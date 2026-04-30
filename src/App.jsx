@@ -1,30 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { observeAuth } from './services/auth';
-import Login from './pages/Login';
-import AdminDashboard from './pages/AdminDashboard'; // Você criará esta a seguir
+import React from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
 
-function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+// Importando as Telas
+import Login from './pages/Login';
+import AdminDashboard from './pages/AdminDashboard';
+import CollaboratorDashboard from './pages/CollaboratorDashboard';
 
-  useEffect(() => {
-    const unsubscribe = observeAuth((currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsubscribe();
-  }, []);
+const AppRoutes = () => {
+  const { currentUser, userRole, loading } = useAuth();
 
-  if (loading) return <div className="h-screen flex items-center justify-center">Carregando...</div>;
+  // 1. Tela de carregamento enquanto o Firebase decide se o cara tá logado ou não
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+      </div>
+    );
+  }
 
+  // 2. Se não tem ninguém logado, mostra o Login
+  if (!currentUser) {
+    return <Login />;
+  }
+
+  // 3. Se logou e for admin/gestor, mostra o dashboard completo da gestão
+  if (userRole === 'admin') {
+    return <AdminDashboard />;
+  }
+
+  // 4. Se logou e for colaborador comum, manda pro dashboard individual DELE
+  return <CollaboratorDashboard currentUserId={currentUser.firestoreId} />;
+};
+
+const App = () => {
   return (
     <NotificationProvider>
-    <div className="App">
-      {user ? <AdminDashboard user={user} /> : <Login />}
-    </div>
+      <AuthProvider>
+        <AppRoutes />
+      </AuthProvider>
     </NotificationProvider>
   );
-}
+};
 
 export default App;
