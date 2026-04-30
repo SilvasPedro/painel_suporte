@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { sendPasswordResetEmail } from 'firebase/auth';
 import { Users, UserPlus, Edit, FileText, MessageSquare, Sun, Sunset, Moon, X, Loader2, Calendar, Phone, PhoneMissed, CheckCircle, Clock } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { auth } from '../services/firebase';
 import { registerCollaborator, updateCollaboratorProfile, registerFeedback } from '../services/adminAuth';
 import { useNotification } from '../context/NotificationContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
@@ -182,6 +184,11 @@ const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport }) => (
 );
 
 // --- COMPONENTE DO MODAL DE EDIÇÃO ---
+// Não esqueça de importar o sendPasswordResetEmail e o auth no TOPO do arquivo CollaboratorsHub.jsx!
+// import { sendPasswordResetEmail } from 'firebase/auth';
+// import { auth } from '../services/firebase';
+import { KeyRound } from 'lucide-react'; // Adicione também este ícone no import do lucide-react
+
 const EditCollaboratorModal = ({ colab, onClose }) => {
     const { showToast } = useNotification();
     const [formData, setFormData] = useState({
@@ -190,6 +197,7 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
         shift: colab.shift
     });
     const [loading, setLoading] = useState(false);
+    const [resetting, setResetting] = useState(false);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -202,6 +210,23 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
             showToast("Erro ao atualizar: " + error.message, "error");
         } finally {
             setLoading(false);
+        }
+    };
+
+  const handleResetPassword = async () => {
+        if (!window.confirm(`Tem certeza que deseja enviar um e-mail de redefinição de senha para ${colab.email}?`)) return;
+        
+        setResetting(true);
+        try {
+            // Agora a função real do Firebase está disparando o e-mail!
+            await sendPasswordResetEmail(auth, colab.email);
+            
+            showToast("E-mail de redefinição enviado com sucesso!", "success");
+        } catch (error) {
+            console.error(error);
+            showToast("Erro ao enviar e-mail: " + error.message, "error");
+        } finally {
+            setResetting(false);
         }
     };
 
@@ -222,7 +247,7 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
 
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">E-mail (Apenas Leitura)</label>
-                        <input type="email" disabled value={colab.email} className="w-full p-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-lg outline-none cursor-not-allowed" title="O e-mail de acesso não pode ser alterado por aqui." />
+                        <input type="email" disabled value={colab.email} className="w-full p-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-lg outline-none cursor-not-allowed" />
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -248,6 +273,23 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
                         </button>
                     </div>
                 </form>
+
+                {/* ZONA DE PERIGO: Reset de Senha */}
+                <div className="p-6 bg-red-50 border-t border-red-100 flex items-center justify-between">
+                    <div>
+                        <h4 className="text-sm font-bold text-red-800">Acesso</h4>
+                        <p className="text-xs text-red-600">Restaurar senha do usuário.</p>
+                    </div>
+                    <button 
+                        type="button" 
+                        onClick={handleResetPassword}
+                        disabled={resetting}
+                        className="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors text-xs font-bold flex items-center gap-2 shadow-sm"
+                    >
+                        {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
+                        Resetar Senha
+                    </button>
+                </div>
             </div>
         </div>
     );

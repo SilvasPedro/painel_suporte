@@ -1,14 +1,15 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-    Clock, Target, RefreshCw, Star, Phone, MessageSquare, 
+import {
+    Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
-    Search, Calendar, Eye, X, Database, TrendingUp
+    Search, Calendar, Eye, X, Database, TrendingUp, Settings as SettingsIcon
 } from 'lucide-react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../context/AuthContext';
+import Settings from './Settings';
 
 // --- DICIONÁRIO DE TRADUÇÃO (Reaproveitado do DataManager) ---
 const translateKey = (key) => {
@@ -36,7 +37,7 @@ const translateKey = (key) => {
 
 const CollaboratorDashboard = ({ currentUserId }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
-    const { currentUser } = useAuth(); 
+    const { currentUser } = useAuth();
 
     const renderContent = () => {
         switch (activeTab) {
@@ -50,6 +51,8 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <h2 className="text-xl font-bold text-gray-600 mb-2">Minhas Auditorias</h2>
                     <p>Este módulo está em desenvolvimento e estará disponível em breve.</p>
                 </div>;
+            case 'settings':
+                return <Settings />;
             default:
                 return <MyDashboardOverview currentUserId={currentUserId} />;
         }
@@ -65,7 +68,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     </div>
                     <span className="text-lg font-bold tracking-wider">SUPPORT<span className="text-red-500">SYS</span></span>
                 </div>
-                
+
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <BarChart2 className="w-5 h-5" />
@@ -80,6 +83,10 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <button onClick={() => setActiveTab('audits')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'audits' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <ShieldCheck className="w-5 h-5" />
                         <span className="font-medium">Minhas Auditorias</span>
+                    </button>
+                    <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <SettingsIcon className="w-5 h-5" />
+                        <span className="font-medium">Configurações</span>
                     </button>
                 </nav>
 
@@ -142,27 +149,27 @@ const TrendIndicator = ({ type, current, previous }) => {
         const prevVal = timeToDecimal(previous);
         if (curVal === prevVal) return null;
         isUp = curVal > prevVal;
-        isGood = curVal < prevVal; 
+        isGood = curVal < prevVal;
     } else if (type === 'fcr') {
         const curVal = Number(current);
         const prevVal = Number(previous);
         if (curVal === prevVal) return null;
         isUp = curVal > prevVal;
-        isGood = curVal > prevVal; 
+        isGood = curVal > prevVal;
     } else if (type === 'recurrence') {
         const curVal = Number(current);
         const prevVal = Number(previous);
         if (curVal === prevVal) return null;
         isUp = curVal > prevVal;
-        isGood = curVal < prevVal; 
+        isGood = curVal < prevVal;
     }
 
     const colorClass = isGood ? "fill-emerald-500" : "fill-red-500";
-    const pathObj = isUp ? "M12 4l8 16H4z" : "M12 20l8-16H4z"; 
+    const pathObj = isUp ? "M12 4l8 16H4z" : "M12 20l8-16H4z";
 
     return (
         <svg className={`w-4 h-4 mb-1.5 ${colorClass}`} viewBox="0 0 24 24">
-            <path d={pathObj}/>
+            <path d={pathObj} />
         </svg>
     );
 };
@@ -173,7 +180,7 @@ const TrendIndicator = ({ type, current, previous }) => {
 const MyDashboardOverview = ({ currentUserId }) => {
     const [loading, setLoading] = useState(true);
     const [globalKpi, setGlobalKpi] = useState({ tmr: '00:00:00', fcr: 0, recurrence: 0 });
-    const [prevGlobalKpi, setPrevGlobalKpi] = useState(null); 
+    const [prevGlobalKpi, setPrevGlobalKpi] = useState(null);
     const [myEvals, setMyEvals] = useState([]);
 
     const formatChartDate = (dateString) => {
@@ -190,13 +197,13 @@ const MyDashboardOverview = ({ currentUserId }) => {
             kpis.sort((a, b) => {
                 const da = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
                 const dbDate = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-                return dbDate - da; 
+                return dbDate - da;
             });
-            
+
             if (kpis.length > 0) {
-                setGlobalKpi(kpis[0]); 
+                setGlobalKpi(kpis[0]);
                 if (kpis.length > 1) {
-                    setPrevGlobalKpi(kpis[1]); 
+                    setPrevGlobalKpi(kpis[1]);
                 }
             }
         });
@@ -209,13 +216,13 @@ const MyDashboardOverview = ({ currentUserId }) => {
         const unsubEvals = onSnapshot(qEvals, (snap) => {
             const evals = [];
             snap.forEach(d => evals.push({ id: d.id, ...d.data() }));
-            
+
             evals.sort((a, b) => {
                 const da = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
                 const dbDate = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-                return da - dbDate; 
+                return da - dbDate;
             });
-            
+
             setMyEvals(evals);
             setLoading(false);
         });
@@ -236,10 +243,10 @@ const MyDashboardOverview = ({ currentUserId }) => {
         myEvals.forEach(e => {
             let pts = e.pontuacao;
             if (pts === undefined) {
-                pts = (Number(e.Atendimentos_Finalizados || 0) * 1) + 
-                      (Number(e.Ligacoes_Atendidas || 0) * 2) + 
-                      (Number(e.Atendimentos_Huggy || 0) * 1) + 
-                      (Number(e.Ligacoes_Perdidas || 0) * -5);
+                pts = (Number(e.Atendimentos_Finalizados || 0) * 1) +
+                    (Number(e.Ligacoes_Atendidas || 0) * 2) +
+                    (Number(e.Atendimentos_Huggy || 0) * 1) +
+                    (Number(e.Ligacoes_Perdidas || 0) * -5);
             }
 
             const telDec = timeToDecimal(e.TMA_Telefonia);
@@ -289,26 +296,26 @@ const MyDashboardOverview = ({ currentUserId }) => {
                 <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4">
                     <Rocket className="w-4 h-4 text-gray-500" /> KPIs Globais do Setor
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <DashboardCard 
-                        title="TMR Global" 
-                        value={globalKpi.tmr || '00:00:00'} 
-                        subtitle="Tempo Médio Resolução" 
+                    <DashboardCard
+                        title="TMR Global"
+                        value={globalKpi.tmr || '00:00:00'}
+                        subtitle="Tempo Médio Resolução"
                         icon={<Clock className="w-5 h-5 text-gray-400" />}
                         trend={<TrendIndicator type="tmr" current={globalKpi.tmr} previous={prevGlobalKpi?.tmr} />}
                     />
-                    <DashboardCard 
-                        title="FCR Global" 
-                        value={`${globalKpi.fcr || 0}%`} 
-                        subtitle="First Call Resolution" 
+                    <DashboardCard
+                        title="FCR Global"
+                        value={`${globalKpi.fcr || 0}%`}
+                        subtitle="First Call Resolution"
                         icon={<Target className="w-5 h-5 text-gray-400" />}
                         trend={<TrendIndicator type="fcr" current={globalKpi.fcr} previous={prevGlobalKpi?.fcr} />}
                     />
-                    <DashboardCard 
-                        title="Reincidência" 
-                        value={`${globalKpi.recurrence || 0}%`} 
-                        subtitle="Taxa de Retorno" 
+                    <DashboardCard
+                        title="Reincidência"
+                        value={`${globalKpi.recurrence || 0}%`}
+                        subtitle="Taxa de Retorno"
                         icon={<RefreshCw className="w-5 h-5 text-gray-400" />}
                         trend={<TrendIndicator type="recurrence" current={globalKpi.recurrence} previous={prevGlobalKpi?.recurrence} />}
                     />
@@ -319,30 +326,30 @@ const MyDashboardOverview = ({ currentUserId }) => {
                 <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4">
                     <User className="w-4 h-4 text-gray-500" /> Minhas Médias (Geral) & Qualidade
                 </h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <DashboardCard 
-                        title="Pontuação (Acumulada)" 
-                        value={myStats.totalPoints} 
-                        subtitle={<span>Média semanal: <strong>{myStats.avgPoints} pts</strong></span>} 
+                    <DashboardCard
+                        title="Pontuação (Acumulada)"
+                        value={myStats.totalPoints}
+                        subtitle={<span>Média semanal: <strong>{myStats.avgPoints} pts</strong></span>}
                         icon={<Star className="w-5 h-5 text-gray-400" />}
                     />
-                    <DashboardCard 
-                        title="Média TMA Tel" 
-                        value={myStats.avgTmaTel} 
-                        subtitle="Tempo médio em linha" 
+                    <DashboardCard
+                        title="Média TMA Tel"
+                        value={myStats.avgTmaTel}
+                        subtitle="Tempo médio em linha"
                         icon={<Phone className="w-5 h-5 text-gray-400" />}
                     />
-                    <DashboardCard 
-                        title="Média TMA Chat" 
-                        value={myStats.avgTmaHuggy} 
-                        subtitle="Tempo médio no Huggy" 
+                    <DashboardCard
+                        title="Média TMA Chat"
+                        value={myStats.avgTmaHuggy}
+                        subtitle="Tempo médio no Huggy"
                         icon={<MessageSquare className="w-5 h-5 text-gray-400" />}
                     />
-                    <DashboardCard 
-                        title="Conformidade QA" 
-                        value="87.5%" 
-                        subtitle="Baseado em 8 auditorias" 
+                    <DashboardCard
+                        title="Conformidade QA"
+                        value="87.5%"
+                        subtitle="Baseado em 8 auditorias"
                         icon={<ShieldCheck className="w-5 h-5 text-gray-400" />}
                     />
                 </div>
@@ -359,21 +366,21 @@ const MyDashboardOverview = ({ currentUserId }) => {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
+
                         <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col h-72">
                             <h3 className="text-sm font-bold text-gray-700 mb-4">Evolução de Produtividade</h3>
                             <ResponsiveContainer width="100%" height="100%">
                                 <AreaChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} />
-                                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} />
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
                                     <Area type="monotone" dataKey="pontos" name="Pontuação" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#colorPts)" activeDot={{ r: 5 }} />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -385,14 +392,14 @@ const MyDashboardOverview = ({ currentUserId }) => {
                                 <AreaChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} tickFormatter={formatTime} />
-                                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val) => [formatTime(val), "TMA Telefonia"]} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} />
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val) => [formatTime(val), "TMA Telefonia"]} />
                                     <Area type="monotone" dataKey="tmaTelDec" name="TMA Telefonia" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorTel)" activeDot={{ r: 5 }} />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -404,14 +411,14 @@ const MyDashboardOverview = ({ currentUserId }) => {
                                 <AreaChart data={chartData}>
                                     <defs>
                                         <linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                                            <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                                         </linearGradient>
                                     </defs>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} tickFormatter={formatTime} />
-                                    <Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} formatter={(val) => [formatTime(val), "TMA Huggy"]} />
+                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} />
+                                    <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} formatter={(val) => [formatTime(val), "TMA Huggy"]} />
                                     <Area type="monotone" dataKey="tmaHuggyDec" name="TMA Huggy" stroke="#8b5cf6" strokeWidth={2} fillOpacity={1} fill="url(#colorHuggy)" activeDot={{ r: 5 }} />
                                 </AreaChart>
                             </ResponsiveContainer>
@@ -436,7 +443,7 @@ const DashboardCard = ({ title, value, subtitle, icon, trend }) => (
             <div className="text-3xl font-extrabold tracking-tight text-gray-900">
                 {value}
             </div>
-            {trend} 
+            {trend}
         </div>
         <div className="text-xs text-gray-400 mt-2 font-medium">
             {subtitle}
@@ -448,10 +455,10 @@ const DashboardCard = ({ title, value, subtitle, icon, trend }) => (
 // SUB-COMPONENTE: MEU HISTÓRICO (SOMENTE LEITURA)
 // ==========================================
 const MyHistory = ({ currentUserId }) => {
-    const [activeTab, setActiveTab] = useState('feedbacks'); 
+    const [activeTab, setActiveTab] = useState('feedbacks');
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState('');
-    
+
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [viewingItem, setViewingItem] = useState(null);
@@ -492,8 +499,8 @@ const MyHistory = ({ currentUserId }) => {
             // Usamos a mesma abordagem de buscar tudo do usuário e filtrar no JS para ser à prova de falhas,
             // ou se o banco estiver padronizado, usamos a query direto. Como não sei se você padronizou, 
             // vou buscar e filtrar pelo JS para garantir que não dê erro de index no Firebase.
-            const q = query(collection(db, currentCollection)); 
-            
+            const q = query(collection(db, currentCollection));
+
             const unsubscribe = onSnapshot(q, (snapshot) => {
                 const fetchedData = [];
                 snapshot.forEach((doc) => {
@@ -503,13 +510,13 @@ const MyHistory = ({ currentUserId }) => {
                         fetchedData.push({ id: doc.id, ...docData });
                     }
                 });
-                
+
                 fetchedData.sort((a, b) => {
                     const dateA = typeof a.createdAt?.toMillis === 'function' ? a.createdAt.toMillis() : 0;
                     const dateB = typeof b.createdAt?.toMillis === 'function' ? b.createdAt.toMillis() : 0;
                     return dateB - dateA;
                 });
-                
+
                 setData(fetchedData);
                 setLoading(false);
             });
@@ -522,12 +529,12 @@ const MyHistory = ({ currentUserId }) => {
     }, [activeTab, currentUserId]);
 
     const filteredData = data.filter(item => {
-        const matchSearch = searchTerm === '' || 
+        const matchSearch = searchTerm === '' ||
             (item.type && item.type.toLowerCase().includes(searchTerm.toLowerCase()));
-            
+
         const safeDate = getSafeDateString(item);
         const matchDate = dateFilter === '' || safeDate.includes(dateFilter);
-            
+
         return matchSearch && matchDate;
     });
 
@@ -544,18 +551,18 @@ const MyHistory = ({ currentUserId }) => {
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
                 <div className="flex space-x-2 border-b border-gray-100 pb-4">
                     <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'feedbacks' ? 'bg-red-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-                        <MessageSquare className="w-4 h-4"/> Feedbacks
+                        <MessageSquare className="w-4 h-4" /> Feedbacks
                     </button>
                     <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'metrics' ? 'bg-red-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
-                        <TrendingUp className="w-4 h-4"/> Desempenho
+                        <TrendingUp className="w-4 h-4" /> Desempenho
                     </button>
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1 relative">
                         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             placeholder="Buscar por tipo de dado..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -564,8 +571,8 @@ const MyHistory = ({ currentUserId }) => {
                     </div>
                     <div className="md:w-64 relative">
                         <Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             placeholder="Filtrar data (ex: 13/04)"
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
@@ -602,14 +609,13 @@ const MyHistory = ({ currentUserId }) => {
                                         <td className="px-6 py-4 text-gray-500">
                                             {getSafeDateString(item)}
                                         </td>
-                                        
+
                                         <td className="px-6 py-4">
                                             {activeTab === 'feedbacks' && (
-                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                    item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : 
-                                                    item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 
-                                                    'bg-blue-100 text-blue-700'
-                                                }`}>
+                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' :
+                                                    item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' :
+                                                        'bg-blue-100 text-blue-700'
+                                                    }`}>
                                                     {item.type}
                                                 </span>
                                             )}
@@ -619,7 +625,7 @@ const MyHistory = ({ currentUserId }) => {
                                                 </span>
                                             )}
                                         </td>
-                                        
+
                                         <td className="px-6 py-4 text-right flex justify-end gap-2">
                                             <button onClick={() => setViewingItem(item)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded flex items-center gap-1" title="Ver detalhes">
                                                 <Eye className="w-4 h-4" /> <span className="text-xs font-bold">Lêr</span>
@@ -644,8 +650,8 @@ const MyHistory = ({ currentUserId }) => {
                         <div className="p-6 space-y-4 text-sm max-h-[60vh] overflow-y-auto">
                             {Object.entries(viewingItem).map(([key, value]) => {
                                 // Esconde chaves de sistema e os IDs do usuário já que ele sabe que é dele
-                                if (key === 'id' || key === 'createdAt' || key === 'colabId' || key === 'collaboratorId' || key === 'colabName') return null; 
-                                
+                                if (key === 'id' || key === 'createdAt' || key === 'colabId' || key === 'collaboratorId' || key === 'colabName') return null;
+
                                 return (
                                     <div key={key} className="border-b border-gray-100 pb-2">
                                         <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(key)}</span>
