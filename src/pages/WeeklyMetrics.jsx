@@ -1,31 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Loader2, Calendar, TrendingUp } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firestore';
+import { TrendingUp, Save, Loader2, Calendar } from 'lucide-react';
+import { collection, onSnapshot, addDoc, query, orderBy } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
 
 const WeeklyMetrics = () => {
     const { showToast } = useNotification();
     const [collaborators, setCollaborators] = useState([]);
+    const [metricsData, setMetricsData] = useState({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    
-    // Estado para armazenar os valores digitados na tabela
-    // O formato será: { id_do_colaborador: { Ligacoes_Atendidas: "54", TMA_Telefonia: "00:09:05", ... } }
-    const [metricsData, setMetricsData] = useState({});
 
-    // Busca os colaboradores em ordem alfabética, igual ao Hub
+    // NOVO: Estado para a data de referência (inicia com a data de hoje no formato YYYY-MM-DD para o input)
+    const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
+
     useEffect(() => {
-        const q = query(collection(db, "collaborators"), orderBy("name", "asc"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const docs = [];
+        const q = query(collection(db, "collaborators"), orderBy("name"));
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const colabs = [];
             const initialMetrics = {};
-            
-            querySnapshot.forEach((doc) => {
+            snapshot.forEach((doc) => {
                 const data = doc.data();
-                docs.push({ id: doc.id, ...data });
-                
-                // Inicializa os campos vazios para cada colaborador
+                colabs.push({ id: doc.id, ...data });
                 initialMetrics[doc.id] = {
                     Ligacoes_Atendidas: '',
                     Ligacoes_Perdidas: '',
@@ -36,20 +32,15 @@ const WeeklyMetrics = () => {
                     Atendimentos_Finalizados: ''
                 };
             });
-            
-            setCollaborators(docs);
-            // Só sobrescreve os inputs se for o carregamento inicial para não apagar o que o usuário já digitou
+            setCollaborators(colabs);
+            // Só seta o initialMetrics se estiver vazio para não apagar o que o usuário já digitou se a tela recarregar
             setMetricsData(prev => Object.keys(prev).length === 0 ? initialMetrics : prev);
-            setLoading(false);
-        }, (error) => {
-            showToast("Erro ao carregar equipe: " + error.message, "error");
             setLoading(false);
         });
 
         return () => unsubscribe();
     }, []);
 
-    // Função para atualizar o valor digitado em uma célula específica
     const handleInputChange = (colabId, field, value) => {
         setMetricsData(prev => ({
             ...prev,
@@ -60,29 +51,28 @@ const WeeklyMetrics = () => {
         }));
     };
 
-// Função para salvar tudo no banco de dados REAL com a PONTUAÇÃO
     const handleSaveMetrics = async () => {
         setSaving(true);
         try {
-            const today = new Date();
-            const dateString = today.toLocaleDateString('pt-BR');
+            // Formata a data escolhida no input (YYYY-MM-DD) para o padrão do banco (DD/MM/YYYY)
+            const [year, month, day] = referenceDate.split('-');
+            const dateString = `${day}/${month}/${year}`;
 
             const savePromises = Object.entries(metricsData).map(async ([colabId, metrics]) => {
                 const hasData = Object.values(metrics).some(val => val !== '');
                 if (!hasData) return Promise.resolve();
 
-                // Converte para número e garante que não dê erro se estiver vazio
                 const finalizados = Number(metrics.Atendimentos_Finalizados) || 0;
                 const ligAtendidas = Number(metrics.Ligacoes_Atendidas) || 0;
                 const ligPerdidas = Number(metrics.Ligacoes_Perdidas) || 0;
                 const huggy = Number(metrics.Atendimentos_Huggy) || 0;
 
-                // Faz o cálculo da regra de negócio antes de salvar
+                // Cálculo de pontuação
                 const pontuacaoTotal = (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
 
                 return addDoc(collection(db, "weekly_evaluations"), {
                     colabId: colabId,
-                    date: dateString,
+                    date: dateString, // Salva com a data selecionada no seletor!
                     Atendimentos_Finalizados: finalizados,
                     Ligacoes_Atendidas: ligAtendidas,
                     Ligacoes_Perdidas: ligPerdidas,
@@ -90,18 +80,28 @@ const WeeklyMetrics = () => {
                     TMA_Telefonia: metrics.TMA_Telefonia || "00:00:00",
                     TMA_Huggy: metrics.TMA_Huggy || "00:00:00",
                     TME_Telefonia: metrics.TME_Telefonia || "00:00:00",
-                    pontuacao: pontuacaoTotal, // SALVANDO A PONTUÇÃO AQUI!
+                    pontuacao: pontuacaoTotal,
                     createdAt: new Date() 
                 });
             });
 
             await Promise.all(savePromises);
             
-            showToast("Avaliações semanais salvas com sucesso no banco!", "success");
+            showToast("Avaliações semanais salvas com sucesso!", "success");
             
+            // Limpa os campos após salvar
+            const resetMetrics = {};
+            collaborators.forEach(c => {
+                resetMetrics[c.id] = {
+                    Ligacoes_Atendidas: '', Ligacoes_Perdidas: '', TMA_Telefonia: '',
+                    TME_Telefonia: '', Atendimentos_Huggy: '', TMA_Huggy: '', Atendimentos_Finalizados: ''
+                };
+            });
+            setMetricsData(resetMetrics);
+
         } catch (error) {
             console.error(error);
-            showToast("Erro ao salvar avaliações no Firebase.", "error");
+            showToast("Erro ao salvar avaliações.", "error");
         } finally {
             setSaving(false);
         }
@@ -109,95 +109,97 @@ const WeeklyMetrics = () => {
 
     if (loading) {
         return (
-            <div className="flex-1 flex items-center justify-center">
+            <div className="flex-1 flex items-center justify-center bg-gray-50 h-full">
                 <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
             </div>
         );
     }
 
     return (
-        <div className="flex-1 p-6 bg-gray-50 h-full overflow-y-auto flex flex-col">
-            <header className="flex justify-between items-center mb-6 flex-shrink-0">
+        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50">
+            
+            {/* CABEÇALHO ATUALIZADO (Com card branco e seletor de data) */}
+            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-6 gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <TrendingUp className="w-6 h-6 text-red-600" />
                         Lançamento de Avaliações
                     </h1>
-                    <p className="text-sm text-gray-500">Preencha as métricas semanais da equipe de atendimento.</p>
+                    <p className="text-sm text-gray-500 mt-1">Preencha as métricas semanais da equipe de atendimento.</p>
                 </div>
                 
-                <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2 bg-white px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 shadow-sm">
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    {/* Seletor de Data */}
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-700">
                         <Calendar className="w-4 h-4 text-gray-500" />
-                        <span>Semana Atual</span>
+                        <span className="text-gray-500 hidden sm:inline">Referência:</span>
+                        <input 
+                            type="date" 
+                            value={referenceDate}
+                            onChange={(e) => setReferenceDate(e.target.value)}
+                            className="bg-transparent outline-none cursor-pointer font-bold text-gray-900"
+                        />
                     </div>
                     
-                    <button
+                    <button 
                         onClick={handleSaveMetrics}
                         disabled={saving}
-                        className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-6 py-2.5 rounded-lg font-medium transition-colors shadow-sm disabled:opacity-50"
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors disabled:opacity-70 shadow-sm"
                     >
-                        {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                        {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                         Salvar Lançamentos
                     </button>
                 </div>
             </header>
 
-            {/* Container da Tabela com Scroll Horizontal */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex-1 flex flex-col">
-                <div className="overflow-x-auto flex-1">
+            {/* TABELA DE LANÇAMENTOS */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex-1">
+                <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
-                        <thead className="bg-zinc-950 text-white sticky top-0 z-10">
+                        <thead className="bg-zinc-950 text-white">
                             <tr>
-                                <th className="px-4 py-3 text-left font-semibold border-r border-zinc-800 sticky left-0 bg-zinc-950 z-20">Colaborador</th>
-                                <th className="px-4 py-3 text-left font-semibold border-r border-zinc-800">Turno</th>
-                                <th className="px-4 py-3 text-center font-semibold border-r border-zinc-800">Ligações<br/>Atendidas</th>
-                                <th className="px-4 py-3 text-center font-semibold border-r border-zinc-800">Ligações<br/>Perdidas</th>
-                                <th className="px-4 py-3 text-center font-semibold border-r border-zinc-800">TMA<br/>Telefonia</th>
-                                <th className="px-4 py-3 text-center font-semibold border-r border-zinc-800">TME<br/>Telefonia</th>
-                                <th className="px-4 py-3 text-center font-semibold border-r border-zinc-800">Atendimentos<br/>Huggy</th>
-                                <th className="px-4 py-3 text-center font-semibold border-r border-zinc-800">TMA<br/>Huggy</th>
-                                <th className="px-4 py-3 text-center font-semibold">Atendimentos<br/>Finalizados</th>
+                                <th className="px-4 py-3 text-left font-semibold">Colaborador</th>
+                                <th className="px-4 py-3 text-center font-semibold w-24">Turno</th>
+                                <th className="px-4 py-3 text-center font-semibold w-28">Ligações<br/>Atendidas</th>
+                                <th className="px-4 py-3 text-center font-semibold w-28">Ligações<br/>Perdidas</th>
+                                <th className="px-4 py-3 text-center font-semibold w-32">TMA<br/>Telefonia</th>
+                                <th className="px-4 py-3 text-center font-semibold w-32">TME<br/>Telefonia</th>
+                                <th className="px-4 py-3 text-center font-semibold w-28">Atendimentos<br/>Huggy</th>
+                                <th className="px-4 py-3 text-center font-semibold w-32">TMA<br/>Huggy</th>
+                                <th className="px-4 py-3 text-center font-semibold w-32">Atendimentos<br/>Finalizados</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {collaborators.map((colab) => (
                                 <tr key={colab.id} className="hover:bg-gray-50 transition-colors">
-                                    {/* Nome Fixo (Sticky) para não sumir ao rolar para o lado */}
-                                    <td className="px-4 py-2 font-medium text-gray-900 border-r border-gray-200 sticky left-0 bg-white group-hover:bg-gray-50">
-                                        {colab.name}
-                                    </td>
-                                    <td className="px-4 py-2 text-gray-600 border-r border-gray-200">
-                                        {colab.shift}
-                                    </td>
-                                    
-                                    {/* Inputs de Métricas */}
-                                    <td className="px-2 py-2 border-r border-gray-200">
-                                        <input type="number" className="w-full min-w-[80px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="0"
+                                    <td className="px-4 py-3 font-medium text-gray-900">{colab.name}</td>
+                                    <td className="px-4 py-3 text-center text-gray-500">{colab.shift}</td>
+                                    <td className="px-4 py-3">
+                                        <input type="number" min="0" placeholder="0" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.Ligacoes_Atendidas || ''} onChange={(e) => handleInputChange(colab.id, 'Ligacoes_Atendidas', e.target.value)} />
                                     </td>
-                                    <td className="px-2 py-2 border-r border-gray-200">
-                                        <input type="number" className="w-full min-w-[80px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="0"
+                                    <td className="px-4 py-3">
+                                        <input type="number" min="0" placeholder="0" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.Ligacoes_Perdidas || ''} onChange={(e) => handleInputChange(colab.id, 'Ligacoes_Perdidas', e.target.value)} />
                                     </td>
-                                    <td className="px-2 py-2 border-r border-gray-200">
-                                        <input type="text" className="w-full min-w-[90px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="00:00:00"
+                                    <td className="px-4 py-3">
+                                        <input type="text" placeholder="00:00:00" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.TMA_Telefonia || ''} onChange={(e) => handleInputChange(colab.id, 'TMA_Telefonia', e.target.value)} />
                                     </td>
-                                    <td className="px-2 py-2 border-r border-gray-200">
-                                        <input type="text" className="w-full min-w-[90px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="00:00:00"
+                                    <td className="px-4 py-3">
+                                        <input type="text" placeholder="00:00:00" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.TME_Telefonia || ''} onChange={(e) => handleInputChange(colab.id, 'TME_Telefonia', e.target.value)} />
                                     </td>
-                                    <td className="px-2 py-2 border-r border-gray-200">
-                                        <input type="number" className="w-full min-w-[80px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="0"
+                                    <td className="px-4 py-3">
+                                        <input type="number" min="0" placeholder="0" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.Atendimentos_Huggy || ''} onChange={(e) => handleInputChange(colab.id, 'Atendimentos_Huggy', e.target.value)} />
                                     </td>
-                                    <td className="px-2 py-2 border-r border-gray-200">
-                                        <input type="text" className="w-full min-w-[90px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="00:00:00"
+                                    <td className="px-4 py-3">
+                                        <input type="text" placeholder="00:00:00" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.TMA_Huggy || ''} onChange={(e) => handleInputChange(colab.id, 'TMA_Huggy', e.target.value)} />
                                     </td>
-                                    <td className="px-2 py-2">
-                                        <input type="number" className="w-full min-w-[80px] p-1.5 text-center border border-gray-300 rounded focus:ring-2 focus:ring-red-600 outline-none" placeholder="0"
+                                    <td className="px-4 py-3">
+                                        <input type="number" min="0" placeholder="0" className="w-full p-2 border border-gray-300 rounded text-center outline-none focus:border-red-500 transition-colors"
                                             value={metricsData[colab.id]?.Atendimentos_Finalizados || ''} onChange={(e) => handleInputChange(colab.id, 'Atendimentos_Finalizados', e.target.value)} />
                                     </td>
                                 </tr>
