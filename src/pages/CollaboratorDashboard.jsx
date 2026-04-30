@@ -2,14 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Clock, Target, RefreshCw, Star, Phone, MessageSquare, 
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
-    Search, Calendar, Eye, X, Database, TrendingUp
+    Search, Calendar, Eye, X, Database, TrendingUp, Settings as SettingsIcon, Users
 } from 'lucide-react';
-import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext'; 
+import Settings from './Settings';
 
+// --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
     const dictionary = {
         createdBy: 'Criado por',
@@ -40,7 +42,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     const renderContent = () => {
         switch (activeTab) {
             case 'dashboard':
-                return <MyDashboardOverview currentUserId={currentUserId} />;
+                return <MyDashboardOverview currentUserId={currentUserId} currentUser={currentUser} />;
             case 'history':
                 return <MyHistory currentUserId={currentUserId} />;
             case 'audits':
@@ -49,8 +51,10 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <h2 className="text-xl font-bold text-gray-600 mb-2">Minhas Auditorias</h2>
                     <p>Este módulo está em desenvolvimento e estará disponível em breve.</p>
                 </div>;
+            case 'settings':
+                return <Settings />;
             default:
-                return <MyDashboardOverview currentUserId={currentUserId} />;
+                return <MyDashboardOverview currentUserId={currentUserId} currentUser={currentUser} />;
         }
     };
 
@@ -61,7 +65,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <div className="p-2 bg-red-600 rounded-lg">
                         <BarChart2 className="w-5 h-5 text-white" />
                     </div>
-                    <span className="text-lg font-bold tracking-wider">SUPPORT<span className="text-red-500">SYS</span></span>
+                    <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
                 </div>
                 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -78,6 +82,11 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <button onClick={() => setActiveTab('audits')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'audits' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <ShieldCheck className="w-5 h-5" />
                         <span className="font-medium">Minhas Auditorias</span>
+                    </button>
+
+                    <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <SettingsIcon className="w-5 h-5" />
+                        <span className="font-medium">Configurações</span>
                     </button>
                 </nav>
 
@@ -164,12 +173,13 @@ const TrendIndicator = ({ type, current, previous }) => {
 // ==========================================
 // SUB-COMPONENTE: Visão Geral do Colaborador
 // ==========================================
-const MyDashboardOverview = ({ currentUserId }) => {
+const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [loading, setLoading] = useState(true);
     const [globalKpi, setGlobalKpi] = useState({ tmr: '00:00:00', fcr: 0, recurrence: 0 });
     const [prevGlobalKpi, setPrevGlobalKpi] = useState(null); 
-    const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 }); // Estado das Metas!
-    const [myEvals, setMyEvals] = useState([]);
+    const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 }); 
+    const [allEvals, setAllEvals] = useState([]);
+    const [colabsFull, setColabsFull] = useState({});
 
     const formatChartDate = (dateString) => {
         if (!dateString) return '';
@@ -179,12 +189,10 @@ const MyDashboardOverview = ({ currentUserId }) => {
     };
 
     useEffect(() => {
-        // Busca as Metas do Setor
         const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
             if (docSnap.exists()) setGoals(docSnap.data());
         });
 
-        // Busca os Lançamentos Globais
         const unsubKpi = onSnapshot(collection(db, "sector_kpis"), (snap) => {
             const kpis = [];
             snap.forEach(d => kpis.push(d.data()));
@@ -202,12 +210,13 @@ const MyDashboardOverview = ({ currentUserId }) => {
             }
         });
 
-        const qEvals = query(
-            collection(db, "weekly_evaluations"),
-            where("colabId", "==", currentUserId)
-        );
+        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
+            const map = {};
+            snap.forEach(d => map[d.id] = d.data()); 
+            setColabsFull(map);
+        });
 
-        const unsubEvals = onSnapshot(qEvals, (snap) => {
+        const unsubEvals = onSnapshot(query(collection(db, "weekly_evaluations")), (snap) => {
             const evals = [];
             snap.forEach(d => evals.push({ id: d.id, ...d.data() }));
             
@@ -217,19 +226,21 @@ const MyDashboardOverview = ({ currentUserId }) => {
                 return da - dbDate; 
             });
             
-            setMyEvals(evals);
+            setAllEvals(evals);
             setLoading(false);
         });
 
-        return () => { unsubKpi(); unsubEvals(); unsubGoals(); };
-    }, [currentUserId]);
+        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); };
+    }, []);
 
-    const { myStats, chartData } = useMemo(() => {
+    const { myStats, chartData, shiftAvgPts } = useMemo(() => {
         const defaultStats = {
             totalPoints: 0, avgPoints: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00'
         };
 
-        if (myEvals.length === 0) return { myStats: defaultStats, chartData: [] };
+        if (allEvals.length === 0) return { myStats: defaultStats, chartData: [], shiftAvgPts: 0 };
+
+        const myEvals = allEvals.filter(e => e.colabId === currentUserId || e.collaboratorId === currentUserId);
 
         let sumPoints = 0, sumTmaTel = 0, sumTmaHuggy = 0;
         const formattedChartData = [];
@@ -259,17 +270,51 @@ const MyDashboardOverview = ({ currentUserId }) => {
         });
 
         const count = myEvals.length;
+        const myCalculatedStats = {
+            totalPoints: sumPoints,
+            avgPoints: count > 0 ? (sumPoints / count).toFixed(1) : 0,
+            avgTmaTel: count > 0 ? formatTime(sumTmaTel / count) : "00:00:00",
+            avgTmaHuggy: count > 0 ? formatTime(sumTmaHuggy / count) : "00:00:00"
+        };
+
+        let avgPts = 0;
+        const latestDate = allEvals.reduce((max, e) => (e.date > max ? e.date : max), '');
+        const currentWeekAll = allEvals.filter(e => e.date === latestDate);
+
+        const myShift = currentUser?.shift || colabsFull[currentUserId]?.shift || 'Manhã';
+        const isDayShift = myShift === 'Manhã' || myShift === 'Tarde';
+
+        let shiftSum = 0;
+        let shiftCount = 0;
+
+        currentWeekAll.forEach(e => {
+            const cId = e.colabId || e.collaboratorId;
+            const cShift = colabsFull[cId]?.shift || 'Manhã';
+            const cIsDay = cShift === 'Manhã' || cShift === 'Tarde';
+
+            if (isDayShift === cIsDay) {
+                let pts = e.pontuacao;
+                if (pts === undefined) {
+                    pts = (Number(e.Atendimentos_Finalizados || 0) * 1) + 
+                          (Number(e.Ligacoes_Atendidas || 0) * 2) + 
+                          (Number(e.Atendimentos_Huggy || 0) * 1) + 
+                          (Number(e.Ligacoes_Perdidas || 0) * -5);
+                }
+                shiftSum += pts;
+                shiftCount++;
+            }
+        });
+        
+        if (shiftCount > 0) {
+            avgPts = Math.round(shiftSum / shiftCount);
+        }
 
         return {
-            myStats: {
-                totalPoints: sumPoints,
-                avgPoints: (sumPoints / count).toFixed(1),
-                avgTmaTel: formatTime(sumTmaTel / count),
-                avgTmaHuggy: formatTime(sumTmaHuggy / count)
-            },
-            chartData: formattedChartData
+            myStats: myCalculatedStats,
+            chartData: formattedChartData,
+            shiftAvgPts: avgPts
         };
-    }, [myEvals]);
+    }, [allEvals, currentUserId, currentUser, colabsFull]);
 
     if (loading) {
         return (
@@ -297,7 +342,7 @@ const MyDashboardOverview = ({ currentUserId }) => {
                         value={globalKpi.tmr || '00:00:00'} 
                         subtitle="Tempo Médio Resolução" 
                         goalText={`Meta: ≤ ${goals.tmr}`}
-                        icon={<Clock className="w-5 h-5 text-gray-400" />}
+                        icon={<Clock className="w-5 h-5 text-purple-500" />}
                         trend={<TrendIndicator type="tmr" current={globalKpi.tmr} previous={prevGlobalKpi?.tmr} />}
                     />
                     <DashboardCard 
@@ -305,7 +350,7 @@ const MyDashboardOverview = ({ currentUserId }) => {
                         value={`${globalKpi.fcr || 0}%`} 
                         subtitle="First Call Resolution" 
                         goalText={`Meta: ≥ ${goals.fcr}%`}
-                        icon={<Target className="w-5 h-5 text-gray-400" />}
+                        icon={<Target className="w-5 h-5 text-rose-500" />}
                         trend={<TrendIndicator type="fcr" current={globalKpi.fcr} previous={prevGlobalKpi?.fcr} />}
                     />
                     <DashboardCard 
@@ -313,7 +358,7 @@ const MyDashboardOverview = ({ currentUserId }) => {
                         value={`${globalKpi.recurrence || 0}%`} 
                         subtitle="Taxa de Retorno" 
                         goalText={`Meta: ≤ ${goals.recurrence}%`}
-                        icon={<RefreshCw className="w-5 h-5 text-gray-400" />}
+                        icon={<RefreshCw className="w-5 h-5 text-blue-500" />}
                         trend={<TrendIndicator type="recurrence" current={globalKpi.recurrence} previous={prevGlobalKpi?.recurrence} />}
                     />
                 </div>
@@ -324,30 +369,38 @@ const MyDashboardOverview = ({ currentUserId }) => {
                     <User className="w-4 h-4 text-gray-500" /> Minhas Médias (Geral) & Qualidade
                 </h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <DashboardCard 
                         title="Pontuação (Acumulada)" 
                         value={myStats.totalPoints} 
                         subtitle={<span>Média semanal: <strong>{myStats.avgPoints} pts</strong></span>} 
-                        icon={<Star className="w-5 h-5 text-gray-400" />}
+                        icon={<Star className="w-5 h-5 text-emerald-500" />}
                     />
+                    
+                    <DashboardCard 
+                        title="Média do Meu Turno" 
+                        value={shiftAvgPts} 
+                        subtitle="Última semana (Equipe)" 
+                        icon={<Users className="w-5 h-5 text-blue-500" />}
+                    />
+
                     <DashboardCard 
                         title="Média TMA Tel" 
                         value={myStats.avgTmaTel} 
                         subtitle="Tempo médio em linha" 
-                        icon={<Phone className="w-5 h-5 text-gray-400" />}
+                        icon={<Phone className="w-5 h-5 text-rose-500" />}
                     />
                     <DashboardCard 
                         title="Média TMA Chat" 
                         value={myStats.avgTmaHuggy} 
                         subtitle="Tempo médio no Huggy" 
-                        icon={<MessageSquare className="w-5 h-5 text-gray-400" />}
+                        icon={<MessageSquare className="w-5 h-5 text-indigo-400" />}
                     />
                     <DashboardCard 
                         title="Conformidade QA" 
                         value="87.5%" 
                         subtitle="Baseado em 8 auditorias" 
-                        icon={<ShieldCheck className="w-5 h-5 text-gray-400" />}
+                        icon={<ShieldCheck className="w-5 h-5 text-amber-500" />}
                     />
                 </div>
             </div>
@@ -357,7 +410,8 @@ const MyDashboardOverview = ({ currentUserId }) => {
                     <TrendingUp className="w-4 h-4 text-gray-500" /> Evolução Temporal
                 </h2>
 
-                {myEvals.length === 0 ? (
+                {/* CORREÇÃO DO BUG: AGORA OLHAMOS PARA O CHARTDATA EM VEZ DO MYEVALS */}
+                {chartData.length === 0 ? (
                     <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center text-gray-400">
                         Nenhuma avaliação registrada no sistema para desenhar o gráfico.
                     </div>

@@ -35,7 +35,7 @@ const Login = () => {
               <div className="p-3 bg-red-600 rounded-lg">
                 <Activity className="w-6 h-6 text-white" />
               </div>
-              <span className="text-xl font-bold tracking-wider">SUPPORT<span className="text-red-500">SYS</span></span>
+              <span className="text-xl font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
             </div>
             
             <h1 className="text-4xl font-bold mb-4 leading-tight">

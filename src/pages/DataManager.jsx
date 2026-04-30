@@ -51,8 +51,16 @@ const DataManager = () => {
         'kpis': 'sector_kpis'
     };
 
+    // Função melhorada para forçar o formato DD/MM/AAAA
     const getSafeDateString = (item) => {
-        if (item.date) return item.date;
+        if (item.date) {
+            // Se vier no formato AAAA-MM-DD do input date, inverte para DD/MM/AAAA
+            if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [year, month, day] = item.date.split('-');
+                return `${day}/${month}/${year}`;
+            }
+            return item.date;
+        }
         if (item.createdAt) {
             if (typeof item.createdAt.toDate === 'function') {
                 return new Date(item.createdAt.toDate()).toLocaleDateString('pt-BR');
@@ -66,7 +74,6 @@ const DataManager = () => {
         return 'Sem data';
     };
 
-    // Busca o nome dos colaboradores
     useEffect(() => {
         const unsubColabs = onSnapshot(collection(db, "collaborators"), (snapshot) => {
             const map = {};
@@ -79,7 +86,6 @@ const DataManager = () => {
         return () => unsubColabs();
     }, []);
 
-    // Busca de Dados
     useEffect(() => {
         setLoading(true);
         const currentCollection = collectionMap[activeTab];
@@ -107,9 +113,7 @@ const DataManager = () => {
         return () => unsubscribe();
     }, [activeTab]);
 
-    // Filtragem
     const filteredData = data.filter(item => {
-        // Tenta achar pelo colabId ou collaboratorId (corrige o bug da busca)
         const mappedName = collaboratorsMap[item.colabId || item.collaboratorId] || '';
         
         const matchSearch = searchTerm === '' || 
@@ -219,7 +223,6 @@ const DataManager = () => {
                                         
                                         {activeTab !== 'kpis' && (
                                             <td className="px-6 py-4 font-bold text-gray-900 truncate max-w-[250px]">
-                                                {/* Correção do BUG do Desconhecido: Verifica colabId ou collaboratorId */}
                                                 {collaboratorsMap[item.colabId || item.collaboratorId] || item.colabName || item.colabId || item.collaboratorId || 'Desconhecido'}
                                             </td>
                                         )}
@@ -241,7 +244,7 @@ const DataManager = () => {
                                             )}
                                             {activeTab === 'kpis' && (
                                                 <span className="text-gray-600">
-                                                    FCR: <strong className="text-gray-900">{item.fcr}%</strong> | TMR: <strong className="text-gray-900">{item.tmr}</strong>
+                                                    FCR: <strong className="text-gray-900">{item.fcr}%</strong> | TMR: <strong className="text-gray-900">{item.tmr}</strong> | Reincidência: <strong className="text-gray-900">{item.recurrence}%</strong>
                                                 </span>
                                             )}
                                         </td>
@@ -296,14 +299,12 @@ const ViewModal = ({ item, collaboratorsMap, onClose }) => (
                     if (key === 'id' || key === 'createdAt') return null; 
                     
                     let displayValue = value?.toString() || 'Vazio';
-                    // Corrige o ID do colaborador para mostrar o nome dentro do modal
                     if ((key === 'colabId' || key === 'collaboratorId') && collaboratorsMap[value]) {
                         displayValue = collaboratorsMap[value]; 
                     }
 
                     return (
                         <div key={key} className="border-b border-gray-100 pb-2">
-                            {/* Passa a chave pelo tradutor antes de exibir */}
                             <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(key)}</span>
                             <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayValue}</span>
                         </div>
@@ -362,9 +363,45 @@ const EditModal = ({ item, collaboratorsMap, onClose, onSave }) => {
                 <div className="p-6 overflow-y-auto flex-1">
                     <form id="editForm" onSubmit={handleSubmit} className="space-y-4">
                         {Object.entries(formData).map(([key, value]) => {
-                            // Ignora id, createdAt e as chaves de colaborador que não devem ser mudadas pelo form de texto
                             if (key === 'id' || key === 'createdAt' || key === 'colabId' || key === 'collaboratorId') return null;
                             
+                            // LISTA SUSPENSA PARA MEIO/CANAL
+                            if (key === 'method') {
+                                return (
+                                    <div key={key}>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{translateKey(key)}</label>
+                                        <select 
+                                            value={value} 
+                                            onChange={(e) => handleChange(key, e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
+                                        >
+                                            <option value="Chat">Chat</option>
+                                            <option value="Telefone">Telefone</option>
+                                            <option value="Presencial">Presencial</option>
+                                            <option value="Sistema">Sistema</option>
+                                        </select>
+                                    </div>
+                                );
+                            }
+
+                            // LISTA SUSPENSA PARA TIPO DE FEEDBACK
+                            if (key === 'type') {
+                                return (
+                                    <div key={key}>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{translateKey(key)}</label>
+                                        <select 
+                                            value={value} 
+                                            onChange={(e) => handleChange(key, e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
+                                        >
+                                            <option value="Elogio">Elogio</option>
+                                            <option value="Ponto de Melhoria">Ponto de Melhoria</option>
+                                            <option value="Orientação">Orientação</option>
+                                        </select>
+                                    </div>
+                                );
+                            }
+
                             if (key === 'comment' || key === 'comentario') {
                                 return (
                                     <div key={key}>
