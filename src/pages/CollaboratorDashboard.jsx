@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Clock, Target, RefreshCw, Star, Phone, MessageSquare, 
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
-    Search, Calendar, Eye, X, Database, TrendingUp, Settings as SettingsIcon, Users, CheckCircle
+    Search, Eye, X, Database, TrendingUp, Settings as SettingsIcon, Users, CheckCircle, Filter
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -10,8 +10,9 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext'; 
 import Settings from './Settings';
-import Reports from './Reports'; // Importação do módulo de relatórios
+import Reports from './Reports'; 
 
+// --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
     const dictionary = {
         createdBy: 'Criado por',
@@ -33,6 +34,24 @@ const translateKey = (key) => {
         pontuacao: 'Pontuação'
     };
     return dictionary[key] || key;
+};
+
+// --- FUNÇÃO PARA CONVERTER DATA EM VALOR MATEMÁTICO (USADA PARA ORDENAÇÃO) ---
+const parseDateObj = (dateStr) => {
+    if (!dateStr) return 0;
+    if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) {
+            return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+        }
+    }
+    if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) {
+            return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+        }
+    }
+    return 0;
 };
 
 const CollaboratorDashboard = ({ currentUserId }) => {
@@ -158,8 +177,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 }); 
     const [allEvals, setAllEvals] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
-    
-    // NOVO: Contador de relatórios do usuário
     const [reportStats, setReportCounts] = useState({ pending: 0, resolved: 0 });
 
     const formatChartDate = (dateString) => {
@@ -190,7 +207,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setAllEvals(evals); setLoading(false);
         });
 
-        // NOVO: Listener para contar relatórios críticos do usuário logado
         const qReports = query(collection(db, "critical_reports"), where("creatorId", "==", currentUserId));
         const unsubReports = onSnapshot(qReports, (snap) => {
             let pending = 0; let resolved = 0;
@@ -248,7 +264,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
-            {/* CABEÇALHO EM CARD COM CONTADORES DE RELATÓRIOS */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
@@ -326,27 +341,89 @@ const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
     </div>
 );
 
+// ==========================================
+// SUB-COMPONENTE: MEU HISTÓRICO (COM FILTRO E ORDENAÇÃO CORRIGIDOS)
+// ==========================================
 const MyHistory = ({ currentUserId }) => {
-    const [activeTab, setActiveTab] = useState('feedbacks'); const [searchTerm, setSearchTerm] = useState(''); const [dateFilter, setDateFilter] = useState('');
-    const [data, setData] = useState([]); const [loading, setLoading] = useState(true); const [viewingItem, setViewingItem] = useState(null);
+    const [activeTab, setActiveTab] = useState('feedbacks'); 
+    const [searchTerm, setSearchTerm] = useState(''); 
+    const [dateFilter, setDateFilter] = useState('');
+    
+    const [data, setData] = useState([]); 
+    const [loading, setLoading] = useState(true); 
+    const [viewingItem, setViewingItem] = useState(null);
 
     const getSafeDateString = item => {
-        if (item.date) { if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) { const [y, m, d] = item.date.split('-'); return `${d}/${m}/${y}`; } return item.date; }
+        if (item.date) { 
+            if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) { 
+                const [y, m, d] = item.date.split('-'); 
+                return `${d}/${m}/${y}`; 
+            } 
+            return item.date; 
+        }
         return item.createdAt ? (typeof item.createdAt.toDate === 'function' ? item.createdAt.toDate().toLocaleDateString('pt-BR') : new Date(item.createdAt).toLocaleDateString('pt-BR')) : 'Sem data';
     };
 
     useEffect(() => {
-        setLoading(true); let col = activeTab === 'feedbacks' ? 'feedbacks' : 'weekly_evaluations';
+        setLoading(true); 
+        let col = activeTab === 'feedbacks' ? 'feedbacks' : 'weekly_evaluations';
         const q = query(collection(db, col)); 
+        
         const unsub = onSnapshot(q, snap => {
-            const res = []; snap.forEach(d => { const dt = d.data(); if (dt.colabId === currentUserId || dt.collaboratorId === currentUserId) res.push({ id: d.id, ...dt }); });
-            res.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
-            setData(res); setLoading(false);
+            const res = []; 
+            snap.forEach(d => { 
+                const dt = d.data(); 
+                if (dt.colabId === currentUserId || dt.collaboratorId === currentUserId) {
+                    res.push({ id: d.id, ...dt }); 
+                }
+            });
+            
+            // AQUI É A MÁGICA DA ORDENAÇÃO: 
+            // Lê o texto da data de referência e ordena em ORDEM CRESCENTE baseada nela.
+            res.sort((a, b) => {
+                const timeA = a.date ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+                const timeB = b.date ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+                return timeA - timeB; 
+            });
+            
+            setData(res); 
+            setLoading(false);
         });
         return () => unsub();
     }, [activeTab, currentUserId]);
 
-    const filteredData = data.filter(i => (searchTerm === '' || (i.type && i.type.toLowerCase().includes(searchTerm.toLowerCase()))) && (dateFilter === '' || getSafeDateString(i).includes(dateFilter)));
+    // Extrai os meses e datas disponíveis no banco para montar a lista suspensa
+    const filterOptions = useMemo(() => {
+        const months = new Set();
+        const dates = new Set();
+
+        data.forEach(item => {
+            const safeDate = getSafeDateString(item);
+            if (safeDate && safeDate !== 'Sem data' && safeDate !== 'Data inválida') {
+                dates.add(safeDate);
+                const parts = safeDate.split('/');
+                if (parts.length === 3) {
+                    months.add(`${parts[1]}/${parts[2]}`);
+                }
+            }
+        });
+
+        const sortedDates = Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a));
+        const sortedMonths = Array.from(months).sort((a, b) => {
+            const [m1, y1] = a.split('/');
+            const [m2, y2] = b.split('/');
+            return new Date(y2, m2 - 1, 1).getTime() - new Date(y1, m1 - 1, 1).getTime();
+        });
+
+        return { months: sortedMonths, dates: sortedDates };
+    }, [data]);
+
+    const filteredData = data.filter(i => {
+        const matchSearch = searchTerm === '' || (i.type && i.type.toLowerCase().includes(searchTerm.toLowerCase()));
+        const safeDate = getSafeDateString(i);
+        const matchDate = dateFilter === '' || safeDate.includes(dateFilter);
+        return matchSearch && matchDate;
+    });
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto flex flex-col">
@@ -354,23 +431,90 @@ const MyHistory = ({ currentUserId }) => {
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><History className="w-6 h-6 text-red-600" />Meu Histórico</h1>
                 <p className="text-sm text-gray-500">Acompanhe seus lançamentos e avaliações recebidas.</p>
             </header>
+            
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
                 <div className="flex space-x-2 border-b border-gray-100 pb-4">
                     <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'feedbacks' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}><MessageSquare className="w-4 h-4"/> Feedbacks</button>
                     <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}><TrendingUp className="w-4 h-4"/> Desempenho</button>
                 </div>
-                <div className="flex flex-col md:flex-row gap-4"><div className="flex-1 relative"><Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" /><input type="text" placeholder="Buscar por tipo..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none" /></div><div className="md:w-64 relative"><Calendar className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" /><input type="text" placeholder="Filtrar data (ex: 13/04)" value={dateFilter} onChange={e => setDateFilter(e.target.value)} className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none" /></div></div>
+                
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="flex-1 relative">
+                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                        <input type="text" placeholder="Buscar por tipo..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" />
+                    </div>
+                    
+                    {/* AQUI ESTÁ O NOVO FILTRO SUSPENSO INTELIGENTE DE DATA */}
+                    <div className="md:w-64 relative">
+                        <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
+                        <select 
+                            value={dateFilter}
+                            onChange={(e) => setDateFilter(e.target.value)}
+                            className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none text-sm appearance-none bg-white cursor-pointer text-gray-600 font-medium"
+                        >
+                            <option value="">Todo o Período</option>
+                            {filterOptions.months.length > 0 && (
+                                <optgroup label="Por Mês">
+                                    {filterOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
+                                </optgroup>
+                            )}
+                            {filterOptions.dates.length > 0 && (
+                                <optgroup label="Datas Específicas">
+                                    {filterOptions.dates.map(d => <option key={d} value={d}>{d}</option>)}
+                                </optgroup>
+                            )}
+                        </select>
+                    </div>
+                </div>
             </div>
+
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-                {loading ? <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div> : filteredData.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center"><Database className="w-12 h-12 mb-3 opacity-20" /><p className="text-lg font-medium text-gray-500">Nenhum registro encontrado.</p></div> : (
-                    <div className="overflow-x-auto flex-1"><table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap"><thead className="bg-zinc-950 text-white sticky top-0 z-10"><tr><th className="px-6 py-3 text-left font-semibold">Data</th><th className="px-6 py-3 text-left font-semibold">Resumo</th><th className="px-6 py-3 text-right font-semibold">Ação</th></tr></thead><tbody className="bg-white divide-y divide-gray-200">{filteredData.map(i => (
-                        <tr key={i.id} className="hover:bg-gray-50"><td className="px-6 py-4 text-gray-500">{getSafeDateString(i)}</td><td className="px-6 py-4">{activeTab === 'feedbacks' ? <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${i.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : i.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{i.type}</span> : <span className="text-gray-600">Pontuação: <strong className="text-gray-900">{i.pontuacao || 0} pts</strong></span>}</td><td className="px-6 py-4 text-right"><button onClick={() => setViewingItem(i)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded flex items-center gap-1 ml-auto"><Eye className="w-4 h-4" /> <span className="text-xs font-bold">Ler</span></button></td></tr>
-                    ))}</tbody></table></div>
+                {loading ? <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div> : filteredData.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center"><Database className="w-12 h-12 mb-3 opacity-20" /><p className="text-lg font-medium text-gray-500">Nenhum registro encontrado com estes filtros.</p></div> : (
+                    <div className="overflow-x-auto flex-1">
+                        <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
+                            <thead className="bg-zinc-950 text-white sticky top-0 z-10">
+                                <tr>
+                                    <th className="px-6 py-3 text-left font-semibold">Data</th>
+                                    <th className="px-6 py-3 text-left font-semibold">Resumo</th>
+                                    <th className="px-6 py-3 text-right font-semibold">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {filteredData.map(i => (
+                                    <tr key={i.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4 text-gray-500">{getSafeDateString(i)}</td>
+                                        <td className="px-6 py-4">{activeTab === 'feedbacks' ? <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${i.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : i.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{i.type}</span> : <span className="text-gray-600">Pontuação: <strong className="text-gray-900">{i.pontuacao || 0} pts</strong></span>}</td>
+                                        <td className="px-6 py-4 text-right"><button onClick={() => setViewingItem(i)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded flex items-center gap-1 ml-auto"><Eye className="w-4 h-4" /> <span className="text-xs font-bold">Ler</span></button></td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 )}
             </div>
+
             {viewingItem && (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden"><div className="p-4 bg-zinc-950 text-white flex justify-between items-center"><h3 className="font-bold">Detalhes</h3><button onClick={() => setViewingItem(null)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button></div><div className="p-6 space-y-4 text-sm max-h-[60vh] overflow-y-auto">{Object.entries(viewingItem).map(([k, v]) => { if (['id', 'createdAt', 'colabId', 'collaboratorId', 'colabName'].includes(k)) return null; return <div key={k} className="border-b border-gray-100 pb-2"><span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span><span className="block text-gray-900 mt-1 whitespace-pre-wrap">{v?.toString() || 'Vazio'}</span></div>; })}</div><div className="p-4 bg-gray-50 border-t border-gray-200"><button onClick={() => setViewingItem(null)} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button></div></div>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
+                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center">
+                            <h3 className="font-bold">Detalhes</h3>
+                            <button onClick={() => setViewingItem(null)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
+                        </div>
+                        <div className="p-6 space-y-4 text-sm max-h-[60vh] overflow-y-auto">
+                            {Object.entries(viewingItem).map(([k, v]) => { 
+                                if (['id', 'createdAt', 'colabId', 'collaboratorId', 'colabName'].includes(k)) return null; 
+                                return (
+                                    <div key={k} className="border-b border-gray-100 pb-2">
+                                        <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span>
+                                        <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{v?.toString() || 'Vazio'}</span>
+                                    </div>
+                                ); 
+                            })}
+                        </div>
+                        <div className="p-4 bg-gray-50 border-t border-gray-200">
+                            <button onClick={() => setViewingItem(null)} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>

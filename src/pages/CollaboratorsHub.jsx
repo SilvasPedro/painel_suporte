@@ -1,19 +1,51 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { Users, UserPlus, Edit, FileText, MessageSquare, Sun, Sunset, Moon, X, Loader2, Calendar, Phone, PhoneMissed, CheckCircle, Clock } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, where } from 'firebase/firestore';
-import { db } from '../services/firebase';
-import { auth } from '../services/firebase';
+import { Users, UserPlus, Edit, FileText, MessageSquare, Sun, Sunset, Moon, X, Loader2, Calendar, Phone, PhoneMissed, CheckCircle, Clock, Filter, KeyRound } from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, where, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { db, auth } from '../services/firebase';
 import { registerCollaborator, updateCollaboratorProfile, registerFeedback } from '../services/adminAuth';
 import { useNotification } from '../context/NotificationContext';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+// --- FUNÇÕES AUXILIARES ---
+const parseDateObj = (dateStr) => {
+    if (!dateStr || dateStr === 'Semana Atual' || dateStr === 'Sem data') return 0;
+    if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+    }
+    if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+    }
+    return 0;
+};
+
+const timeToDecimal = (timeStr) => {
+    if (!timeStr) return 0;
+    const parts = timeStr.split(':');
+    if (parts.length !== 3) return 0;
+    const hours = parseInt(parts[0], 10);
+    const minutes = parseInt(parts[1], 10);
+    const seconds = parseInt(parts[2], 10);
+    return (hours * 60) + minutes + (seconds / 60);
+};
+
+const formatTime = (decimalMinutes) => {
+    if (!decimalMinutes && decimalMinutes !== 0) return "00:00:00";
+    const totalSeconds = Math.round(decimalMinutes * 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
 
 const CollaboratorsHub = () => {
     const { showToast } = useNotification();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingColab, setEditingColab] = useState(null);
     const [feedbackColab, setFeedbackColab] = useState(null);
-    const [reportColab, setReportColab] = useState(null); // Estado do Relatório
+    const [reportColab, setReportColab] = useState(null); 
     const [collaborators, setCollaborators] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -112,37 +144,10 @@ const CollaboratorsHub = () => {
                 </div>
             )}
 
-            {/* Renderiza o Modal de Criação */}
-            {isCreateModalOpen && (
-                <CreateCollaboratorModal
-                    onClose={() => setIsCreateModalOpen(false)}
-                    onSuccess={() => setIsCreateModalOpen(false)}
-                />
-            )}
-
-            {/* Renderiza o Modal de Edição */}
-            {editingColab && (
-                <EditCollaboratorModal
-                    colab={editingColab}
-                    onClose={() => setEditingColab(null)}
-                />
-            )}
-
-            {/* Renderiza o Modal de Feedback */}
-            {feedbackColab && (
-                <FeedbackModal
-                    colab={feedbackColab}
-                    onClose={() => setFeedbackColab(null)}
-                />
-            )}
-
-            {/* Renderiza o Modal de Relatório */}
-            {reportColab && (
-                <ReportDashboardModal
-                    colab={reportColab}
-                    onClose={() => setReportColab(null)}
-                />
-            )}
+            {isCreateModalOpen && <CreateCollaboratorModal onClose={() => setIsCreateModalOpen(false)} onSuccess={() => setIsCreateModalOpen(false)} />}
+            {editingColab && <EditCollaboratorModal colab={editingColab} onClose={() => setEditingColab(null)} />}
+            {feedbackColab && <FeedbackModal colab={feedbackColab} onClose={() => setFeedbackColab(null)} />}
+            {reportColab && <ReportDashboardModal colab={reportColab} onClose={() => setReportColab(null)} />}
         </div>
     );
 };
@@ -184,11 +189,6 @@ const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport }) => (
 );
 
 // --- COMPONENTE DO MODAL DE EDIÇÃO ---
-// Não esqueça de importar o sendPasswordResetEmail e o auth no TOPO do arquivo CollaboratorsHub.jsx!
-// import { sendPasswordResetEmail } from 'firebase/auth';
-// import { auth } from '../services/firebase';
-import { KeyRound } from 'lucide-react'; // Adicione também este ícone no import do lucide-react
-
 const EditCollaboratorModal = ({ colab, onClose }) => {
     const { showToast } = useNotification();
     const [formData, setFormData] = useState({
@@ -218,9 +218,7 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
         
         setResetting(true);
         try {
-            // Agora a função real do Firebase está disparando o e-mail!
             await sendPasswordResetEmail(auth, colab.email);
-            
             showToast("E-mail de redefinição enviado com sucesso!", "success");
         } catch (error) {
             console.error(error);
@@ -455,32 +453,11 @@ const FeedbackModal = ({ colab, onClose }) => {
     );
 };
 
-// --- COMPONENTE DO MODAL DE RELATÓRIO (DASHBOARD) ---
-// --- COMPONENTE DO MODAL DE RELATÓRIO (DASHBOARD COM DADOS REAIS) ---
-// --- COMPONENTE DO MODAL DE RELATÓRIO (DASHBOARD COM DADOS REAIS E PONTUAÇÃO) ---
+// --- COMPONENTE DO MODAL DE RELATÓRIO (DASHBOARD COM DADOS REAIS E FILTROS CORRIGIDOS) ---
 const ReportDashboardModal = ({ colab, onClose }) => {
-    const [period, setPeriod] = useState('ultimos_30');
+    const [dateFilter, setDateFilter] = useState('');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    const timeToDecimal = (timeStr) => {
-        if (!timeStr) return 0;
-        const parts = timeStr.split(':');
-        if (parts.length !== 3) return 0;
-        const hours = parseInt(parts[0], 10);
-        const minutes = parseInt(parts[1], 10);
-        const seconds = parseInt(parts[2], 10);
-        return (hours * 60) + minutes + (seconds / 60);
-    };
-
-    const formatTime = (decimalMinutes) => {
-        if (!decimalMinutes && decimalMinutes !== 0) return "00:00:00";
-        const totalSeconds = Math.round(decimalMinutes * 60);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    };
 
     // NOVA FUNÇÃO: Calcula a pontuação baseada na regra de negócio
     const calcularPontuacao = (metrics) => {
@@ -512,17 +489,60 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                     huggyVol: Number(dbData.Atendimentos_Huggy) || 0,
                     tmaTel: timeToDecimal(dbData.TMA_Telefonia),
                     tmaHuggy: timeToDecimal(dbData.TMA_Huggy),
-                    tme: timeToDecimal(dbData.TME_Telefonia)
+                    tme: timeToDecimal(dbData.TME_Telefonia),
+                    createdAt: dbData.createdAt
                 });
             });
+
+            // CORREÇÃO: Ordenando pelo valor matemático da data de referência (Ordem Crescente)
+            fetchedData.sort((a, b) => {
+                const timeA = a.date !== 'Semana Atual' ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+                const timeB = b.date !== 'Semana Atual' ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+                return timeA - timeB; 
+            });
+
             setData(fetchedData);
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [colab.id, period]);
+    }, [colab.id]);
 
-    const currentData = data.length > 0 ? data[data.length - 1] : {
+    // Extrai os meses e datas disponíveis no banco para montar a lista suspensa
+    const filterOptions = useMemo(() => {
+        const months = new Set();
+        const dates = new Set();
+
+        data.forEach(item => {
+            const safeDate = item.date;
+            if (safeDate && safeDate !== 'Sem data' && safeDate !== 'Semana Atual') {
+                dates.add(safeDate);
+                const parts = safeDate.split('/');
+                if (parts.length === 3) {
+                    months.add(`${parts[1]}/${parts[2]}`);
+                }
+            }
+        });
+
+        const sortedDates = Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a));
+        const sortedMonths = Array.from(months).sort((a, b) => {
+            const [m1, y1] = a.split('/');
+            const [m2, y2] = b.split('/');
+            return new Date(y2, m2 - 1, 1).getTime() - new Date(y1, m1 - 1, 1).getTime();
+        });
+
+        return { months: sortedMonths, dates: sortedDates };
+    }, [data]);
+
+    // Aplica o filtro de data selecionado aos dados
+    const filteredData = useMemo(() => {
+        return data.filter(item => {
+            if (dateFilter === '') return true;
+            return item.date.includes(dateFilter);
+        });
+    }, [data, dateFilter]);
+
+    const currentData = filteredData.length > 0 ? filteredData[filteredData.length - 1] : {
         finalizados: 0, ligAtendidas: 0, ligPerdidas: 0, huggyVol: 0, tmaTel: 0, tme: 0, tmaHuggy: 0
     };
 
@@ -537,7 +557,7 @@ const ReportDashboardModal = ({ colab, onClose }) => {
     return (
         <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[70] backdrop-blur-sm">
             <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
-                <div className="p-5 bg-zinc-950 flex justify-between items-center text-white shrink-0">
+                <div className="p-5 bg-zinc-950 flex flex-col md:flex-row justify-between items-start md:items-center text-white shrink-0 gap-4">
                     <div>
                         <h2 className="text-xl font-bold flex items-center gap-2">
                             <FileText className="w-5 h-5 text-red-500" />
@@ -545,34 +565,45 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                         </h2>
                         <p className="text-sm text-zinc-400">Analisando métricas de: <span className="text-white font-medium">{colab.name}</span></p>
                     </div>
-                    <div className="flex items-center gap-4">
-                        <select 
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            className="bg-zinc-900 border border-zinc-700 text-sm rounded-lg px-3 py-2 outline-none focus:border-red-500 transition-colors text-white"
-                        >
-                            <option value="ultimos_30">Últimos 30 dias</option>
-                            <option value="este_mes">Este mês</option>
-                            <option value="todo_periodo">Todo o período</option>
-                        </select>
-                        <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors">
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                        <div className="relative flex-1 md:w-64">
+                            <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                            <select 
+                                value={dateFilter}
+                                onChange={(e) => setDateFilter(e.target.value)}
+                                className="w-full pl-9 pr-4 py-2 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm appearance-none bg-zinc-900 cursor-pointer text-white font-medium"
+                            >
+                                <option value="">Todo o Período</option>
+                                {filterOptions.months.length > 0 && (
+                                    <optgroup label="Por Mês" className="bg-white text-gray-900">
+                                        {filterOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </optgroup>
+                                )}
+                                {filterOptions.dates.length > 0 && (
+                                    <optgroup label="Datas Específicas" className="bg-white text-gray-900">
+                                        {filterOptions.dates.map(d => <option key={d} value={d}>{d}</option>)}
+                                    </optgroup>
+                                )}
+                            </select>
+                        </div>
+                        <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors shrink-0">
                             <X className="w-6 h-6" />
                         </button>
                     </div>
                 </div>
 
                 <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                    {data.length === 0 ? (
+                    {filteredData.length === 0 ? (
                         <div className="text-center py-20 flex flex-col items-center justify-center">
                             <FileText className="w-16 h-16 text-gray-300 mb-4" />
                             <h3 className="text-lg font-bold text-gray-700">Nenhum dado encontrado</h3>
-                            <p className="text-gray-500">Ainda não há avaliações lançadas para este colaborador.</p>
+                            <p className="text-gray-500">Ainda não há avaliações lançadas neste período para este colaborador.</p>
                         </div>
                     ) : (
                         <>
                             <div className="bg-white border border-gray-200 p-3 rounded-xl flex items-center gap-2 shadow-sm">
                                 <Calendar className="w-5 h-5 text-red-600" />
-                                <span className="font-medium text-gray-700">Visualizando dados de:</span>
+                                <span className="font-medium text-gray-700">Visualizando dados mais recentes em:</span>
                                 <span className="font-bold text-gray-900">{currentData.date || 'Último lançamento'}</span>
                             </div>
 
@@ -584,7 +615,7 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                                     </h3>
                                     <div className="h-64">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={data}>
+                                            <BarChart data={filteredData}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                                                 <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
                                                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
@@ -603,7 +634,7 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                                         </h3>
                                         <div className="h-56">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={data}>
+                                                <LineChart data={filteredData}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                                                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
                                                     <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} tickFormatter={formatTime} />
@@ -621,7 +652,7 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                                         </h3>
                                         <div className="h-56">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={data}>
+                                                <LineChart data={filteredData}>
                                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
                                                     <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
                                                     <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} tickFormatter={formatTime} />
@@ -635,12 +666,10 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
-                                {/* CARD ATUALIZADO AQUI */}
                                 <ReportCard 
                                     title="Pontuação Total" 
                                     value={`${calcularPontuacao(currentData)} pts`} 
                                     valueColor={calcularPontuacao(currentData) < 0 ? "text-red-600" : "text-amber-500"} 
-                                    // icon={<Award className="w-4 h-4 text-amber-500"/>} <-- Descomente essa linha se tiver adicionado o Award no topo do arquivo
                                 />
                                 <ReportCard title="Atend. Finalizados" value={currentData.finalizados} valueColor="text-emerald-600" />
                                 <ReportCard title="Lig. Recebidas" value={currentData.ligAtendidas} icon={<Phone className="w-4 h-4 text-blue-500"/>} />
