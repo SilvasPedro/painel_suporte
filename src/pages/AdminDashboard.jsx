@@ -97,7 +97,7 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-white">Admin</p>
-                            <p className="text-xs text-zinc-500">Gestão de TI</p>
+                            <p className="text-xs text-zinc-500">Gestão de Suporte</p>
                         </div>
                     </div>
                     <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
