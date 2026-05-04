@@ -4,14 +4,15 @@ import {
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Settings as SettingsIcon, Users, CheckCircle, Filter
 } from 'lucide-react';
-import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext'; 
+import { useNotification } from '../context/NotificationContext';
 import Settings from './Settings';
 import Reports from './Reports'; 
-import logo from '../assets/logo.png'
+import logo from '../assets/logo.png';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -35,7 +36,8 @@ const translateKey = (key) => {
         TMA_Telefonia: 'TMA Telefonia',
         TMA_Huggy: 'TMA Huggy',
         TME_Telefonia: 'TME Telefonia',
-        pontuacao: 'Pontuação'
+        pontuacao: 'Pontuação',
+        read: 'Status de Leitura'
     };
     return dictionary[key] || key;
 };
@@ -183,8 +185,8 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [allEvals, setAllEvals] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
     
-    // ATUALIZADO: Contador incluindo 'inProgress'
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
+    const [unreadFeedbacks, setUnreadFeedbacks] = useState(0); // NOVO ESTADO: Feedbacks não lidos
 
     const formatChartDate = (dateString) => {
         if (!dateString) return '';
@@ -214,7 +216,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setAllEvals(evals); setLoading(false);
         });
 
-        // ATUALIZADO: Contabilizando 'Em Andamento'
         const qReports = query(collection(db, "critical_reports"), where("creatorId", "==", currentUserId));
         const unsubReports = onSnapshot(qReports, (snap) => {
             let pending = 0; let inProgress = 0; let resolved = 0;
@@ -227,7 +228,20 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setReportCounts({ pending, inProgress, resolved });
         });
 
-        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); };
+        // NOVO LISTENER: Ouvinte de Feedbacks Não Lidos
+        const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
+            let unreadCount = 0;
+            snap.forEach(doc => {
+                const data = doc.data();
+                // Verifica se o feedback é do usuário atual e se o status 'read' é falso/inexistente
+                if ((data.colabId === currentUserId || data.collaboratorId === currentUserId) && !data.read) {
+                    unreadCount++;
+                }
+            });
+            setUnreadFeedbacks(unreadCount);
+        });
+
+        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); };
     }, [currentUserId]);
 
     const { myStats, chartData, shiftAvgPts } = useMemo(() => {
@@ -273,7 +287,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
-            {/* CABEÇALHO EM CARD COM CONTADORES DE RELATÓRIOS ATUALIZADOS */}
             <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
@@ -281,7 +294,17 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
                 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
-                    {/* Pendente */}
+                    {/* NOVO CARTÃO: Feedbacks Não Lidos */}
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-fuchsia-50 px-4 py-2.5 rounded-lg border border-fuchsia-100 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-fuchsia-500 rounded-md shrink-0">
+                            <MessageSquare className="w-4 h-4 text-white" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-fuchsia-600 uppercase tracking-tight line-clamp-1">Feedbacks Novos</span>
+                            <span className="text-xl font-black text-fuchsia-900 leading-tight">{unreadFeedbacks}</span>
+                        </div>
+                    </div>
+
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-amber-50 px-4 py-2.5 rounded-lg border border-amber-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-amber-500 rounded-md shrink-0">
                             <Clock className="w-4 h-4 text-white" />
@@ -292,7 +315,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                         </div>
                     </div>
 
-                    {/* Em Andamento - ADICIONADO */}
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-blue-500 rounded-md shrink-0">
                             <Loader2 className="w-4 h-4 text-white animate-spin" />
@@ -303,7 +325,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                         </div>
                     </div>
 
-                    {/* Resolvido */}
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-lg border border-emerald-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-emerald-500 rounded-md shrink-0">
                             <CheckCircle className="w-4 h-4 text-white" />
@@ -364,9 +385,18 @@ const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
     </div>
 );
 
+// ==========================================
+// SUB-COMPONENTE: MEU HISTÓRICO 
+// ==========================================
 const MyHistory = ({ currentUserId }) => {
-    const [activeTab, setActiveTab] = useState('feedbacks'); const [searchTerm, setSearchTerm] = useState(''); const [dateFilter, setDateFilter] = useState('');
-    const [data, setData] = useState([]); const [loading, setLoading] = useState(true); const [viewingItem, setViewingItem] = useState(null);
+    const { showToast } = useNotification();
+    const [activeTab, setActiveTab] = useState('feedbacks'); 
+    const [searchTerm, setSearchTerm] = useState(''); 
+    const [dateFilter, setDateFilter] = useState('');
+    
+    const [data, setData] = useState([]); 
+    const [loading, setLoading] = useState(true); 
+    const [viewingItem, setViewingItem] = useState(null);
 
     const getSafeDateString = item => {
         if (item.date) { 
@@ -396,7 +426,7 @@ const MyHistory = ({ currentUserId }) => {
             res.sort((a, b) => {
                 const timeA = a.date ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
                 const timeB = b.date ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-                return timeA - timeB; 
+                return timeB - timeA; // Mostra os mais recentes primeiro
             });
             
             setData(res); 
@@ -404,6 +434,25 @@ const MyHistory = ({ currentUserId }) => {
         });
         return () => unsub();
     }, [activeTab, currentUserId]);
+
+    // MARCAR COMO LIDO
+    const handleMarkAsRead = async (id) => {
+        try {
+            await updateDoc(doc(db, "feedbacks", id), { read: true });
+            showToast("Feedback marcado como lido!", "success");
+        } catch (error) {
+            console.error("Erro ao marcar feedback como lido:", error);
+            showToast("Erro ao atualizar status.", "error");
+        }
+    };
+
+    // ABRIR ITEM E MARCAR COMO LIDO AUTOMATICAMENTE
+    const handleViewItem = (item) => {
+        setViewingItem(item);
+        if (activeTab === 'feedbacks' && !item.read) {
+            handleMarkAsRead(item.id);
+        }
+    };
 
     const filterOptions = useMemo(() => {
         const months = new Set();
@@ -446,8 +495,12 @@ const MyHistory = ({ currentUserId }) => {
             
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
                 <div className="flex space-x-2 border-b border-gray-100 pb-4">
-                    <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'feedbacks' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}><MessageSquare className="w-4 h-4"/> Feedbacks</button>
-                    <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}><TrendingUp className="w-4 h-4"/> Desempenho</button>
+                    <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'feedbacks' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                        <MessageSquare className="w-4 h-4"/> Feedbacks
+                    </button>
+                    <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                        <TrendingUp className="w-4 h-4"/> Desempenho
+                    </button>
                 </div>
                 
                 <div className="flex flex-col md:flex-row gap-4">
@@ -487,15 +540,42 @@ const MyHistory = ({ currentUserId }) => {
                                 <tr>
                                     <th className="px-6 py-3 text-left font-semibold">Data</th>
                                     <th className="px-6 py-3 text-left font-semibold">Resumo</th>
-                                    <th className="px-6 py-3 text-right font-semibold">Ação</th>
+                                    <th className="px-6 py-3 text-right font-semibold">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
                                 {filteredData.map(i => (
-                                    <tr key={i.id} className="hover:bg-gray-50">
+                                    <tr key={i.id} className={`hover:bg-gray-50 transition-colors ${activeTab === 'feedbacks' && !i.read ? 'bg-fuchsia-50/20' : ''}`}>
                                         <td className="px-6 py-4 text-gray-500">{getSafeDateString(i)}</td>
-                                        <td className="px-6 py-4">{activeTab === 'feedbacks' ? <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${i.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : i.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{i.type}</span> : <span className="text-gray-600">Pontuação: <strong className="text-gray-900">{i.pontuacao || 0} pts</strong></span>}</td>
-                                        <td className="px-6 py-4 text-right"><button onClick={() => setViewingItem(i)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded flex items-center gap-1 ml-auto"><Eye className="w-4 h-4" /> <span className="text-xs font-bold">Ler</span></button></td>
+                                        <td className="px-6 py-4">
+                                            {activeTab === 'feedbacks' ? (
+                                                <div className="flex items-center gap-2">
+                                                    {!i.read && <span className="w-2 h-2 rounded-full bg-fuchsia-500" title="Feedback não lido"></span>}
+                                                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${i.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : i.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{i.type}</span>
+                                                </div>
+                                            ) : (
+                                                <span className="text-gray-600">Pontuação: <strong className="text-gray-900">{i.pontuacao || 0} pts</strong></span>
+                                            )}
+                                        </td>
+                                        <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
+                                            {activeTab === 'feedbacks' && (
+                                                !i.read ? (
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleMarkAsRead(i.id); }}
+                                                        className="text-[11px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase tracking-tight transition-colors"
+                                                    >
+                                                        Marcar como lido
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tight flex items-center gap-1">
+                                                        <CheckCircle className="w-3 h-3"/> Lido
+                                                    </span>
+                                                )
+                                            )}
+                                            <button onClick={() => handleViewItem(i)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded flex items-center gap-1">
+                                                <Eye className="w-4 h-4" /> <span className="text-xs font-bold">Ler</span>
+                                            </button>
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -513,7 +593,7 @@ const MyHistory = ({ currentUserId }) => {
                         </div>
                         <div className="p-6 space-y-4 text-sm max-h-[60vh] overflow-y-auto">
                             {Object.entries(viewingItem).map(([k, v]) => { 
-                                if (['id', 'createdAt', 'colabId', 'collaboratorId', 'colabName'].includes(k)) return null; 
+                                if (['id', 'createdAt', 'colabId', 'collaboratorId', 'colabName', 'read'].includes(k)) return null; 
                                 return (
                                     <div key={k} className="border-b border-gray-100 pb-2">
                                         <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span>
