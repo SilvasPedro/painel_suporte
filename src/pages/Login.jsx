@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, Activity, ArrowRight, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
+import logo from '../assets/logo.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -32,8 +33,8 @@ const Login = () => {
           
           <div>
             <div className="flex items-center gap-3 mb-12">
-              <div className="p-3 bg-red-600 rounded-lg">
-                <Activity className="w-6 h-6 text-white" />
+              <div className="bg-black rounded-lg">
+                <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
               </div>
               <span className="text-xl font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
             </div>

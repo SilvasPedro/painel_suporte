@@ -11,6 +11,10 @@ import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext'; 
 import Settings from './Settings';
 import Reports from './Reports'; 
+import logo from '../assets/logo.png'
+
+// Importação da logo estendida
+import logoExtended from '../assets/logo_extended.png';
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -77,8 +81,9 @@ const CollaboratorDashboard = ({ currentUserId }) => {
         <div className="min-h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
                 <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
-                    <div className="p-2 bg-red-600 rounded-lg">
-                        <BarChart2 className="w-5 h-5 text-white" />
+                    <div className="flex items-center border-none border-zinc-800 shrink-0">
+                        {/* Tag <img> adicionada aqui para a sua logo estendida */}
+                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
                     </div>
                     <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
                 </div>
@@ -177,7 +182,9 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 }); 
     const [allEvals, setAllEvals] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
-    const [reportStats, setReportCounts] = useState({ pending: 0, resolved: 0 });
+    
+    // ATUALIZADO: Contador incluindo 'inProgress'
+    const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
 
     const formatChartDate = (dateString) => {
         if (!dateString) return '';
@@ -207,15 +214,17 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setAllEvals(evals); setLoading(false);
         });
 
+        // ATUALIZADO: Contabilizando 'Em Andamento'
         const qReports = query(collection(db, "critical_reports"), where("creatorId", "==", currentUserId));
         const unsubReports = onSnapshot(qReports, (snap) => {
-            let pending = 0; let resolved = 0;
+            let pending = 0; let inProgress = 0; let resolved = 0;
             snap.forEach(doc => {
                 const data = doc.data();
                 if (data.status === 'Pendente') pending++;
+                if (data.status === 'Em Andamento') inProgress++;
                 if (data.status === 'Resolvido') resolved++;
             });
-            setReportCounts({ pending, resolved });
+            setReportCounts({ pending, inProgress, resolved });
         });
 
         return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); };
@@ -264,29 +273,43 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
+            {/* CABEÇALHO EM CARD COM CONTADORES DE RELATÓRIOS ATUALIZADOS */}
+            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
                     <p className="text-sm text-gray-500">Visão geral de indicadores e qualidade.</p>
                 </div>
                 
-                <div className="flex gap-4 mt-4 md:mt-0">
-                    <div className="flex items-center gap-3 bg-amber-50 px-4 py-2.5 rounded-lg border border-amber-100 shadow-sm">
-                        <div className="p-1.5 bg-amber-500 rounded-md">
+                <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
+                    {/* Pendente */}
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-amber-50 px-4 py-2.5 rounded-lg border border-amber-100 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-amber-500 rounded-md shrink-0">
                             <Clock className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight">Relatos Pendentes</span>
+                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight line-clamp-1">Relatos Pendentes</span>
                             <span className="text-xl font-black text-amber-900 leading-tight">{reportStats.pending}</span>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-lg border border-emerald-100 shadow-sm">
-                        <div className="p-1.5 bg-emerald-500 rounded-md">
+                    {/* Em Andamento - ADICIONADO */}
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-blue-500 rounded-md shrink-0">
+                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight line-clamp-1">Em Andamento</span>
+                            <span className="text-xl font-black text-blue-900 leading-tight">{reportStats.inProgress}</span>
+                        </div>
+                    </div>
+
+                    {/* Resolvido */}
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-lg border border-emerald-100 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-emerald-500 rounded-md shrink-0">
                             <CheckCircle className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight">Relatos Concluídos</span>
+                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight line-clamp-1">Relatos Concluídos</span>
                             <span className="text-xl font-black text-emerald-900 leading-tight">{reportStats.resolved}</span>
                         </div>
                     </div>
@@ -341,17 +364,9 @@ const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
     </div>
 );
 
-// ==========================================
-// SUB-COMPONENTE: MEU HISTÓRICO (COM FILTRO E ORDENAÇÃO CORRIGIDOS)
-// ==========================================
 const MyHistory = ({ currentUserId }) => {
-    const [activeTab, setActiveTab] = useState('feedbacks'); 
-    const [searchTerm, setSearchTerm] = useState(''); 
-    const [dateFilter, setDateFilter] = useState('');
-    
-    const [data, setData] = useState([]); 
-    const [loading, setLoading] = useState(true); 
-    const [viewingItem, setViewingItem] = useState(null);
+    const [activeTab, setActiveTab] = useState('feedbacks'); const [searchTerm, setSearchTerm] = useState(''); const [dateFilter, setDateFilter] = useState('');
+    const [data, setData] = useState([]); const [loading, setLoading] = useState(true); const [viewingItem, setViewingItem] = useState(null);
 
     const getSafeDateString = item => {
         if (item.date) { 
@@ -378,8 +393,6 @@ const MyHistory = ({ currentUserId }) => {
                 }
             });
             
-            // AQUI É A MÁGICA DA ORDENAÇÃO: 
-            // Lê o texto da data de referência e ordena em ORDEM CRESCENTE baseada nela.
             res.sort((a, b) => {
                 const timeA = a.date ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
                 const timeB = b.date ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
@@ -392,7 +405,6 @@ const MyHistory = ({ currentUserId }) => {
         return () => unsub();
     }, [activeTab, currentUserId]);
 
-    // Extrai os meses e datas disponíveis no banco para montar a lista suspensa
     const filterOptions = useMemo(() => {
         const months = new Set();
         const dates = new Set();
@@ -444,7 +456,6 @@ const MyHistory = ({ currentUserId }) => {
                         <input type="text" placeholder="Buscar por tipo..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" />
                     </div>
                     
-                    {/* AQUI ESTÁ O NOVO FILTRO SUSPENSO INTELIGENTE DE DATA */}
                     <div className="md:w-64 relative">
                         <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
                         <select 
