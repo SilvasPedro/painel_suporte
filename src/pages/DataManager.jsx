@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Database, Search, Calendar, Eye, Edit2, Trash2, X, Loader2, MessageSquare, TrendingUp, Target, AlertTriangle } from 'lucide-react';
+import { Database, Search, Calendar, Eye, Edit2, Trash2, X, Loader2, MessageSquare, TrendingUp, Target, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { collection, onSnapshot, query, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
@@ -24,7 +24,11 @@ const translateKey = (key) => {
         Ligacoes_Perdidas: 'Ligações Perdidas',
         TMA_Telefonia: 'TMA Telefonia',
         TMA_Huggy: 'TMA Huggy',
-        TME_Telefonia: 'TME Telefonia'
+        TME_Telefonia: 'TME Telefonia',
+        evaluatorName: 'Avaliador',
+        evaluatorId: 'ID Avaliador',
+        notes: 'Observações do Auditor',
+        status: 'Status'
     };
     return dictionary[key] || key;
 };
@@ -32,6 +36,7 @@ const translateKey = (key) => {
 const DataManager = () => {
     const { showToast } = useNotification();
     
+    // Adicionado a aba 'audits'
     const [activeTab, setActiveTab] = useState('feedbacks'); 
     const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState('');
@@ -45,16 +50,16 @@ const DataManager = () => {
     const [editingItem, setEditingItem] = useState(null);
     const [deletingItem, setDeletingItem] = useState(null);
 
+    // Mapeamento atualizado das coleções
     const collectionMap = {
         'feedbacks': 'feedbacks', 
         'metrics': 'weekly_evaluations',
-        'kpis': 'sector_kpis'
+        'kpis': 'sector_kpis',
+        'audits': 'qa_audits'
     };
 
-    // Função melhorada para forçar o formato DD/MM/AAAA
     const getSafeDateString = (item) => {
         if (item.date) {
-            // Se vier no formato AAAA-MM-DD do input date, inverte para DD/MM/AAAA
             if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
                 const [year, month, day] = item.date.split('-');
                 return `${day}/${month}/${year}`;
@@ -119,7 +124,8 @@ const DataManager = () => {
         const matchSearch = searchTerm === '' || 
             (item.colabName && item.colabName.toLowerCase().includes(searchTerm.toLowerCase())) ||
             (mappedName.toLowerCase().includes(searchTerm.toLowerCase())) || 
-            (item.type && item.type.toLowerCase().includes(searchTerm.toLowerCase()));
+            (item.type && item.type.toLowerCase().includes(searchTerm.toLowerCase())) ||
+            (activeTab === 'audits' && item.protocol && item.protocol.toLowerCase().includes(searchTerm.toLowerCase()));
             
         const safeDate = getSafeDateString(item);
         const matchDate = dateFilter === '' || safeDate.includes(dateFilter);
@@ -161,10 +167,11 @@ const DataManager = () => {
             </header>
 
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
-                <div className="flex space-x-2 border-b border-gray-100 pb-4">
+                <div className="flex space-x-2 border-b border-gray-100 pb-4 overflow-x-auto">
                     <TabButton active={activeTab === 'feedbacks'} onClick={() => setActiveTab('feedbacks')} icon={<MessageSquare className="w-4 h-4"/>} text="Feedbacks" />
                     <TabButton active={activeTab === 'metrics'} onClick={() => setActiveTab('metrics')} icon={<TrendingUp className="w-4 h-4"/>} text="Desempenho" />
                     <TabButton active={activeTab === 'kpis'} onClick={() => setActiveTab('kpis')} icon={<Target className="w-4 h-4"/>} text="KPIs do Setor" />
+                    <TabButton active={activeTab === 'audits'} onClick={() => setActiveTab('audits')} icon={<ShieldCheck className="w-4 h-4"/>} text="Auditorias QA" />
                 </div>
 
                 <div className="flex flex-col md:flex-row gap-4">
@@ -172,7 +179,7 @@ const DataManager = () => {
                         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
                         <input 
                             type="text" 
-                            placeholder={activeTab === 'kpis' ? "Busca desativada para KPIs globais..." : "Buscar por colaborador ou tipo..."}
+                            placeholder={activeTab === 'kpis' ? "Busca desativada para KPIs globais..." : "Buscar por colaborador, tipo, ou protocolo..."}
                             disabled={activeTab === 'kpis'}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -247,6 +254,11 @@ const DataManager = () => {
                                                     FCR: <strong className="text-gray-900">{item.fcr}%</strong> | TMR: <strong className="text-gray-900">{item.tmr}</strong> | Reincidência: <strong className="text-gray-900">{item.recurrence}%</strong>
                                                 </span>
                                             )}
+                                            {activeTab === 'audits' && (
+                                                <span className="text-gray-600">
+                                                    Status: <strong className={item.status === 'Conforme' ? 'text-emerald-600' : 'text-red-600'}>{item.status}</strong> | Protocolo: <strong className="text-gray-900">{item.protocol || '--'}</strong>
+                                                </span>
+                                            )}
                                         </td>
                                         
                                         <td className="px-6 py-4 text-right flex justify-end gap-2">
@@ -270,7 +282,7 @@ const DataManager = () => {
 
             {viewingItem && <ViewModal item={viewingItem} collaboratorsMap={collaboratorsMap} onClose={() => setViewingItem(null)} />}
             {deletingItem && <DeleteModal onClose={() => setDeletingItem(null)} onConfirm={handleDelete} />}
-            {editingItem && <EditModal item={editingItem} collaboratorsMap={collaboratorsMap} onClose={() => setEditingItem(null)} onSave={handleEditSave} />}
+            {editingItem && <EditModal activeTab={activeTab} item={editingItem} collaboratorsMap={collaboratorsMap} onClose={() => setEditingItem(null)} onSave={handleEditSave} />}
         </div>
     );
 };
@@ -278,7 +290,7 @@ const DataManager = () => {
 const TabButton = ({ active, onClick, icon, text }) => (
     <button 
         onClick={onClick}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${
             active ? 'bg-red-600 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'
         }`}
     >
@@ -334,7 +346,7 @@ const DeleteModal = ({ onClose, onConfirm }) => (
     </div>
 );
 
-const EditModal = ({ item, collaboratorsMap, onClose, onSave }) => {
+const EditModal = ({ activeTab, item, collaboratorsMap, onClose, onSave }) => {
     const [formData, setFormData] = useState({ ...item });
 
     const handleChange = (key, value) => {
@@ -377,8 +389,10 @@ const EditModal = ({ item, collaboratorsMap, onClose, onSave }) => {
                                         >
                                             <option value="Chat">Chat</option>
                                             <option value="Telefone">Telefone</option>
+                                            <option value="WhatsApp">WhatsApp</option>
+                                            <option value="E-mail">E-mail</option>
                                             <option value="Presencial">Presencial</option>
-                                            <option value="Sistema">Sistema</option>
+                                            <option value="Videoconferência">Videoconferência</option>
                                         </select>
                                     </div>
                                 );
@@ -396,13 +410,32 @@ const EditModal = ({ item, collaboratorsMap, onClose, onSave }) => {
                                         >
                                             <option value="Elogio">Elogio</option>
                                             <option value="Ponto de Melhoria">Ponto de Melhoria</option>
-                                            <option value="Orientação">Orientação</option>
+                                            <option value="Reclamação">Reclamação</option>
+                                            <option value="Sugestão">Sugestão</option>
+                                            <option value="Dúvida">Dúvida</option>
                                         </select>
                                     </div>
                                 );
                             }
 
-                            if (key === 'comment' || key === 'comentario') {
+                            // LISTA SUSPENSA PARA STATUS DA AUDITORIA
+                            if (key === 'status' && activeTab === 'audits') {
+                                return (
+                                    <div key={key}>
+                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{translateKey(key)}</label>
+                                        <select 
+                                            value={value} 
+                                            onChange={(e) => handleChange(key, e.target.value)}
+                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
+                                        >
+                                            <option value="Conforme">Conforme</option>
+                                            <option value="Não Conforme">Não Conforme</option>
+                                        </select>
+                                    </div>
+                                );
+                            }
+
+                            if (key === 'comment' || key === 'notes' || key === 'comentario') {
                                 return (
                                     <div key={key}>
                                         <label className="block text-xs font-bold text-gray-500 uppercase mb-1">{translateKey(key)}</label>
@@ -424,7 +457,7 @@ const EditModal = ({ item, collaboratorsMap, onClose, onSave }) => {
                                         value={value} 
                                         onChange={(e) => handleChange(key, typeof value === 'number' ? Number(e.target.value) : e.target.value)}
                                         className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none disabled:bg-gray-100"
-                                        disabled={key === 'createdBy'}
+                                        disabled={key === 'createdBy' || key === 'evaluatorName' || key === 'evaluatorId'}
                                     />
                                 </div>
                             );

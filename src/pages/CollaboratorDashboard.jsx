@@ -12,10 +12,10 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import Settings from './Settings';
 import Reports from './Reports'; 
-import logo from '../assets/logo.png';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
+import logo from '../assets/logo.png'
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -37,7 +37,10 @@ const translateKey = (key) => {
         TMA_Huggy: 'TMA Huggy',
         TME_Telefonia: 'TME Telefonia',
         pontuacao: 'Pontuação',
-        read: 'Status de Leitura'
+        read: 'Status de Leitura',
+        status: 'Resultado QA',
+        notes: 'Observações do Auditor',
+        evaluatorName: 'Auditado por'
     };
     return dictionary[key] || key;
 };
@@ -82,7 +85,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     return (
         <div className="min-h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
-                <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
+             <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
                     <div className="flex items-center border-none border-zinc-800 shrink-0">
                         {/* Tag <img> adicionada aqui para a sua logo estendida */}
                         <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
@@ -186,7 +189,8 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [colabsFull, setColabsFull] = useState({});
     
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
-    const [unreadFeedbacks, setUnreadFeedbacks] = useState(0); // NOVO ESTADO: Feedbacks não lidos
+    const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
+    const [myAudits, setMyAudits] = useState([]); 
 
     const formatChartDate = (dateString) => {
         if (!dateString) return '';
@@ -228,12 +232,10 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setReportCounts({ pending, inProgress, resolved });
         });
 
-        // NOVO LISTENER: Ouvinte de Feedbacks Não Lidos
         const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
             let unreadCount = 0;
             snap.forEach(doc => {
                 const data = doc.data();
-                // Verifica se o feedback é do usuário atual e se o status 'read' é falso/inexistente
                 if ((data.colabId === currentUserId || data.collaboratorId === currentUserId) && !data.read) {
                     unreadCount++;
                 }
@@ -241,8 +243,22 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setUnreadFeedbacks(unreadCount);
         });
 
-        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); };
+        const qAudits = query(collection(db, "qa_audits"), where("colabId", "==", currentUserId));
+        const unsubAudits = onSnapshot(qAudits, (snap) => {
+            const fetched = [];
+            snap.forEach(d => fetched.push(d.data()));
+            setMyAudits(fetched);
+        });
+
+        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); unsubAudits(); };
     }, [currentUserId]);
+
+    const qaStats = useMemo(() => {
+        const total = myAudits.length;
+        const conformes = myAudits.filter(a => a.status === 'Conforme').length;
+        const taxa = total > 0 ? ((conformes / total) * 100).toFixed(1) : "0.0";
+        return { total, taxa };
+    }, [myAudits]);
 
     const { myStats, chartData, shiftAvgPts } = useMemo(() => {
         const defaultStats = { totalPoints: 0, avgPoints: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00' };
@@ -294,7 +310,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
                 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
-                    {/* NOVO CARTÃO: Feedbacks Não Lidos */}
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-fuchsia-50 px-4 py-2.5 rounded-lg border border-fuchsia-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-fuchsia-500 rounded-md shrink-0">
                             <MessageSquare className="w-4 h-4 text-white" />
@@ -353,7 +368,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                     <DashboardCard title="Média do Meu Turno" value={shiftAvgPts} subtitle="Última semana (Equipe)" icon={<Users className="w-5 h-5 text-blue-500" />} />
                     <DashboardCard title="Média TMA Tel" value={myStats.avgTmaTel} subtitle="Tempo médio em linha" icon={<Phone className="w-5 h-5 text-rose-500" />} />
                     <DashboardCard title="Média TMA Chat" value={myStats.avgTmaHuggy} subtitle="Tempo médio no Huggy" icon={<MessageSquare className="w-5 h-5 text-indigo-400" />} />
-                    <DashboardCard title="Conformidade QA" value="87.5%" subtitle="Baseado em 8 auditorias" icon={<ShieldCheck className="w-5 h-5 text-amber-500" />} />
+                    <DashboardCard title="Conformidade QA" value={`${qaStats.taxa}%`} subtitle={`Baseado em ${qaStats.total} auditorias`} icon={<ShieldCheck className="w-5 h-5 text-amber-500" />} />
                 </div>
             </div>
 
@@ -411,7 +426,11 @@ const MyHistory = ({ currentUserId }) => {
 
     useEffect(() => {
         setLoading(true); 
-        let col = activeTab === 'feedbacks' ? 'feedbacks' : 'weekly_evaluations';
+        let col = '';
+        if (activeTab === 'feedbacks') col = 'feedbacks';
+        else if (activeTab === 'metrics') col = 'weekly_evaluations';
+        else if (activeTab === 'audits') col = 'qa_audits';
+
         const q = query(collection(db, col)); 
         
         const unsub = onSnapshot(q, snap => {
@@ -426,7 +445,7 @@ const MyHistory = ({ currentUserId }) => {
             res.sort((a, b) => {
                 const timeA = a.date ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
                 const timeB = b.date ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-                return timeB - timeA; // Mostra os mais recentes primeiro
+                return timeB - timeA; 
             });
             
             setData(res); 
@@ -435,18 +454,15 @@ const MyHistory = ({ currentUserId }) => {
         return () => unsub();
     }, [activeTab, currentUserId]);
 
-    // MARCAR COMO LIDO
     const handleMarkAsRead = async (id) => {
         try {
             await updateDoc(doc(db, "feedbacks", id), { read: true });
             showToast("Feedback marcado como lido!", "success");
         } catch (error) {
-            console.error("Erro ao marcar feedback como lido:", error);
             showToast("Erro ao atualizar status.", "error");
         }
     };
 
-    // ABRIR ITEM E MARCAR COMO LIDO AUTOMATICAMENTE
     const handleViewItem = (item) => {
         setViewingItem(item);
         if (activeTab === 'feedbacks' && !item.read) {
@@ -457,26 +473,18 @@ const MyHistory = ({ currentUserId }) => {
     const filterOptions = useMemo(() => {
         const months = new Set();
         const dates = new Set();
-
         data.forEach(item => {
             const safeDate = getSafeDateString(item);
-            if (safeDate && safeDate !== 'Sem data' && safeDate !== 'Data inválida') {
+            if (safeDate && safeDate !== 'Sem data') {
                 dates.add(safeDate);
                 const parts = safeDate.split('/');
-                if (parts.length === 3) {
-                    months.add(`${parts[1]}/${parts[2]}`);
-                }
+                if (parts.length === 3) months.add(`${parts[1]}/${parts[2]}`);
             }
         });
-
-        const sortedDates = Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a));
-        const sortedMonths = Array.from(months).sort((a, b) => {
-            const [m1, y1] = a.split('/');
-            const [m2, y2] = b.split('/');
-            return new Date(y2, m2 - 1, 1).getTime() - new Date(y1, m1 - 1, 1).getTime();
-        });
-
-        return { months: sortedMonths, dates: sortedDates };
+        return { 
+            months: Array.from(months).sort((a, b) => b.localeCompare(a)), 
+            dates: Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a)) 
+        };
     }, [data]);
 
     const filteredData = data.filter(i => {
@@ -494,19 +502,22 @@ const MyHistory = ({ currentUserId }) => {
             </header>
             
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
-                <div className="flex space-x-2 border-b border-gray-100 pb-4">
-                    <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'feedbacks' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                <div className="flex space-x-2 border-b border-gray-100 pb-4 overflow-x-auto">
+                    <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'feedbacks' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                         <MessageSquare className="w-4 h-4"/> Feedbacks
                     </button>
-                    <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                         <TrendingUp className="w-4 h-4"/> Desempenho
+                    </button>
+                    <button onClick={() => setActiveTab('audits')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'audits' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                        <ShieldCheck className="w-4 h-4"/> Auditorias
                     </button>
                 </div>
                 
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1 relative">
                         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-                        <input type="text" placeholder="Buscar por tipo..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" />
+                        <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" />
                     </div>
                     
                     <div className="md:w-64 relative">
@@ -533,7 +544,7 @@ const MyHistory = ({ currentUserId }) => {
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-                {loading ? <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div> : filteredData.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center"><Database className="w-12 h-12 mb-3 opacity-20" /><p className="text-lg font-medium text-gray-500">Nenhum registro encontrado com estes filtros.</p></div> : (
+                {loading ? <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div> : filteredData.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center"><Database className="w-12 h-12 mb-3 opacity-20" /><p className="text-lg font-medium text-gray-500">Nenhum registro encontrado.</p></div> : (
                     <div className="overflow-x-auto flex-1">
                         <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
                             <thead className="bg-zinc-950 text-white sticky top-0 z-10">
@@ -548,29 +559,24 @@ const MyHistory = ({ currentUserId }) => {
                                     <tr key={i.id} className={`hover:bg-gray-50 transition-colors ${activeTab === 'feedbacks' && !i.read ? 'bg-fuchsia-50/20' : ''}`}>
                                         <td className="px-6 py-4 text-gray-500">{getSafeDateString(i)}</td>
                                         <td className="px-6 py-4">
-                                            {activeTab === 'feedbacks' ? (
+                                            {activeTab === 'feedbacks' && (
                                                 <div className="flex items-center gap-2">
-                                                    {!i.read && <span className="w-2 h-2 rounded-full bg-fuchsia-500" title="Feedback não lido"></span>}
+                                                    {!i.read && <span className="w-2 h-2 rounded-full bg-fuchsia-500"></span>}
                                                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${i.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : i.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}>{i.type}</span>
                                                 </div>
-                                            ) : (
+                                            )}
+                                            {activeTab === 'metrics' && (
                                                 <span className="text-gray-600">Pontuação: <strong className="text-gray-900">{i.pontuacao || 0} pts</strong></span>
+                                            )}
+                                            {activeTab === 'audits' && (
+                                                <span className="text-gray-600">
+                                                    Status: <strong className={i.status === 'Conforme' ? 'text-emerald-600' : 'text-red-600'}>{i.status}</strong> | Protocolo: <strong className="text-gray-900">{i.protocol || '--'}</strong>
+                                                </span>
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-right flex justify-end gap-4 items-center">
-                                            {activeTab === 'feedbacks' && (
-                                                !i.read ? (
-                                                    <button 
-                                                        onClick={(e) => { e.stopPropagation(); handleMarkAsRead(i.id); }}
-                                                        className="text-[11px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase tracking-tight transition-colors"
-                                                    >
-                                                        Marcar como lido
-                                                    </button>
-                                                ) : (
-                                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-tight flex items-center gap-1">
-                                                        <CheckCircle className="w-3 h-3"/> Lido
-                                                    </span>
-                                                )
+                                            {activeTab === 'feedbacks' && !i.read && (
+                                                <button onClick={(e) => { e.stopPropagation(); handleMarkAsRead(i.id); }} className="text-[11px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase transition-colors">Marcar como lido</button>
                                             )}
                                             <button onClick={() => handleViewItem(i)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded flex items-center gap-1">
                                                 <Eye className="w-4 h-4" /> <span className="text-xs font-bold">Ler</span>
@@ -586,23 +592,37 @@ const MyHistory = ({ currentUserId }) => {
 
             {viewingItem && (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
                             <h3 className="font-bold">Detalhes</h3>
                             <button onClick={() => setViewingItem(null)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
                         </div>
-                        <div className="p-6 space-y-4 text-sm max-h-[60vh] overflow-y-auto">
+                        <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
                             {Object.entries(viewingItem).map(([k, v]) => { 
-                                if (['id', 'createdAt', 'colabId', 'collaboratorId', 'colabName', 'read'].includes(k)) return null; 
+                                // Ocultando os campos de controle de sistema para não poluir a tela
+                                if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId'].includes(k)) return null; 
+                                
+                                // Tratamento de segurança para objetos de data gerados pelo Firebase
+                                let displayValue = v;
+                                if (v && typeof v === 'object') {
+                                    if (typeof v.toDate === 'function') {
+                                        displayValue = v.toDate().toLocaleString('pt-BR');
+                                    } else if (v.seconds !== undefined) {
+                                        displayValue = new Date(v.seconds * 1000).toLocaleString('pt-BR');
+                                    } else {
+                                        displayValue = JSON.stringify(v);
+                                    }
+                                }
+
                                 return (
                                     <div key={k} className="border-b border-gray-100 pb-2">
                                         <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span>
-                                        <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{v?.toString() || 'Vazio'}</span>
+                                        <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayValue?.toString() || 'Vazio'}</span>
                                     </div>
                                 ); 
                             })}
                         </div>
-                        <div className="p-4 bg-gray-50 border-t border-gray-200">
+                        <div className="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
                             <button onClick={() => setViewingItem(null)} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button>
                         </div>
                     </div>

@@ -3,7 +3,7 @@ import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
     TrendingUp, Clock, Star, ClipboardList, Target,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
-    Award, AlertTriangle, Database, CheckCircle, Loader2
+    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck
 } from 'lucide-react';
 import { collection, onSnapshot, doc, query } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -17,6 +17,7 @@ import DataManager from './DataManager';
 import Settings from './Settings';
 import Reports from './Reports'; // Garantindo que a tela de relatórios está importada
 import logo from '../assets/logo.png'
+import Audits from './Audits';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -29,6 +30,8 @@ const AdminDashboard = () => {
                 return <CollaboratorsHub />;
             case 'metrics':
                 return <WeeklyMetrics />;
+            case 'audits':
+                return <Audits />;
             case 'sector_kpis':
                 return <SectorKPIs />;
             case 'data_manager':
@@ -82,6 +85,11 @@ const AdminDashboard = () => {
                     <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <ClipboardList className="w-5 h-5" />
                         <span className="font-medium">Relatórios Críticos</span>
+                    </button>
+
+                    <button onClick={() => setActiveTab('audits')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'audits' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <ShieldCheck className="w-5 h-5" />
+                        <span className="font-medium">Auditorias QA</span>
                     </button>
 
                     <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
