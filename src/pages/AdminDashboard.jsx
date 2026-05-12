@@ -15,9 +15,12 @@ import WeeklyMetrics from './WeeklyMetrics';
 import SectorKPIs from './SectorKPIs';
 import DataManager from './DataManager';
 import Settings from './Settings';
-import Reports from './Reports'; // Garantindo que a tela de relatórios está importada
-import logo from '../assets/logo.png'
+import Reports from './Reports';
 import Audits from './Audits';
+
+// Importação da logo estendida
+import logoExtended from '../assets/logo_extended.png';
+import logo from '../assets/logo.png'
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
@@ -30,14 +33,14 @@ const AdminDashboard = () => {
                 return <CollaboratorsHub />;
             case 'metrics':
                 return <WeeklyMetrics />;
-            case 'audits':
-                return <Audits />;
             case 'sector_kpis':
                 return <SectorKPIs />;
             case 'data_manager':
                 return <DataManager />;
             case 'reports':
                 return <Reports />;
+            case 'audits':
+                return <Audits />;
             case 'settings':
                 return <Settings />;
             default:
@@ -105,7 +108,7 @@ const AdminDashboard = () => {
                         </div>
                         <div>
                             <p className="text-sm font-medium text-white">Admin</p>
-                            <p className="text-xs text-zinc-500">Gestão de Suporte</p>
+                            <p className="text-xs text-zinc-500">Gestão de TI</p>
                         </div>
                     </div>
                     <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
@@ -177,8 +180,10 @@ const DashboardOverview = () => {
     const [evalsList, setEvalsList] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
 
-    // Novo estado para controlar os relatórios do setor
     const [reportStats, setReportStats] = useState({ pending: 0, inProgress: 0, resolved: 0 });
+
+    // NOVO ESTADO: Estatísticas de QA Reais
+    const [qaStats, setQaStats] = useState({ taxa: 0, total: 0 });
 
     useEffect(() => {
         const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
@@ -208,7 +213,6 @@ const DashboardOverview = () => {
             setEvalsList(evals);
         });
 
-        // Ouvinte dos Relatórios Críticos em Tempo Real
         const unsubReports = onSnapshot(collection(db, "critical_reports"), (snap) => {
             let pending = 0;
             let inProgress = 0;
@@ -224,10 +228,23 @@ const DashboardOverview = () => {
             setReportStats({ pending, inProgress, resolved });
         });
 
-        return () => { unsubGoals(); unsubKpi(); unsubColabs(); unsubEvals(); unsubReports(); };
+        // NOVO: Ouvinte de Auditorias QA para cálculo da média real da equipe
+        const unsubAudits = onSnapshot(collection(db, "qa_audits"), (snap) => {
+            let total = 0;
+            let conformes = 0;
+
+            snap.forEach(doc => {
+                total++;
+                if (doc.data().status === 'Conforme') conformes++;
+            });
+
+            const taxaResult = total > 0 ? ((conformes / total) * 100).toFixed(1) : 0;
+            setQaStats({ taxa: taxaResult, total: total });
+        });
+
+        return () => { unsubGoals(); unsubKpi(); unsubColabs(); unsubEvals(); unsubReports(); unsubAudits(); };
     }, []);
 
-    // --- CÁLCULO INTELIGENTE DAS MÉDIAS E DO ACUMULADO ---
     const teamStats = useMemo(() => {
         const defaultStats = {
             avgVol: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00',
@@ -327,7 +344,6 @@ const DashboardOverview = () => {
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
 
-            {/* CABEÇALHO COM MINI CARDS DE RELATÓRIOS */}
             <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Visão Geral da Gestão</h1>
@@ -335,7 +351,6 @@ const DashboardOverview = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto">
-                    {/* Pendente */}
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-amber-50 px-4 py-2.5 rounded-lg border border-amber-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-amber-500 rounded-md shrink-0">
                             <Clock className="w-4 h-4 text-white" />
@@ -346,7 +361,6 @@ const DashboardOverview = () => {
                         </div>
                     </div>
 
-                    {/* Em Andamento */}
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-blue-500 rounded-md shrink-0">
                             <Loader2 className="w-4 h-4 text-white animate-spin" />
@@ -357,7 +371,6 @@ const DashboardOverview = () => {
                         </div>
                     </div>
 
-                    {/* Resolvido */}
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-lg border border-emerald-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-emerald-500 rounded-md shrink-0">
                             <CheckCircle className="w-4 h-4 text-white" />
@@ -409,6 +422,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-3 font-medium">Meta: ≤ {goals.recurrence}%</div>
                     </div>
 
+                    {/* CARD QA ATUALIZADO COM DADOS REAIS */}
                     <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
                         <div className="absolute top-5 left-5 flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                             <Star className="w-4 h-4 text-amber-400" /> % QA (Equipe)
@@ -417,8 +431,21 @@ const DashboardOverview = () => {
                         <div className="mt-8 h-24 w-full">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={[{ value: 72.6 }, { value: 27.4 }]} cx="50%" cy="100%" startAngle={180} endAngle={0} innerRadius={60} outerRadius={80} dataKey="value" stroke="none">
-                                        <Cell fill="#ef4444" />
+                                    <Pie
+                                        data={[
+                                            { value: Number(qaStats.taxa) },
+                                            { value: 100 - Number(qaStats.taxa) }
+                                        ]}
+                                        cx="50%"
+                                        cy="100%"
+                                        startAngle={180}
+                                        endAngle={0}
+                                        innerRadius={60}
+                                        outerRadius={80}
+                                        dataKey="value"
+                                        stroke="none"
+                                    >
+                                        <Cell fill={Number(qaStats.taxa) >= 80 ? "#10b981" : "#ef4444"} />
                                         <Cell fill="#f3f4f6" />
                                     </Pie>
                                 </PieChart>
@@ -426,9 +453,11 @@ const DashboardOverview = () => {
                         </div>
 
                         <div className="absolute bottom-8 flex flex-col items-center">
-                            <span className="text-2xl font-extrabold text-red-600 tracking-tight">72.6%</span>
+                            <span className={`text-2xl font-extrabold tracking-tight ${Number(qaStats.taxa) >= 80 ? "text-emerald-600" : "text-red-600"}`}>
+                                {qaStats.taxa}%
+                            </span>
                         </div>
-                        <div className="text-[10px] text-gray-400 mt-2 font-medium">Média do departamento</div>
+                        <div className="text-[10px] text-gray-400 mt-2 font-medium">Baseado em {qaStats.total} auditorias</div>
                     </div>
                 </div>
             </div>
