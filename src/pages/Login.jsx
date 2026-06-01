@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Mail, Lock, Activity, ArrowRight, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
 import logo from '../assets/logo.png';
 
@@ -9,12 +11,27 @@ const Login = () => {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  const navigate = useNavigate();
+  const { currentUser } = useAuth();
+
+  // Escuta as mudanças de login. Se o usuário estiver logado, redireciona para o painel correto.
+  useEffect(() => {
+    if (currentUser) {
+      if (currentUser.role === 'Admin') {
+        navigate('/admin', { replace: true });
+      } else {
+        navigate('/collaborator', { replace: true });
+      }
+    }
+  }, [currentUser, navigate]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
     try {
       await login(email, password);
+      // O redirecionamento acontece automaticamente pelo useEffect acima assim que o Firebase confirmar o login
     } catch (err) {
       setError("Credenciais inválidas. Verifique os dados e tente novamente.");
       setIsLoading(false);

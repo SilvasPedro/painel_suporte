@@ -51,7 +51,7 @@ const AdminDashboard = () => {
     return (
         <div className="min-h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
-                <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
+             <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
                     <div className="flex items-center border-none border-zinc-800 shrink-0">
                         {/* Tag <img> adicionada aqui para a sua logo estendida */}
                         <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
@@ -125,10 +125,6 @@ const AdminDashboard = () => {
     );
 };
 
-// ==========================================
-// VISÃO GERAL (DASHBOARD REAL-TIME)
-// ==========================================
-
 const timeToDecimal = (timeStr) => {
     if (!timeStr) return 0;
     const parts = timeStr.split(':');
@@ -179,11 +175,9 @@ const DashboardOverview = () => {
 
     const [evalsList, setEvalsList] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
+    const [auditsList, setAuditsList] = useState([]);
 
     const [reportStats, setReportStats] = useState({ pending: 0, inProgress: 0, resolved: 0 });
-
-    // NOVO ESTADO: Estatísticas de QA Reais
-    const [qaStats, setQaStats] = useState({ taxa: 0, total: 0 });
 
     useEffect(() => {
         const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
@@ -203,7 +197,7 @@ const DashboardOverview = () => {
 
         const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
             const map = {};
-            snap.forEach(d => map[d.id] = d.data());
+            snap.forEach(d => map[d.id] = { id: d.id, ...d.data() });
             setColabsFull(map);
         });
 
@@ -214,37 +208,43 @@ const DashboardOverview = () => {
         });
 
         const unsubReports = onSnapshot(collection(db, "critical_reports"), (snap) => {
-            let pending = 0;
-            let inProgress = 0;
-            let resolved = 0;
-
+            let pending = 0; let inProgress = 0; let resolved = 0;
             snap.forEach(doc => {
                 const data = doc.data();
                 if (data.status === 'Pendente') pending++;
                 else if (data.status === 'Em Andamento') inProgress++;
                 else if (data.status === 'Resolvido') resolved++;
             });
-
             setReportStats({ pending, inProgress, resolved });
         });
 
-        // NOVO: Ouvinte de Auditorias QA para cálculo da média real da equipe
         const unsubAudits = onSnapshot(collection(db, "qa_audits"), (snap) => {
-            let total = 0;
-            let conformes = 0;
-
-            snap.forEach(doc => {
-                total++;
-                if (doc.data().status === 'Conforme') conformes++;
-            });
-
-            const taxaResult = total > 0 ? ((conformes / total) * 100).toFixed(1) : 0;
-            setQaStats({ taxa: taxaResult, total: total });
+            const fetched = [];
+            snap.forEach(doc => fetched.push(doc.data()));
+            setAuditsList(fetched);
         });
 
         return () => { unsubGoals(); unsubKpi(); unsubColabs(); unsubEvals(); unsubReports(); unsubAudits(); };
     }, []);
 
+    // --- LÓGICA DE QA IGNORANDO INATIVOS ---
+    const qaStats = useMemo(() => {
+        let total = 0;
+        let conformes = 0;
+
+        auditsList.forEach(audit => {
+            const colabInfo = colabsFull[audit.colabId];
+            if (colabInfo && colabInfo.active !== false) {
+                total++;
+                if (audit.status === 'Conforme') conformes++;
+            }
+        });
+
+        const taxaResult = total > 0 ? ((conformes / total) * 100).toFixed(1) : 0;
+        return { taxa: taxaResult, total };
+    }, [auditsList, colabsFull]);
+
+    // --- LÓGICA DA EQUIPE IGNORANDO INATIVOS ---
     const teamStats = useMemo(() => {
         const defaultStats = {
             avgVol: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00',
@@ -259,14 +259,18 @@ const DashboardOverview = () => {
 
         evalsList.forEach(e => {
             const colabId = e.colabId || e.collaboratorId;
-            let pts = e.pontuacao;
-            if (pts === undefined) {
-                pts = (Number(e.Atendimentos_Finalizados || 0) * 1) +
-                    (Number(e.Ligacoes_Atendidas || 0) * 2) +
-                    (Number(e.Atendimentos_Huggy || 0) * 1) +
-                    (Number(e.Ligacoes_Perdidas || 0) * -5);
+            const colabInfo = colabsFull[colabId];
+
+            if (colabInfo && colabInfo.active !== false) {
+                let pts = e.pontuacao;
+                if (pts === undefined) {
+                    pts = (Number(e.Atendimentos_Finalizados || 0) * 1) +
+                        (Number(e.Ligacoes_Atendidas || 0) * 2) +
+                        (Number(e.Atendimentos_Huggy || 0) * 1) +
+                        (Number(e.Ligacoes_Perdidas || 0) * -5);
+                }
+                accumulatedPoints[colabId] = (accumulatedPoints[colabId] || 0) + pts;
             }
-            accumulatedPoints[colabId] = (accumulatedPoints[colabId] || 0) + pts;
         });
 
         let topDay = { val: -Infinity, id: '' };
@@ -274,7 +278,7 @@ const DashboardOverview = () => {
 
         Object.entries(accumulatedPoints).forEach(([colabId, score]) => {
             const colabInfo = colabsFull[colabId];
-            if (colabInfo) {
+            if (colabInfo && colabInfo.active !== false) {
                 if ((colabInfo.shift === 'Manhã' || colabInfo.shift === 'Tarde') && score > topDay.val) {
                     topDay = { val: score, id: colabId };
                 } else if (colabInfo.shift === 'Noite' && score > topNight.val) {
@@ -291,30 +295,33 @@ const DashboardOverview = () => {
         let sumPtsNight = 0, countNight = 0;
         let maxTel = { val: -1, id: '' };
         let maxHuggy = { val: -1, id: '' };
+        let activeCurrentWeekCount = 0;
 
         if (currentWeek.length > 0) {
             currentWeek.forEach(e => {
-                sumVol += Number(e.Atendimentos_Finalizados) || 0;
-                const telDec = timeToDecimal(e.TMA_Telefonia);
-                const huggyDec = timeToDecimal(e.TMA_Huggy);
-
-                sumTmaTel += telDec;
-                sumTmaHuggy += huggyDec;
-
                 const colabId = e.colabId || e.collaboratorId;
-                if (telDec > maxTel.val) maxTel = { val: telDec, id: colabId };
-                if (huggyDec > maxHuggy.val) maxHuggy = { val: huggyDec, id: colabId };
-
-                let currentPts = e.pontuacao;
-                if (currentPts === undefined) {
-                    currentPts = (Number(e.Atendimentos_Finalizados || 0) * 1) +
-                        (Number(e.Ligacoes_Atendidas || 0) * 2) +
-                        (Number(e.Atendimentos_Huggy || 0) * 1) +
-                        (Number(e.Ligacoes_Perdidas || 0) * -5);
-                }
-
                 const colabInfo = colabsFull[colabId];
-                if (colabInfo) {
+
+                if (colabInfo && colabInfo.active !== false) {
+                    activeCurrentWeekCount++;
+                    sumVol += Number(e.Atendimentos_Finalizados) || 0;
+                    const telDec = timeToDecimal(e.TMA_Telefonia);
+                    const huggyDec = timeToDecimal(e.TMA_Huggy);
+
+                    sumTmaTel += telDec;
+                    sumTmaHuggy += huggyDec;
+
+                    if (telDec > maxTel.val) maxTel = { val: telDec, id: colabId };
+                    if (huggyDec > maxHuggy.val) maxHuggy = { val: huggyDec, id: colabId };
+
+                    let currentPts = e.pontuacao;
+                    if (currentPts === undefined) {
+                        currentPts = (Number(e.Atendimentos_Finalizados || 0) * 1) +
+                            (Number(e.Ligacoes_Atendidas || 0) * 2) +
+                            (Number(e.Atendimentos_Huggy || 0) * 1) +
+                            (Number(e.Ligacoes_Perdidas || 0) * -5);
+                    }
+
                     if (colabInfo.shift === 'Manhã' || colabInfo.shift === 'Tarde') {
                         sumPtsDay += currentPts;
                         countDay++;
@@ -326,10 +333,10 @@ const DashboardOverview = () => {
             });
         }
 
-        const count = currentWeek.length || 1;
+        const count = activeCurrentWeekCount || 1;
 
         return {
-            avgVol: currentWeek.length > 0 ? Math.round(sumVol / count) : 0,
+            avgVol: activeCurrentWeekCount > 0 ? Math.round(sumVol / count) : 0,
             avgTmaTel: formatTime(sumTmaTel / count),
             avgTmaHuggy: formatTime(sumTmaHuggy / count),
             maxTmaTel: { val: formatTime(maxTel.val), name: colabsFull[maxTel.id]?.name || '--' },
@@ -343,7 +350,6 @@ const DashboardOverview = () => {
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
-
             <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Visão Geral da Gestão</h1>
@@ -422,13 +428,12 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-3 font-medium">Meta: ≤ {goals.recurrence}%</div>
                     </div>
 
-                    {/* CARD QA ATUALIZADO COM DADOS REAIS */}
                     <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
                         <div className="absolute top-5 left-5 flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                            <Star className="w-4 h-4 text-amber-400" /> % QA (Equipe)
+                            <Star className="w-4 h-4 text-amber-400" /> % QA (Equipe Ativa)
                         </div>
 
-                        <div className="mt-8 h-24 w-full">
+                        <div className="mt-8 w-full" style={{ minHeight: '96px', height: '100px' }}>
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie

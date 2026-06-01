@@ -1,46 +1,139 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { messaging } from './services/firebase';
+import { getToken } from 'firebase/messaging';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from './services/firebase';
 
-// Importando as Telas
+// Importação das páginas
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import CollaboratorDashboard from './pages/CollaboratorDashboard';
 
+// ==========================================
+// GERENCIADOR DE NOTIFICAÇÕES (Invisível)
+// ==========================================
+// ==========================================
+// GERENCIADOR DE NOTIFICAÇÕES (Invisível)
+// ==========================================
+const NotificationManager = () => {
+    const { currentUser } = useAuth();
+
+    useEffect(() => {
+        if (currentUser) {
+            requestNotificationPermission();
+        }
+    }, [currentUser]);
+
+    const requestNotificationPermission = async () => {
+        try {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                const token = await getToken(messaging, { 
+                    vapidKey: 'BGK2ZQE-DyWlwEk00nwgXppWc8kmJfidnErECA81peK1iUHkgf32D_9NgXxL73N7mED68U1ZEzRvT43tGQ1x0Vg' 
+                });
+                
+                if (token) {
+                    console.log('Token FCM gerado com sucesso:', token);
+                    
+                    // NOVA PARTE: Salva o token no documento do colaborador
+                    if (currentUser.firestoreId) {
+                        try {
+                            await updateDoc(doc(db, 'collaborators', currentUser.firestoreId), {
+                                fcmToken: token
+                            });
+                            console.log('Token salvo no perfil do usuário com sucesso!');
+                        } catch (e) {
+                            console.error('Erro ao salvar token no banco:', e);
+                        }
+                    }
+
+                } else {
+                    console.log('Nenhum token de registro disponível.');
+                }
+            } else {
+                console.log('Permissão para notificações foi negada pelo usuário.');
+            }
+        } catch (error) {
+            console.error('Erro ao pedir permissão para notificações:', error);
+        }
+    };
+
+    return null; 
+};
+
+// ==========================================
+// PROTEÇÃO DE ROTAS
+// ==========================================
+const PrivateRoute = ({ children, requiredRole }) => {
+    const { currentUser, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (requiredRole === 'Admin' && currentUser.role !== 'Admin') {
+        return <Navigate to="/collaborator" replace />;
+    }
+
+    return children;
+};
+
+// ==========================================
+// GERENCIADOR DE ROTAS (Filho do AuthProvider)
+// ==========================================
 const AppRoutes = () => {
-  const { currentUser, userRole, loading } = useAuth();
+    const { currentUser } = useAuth(); // Agora funciona perfeitamente!
 
-  // 1. Tela de carregamento enquanto o Firebase decide se o cara tá logado ou não
-  if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-      </div>
+        <Routes>
+            <Route path="/login" element={<Login />} />
+            
+            {/* Rota do Gestor */}
+            <Route path="/admin/*" element={
+                <PrivateRoute requiredRole="Admin">
+                    <AdminDashboard />
+                </PrivateRoute>
+            } />
+            
+            {/* Rota do Colaborador */}
+            <Route path="/collaborator/*" element={
+                <PrivateRoute>
+                    <CollaboratorDashboard currentUserId={currentUser?.firestoreId} />
+                </PrivateRoute>
+            } />
+
+            {/* Redirecionamento Padrão */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
     );
-  }
-
-  // 2. Se não tem ninguém logado, mostra o Login
-  if (!currentUser) {
-    return <Login />;
-  }
-
-  // 3. Se logou e for admin/gestor, mostra o dashboard completo da gestão
-  if (userRole === 'admin') {
-    return <AdminDashboard />;
-  }
-
-  // 4. Se logou e for colaborador comum, manda pro dashboard individual DELE
-  return <CollaboratorDashboard currentUserId={currentUser.firestoreId} />;
 };
 
-const App = () => {
-  return (
-    <NotificationProvider>
-      <AuthProvider>
-        <AppRoutes />
-      </AuthProvider>
-    </NotificationProvider>
-  );
-};
+// ==========================================
+// APP PRINCIPAL
+// ==========================================
+function App() {
+    return (
+        <NotificationProvider>
+            <AuthProvider>
+                <BrowserRouter>
+                    <NotificationManager />
+                    <AppRoutes /> {/* As rotas agora ficam aqui dentro */}
+                </BrowserRouter>
+            </AuthProvider>
+        </NotificationProvider>
+    );
+}
 
 export default App;

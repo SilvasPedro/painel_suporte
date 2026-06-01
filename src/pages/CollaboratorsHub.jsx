@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { Users, UserPlus, Edit, FileText, MessageSquare, Sun, Sunset, Moon, X, Loader2, Calendar, Phone, PhoneMissed, CheckCircle, Clock, Filter, KeyRound } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, where, doc, updateDoc, addDoc, deleteDoc } from 'firebase/firestore';
+import { 
+    Users, UserPlus, Edit, FileText, MessageSquare, 
+    X, Loader2, Calendar, Phone, PhoneMissed, 
+    CheckCircle, Clock, Filter, KeyRound, UserX, UserCheck 
+} from 'lucide-react';
+import { collection, onSnapshot, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
 import { registerCollaborator, updateCollaboratorProfile, registerFeedback } from '../services/adminAuth';
 import { useNotification } from '../context/NotificationContext';
@@ -49,7 +53,7 @@ const CollaboratorsHub = () => {
     const [collaborators, setCollaborators] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // --- CONEXÃO EM TEMPO REAL COM O FIREBASE ---
+    // --- CONEXÃO EM TEMPO REAL ---
     useEffect(() => {
         const q = query(collection(db, "collaborators"), orderBy("name", "asc"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
@@ -67,11 +71,23 @@ const CollaboratorsHub = () => {
         return () => unsubscribe();
     }, []);
 
-    // --- LÓGICA DO GRÁFICO DE TURNOS ---
-    const total = collaborators.length;
-    const manha = collaborators.filter(c => c.shift === 'Manhã').length;
-    const tarde = collaborators.filter(c => c.shift === 'Tarde').length;
-    const noite = collaborators.filter(c => c.shift === 'Noite').length;
+    // --- FUNÇÃO DE INATIVAÇÃO ---
+    const handleToggleActive = async (colab) => {
+        try {
+            const newStatus = colab.active === false ? true : false;
+            await updateDoc(doc(db, "collaborators", colab.id), { active: newStatus });
+            showToast(`Colaborador ${newStatus ? 'ativado' : 'inativado'} com sucesso!`, "success");
+        } catch (error) {
+            showToast("Erro ao alterar status: " + error.message, "error");
+        }
+    };
+
+    // --- LÓGICA DO GRÁFICO DE TURNOS (APENAS ATIVOS) ---
+    const activeColabs = collaborators.filter(c => c.active !== false);
+    const total = activeColabs.length;
+    const manha = activeColabs.filter(c => c.shift === 'Manhã').length;
+    const tarde = activeColabs.filter(c => c.shift === 'Tarde').length;
+    const noite = activeColabs.filter(c => c.shift === 'Noite').length;
     const getPercent = (value) => total > 0 ? (value / total) * 100 : 0;
 
     if (loading) {
@@ -87,7 +103,7 @@ const CollaboratorsHub = () => {
             <header className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Hub de Colaboradores</h1>
-                    <p className="text-sm text-gray-500">Total de {total} colaboradores registrados.</p>
+                    <p className="text-sm text-gray-500">Total de {total} colaboradores <strong>ativos</strong> na equipe.</p>
                 </div>
                 <button
                     onClick={() => setIsCreateModalOpen(true)}
@@ -100,7 +116,7 @@ const CollaboratorsHub = () => {
 
             {/* Gráfico de Distribuição por Turno */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-8">
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Distribuição por Turno</h2>
+                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Distribuição da Equipe Ativa</h2>
                 <div className="flex items-center gap-4 mb-3">
                     <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden flex">
                         <div style={{ width: `${getPercent(manha)}%` }} className="bg-amber-400 transition-all duration-700"></div>
@@ -139,6 +155,7 @@ const CollaboratorsHub = () => {
                             onEdit={() => setEditingColab(colab)}
                             onFeedback={() => setFeedbackColab(colab)}
                             onReport={() => setReportColab(colab)}
+                            onToggleActive={() => handleToggleActive(colab)}
                         />
                     ))}
                 </div>
@@ -153,14 +170,17 @@ const CollaboratorsHub = () => {
 };
 
 // --- COMPONENTE DO CARD ---
-const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport }) => (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-red-200">
+const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport, onToggleActive }) => (
+    <div className={`bg-white rounded-xl border ${colab.active === false ? 'border-gray-200 opacity-60' : 'border-gray-200'} shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-red-200`}>
         <div className="p-5 border-b border-gray-100 flex items-start gap-4">
-            <div className="w-12 h-12 rounded-full bg-zinc-950 text-white flex items-center justify-center font-bold text-lg flex-shrink-0">
+            <div className={`w-12 h-12 rounded-full ${colab.active === false ? 'bg-gray-400' : 'bg-zinc-950'} text-white flex items-center justify-center font-bold text-lg flex-shrink-0`}>
                 {colab.name?.charAt(0)}
             </div>
             <div className="overflow-hidden">
-                <h3 className="font-bold text-gray-900 truncate">{colab.name}</h3>
+                <div className="flex items-center gap-2 mb-1">
+                    <h3 className="font-bold text-gray-900 truncate">{colab.name}</h3>
+                    {colab.active === false && <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 uppercase">Inativo</span>}
+                </div>
                 <p className="text-xs text-gray-500 mb-2 truncate">{colab.email}</p>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
                     colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
@@ -171,7 +191,7 @@ const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport }) => (
             </div>
         </div>
 
-        <div className="p-2 bg-gray-50 grid grid-cols-3 gap-1">
+        <div className="p-2 bg-gray-50 grid grid-cols-4 gap-1">
             <button onClick={onEdit} className="flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-zinc-950 hover:bg-white rounded-lg transition-all">
                 <Edit className="w-4 h-4" />
                 <span className="text-[9px] font-bold uppercase">Editar</span>
@@ -183,6 +203,10 @@ const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport }) => (
             <button onClick={onFeedback} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
                 <MessageSquare className="w-4 h-4" />
                 <span className="text-[9px] font-bold uppercase">Feedback</span>
+            </button>
+            <button onClick={onToggleActive} className={`flex flex-col items-center gap-1 p-2 ${colab.active === false ? 'text-emerald-600' : 'text-red-600'} hover:bg-white rounded-lg transition-all`}>
+                {colab.active === false ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                <span className="text-[9px] font-bold uppercase">{colab.active === false ? 'Ativar' : 'Inativar'}</span>
             </button>
         </div>
     </div>
@@ -272,7 +296,6 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
                     </div>
                 </form>
 
-                {/* ZONA DE PERIGO: Reset de Senha */}
                 <div className="p-6 bg-red-50 border-t border-red-100 flex items-center justify-between">
                     <div>
                         <h4 className="text-sm font-bold text-red-800">Acesso</h4>
@@ -296,7 +319,7 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
 // --- COMPONENTE DO MODAL DE CRIAÇÃO ---
 const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
     const { showToast } = useNotification();
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'Analista de Suporte', shift: 'Manhã' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'Analista de Suporte', shift: 'Manhã', active: true });
     const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (e) => {
@@ -453,13 +476,12 @@ const FeedbackModal = ({ colab, onClose }) => {
     );
 };
 
-// --- COMPONENTE DO MODAL DE RELATÓRIO (DASHBOARD COM DADOS REAIS E FILTROS CORRIGIDOS) ---
+// --- COMPONENTE DO MODAL DE RELATÓRIO ---
 const ReportDashboardModal = ({ colab, onClose }) => {
     const [dateFilter, setDateFilter] = useState('');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // NOVA FUNÇÃO: Calcula a pontuação baseada na regra de negócio
     const calcularPontuacao = (metrics) => {
         if (!metrics) return 0;
         const ptsFinalizados = (metrics.finalizados || 0) * 1;
@@ -494,7 +516,6 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                 });
             });
 
-            // CORREÇÃO: Ordenando pelo valor matemático da data de referência (Ordem Crescente)
             fetchedData.sort((a, b) => {
                 const timeA = a.date !== 'Semana Atual' ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
                 const timeB = b.date !== 'Semana Atual' ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
@@ -508,7 +529,6 @@ const ReportDashboardModal = ({ colab, onClose }) => {
         return () => unsubscribe();
     }, [colab.id]);
 
-    // Extrai os meses e datas disponíveis no banco para montar a lista suspensa
     const filterOptions = useMemo(() => {
         const months = new Set();
         const dates = new Set();
@@ -534,7 +554,6 @@ const ReportDashboardModal = ({ colab, onClose }) => {
         return { months: sortedMonths, dates: sortedDates };
     }, [data]);
 
-    // Aplica o filtro de data selecionado aos dados
     const filteredData = useMemo(() => {
         return data.filter(item => {
             if (dateFilter === '') return true;
@@ -666,16 +685,11 @@ const ReportDashboardModal = ({ colab, onClose }) => {
                             </div>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
-                                <ReportCard 
-                                    title="Pontuação Total" 
-                                    value={`${calcularPontuacao(currentData)} pts`} 
-                                    valueColor={calcularPontuacao(currentData) < 0 ? "text-red-600" : "text-amber-500"} 
-                                />
+                                <ReportCard title="Pontuação Total" value={`${calcularPontuacao(currentData)} pts`} valueColor={calcularPontuacao(currentData) < 0 ? "text-red-600" : "text-amber-500"} />
                                 <ReportCard title="Atend. Finalizados" value={currentData.finalizados} valueColor="text-emerald-600" />
                                 <ReportCard title="Lig. Recebidas" value={currentData.ligAtendidas} icon={<Phone className="w-4 h-4 text-blue-500"/>} />
                                 <ReportCard title="Lig. Perdidas" value={currentData.ligPerdidas} valueColor="text-red-600" icon={<PhoneMissed className="w-4 h-4 text-red-500"/>} />
                                 <ReportCard title="Vol. Huggy" value={currentData.huggyVol} />
-                                
                                 <ReportCard title="TMA Tel" value={formatTime(currentData.tmaTel)} valueColor="text-blue-600" />
                                 <ReportCard title="TME Tel" value={formatTime(currentData.tme)} />
                                 <ReportCard title="TMA Huggy" value={formatTime(currentData.tmaHuggy)} valueColor="text-purple-600" />
@@ -690,13 +704,8 @@ const ReportDashboardModal = ({ colab, onClose }) => {
 
 const ReportCard = ({ title, value, valueColor = "text-gray-900", icon }) => (
     <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-            {icon}
-            {title}
-        </div>
-        <div className={`text-2xl font-black ${valueColor}`}>
-            {value}
-        </div>
+        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{icon}{title}</div>
+        <div className={`text-2xl font-black ${valueColor}`}>{value}</div>
     </div>
 );
 

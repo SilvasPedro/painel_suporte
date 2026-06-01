@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getMessaging } from "firebase/messaging";
 
 // Substitua pelos seus dados reais do console
 export const firebaseConfig = {
@@ -18,4 +19,5 @@ const app = initializeApp(firebaseConfig);
 
 // Exporta as instâncias para usar nos componentes
 export const db = getFirestore(app);
+export const messaging = getMessaging(app);
 export const auth = getAuth(app);
