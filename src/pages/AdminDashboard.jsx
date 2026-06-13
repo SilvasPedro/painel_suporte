@@ -49,7 +49,7 @@ const AdminDashboard = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex overflow-hidden">
+        <div className="h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
              <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
                     <div className="flex items-center border-none border-zinc-800 shrink-0">

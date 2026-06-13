@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-    ShieldCheck, Plus, Search, Eye, Edit2, Trash2, X, Loader2, 
-    AlertTriangle, CheckCircle, XCircle, BarChart2, Award, FileText
+    ShieldCheck, Plus, Search, Edit2, Trash2, X, Loader2, 
+    AlertTriangle, CheckCircle, XCircle, BarChart2, Award, FileText, Settings, ListChecks
 } from 'lucide-react';
 import { collection, onSnapshot, query, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -12,7 +12,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 const Audits = () => {
     const { showToast } = useNotification();
     const { currentUser } = useAuth();
+    
     const [audits, setAudits] = useState([]);
+    const [qaProcesses, setQaProcesses] = useState([]);
     const [collaboratorsMap, setCollaboratorsMap] = useState({});
     const [collaboratorsList, setCollaboratorsList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,17 +23,23 @@ const Audits = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
     
+    // Formulário do Modal
     const [editingId, setEditingId] = useState(null);
     const [formData, setFormData] = useState({
         colabId: '',
         date: new Date().toISOString().split('T')[0],
         protocol: '',
+        processId: '',
+        processName: '',
         status: 'Conforme',
-        notes: ''
+        notes: '',
+        checklistResults: {} // Armazena { "Pergunta 1": "Conforme", "Pergunta 2": "Não Conforme" }
     });
+    const [activeChecklist, setActiveChecklist] = useState([]);
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
+        // Busca Colaboradores
         const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
             const map = {};
             const list = [];
@@ -44,24 +52,32 @@ const Audits = () => {
             setCollaboratorsList(list);
         });
 
+        // Busca Processos/Checklists de QA
+        const unsubProcesses = onSnapshot(collection(db, "qa_processes"), (snap) => {
+            const fetched = [];
+            snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
+            fetched.sort((a, b) => a.name.localeCompare(b.name));
+            setQaProcesses(fetched);
+        });
+
+        // Busca Auditorias
         const qAudits = query(collection(db, "qa_audits"));
         const unsubAudits = onSnapshot(qAudits, (snap) => {
             const fetched = [];
             snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
-            
             fetched.sort((a, b) => {
                 const dateA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
                 const dateB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
                 return dateB - dateA;
             });
-            
             setAudits(fetched);
             setLoading(false);
         });
 
-        return () => { unsubColabs(); unsubAudits(); };
+        return () => { unsubColabs(); unsubProcesses(); unsubAudits(); };
     }, []);
 
+    // --- CÁLCULOS DO DASHBOARD E RANKING ---
     const { dashboardStats, rankingData, pieData } = useMemo(() => {
         const stats = { total: 0, conformes: 0, naoConformes: 0, taxa: 0 };
         const colabStats = {};
@@ -95,9 +111,14 @@ const Audits = () => {
         return { dashboardStats: stats, rankingData: ranking, pieData: pData };
     }, [audits, collaboratorsMap]);
 
+    // --- AÇÕES DO MODAL ---
     const openNewModal = () => {
         setEditingId(null);
-        setFormData({ colabId: '', date: new Date().toISOString().split('T')[0], protocol: '', status: 'Conforme', notes: '' });
+        setFormData({ 
+            colabId: '', date: new Date().toISOString().split('T')[0], protocol: '', 
+            processId: '', processName: '', status: 'Conforme', notes: '', checklistResults: {} 
+        });
+        setActiveChecklist([]);
         setIsModalOpen(true);
     };
 
@@ -107,18 +128,46 @@ const Audits = () => {
             colabId: audit.colabId || '',
             date: audit.date || '',
             protocol: audit.protocol || '',
+            processId: audit.processId || '',
+            processName: audit.processName || '',
             status: audit.status || 'Conforme',
-            notes: audit.notes || ''
+            notes: audit.notes || '',
+            checklistResults: audit.checklistResults || {}
         });
+        
+        // Carrega a checklist do processo salvo, se existir
+        const process = qaProcesses.find(p => p.id === audit.processId);
+        setActiveChecklist(process ? process.checklist : []);
         setIsModalOpen(true);
+    };
+
+    const handleProcessChange = (e) => {
+        const procId = e.target.value;
+        const process = qaProcesses.find(p => p.id === procId);
+        
+        setFormData({
+            ...formData,
+            processId: procId,
+            processName: process ? process.name : '',
+            checklistResults: {} // Limpa as respostas se trocar de processo
+        });
+        setActiveChecklist(process ? process.checklist : []);
+    };
+
+    const handleChecklistMark = (itemIndex, statusOption) => {
+        setFormData(prev => ({
+            ...prev,
+            checklistResults: {
+                ...prev.checklistResults,
+                [itemIndex]: statusOption
+            }
+        }));
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.colabId) {
-            showToast("Selecione um colaborador.", "error");
-            return;
-        }
+        if (!formData.colabId) { showToast("Selecione um colaborador.", "error"); return; }
+        if (!formData.processId) { showToast("Selecione um processo auditado.", "error"); return; }
 
         setSaving(true);
         try {
@@ -157,7 +206,8 @@ const Audits = () => {
         const colabName = collaboratorsMap[a.colabId] || '';
         return searchTerm === '' || 
                colabName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-               (a.protocol && a.protocol.toLowerCase().includes(searchTerm.toLowerCase()));
+               (a.protocol && a.protocol.toLowerCase().includes(searchTerm.toLowerCase())) ||
+               (a.processName && a.processName.toLowerCase().includes(searchTerm.toLowerCase()));
     });
 
     if (loading) {
@@ -171,7 +221,7 @@ const Audits = () => {
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
                         <ShieldCheck className="w-6 h-6 text-red-600" /> Auditorias de Qualidade (QA)
                     </h1>
-                    <p className="text-sm text-gray-500">Acompanhamento de conformidade dos atendimentos.</p>
+                    <p className="text-sm text-gray-500">Avaliação padronizada com checklists dinâmicos.</p>
                 </div>
                 <button onClick={openNewModal} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors shadow-sm">
                     <Plus className="w-5 h-5" /> Nova Auditoria
@@ -198,21 +248,22 @@ const Audits = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 shrink-0">
-                
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center h-80">
                     <h3 className="text-sm font-bold text-gray-700 w-full text-left mb-2">Distribuição de Resultados</h3>
                     {dashboardStats.total === 0 ? (
                         <p className="text-gray-400 text-sm m-auto">Sem dados suficientes.</p>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
-                                    {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
-                                </Pie>
-                                <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                <Legend verticalAlign="bottom" height={36} iconType="circle"/>
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <div className="w-full h-full" style={{ minHeight: '150px' }}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <PieChart>
+                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
+                                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                                    </Pie>
+                                    <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle"/>
+                                </PieChart>
+                            </ResponsiveContainer>
+                        </div>
                     )}
                 </div>
 
@@ -268,7 +319,7 @@ const Audits = () => {
                             <tr>
                                 <th className="px-6 py-3 text-left font-semibold">Data</th>
                                 <th className="px-6 py-3 text-left font-semibold">Colaborador</th>
-                                <th className="px-6 py-3 text-left font-semibold">Protocolo</th>
+                                <th className="px-6 py-3 text-left font-semibold">Processo Auditado</th>
                                 <th className="px-6 py-3 text-left font-semibold">Resultado</th>
                                 <th className="px-6 py-3 text-right font-semibold">Ações</th>
                             </tr>
@@ -277,14 +328,13 @@ const Audits = () => {
                             {filteredAudits.length === 0 ? (
                                 <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-400">Nenhuma auditoria encontrada.</td></tr>
                             ) : (
-                                // AQUI ESTÁ A LIMITAÇÃO PARA 3 REGISTROS:
                                 filteredAudits.slice(0, 3).map((a) => (
                                     <tr key={a.id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 text-gray-500">
                                             {a.date ? new Date(a.date).toLocaleDateString('pt-BR', {timeZone:'UTC'}) : '--'}
                                         </td>
                                         <td className="px-6 py-4 font-bold text-gray-900">{collaboratorsMap[a.colabId] || 'Desconhecido'}</td>
-                                        <td className="px-6 py-4 text-gray-600">{a.protocol || '--'}</td>
+                                        <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]" title={a.processName}>{a.processName || a.protocol || '--'}</td>
                                         <td className="px-6 py-4">
                                             <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max ${a.status === 'Conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                                                 {a.status === 'Conforme' ? <CheckCircle className="w-3 h-3"/> : <XCircle className="w-3 h-3"/>}
@@ -306,54 +356,123 @@ const Audits = () => {
                 </div>
             </div>
 
+            {/* NOVO MODAL MAX-W-4XL E DUAS COLUNAS */}
             {isModalOpen && (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center">
-                            <h3 className="font-bold flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-red-500" /> {editingId ? 'Editar Auditoria' : 'Nova Auditoria'}</h3>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
+                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
+                            <h3 className="font-bold flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-red-500" /> {editingId ? 'Editar Auditoria' : 'Nova Auditoria Estruturada'}</h3>
                             <button onClick={() => setIsModalOpen(false)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
                         </div>
-                        <div className="p-6 flex-1 overflow-y-auto">
-                            <form id="auditForm" onSubmit={handleSubmit} className="space-y-4">
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Colaborador</label>
-                                    <select required value={formData.colabId} onChange={(e) => setFormData({...formData, colabId: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none">
-                                        <option value="" disabled>Selecione um colaborador...</option>
-                                        {collaboratorsList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Data do Contato</label>
-                                        <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" />
+                        
+                        <div className="flex-1 overflow-y-auto bg-gray-50">
+                            <form id="auditForm" onSubmit={handleSubmit} className="p-6">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                    
+                                    {/* COLUNA ESQUERDA: Informações Gerais */}
+                                    <div className="space-y-5">
+                                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 flex items-center gap-2">
+                                            <FileText className="w-4 h-4 text-gray-500"/> Informações Básicas
+                                        </h4>
+                                        
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Colaborador</label>
+                                            <select required value={formData.colabId} onChange={(e) => setFormData({...formData, colabId: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white">
+                                                <option value="" disabled>Selecione um colaborador...</option>
+                                                {collaboratorsList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                            </select>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Data</label>
+                                                <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white" />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Protocolo / ID</label>
+                                                <input type="text" required placeholder="Nº do ticket..." value={formData.protocol} onChange={(e) => setFormData({...formData, protocol: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white" />
+                                            </div>
+                                        </div>
+
+                                        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Processo / Assunto Auditado</label>
+                                            {qaProcesses.length === 0 ? (
+                                                <div className="text-sm text-red-600 bg-red-50 p-2 rounded flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Vá em Configurações para criar Processos QA.</div>
+                                            ) : (
+                                                <select required value={formData.processId} onChange={handleProcessChange} className="w-full p-2.5 font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-gray-50">
+                                                    <option value="" disabled>Selecione o procedimento de suporte...</option>
+                                                    {qaProcesses.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                                </select>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Status Global (Resultado Final)</label>
+                                            <div className="flex gap-4">
+                                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.status === 'Conforme' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
+                                                    <input type="radio" name="status" value="Conforme" checked={formData.status === 'Conforme'} onChange={(e) => setFormData({...formData, status: e.target.value})} className="hidden" />
+                                                    <CheckCircle className="w-5 h-5"/> <span className="font-bold">Conforme</span>
+                                                </label>
+                                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.status === 'Não Conforme' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
+                                                    <input type="radio" name="status" value="Não Conforme" checked={formData.status === 'Não Conforme'} onChange={(e) => setFormData({...formData, status: e.target.value})} className="hidden" />
+                                                    <XCircle className="w-5 h-5"/> <span className="font-bold">Inconforme</span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Anotações do Avaliador</label>
+                                            <textarea rows="3" placeholder="Comentários gerais..." value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white resize-none" />
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Protocolo / ID</label>
-                                        <input type="text" required placeholder="Ex: 202604018..." value={formData.protocol} onChange={(e) => setFormData({...formData, protocol: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" />
+
+                                    {/* COLUNA DIREITA: Checklist Dinâmica */}
+                                    <div className="space-y-4">
+                                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 flex items-center gap-2">
+                                            <ListChecks className="w-4 h-4 text-red-500"/> Checklist do Procedimento
+                                        </h4>
+                                        
+                                        {!formData.processId ? (
+                                            <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 bg-white p-6 text-center">
+                                                <Settings className="w-8 h-8 mb-2 opacity-20" />
+                                                <p className="text-sm font-medium">Selecione um processo na lateral para carregar as perguntas de verificação.</p>
+                                            </div>
+                                        ) : activeChecklist.length === 0 ? (
+                                            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-amber-700 text-sm">
+                                                Este processo não possui itens de checklist cadastrados.
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-3 pr-2" style={{ maxHeight: 'calc(100vh - 350px)' }}>
+                                                {activeChecklist.map((item, idx) => (
+                                                    <div key={idx} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3 hover:border-gray-300 transition-colors">
+                                                        <span className="text-sm font-medium text-gray-800 leading-snug">{item}</span>
+                                                        <div className="flex bg-gray-50 p-1 rounded-lg border border-gray-100 self-start">
+                                                            <label className={`cursor-pointer px-3 py-1.5 text-xs font-bold rounded-md transition-all ${formData.checklistResults[idx] === 'Passou' ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}>
+                                                                <input type="radio" name={`item_${idx}`} value="Passou" className="hidden" checked={formData.checklistResults[idx] === 'Passou'} onChange={() => handleChecklistMark(idx, 'Passou')} />
+                                                                Passou
+                                                            </label>
+                                                            <label className={`cursor-pointer px-3 py-1.5 text-xs font-bold rounded-md transition-all ${formData.checklistResults[idx] === 'Falhou' ? 'bg-red-100 text-red-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}>
+                                                                <input type="radio" name={`item_${idx}`} value="Falhou" className="hidden" checked={formData.checklistResults[idx] === 'Falhou'} onChange={() => handleChecklistMark(idx, 'Falhou')} />
+                                                                Falhou
+                                                            </label>
+                                                            <label className={`cursor-pointer px-3 py-1.5 text-xs font-bold rounded-md transition-all ${formData.checklistResults[idx] === 'N/A' ? 'bg-gray-300 text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}>
+                                                                <input type="radio" name={`item_${idx}`} value="N/A" className="hidden" checked={formData.checklistResults[idx] === 'N/A'} onChange={() => handleChecklistMark(idx, 'N/A')} />
+                                                                N/A
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Resultado (QA)</label>
-                                    <div className="flex gap-4">
-                                        <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.status === 'Conforme' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
-                                            <input type="radio" name="status" value="Conforme" checked={formData.status === 'Conforme'} onChange={(e) => setFormData({...formData, status: e.target.value})} className="hidden" />
-                                            <CheckCircle className="w-5 h-5"/> <span className="font-bold">Conforme</span>
-                                        </label>
-                                        <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.status === 'Não Conforme' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
-                                            <input type="radio" name="status" value="Não Conforme" checked={formData.status === 'Não Conforme'} onChange={(e) => setFormData({...formData, status: e.target.value})} className="hidden" />
-                                            <XCircle className="w-5 h-5"/> <span className="font-bold">Inconforme</span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Observações do Auditor</label>
-                                    <textarea rows="3" placeholder="Anotações, pontos de atenção, erros cometidos..." value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" />
+
                                 </div>
                             </form>
                         </div>
-                        <div className="p-4 bg-gray-50 border-t border-gray-200 flex gap-3">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-white font-medium transition-colors">Cancelar</button>
-                            <button type="submit" form="auditForm" disabled={saving} className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors disabled:opacity-70 flex justify-center items-center gap-2">
+
+                        <div className="p-4 bg-white border-t border-gray-200 flex gap-3 shrink-0 justify-end">
+                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">Cancelar</button>
+                            <button type="submit" form="auditForm" disabled={saving} className="px-8 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors disabled:opacity-70 flex items-center gap-2">
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Auditoria'}
                             </button>
                         </div>

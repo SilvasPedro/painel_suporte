@@ -2,20 +2,20 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Clock, Target, RefreshCw, Star, Phone, MessageSquare, 
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
-    Search, Eye, X, Database, TrendingUp, Settings as SettingsIcon, Users, CheckCircle, Filter
+    Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
+    KeyRound, Settings
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { updatePassword } from 'firebase/auth';
+import { db, auth } from '../services/firebase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext'; 
 import { useNotification } from '../context/NotificationContext';
-import Settings from './Settings';
 import Reports from './Reports'; 
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
-import logo from '../assets/logo.png'
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -40,12 +40,13 @@ const translateKey = (key) => {
         read: 'Status de Leitura',
         status: 'Resultado QA',
         notes: 'Observações do Auditor',
-        evaluatorName: 'Auditado por'
+        evaluatorName: 'Auditado por',
+        processName: 'Processo Auditado'
     };
     return dictionary[key] || key;
 };
 
-// --- FUNÇÃO PARA CONVERTER DATA EM VALOR MATEMÁTICO (USADA PARA ORDENAÇÃO) ---
+// --- FUNÇÃO PARA CONVERTER DATA EM VALOR MATEMÁTICO ---
 const parseDateObj = (dateStr) => {
     if (!dateStr) return 0;
     if (dateStr.includes('/')) {
@@ -66,6 +67,44 @@ const parseDateObj = (dateStr) => {
 const CollaboratorDashboard = ({ currentUserId }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const { currentUser } = useAuth(); 
+    const { showToast } = useNotification();
+
+    // Estados do Modal de Senha
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loadingPassword, setLoadingPassword] = useState(false);
+
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault();
+        
+        if (newPassword !== confirmPassword) {
+            showToast("As senhas digitadas não coincidem.", "error");
+            return;
+        }
+        if (newPassword.length < 6) {
+            showToast("A senha deve ter pelo menos 6 caracteres.", "error");
+            return;
+        }
+
+        setLoadingPassword(true);
+        try {
+            await updatePassword(auth.currentUser, newPassword);
+            showToast("Senha alterada com sucesso!", "success");
+            setIsPasswordModalOpen(false);
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error) {
+            // O Firebase exige login recente para trocar a senha. Se o token expirou, pedimos para relogar.
+            if (error.code === 'auth/requires-recent-login') {
+                showToast("Por segurança, você precisa sair e entrar novamente no sistema para alterar sua senha.", "error");
+            } else {
+                showToast("Erro ao alterar senha: " + error.message, "error");
+            }
+        } finally {
+            setLoadingPassword(false);
+        }
+    };
 
     const renderContent = () => {
         switch (activeTab) {
@@ -75,22 +114,16 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 return <MyHistory currentUserId={currentUserId} />;
             case 'reports':
                 return <Reports />;
-            case 'settings':
-                return <Settings />;
             default:
                 return <MyDashboardOverview currentUserId={currentUserId} currentUser={currentUser} />;
         }
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex overflow-hidden">
+        <div className="h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
-             <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
-                    <div className="flex items-center border-none border-zinc-800 shrink-0">
-                        {/* Tag <img> adicionada aqui para a sua logo estendida */}
-                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
-                    </div>
-                    <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
+                <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
+                    <img src={logoExtended} alt="HubDesk Logo" className="h-10 w-auto" /> 
                 </div>
                 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
@@ -108,11 +141,6 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                         <ShieldCheck className="w-5 h-5" />
                         <span className="font-medium">Relatórios Críticos</span>
                     </button>
-
-                    <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <SettingsIcon className="w-5 h-5" />
-                        <span className="font-medium">Configurações</span>
-                    </button>
                 </nav>
 
                 <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
@@ -129,6 +157,12 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             </p>
                         </div>
                     </div>
+                    
+                    <button onClick={() => setIsPasswordModalOpen(true)} className="w-full flex items-center gap-3 px-4 py-2 mb-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+                        <KeyRound className="w-4 h-4" />
+                        <span className="text-sm font-medium">Alterar senha</span>
+                    </button>
+                    
                     <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
                         <LogOut className="w-4 h-4" />
                         <span className="text-sm font-medium">Sair do sistema</span>
@@ -139,6 +173,51 @@ const CollaboratorDashboard = ({ currentUserId }) => {
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
                 {renderContent()}
             </main>
+
+            {/* MODAL DE ALTERAÇÃO DE SENHA */}
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[90] backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
+                            <h3 className="font-bold flex items-center gap-2"><KeyRound className="w-5 h-5 text-red-500" /> Alterar Senha</h3>
+                            <button onClick={() => setIsPasswordModalOpen(false)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
+                        </div>
+                        
+                        <form onSubmit={handleUpdatePassword} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    minLength="6"
+                                    value={newPassword} 
+                                    onChange={(e) => setNewPassword(e.target.value)} 
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    minLength="6"
+                                    value={confirmPassword} 
+                                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" 
+                                />
+                            </div>
+
+                            <div className="pt-4 flex gap-3">
+                                <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
+                                <button type="submit" disabled={loadingPassword} className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex justify-center items-center">
+                                    {loadingPassword ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Atualizar'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
         </div>
     );
 };
@@ -410,6 +489,7 @@ const MyHistory = ({ currentUserId }) => {
     const [dateFilter, setDateFilter] = useState('');
     
     const [data, setData] = useState([]); 
+    const [qaProcesses, setQaProcesses] = useState({}); 
     const [loading, setLoading] = useState(true); 
     const [viewingItem, setViewingItem] = useState(null);
 
@@ -425,6 +505,12 @@ const MyHistory = ({ currentUserId }) => {
     };
 
     useEffect(() => {
+        const unsubQA = onSnapshot(collection(db, "qa_processes"), snap => {
+            const map = {};
+            snap.forEach(d => map[d.id] = d.data());
+            setQaProcesses(map);
+        });
+
         setLoading(true); 
         let col = '';
         if (activeTab === 'feedbacks') col = 'feedbacks';
@@ -451,7 +537,8 @@ const MyHistory = ({ currentUserId }) => {
             setData(res); 
             setLoading(false);
         });
-        return () => unsub();
+        
+        return () => { unsubQA(); unsub(); };
     }, [activeTab, currentUserId]);
 
     const handleMarkAsRead = async (id) => {
@@ -592,17 +679,16 @@ const MyHistory = ({ currentUserId }) => {
 
             {viewingItem && (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                    <div className={`bg-white rounded-xl shadow-2xl w-full ${activeTab === 'audits' ? 'max-w-2xl' : 'max-w-md'} overflow-hidden flex flex-col max-h-[90vh]`}>
                         <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
                             <h3 className="font-bold">Detalhes</h3>
                             <button onClick={() => setViewingItem(null)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
                         </div>
                         <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
                             {Object.entries(viewingItem).map(([k, v]) => { 
-                                // Ocultando os campos de controle de sistema para não poluir a tela
-                                if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId'].includes(k)) return null; 
+                                // Ocultando os campos de controle
+                                if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId', 'checklistResults', 'processId'].includes(k)) return null; 
                                 
-                                // Tratamento de segurança para objetos de data gerados pelo Firebase
                                 let displayValue = v;
                                 if (v && typeof v === 'object') {
                                     if (typeof v.toDate === 'function') {
@@ -621,6 +707,35 @@ const MyHistory = ({ currentUserId }) => {
                                     </div>
                                 ); 
                             })}
+
+                            {/* EXIBIÇÃO DEDICADA DA CHECKLIST DE AUDITORIA */}
+                            {activeTab === 'audits' && viewingItem.checklistResults && Object.keys(viewingItem.checklistResults).length > 0 && (
+                                <div className="mt-6 border-t border-gray-200 pt-4">
+                                    <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                        <ShieldCheck className="w-4 h-4 text-red-500" /> Checklist da Avaliação
+                                    </h4>
+                                    <div className="space-y-3">
+                                        {Object.entries(viewingItem.checklistResults).map(([idx, status]) => {
+                                            const process = qaProcesses[viewingItem.processId];
+                                            const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
+                                            
+                                            let statusColor = "text-gray-600 bg-gray-100 border-gray-200";
+                                            if (status === 'Passou') statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+                                            if (status === 'Falhou') statusColor = "text-red-700 bg-red-50 border-red-200";
+
+                                            return (
+                                                <div key={idx} className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                                    <span className="text-sm text-gray-700 font-medium leading-snug">{question}</span>
+                                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${statusColor}`}>
+                                                        {status}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                         <div className="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
                             <button onClick={() => setViewingItem(null)} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button>

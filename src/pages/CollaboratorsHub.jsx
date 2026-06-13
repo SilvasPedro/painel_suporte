@@ -3,7 +3,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { 
     Users, UserPlus, Edit, FileText, MessageSquare, 
     X, Loader2, Calendar, Phone, PhoneMissed, 
-    CheckCircle, Clock, Filter, KeyRound, UserX, UserCheck 
+    CheckCircle, Clock, Filter, KeyRound, UserX, UserCheck, Search 
 } from 'lucide-react';
 import { collection, onSnapshot, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../services/firebase';
@@ -53,6 +53,10 @@ const CollaboratorsHub = () => {
     const [collaborators, setCollaborators] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    // --- ESTADOS DE PESQUISA E FILTRO ---
+    const [searchTerm, setSearchTerm] = useState('');
+    const [showOnlyActive, setShowOnlyActive] = useState(false);
+
     // --- CONEXÃO EM TEMPO REAL ---
     useEffect(() => {
         const q = query(collection(db, "collaborators"), orderBy("name", "asc"));
@@ -90,6 +94,18 @@ const CollaboratorsHub = () => {
     const noite = activeColabs.filter(c => c.shift === 'Noite').length;
     const getPercent = (value) => total > 0 ? (value / total) * 100 : 0;
 
+    // --- LÓGICA DE FILTRAGEM ---
+    const filteredCollaborators = useMemo(() => {
+        return collaborators.filter(colab => {
+            const searchLower = searchTerm.toLowerCase();
+            const matchesSearch = (colab.name && colab.name.toLowerCase().includes(searchLower)) || 
+                                  (colab.shift && colab.shift.toLowerCase().includes(searchLower));
+            const matchesActive = showOnlyActive ? colab.active !== false : true;
+            
+            return matchesSearch && matchesActive;
+        });
+    }, [collaborators, searchTerm, showOnlyActive]);
+
     if (loading) {
         return (
             <div className="flex-1 flex items-center justify-center">
@@ -115,7 +131,7 @@ const CollaboratorsHub = () => {
             </header>
 
             {/* Gráfico de Distribuição por Turno */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-8">
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
                 <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Distribuição da Equipe Ativa</h2>
                 <div className="flex items-center gap-4 mb-3">
                     <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden flex">
@@ -140,15 +156,39 @@ const CollaboratorsHub = () => {
                 </div>
             </div>
 
+            {/* Barra de Pesquisa e Filtros */}
+            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+                <div className="relative w-full md:w-96">
+                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                    <input
+                        type="text"
+                        placeholder="Pesquisar por nome ou turno..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600 transition-shadow text-sm"
+                    />
+                </div>
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                    <input
+                        type="checkbox"
+                        checked={showOnlyActive}
+                        onChange={(e) => setShowOnlyActive(e.target.checked)}
+                        className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
+                    />
+                    Mostrar somente ativos
+                </label>
+            </div>
+
             {/* Grid de Cards dos Colaboradores */}
-            {collaborators.length === 0 ? (
+            {filteredCollaborators.length === 0 ? (
                 <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-200">
-                    <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <p className="text-gray-500">Nenhum colaborador cadastrado ainda.</p>
+                    <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-bold text-gray-700">Nenhum colaborador encontrado</h3>
+                    <p className="text-gray-500">Tente ajustar a sua pesquisa ou filtros.</p>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {collaborators.map((colab) => (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    {filteredCollaborators.map((colab) => (
                         <CollaboratorCard
                             key={colab.id}
                             colab={colab}
@@ -178,10 +218,10 @@ const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport, onToggleActive 
             </div>
             <div className="overflow-hidden">
                 <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-gray-900 truncate">{colab.name}</h3>
+                    <h3 className="font-bold text-gray-900 truncate" title={colab.name}>{colab.name}</h3>
                     {colab.active === false && <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 uppercase">Inativo</span>}
                 </div>
-                <p className="text-xs text-gray-500 mb-2 truncate">{colab.email}</p>
+                <p className="text-xs text-gray-500 mb-2 truncate" title={colab.email}>{colab.email}</p>
                 <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
                     colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
                         'bg-zinc-100 text-zinc-700 border border-zinc-200'
@@ -237,7 +277,7 @@ const EditCollaboratorModal = ({ colab, onClose }) => {
         }
     };
 
-  const handleResetPassword = async () => {
+    const handleResetPassword = async () => {
         if (!window.confirm(`Tem certeza que deseja enviar um e-mail de redefinição de senha para ${colab.email}?`)) return;
         
         setResetting(true);
