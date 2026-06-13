@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-    Clock, Target, RefreshCw, Star, Phone, MessageSquare, 
+import {
+    Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
     KeyRound, Settings
@@ -10,12 +10,13 @@ import { updatePassword } from 'firebase/auth';
 import { db, auth } from '../services/firebase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
-import { useAuth } from '../context/AuthContext'; 
+import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import Reports from './Reports'; 
+import Reports from './Reports';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
+import logo from '../assets/logo.png'
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -66,7 +67,7 @@ const parseDateObj = (dateStr) => {
 
 const CollaboratorDashboard = ({ currentUserId }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
-    const { currentUser } = useAuth(); 
+    const { currentUser } = useAuth();
     const { showToast } = useNotification();
 
     // Estados do Modal de Senha
@@ -77,7 +78,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
     const handleUpdatePassword = async (e) => {
         e.preventDefault();
-        
+
         if (newPassword !== confirmPassword) {
             showToast("As senhas digitadas não coincidem.", "error");
             return;
@@ -123,9 +124,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
                 <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
-                    <img src={logoExtended} alt="HubDesk Logo" className="h-10 w-auto" /> 
+                    <div className="flex items-center border-none border-zinc-800 shrink-0">
+                        {/* Tag <img> adicionada aqui para a sua logo estendida */}
+                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
+                    </div>
+                    <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
                 </div>
-                
+
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                     <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <BarChart2 className="w-5 h-5" />
@@ -157,12 +162,12 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             </p>
                         </div>
                     </div>
-                    
+
                     <button onClick={() => setIsPasswordModalOpen(true)} className="w-full flex items-center gap-3 px-4 py-2 mb-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
                         <KeyRound className="w-4 h-4" />
                         <span className="text-sm font-medium">Alterar senha</span>
                     </button>
-                    
+
                     <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
                         <LogOut className="w-4 h-4" />
                         <span className="text-sm font-medium">Sair do sistema</span>
@@ -182,28 +187,28 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             <h3 className="font-bold flex items-center gap-2"><KeyRound className="w-5 h-5 text-red-500" /> Alterar Senha</h3>
                             <button onClick={() => setIsPasswordModalOpen(false)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
                         </div>
-                        
+
                         <form onSubmit={handleUpdatePassword} className="p-6 space-y-4">
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
-                                <input 
-                                    type="password" 
-                                    required 
+                                <input
+                                    type="password"
+                                    required
                                     minLength="6"
-                                    value={newPassword} 
-                                    onChange={(e) => setNewPassword(e.target.value)} 
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" 
+                                    value={newPassword}
+                                    onChange={(e) => setNewPassword(e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
                                 />
                             </div>
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
-                                <input 
-                                    type="password" 
-                                    required 
+                                <input
+                                    type="password"
+                                    required
                                     minLength="6"
-                                    value={confirmPassword} 
-                                    onChange={(e) => setConfirmPassword(e.target.value)} 
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" 
+                                    value={confirmPassword}
+                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
                                 />
                             </div>
 
@@ -243,17 +248,17 @@ const TrendIndicator = ({ type, current, previous }) => {
     let isUp = false; let isGood = false;
     if (type === 'tmr') {
         const curVal = timeToDecimal(current); const prevVal = timeToDecimal(previous);
-        if (curVal === prevVal) return null; isUp = curVal > prevVal; isGood = curVal < prevVal; 
+        if (curVal === prevVal) return null; isUp = curVal > prevVal; isGood = curVal < prevVal;
     } else if (type === 'fcr') {
         const curVal = Number(current); const prevVal = Number(previous);
-        if (curVal === prevVal) return null; isUp = curVal > prevVal; isGood = curVal > prevVal; 
+        if (curVal === prevVal) return null; isUp = curVal > prevVal; isGood = curVal > prevVal;
     } else if (type === 'recurrence') {
         const curVal = Number(current); const prevVal = Number(previous);
-        if (curVal === prevVal) return null; isUp = curVal > prevVal; isGood = curVal < prevVal; 
+        if (curVal === prevVal) return null; isUp = curVal > prevVal; isGood = curVal < prevVal;
     }
     const colorClass = isGood ? "fill-emerald-500" : "fill-red-500";
-    const pathObj = isUp ? "M12 4l8 16H4z" : "M12 20l8-16H4z"; 
-    return <svg className={`w-4 h-4 mb-1.5 ${colorClass}`} viewBox="0 0 24 24"><path d={pathObj}/></svg>;
+    const pathObj = isUp ? "M12 4l8 16H4z" : "M12 20l8-16H4z";
+    return <svg className={`w-4 h-4 mb-1.5 ${colorClass}`} viewBox="0 0 24 24"><path d={pathObj} /></svg>;
 };
 
 // ==========================================
@@ -262,14 +267,14 @@ const TrendIndicator = ({ type, current, previous }) => {
 const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [loading, setLoading] = useState(true);
     const [globalKpi, setGlobalKpi] = useState({ tmr: '00:00:00', fcr: 0, recurrence: 0 });
-    const [prevGlobalKpi, setPrevGlobalKpi] = useState(null); 
-    const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 }); 
+    const [prevGlobalKpi, setPrevGlobalKpi] = useState(null);
+    const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 });
     const [allEvals, setAllEvals] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
-    
+
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
     const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
-    const [myAudits, setMyAudits] = useState([]); 
+    const [myAudits, setMyAudits] = useState([]);
 
     const formatChartDate = (dateString) => {
         if (!dateString) return '';
@@ -387,7 +392,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
                     <p className="text-sm text-gray-500">Visão geral de indicadores e qualidade.</p>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-fuchsia-50 px-4 py-2.5 rounded-lg border border-fuchsia-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-fuchsia-500 rounded-md shrink-0">
@@ -455,9 +460,9 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4"><TrendingUp className="w-4 h-4 text-gray-500" /> Evolução Temporal</h2>
                 {chartData.length === 0 ? <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center text-gray-400">Nenhuma avaliação registrada para desenhar o gráfico.</div> : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">Produtividade</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/><stop offset="95%" stopColor="#10b981" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} /><Tooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} /><Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" /></AreaChart></ResponsiveContainer></div>
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">TMA Telefonia</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/><stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} tickFormatter={formatTime} /><Tooltip contentStyle={{borderRadius: '8px', border: 'none'}} formatter={val => [formatTime(val), "TMA Tel"]} /><Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" /></AreaChart></ResponsiveContainer></div>
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">TMA Huggy</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{fill: '#9CA3AF', fontSize: 11}} tickFormatter={formatTime} /><Tooltip contentStyle={{borderRadius: '8px', border: 'none'}} formatter={val => [formatTime(val), "TMA Huggy"]} /><Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" /></AreaChart></ResponsiveContainer></div>
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">Produtividade</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" /></AreaChart></ResponsiveContainer></div>
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">TMA Telefonia</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Tel"]} /><Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" /></AreaChart></ResponsiveContainer></div>
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">TMA Huggy</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Huggy"]} /><Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" /></AreaChart></ResponsiveContainer></div>
                     </div>
                 )}
             </div>
@@ -484,22 +489,22 @@ const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
 // ==========================================
 const MyHistory = ({ currentUserId }) => {
     const { showToast } = useNotification();
-    const [activeTab, setActiveTab] = useState('feedbacks'); 
-    const [searchTerm, setSearchTerm] = useState(''); 
+    const [activeTab, setActiveTab] = useState('feedbacks');
+    const [searchTerm, setSearchTerm] = useState('');
     const [dateFilter, setDateFilter] = useState('');
-    
-    const [data, setData] = useState([]); 
-    const [qaProcesses, setQaProcesses] = useState({}); 
-    const [loading, setLoading] = useState(true); 
+
+    const [data, setData] = useState([]);
+    const [qaProcesses, setQaProcesses] = useState({});
+    const [loading, setLoading] = useState(true);
     const [viewingItem, setViewingItem] = useState(null);
 
     const getSafeDateString = item => {
-        if (item.date) { 
-            if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) { 
-                const [y, m, d] = item.date.split('-'); 
-                return `${d}/${m}/${y}`; 
-            } 
-            return item.date; 
+        if (item.date) {
+            if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const [y, m, d] = item.date.split('-');
+                return `${d}/${m}/${y}`;
+            }
+            return item.date;
         }
         return item.createdAt ? (typeof item.createdAt.toDate === 'function' ? item.createdAt.toDate().toLocaleDateString('pt-BR') : new Date(item.createdAt).toLocaleDateString('pt-BR')) : 'Sem data';
     };
@@ -511,33 +516,33 @@ const MyHistory = ({ currentUserId }) => {
             setQaProcesses(map);
         });
 
-        setLoading(true); 
+        setLoading(true);
         let col = '';
         if (activeTab === 'feedbacks') col = 'feedbacks';
         else if (activeTab === 'metrics') col = 'weekly_evaluations';
         else if (activeTab === 'audits') col = 'qa_audits';
 
-        const q = query(collection(db, col)); 
-        
+        const q = query(collection(db, col));
+
         const unsub = onSnapshot(q, snap => {
-            const res = []; 
-            snap.forEach(d => { 
-                const dt = d.data(); 
+            const res = [];
+            snap.forEach(d => {
+                const dt = d.data();
                 if (dt.colabId === currentUserId || dt.collaboratorId === currentUserId) {
-                    res.push({ id: d.id, ...dt }); 
+                    res.push({ id: d.id, ...dt });
                 }
             });
-            
+
             res.sort((a, b) => {
                 const timeA = a.date ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
                 const timeB = b.date ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-                return timeB - timeA; 
+                return timeB - timeA;
             });
-            
-            setData(res); 
+
+            setData(res);
             setLoading(false);
         });
-        
+
         return () => { unsubQA(); unsub(); };
     }, [activeTab, currentUserId]);
 
@@ -568,9 +573,9 @@ const MyHistory = ({ currentUserId }) => {
                 if (parts.length === 3) months.add(`${parts[1]}/${parts[2]}`);
             }
         });
-        return { 
-            months: Array.from(months).sort((a, b) => b.localeCompare(a)), 
-            dates: Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a)) 
+        return {
+            months: Array.from(months).sort((a, b) => b.localeCompare(a)),
+            dates: Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a))
         };
     }, [data]);
 
@@ -587,29 +592,29 @@ const MyHistory = ({ currentUserId }) => {
                 <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><History className="w-6 h-6 text-red-600" />Meu Histórico</h1>
                 <p className="text-sm text-gray-500">Acompanhe seus lançamentos e avaliações recebidas.</p>
             </header>
-            
+
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
                 <div className="flex space-x-2 border-b border-gray-100 pb-4 overflow-x-auto">
                     <button onClick={() => setActiveTab('feedbacks')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'feedbacks' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                        <MessageSquare className="w-4 h-4"/> Feedbacks
+                        <MessageSquare className="w-4 h-4" /> Feedbacks
                     </button>
                     <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                        <TrendingUp className="w-4 h-4"/> Desempenho
+                        <TrendingUp className="w-4 h-4" /> Desempenho
                     </button>
                     <button onClick={() => setActiveTab('audits')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'audits' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                        <ShieldCheck className="w-4 h-4"/> Auditorias
+                        <ShieldCheck className="w-4 h-4" /> Auditorias
                     </button>
                 </div>
-                
+
                 <div className="flex flex-col md:flex-row gap-4">
                     <div className="flex-1 relative">
                         <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
                         <input type="text" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none text-sm" />
                     </div>
-                    
+
                     <div className="md:w-64 relative">
                         <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-3.5" />
-                        <select 
+                        <select
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
                             className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none text-sm appearance-none bg-white cursor-pointer text-gray-600 font-medium"
@@ -685,10 +690,10 @@ const MyHistory = ({ currentUserId }) => {
                             <button onClick={() => setViewingItem(null)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
                         </div>
                         <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
-                            {Object.entries(viewingItem).map(([k, v]) => { 
+                            {Object.entries(viewingItem).map(([k, v]) => {
                                 // Ocultando os campos de controle
-                                if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId', 'checklistResults', 'processId'].includes(k)) return null; 
-                                
+                                if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId', 'checklistResults', 'processId'].includes(k)) return null;
+
                                 let displayValue = v;
                                 if (v && typeof v === 'object') {
                                     if (typeof v.toDate === 'function') {
@@ -705,7 +710,7 @@ const MyHistory = ({ currentUserId }) => {
                                         <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span>
                                         <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayValue?.toString() || 'Vazio'}</span>
                                     </div>
-                                ); 
+                                );
                             })}
 
                             {/* EXIBIÇÃO DEDICADA DA CHECKLIST DE AUDITORIA */}
@@ -718,7 +723,7 @@ const MyHistory = ({ currentUserId }) => {
                                         {Object.entries(viewingItem.checklistResults).map(([idx, status]) => {
                                             const process = qaProcesses[viewingItem.processId];
                                             const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
-                                            
+
                                             let statusColor = "text-gray-600 bg-gray-100 border-gray-200";
                                             if (status === 'Passou') statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
                                             if (status === 'Falhou') statusColor = "text-red-700 bg-red-50 border-red-200";
