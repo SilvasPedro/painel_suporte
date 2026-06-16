@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
-    TrendingUp, Clock, Star, ClipboardList, Target,
+    TrendingUp, Clock, Star, ClipboardList, Target, Trophy, // ADICIONE O TROPHY AQUI
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import DataManager from './DataManager';
 import Settings from './Settings';
 import Reports from './Reports';
 import Audits from './Audits';
+import Rankings from './Rankings';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -31,6 +32,8 @@ const AdminDashboard = () => {
                 return <DashboardOverview />;
             case 'hub':
                 return <CollaboratorsHub />;
+            case 'rankings':             // ADICIONE ESTAS DUAS LINHAS
+                return <Rankings />;
             case 'metrics':
                 return <WeeklyMetrics />;
             case 'sector_kpis':
@@ -51,7 +54,7 @@ const AdminDashboard = () => {
     return (
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
-             <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
+                <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
                     <div className="flex items-center border-none border-zinc-800 shrink-0">
                         {/* Tag <img> adicionada aqui para a sua logo estendida */}
                         <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
@@ -68,6 +71,11 @@ const AdminDashboard = () => {
                     <button onClick={() => setActiveTab('hub')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'hub' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <Users className="w-5 h-5" />
                         <span className="font-medium">Hub da Equipe</span>
+                    </button>
+
+                    <button onClick={() => setActiveTab('rankings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'rankings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <Trophy className="w-5 h-5" />
+                        <span className="font-medium">Rankings da Equipe</span>
                     </button>
 
                     <button onClick={() => setActiveTab('metrics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'metrics' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
