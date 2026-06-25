@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
-    TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
+    TrendingUp, Clock, Star, ClipboardList, Target, Trophy, // ADICIONE O TROPHY AQUI
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
-    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck,
-    CalendarDays // ADICIONE AQUI
+    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck
 } from 'lucide-react';
 import { collection, onSnapshot, doc, query } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -19,7 +18,7 @@ import Settings from './Settings';
 import Reports from './Reports';
 import Audits from './Audits';
 import Rankings from './Rankings';
-import MonthlyEvaluations from './MonthlyEvaluations';
+import DailyQueueTracker from './DailyDemandLaunch'
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -30,17 +29,28 @@ const AdminDashboard = () => {
 
     const renderContent = () => {
         switch (activeTab) {
-            case 'dashboard': return <DashboardOverview />;
-            case 'hub': return <CollaboratorsHub />;
-            case 'rankings': return <Rankings />;
-            case 'metrics': return <WeeklyMetrics />;
-            case 'audits': return <Audits />;
-            case 'monthly': return <MonthlyEvaluations />; // ADICIONE ESTA LINHA
-            case 'reports': return <Reports />;
-            case 'sector_kpis': return <SectorKPIs />;
-            case 'data_manager': return <DataManager />;
-            case 'settings': return <Settings />;
-            default: return <DashboardOverview />;
+            case 'dashboard':
+                return <DashboardOverview />;
+            case 'hub':
+                return <CollaboratorsHub />;
+            case 'rankings':             // ADICIONE ESTAS DUAS LINHAS
+                return <Rankings />;
+            case 'metrics':
+                return <WeeklyMetrics />;
+            case 'sector_kpis':
+                return <SectorKPIs />;
+            case 'data_manager':
+                return <DataManager />;
+            case 'reports':
+                return <Reports />;
+            case 'audits':
+                return <Audits />;
+            case 'settings':
+                return <Settings />;
+            case 'DailyQueueTracker':
+                return <DailyQueueTracker />;
+            default:
+                return <DashboardOverview />;
         }
     };
 
@@ -76,9 +86,12 @@ const AdminDashboard = () => {
                         <span className="font-medium">Avaliações Semanais</span>
                     </button>
 
-                    <button onClick={() => setActiveTab('monthly')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'monthly' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <CalendarDays className="w-5 h-5" />
-                        <span className="font-medium">Avaliações Mensais</span>
+                    <button
+                        onClick={() => setActiveTab('DailyQueueTracker')}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'DailyQueueTracker' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
+                    >
+                        <Activity className="w-5 h-5" />
+                        <span className="font-medium">Demanda Diária</span>
                     </button>
 
                     <button onClick={() => setActiveTab('sector_kpis')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'sector_kpis' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
@@ -101,10 +114,15 @@ const AdminDashboard = () => {
                         <span className="font-medium">Auditorias QA</span>
                     </button>
 
+
+
                     <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <SettingsIcon className="w-5 h-5" />
                         <span className="font-medium">Configurações</span>
                     </button>
+
+
+
                 </nav>
 
                 <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
