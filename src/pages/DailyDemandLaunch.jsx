@@ -304,30 +304,35 @@ export default function DailyDemandLaunch() {
                         </div>
                     </div>
 
-                    {/* Gráfico de Barras Empilhadas (Demanda Total do Dia no Início) */}
-                    <div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 lg:col-span-2">
-                        <h3 className="text-sm font-bold text-zinc-900 mb-6 flex items-center gap-2">
-                            <Activity className="w-4 h-4 text-zinc-400" /> Distribuição da Demanda Diária (Início do Expediente)
-                        </h3>
-                        <div className="h-64 w-full">
-                            {chartData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                        <XAxis dataKey="formattedDate" tick={{fontSize: 11, fill: '#71717a'}} axisLine={false} tickLine={false} />
-                                        <YAxis tick={{fontSize: 11, fill: '#71717a'}} axisLine={false} tickLine={false} />
-                                        <Tooltip cursor={{fill: '#f4f4f5'}} contentStyle={{borderRadius: '8px', border: '1px solid #e4e4e7', fontSize: '12px'}} />
-                                        <Legend wrapperStyle={{fontSize: '11px', paddingTop: '10px'}} iconType="circle" />
-                                        
-                                        <Bar dataKey="startTickets" name="Chamados" stackId="a" fill={COLORS.chamadosInicio} barSize={32} />
-                                        <Bar dataKey="startChats" name="Chats" stackId="a" fill={COLORS.chatsInicio} radius={[4, 4, 0, 0]} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-zinc-400 text-sm">Sem dados no período</div>
-                            )}
-                        </div>
-                    </div>
+ {/* Gráfico de Barras Empilhadas (Início e Fim lado a lado) */}
+<div className="bg-white rounded-xl shadow-sm border border-zinc-200 p-6 lg:col-span-2">
+    <h3 className="text-sm font-bold text-zinc-900 mb-6 flex items-center gap-2">
+        <Activity className="w-4 h-4 text-zinc-400" /> Comparativo: Início vs Fim do Expediente
+    </h3>
+    <div className="h-64 w-full">
+        {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                    <XAxis dataKey="formattedDate" tick={{fontSize: 11, fill: '#71717a'}} axisLine={false} tickLine={false} />
+                    <YAxis tick={{fontSize: 11, fill: '#71717a'}} axisLine={false} tickLine={false} />
+                    <Tooltip cursor={{fill: '#f4f4f5'}} contentStyle={{borderRadius: '8px', border: '1px solid #e4e4e7', fontSize: '12px'}} />
+                    <Legend wrapperStyle={{fontSize: '11px', paddingTop: '10px'}} iconType="circle" />
+                    
+                    {/* Barras do Início (stackId="inicio") */}
+                    <Bar dataKey="startTickets" name="Chamados (Início)" stackId="inicio" fill={COLORS.chamadosInicio} barSize={20} />
+                    <Bar dataKey="startChats" name="Chats (Início)" stackId="inicio" fill={COLORS.chatsInicio} radius={[2, 2, 0, 0]} />
+                    
+                    {/* Barras do Fim (stackId="fim") */}
+                    <Bar dataKey="endTickets" name="Chamados (Fim)" stackId="fim" fill={COLORS.chamadosFim} barSize={20} />
+                    <Bar dataKey="endChats" name="Chats (Fim)" stackId="fim" fill={COLORS.chatsFim} radius={[2, 2, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        ) : (
+            <div className="h-full flex items-center justify-center text-zinc-400 text-sm">Sem dados no período</div>
+        )}
+    </div>
+</div>
                 </div>
 
                 {/* Tabela de Registros */}
