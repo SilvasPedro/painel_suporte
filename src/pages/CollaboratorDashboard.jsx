@@ -301,6 +301,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [colabsFull, setColabsFull] = useState({});
 
     const [myTaskToday, setMyTaskToday] = useState(null);
+    const [nextSundayShift, setNextSundayShift] = useState(null);
 
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
     const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
@@ -313,6 +314,56 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     };
 
     useEffect(() => {
+
+        const unsubSchedule = onSnapshot(doc(db, "daily_schedules", "fixed_schedule"), (docSnap) => {
+            if (docSnap.exists()) {
+                const assignments = docSnap.data().assignments || {};
+                const dayMap = { 0: 'domingo', 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' };
+                const todayId = dayMap[new Date().getDay()];
+
+                if (todayId && assignments[todayId]) {
+                    const dayData = assignments[todayId];
+                    let task = null;
+                    if (dayData.telefonia?.find(u => u.id === currentUserId)) task = "Telefonia";
+                    else if (dayData.huggy?.find(u => u.id === currentUserId)) task = "Huggy";
+                    else if (dayData.apoio?.find(u => u.id === currentUserId)) task = "Apoio";
+                    setMyTaskToday(task);
+                } else {
+                    setMyTaskToday(null);
+                }
+            }
+        });
+
+        // LÓGICA CORRIGIDA: Buscar próximo domingo em toda a coleção (todos os meses)
+        const qSunday = query(collection(db, "sunday_schedules"));
+        const unsubSunday = onSnapshot(qSunday, (querySnapshot) => {
+            let next = null;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            // Percorre todos os documentos da coleção (cada documento é um mês)
+            querySnapshot.forEach((doc) => {
+                const assignments = doc.data().assignments || {};
+
+                // Percorre todos os dias registrados nesse mês
+                for (const [dateStr, colabs] of Object.entries(assignments)) {
+                    // Verifica se o colaborador está escalado neste dia
+                    if (colabs.some(c => c.id === currentUserId)) {
+                        const shiftDate = new Date(dateStr + 'T00:00:00');
+
+                        // Se a data for igual ou futura a hoje
+                        if (shiftDate >= today) {
+                            // Se ainda não temos um próximo, ou se esta data é mais próxima que a anterior salva
+                            if (!next || shiftDate < new Date(next)) {
+                                next = dateStr;
+                            }
+                        }
+                    }
+                }
+            });
+            setNextSundayShift(next);
+        });
+
         const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
             if (docSnap.exists()) setGoals(docSnap.data());
         });
@@ -364,28 +415,16 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setMyAudits(fetched);
         });
 
-        const unsubSchedule = onSnapshot(doc(db, "daily_schedules", "fixed_schedule"), (docSnap) => {
-            if (docSnap.exists()) {
-                const assignments = docSnap.data().assignments || {};
-                const dayMap = { 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' };
-                const todayId = dayMap[new Date().getDay()]; // 0 é domingo, tratamos como folga/não escalado
 
-                if (todayId && assignments[todayId]) {
-                    const dayData = assignments[todayId];
-                    let task = null;
-                    // Procura em qual categoria o usuário está
-                    if (dayData.telefonia?.find(u => u.id === currentUserId)) task = "Telefonia";
-                    else if (dayData.huggy?.find(u => u.id === currentUserId)) task = "Huggy";
-                    else if (dayData.apoio?.find(u => u.id === currentUserId)) task = "Apoio";
-                    setMyTaskToday(task);
-                } else {
-                    setMyTaskToday(null);
-                }
-            }
-        });
 
-        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); unsubAudits(); unsubSchedule(); };
+        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); unsubAudits(); unsubSchedule(); unsubSunday(); };
     }, [currentUserId]);
+
+    const formatDateBR = (dateStr) => {
+        if (!dateStr) return '';
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}`;
+    };
 
     const qaStats = useMemo(() => {
         const total = myAudits.length;
@@ -432,11 +471,40 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     }, [allEvals, currentUserId, currentUser, colabsFull]);
 
     if (loading) {
-        return <div className="flex-1 flex items-center justify-center bg-gray-50 h-full"><Hourglass  className="w-8 h-8 text-red-600 animate-spin" /></div>;
+        return <div className="flex-1 flex items-center justify-center bg-gray-50 h-full"><Hourglass className="w-8 h-8 text-red-600 animate-spin" /></div>;
     }
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
+
+            {/* CARDS DE PLANTÃO */}
+            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Card Plantão Hoje */}
+                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-sm ${myTaskToday ? 'bg-red-900 text-white border-red-900 shadow-sm' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-3 rounded-lg ${myTaskToday ? 'bg-red-700' : 'bg-gray-100'}`}>
+                        <CalendarDays className={`w-6 h-6 ${myTaskToday ? 'text-white' : 'text-gray-500'}`} />
+                    </div>
+                    <div>
+                        <p className={`text-xs font-bold uppercase tracking-widest ${myTaskToday ? 'text-white' : 'text-gray-400'}`}>minha tarefa de hoje</p>
+                        <h2 className="text-xl font-black">
+                            {myTaskToday ? `${myTaskToday}` : "Sem escala para hoje"}
+                        </h2>
+                    </div>
+                </div>
+
+                {/* Card Próximo Domingo */}
+                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-sm ${nextSundayShift ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white border-gray-200'}`}>
+                    <div className={`p-3 rounded-lg ${nextSundayShift ? 'bg-emerald-700' : 'bg-gray-100'}`}>
+                        <Users className={`w-6 h-6 ${nextSundayShift ? 'text-white' : 'text-gray-500'}`} />
+                    </div>
+                    <div>
+                        <p className={`text-xs font-bold uppercase tracking-widest ${nextSundayShift ? 'text-emerald-200' : 'text-gray-400'}`}>Próximo Plantão Domingo</p>
+                        <h2 className="text-xl font-black">
+                            {nextSundayShift ? `Dia ${formatDateBR(nextSundayShift)}` : "Nenhum plantão agendado"}
+                        </h2>
+                    </div>
+                </div>
+            </div>
             <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
@@ -444,22 +512,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
-                    {/* NOVO CARD: MEU PLANTÃO DE HOJE */}
-                    <div className="w-100">
-                        <div className={`p-4 rounded-xl border flex items-center justify-between shadow-sm ${myTaskToday ? 'bg-red-700 text-white border-red-700' : 'bg-white border-gray-200'}`}>
-                            <div className="flex items-center gap-4">
-                                <div className={`p-3 rounded-lg ${myTaskToday ? 'bg-red-900' : 'bg-gray-100'}`}>
-                                    <CalendarDays className={`w-4 h-4 ${myTaskToday ? 'text-white' : 'text-gray-500'}`} />
-                                </div>
-                                <div>
-                                    <p className={`text-xs font-bold uppercase tracking-widest ${myTaskToday ? 'text-white' : 'text-gray-400'}`}>Minha tarefa de hoje</p>
-                                    <h2 className="text-xl font-black">
-                                        {myTaskToday ? `Escalado: ${myTaskToday}` : "Sem escala definida para hoje"}
-                                    </h2>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-fuchsia-50 px-4 py-2.5 rounded-lg border border-fuchsia-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-fuchsia-500 rounded-md shrink-0">
                             <MessageSquare className="w-4 h-4 text-white" />
