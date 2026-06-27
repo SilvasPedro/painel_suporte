@@ -3,7 +3,7 @@ import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy, // ADICIONE O TROPHY AQUI
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
-    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar 
+    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network
 } from 'lucide-react';
 import { collection, onSnapshot, doc, query } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -21,6 +21,7 @@ import Rankings from './Rankings';
 import DailyQueueTracker from './DailyDemandLaunch'
 import SundaySchedule from './SundaySchedule';
 import DailySchedule from './DailySchedule';
+import OrgChart from './OrgChart';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -37,6 +38,8 @@ const AdminDashboard = () => {
                 return <CollaboratorsHub />;
             case 'rankings':             // ADICIONE ESTAS DUAS LINHAS
                 return <Rankings />;
+            case 'orgchart':
+                return <OrgChart />;
             case 'metrics':
                 return <WeeklyMetrics />;
             case 'schedule':
@@ -71,7 +74,7 @@ const AdminDashboard = () => {
                     <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
                     <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <BarChart2 className="w-5 h-5" />
                         <span className="font-medium">Visão Geral KPIs</span>
@@ -80,6 +83,12 @@ const AdminDashboard = () => {
                     <button onClick={() => setActiveTab('hub')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'hub' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <Users className="w-5 h-5" />
                         <span className="font-medium">Hub da Equipe</span>
+                    </button>
+
+                    {/* NOVO BOTÃO: ORGANOGRAMA */}
+                    <button onClick={() => setActiveTab('orgchart')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'orgchart' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <Network className="w-5 h-5" />
+                        <span className="font-medium">Organograma</span>
                     </button>
 
                     <button onClick={() => setActiveTab('schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>

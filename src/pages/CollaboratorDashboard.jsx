@@ -3,7 +3,7 @@ import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
-    KeyRound, Settings, Activity, Calendar, CalendarDays,
+    KeyRound, Settings, Activity, Calendar, CalendarDays, Network
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
@@ -16,6 +16,7 @@ import Reports from './Reports';
 import DailyQueueTracker from './DailyDemandLaunch'
 import SundaySchedule from './SundaySchedule'; // ADICIONE ESTA LINHA
 import DailySchedule from './DailySchedule';
+import OrgChart from './OrgChart';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -122,6 +123,8 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 return <SundaySchedule readOnly={true} />; // ADICIONE ESTA LINHA
             case 'daily_schedule':
                 return <DailySchedule readOnly={true} />;
+            case 'orgchart':
+                return <OrgChart readOnly={true} />;
             case 'DailyQueueTracker':
                 return <DailyQueueTracker />;
             default:
@@ -141,11 +144,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+                <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
                     <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <BarChart2 className="w-5 h-5" />
                         <span className="font-medium">Dashboard</span>
                     </button>
+
+
 
                     <button onClick={() => setActiveTab('history')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <History className="w-5 h-5" />
@@ -174,7 +179,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                         <Activity className="w-5 h-5" />
                         <span className="font-medium">Demanda Diária</span>
                     </button>
+
+                    <button onClick={() => setActiveTab('orgchart')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'orgchart' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <Network className="w-5 h-5" /> <span className="font-medium">Organograma</span>
+                    </button>
                 </nav>
+
+
 
                 <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
                     <div className="flex items-center gap-3 mb-4 px-2">
