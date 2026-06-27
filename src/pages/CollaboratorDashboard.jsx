@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
-    ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
+    ShieldCheck, Rocket, User, Hourglass, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
-    KeyRound, Settings, Activity, Calendar
+    KeyRound, Settings, Activity, Calendar, CalendarDays,
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
@@ -159,7 +159,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
                     {/* NOVO BOTÃO: ESCALA DIÁRIA */}
                     <button onClick={() => setActiveTab('daily_schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'daily_schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Calendar className="w-5 h-5" /> <span className="font-medium">Escala Diária</span>
+                        <CalendarDays className="w-5 h-5" /> <span className="font-medium">Escala Diária</span>
                     </button>
 
                     <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
@@ -243,7 +243,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             <div className="pt-4 flex gap-3">
                                 <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
                                 <button type="submit" disabled={loadingPassword} className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex justify-center items-center">
-                                    {loadingPassword ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Atualizar'}
+                                    {loadingPassword ? <Hourglass className="w-5 h-5 text-white" /> : 'Atualizar'}
                                 </button>
                             </div>
                         </form>
@@ -299,6 +299,8 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 });
     const [allEvals, setAllEvals] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
+
+    const [myTaskToday, setMyTaskToday] = useState(null);
 
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
     const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
@@ -362,7 +364,27 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setMyAudits(fetched);
         });
 
-        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); unsubAudits(); };
+        const unsubSchedule = onSnapshot(doc(db, "daily_schedules", "fixed_schedule"), (docSnap) => {
+            if (docSnap.exists()) {
+                const assignments = docSnap.data().assignments || {};
+                const dayMap = { 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' };
+                const todayId = dayMap[new Date().getDay()]; // 0 é domingo, tratamos como folga/não escalado
+
+                if (todayId && assignments[todayId]) {
+                    const dayData = assignments[todayId];
+                    let task = null;
+                    // Procura em qual categoria o usuário está
+                    if (dayData.telefonia?.find(u => u.id === currentUserId)) task = "Telefonia";
+                    else if (dayData.huggy?.find(u => u.id === currentUserId)) task = "Huggy";
+                    else if (dayData.apoio?.find(u => u.id === currentUserId)) task = "Apoio";
+                    setMyTaskToday(task);
+                } else {
+                    setMyTaskToday(null);
+                }
+            }
+        });
+
+        return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); unsubAudits(); unsubSchedule(); };
     }, [currentUserId]);
 
     const qaStats = useMemo(() => {
@@ -410,7 +432,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     }, [allEvals, currentUserId, currentUser, colabsFull]);
 
     if (loading) {
-        return <div className="flex-1 flex items-center justify-center bg-gray-50 h-full"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
+        return <div className="flex-1 flex items-center justify-center bg-gray-50 h-full"><Hourglass  className="w-8 h-8 text-red-600 animate-spin" /></div>;
     }
 
     return (
@@ -422,6 +444,22 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
+                    {/* NOVO CARD: MEU PLANTÃO DE HOJE */}
+                    <div className="w-100">
+                        <div className={`p-4 rounded-xl border flex items-center justify-between shadow-sm ${myTaskToday ? 'bg-red-700 text-white border-red-700' : 'bg-white border-gray-200'}`}>
+                            <div className="flex items-center gap-4">
+                                <div className={`p-3 rounded-lg ${myTaskToday ? 'bg-red-900' : 'bg-gray-100'}`}>
+                                    <CalendarDays className={`w-4 h-4 ${myTaskToday ? 'text-white' : 'text-gray-500'}`} />
+                                </div>
+                                <div>
+                                    <p className={`text-xs font-bold uppercase tracking-widest ${myTaskToday ? 'text-white' : 'text-gray-400'}`}>Minha tarefa de hoje</p>
+                                    <h2 className="text-xl font-black">
+                                        {myTaskToday ? `Escalado: ${myTaskToday}` : "Sem escala definida para hoje"}
+                                    </h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-fuchsia-50 px-4 py-2.5 rounded-lg border border-fuchsia-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-fuchsia-500 rounded-md shrink-0">
                             <MessageSquare className="w-4 h-4 text-white" />
@@ -444,7 +482,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
                     <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-blue-500 rounded-md shrink-0">
-                            <Loader2 className="w-4 h-4 text-white animate-spin" />
+                            <Hourglass className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight line-clamp-1">Em Andamento</span>
@@ -461,8 +499,10 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                             <span className="text-xl font-black text-emerald-900 leading-tight">{reportStats.resolved}</span>
                         </div>
                     </div>
+
                 </div>
             </header>
+
 
             <div className="mb-8">
                 <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4"><Rocket className="w-4 h-4 text-gray-500" /> KPIs Globais do Setor</h2>
@@ -664,7 +704,7 @@ const MyHistory = ({ currentUserId }) => {
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-                {loading ? <div className="flex-1 flex items-center justify-center"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div> : filteredData.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center"><Database className="w-12 h-12 mb-3 opacity-20" /><p className="text-lg font-medium text-gray-500">Nenhum registro encontrado.</p></div> : (
+                {loading ? <div className="flex-1 flex items-center justify-center"><Hourglass className="w-8 h-8 text-red-600" /></div> : filteredData.length === 0 ? <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center"><Database className="w-12 h-12 mb-3 opacity-20" /><p className="text-lg font-medium text-gray-500">Nenhum registro encontrado.</p></div> : (
                     <div className="overflow-x-auto flex-1">
                         <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
                             <thead className="bg-zinc-950 text-white sticky top-0 z-10">
