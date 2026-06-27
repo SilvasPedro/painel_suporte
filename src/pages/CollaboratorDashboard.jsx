@@ -15,6 +15,7 @@ import { useNotification } from '../context/NotificationContext';
 import Reports from './Reports';
 import DailyQueueTracker from './DailyDemandLaunch'
 import SundaySchedule from './SundaySchedule'; // ADICIONE ESTA LINHA
+import DailySchedule from './DailySchedule';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -119,6 +120,8 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 return <Reports />;
             case 'schedule':
                 return <SundaySchedule readOnly={true} />; // ADICIONE ESTA LINHA
+            case 'daily_schedule':
+                return <DailySchedule readOnly={true} />;
             case 'DailyQueueTracker':
                 return <DailyQueueTracker />;
             default:
@@ -152,6 +155,11 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     {/* ADICIONE O NOVO BOTÃO DA ESCALA AQUI */}
                     <button onClick={() => setActiveTab('schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <Calendar className="w-5 h-5" /> <span className="font-medium">Escala de Plantão</span>
+                    </button>
+
+                    {/* NOVO BOTÃO: ESCALA DIÁRIA */}
+                    <button onClick={() => setActiveTab('daily_schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'daily_schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <Calendar className="w-5 h-5" /> <span className="font-medium">Escala Diária</span>
                     </button>
 
                     <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
