@@ -3,7 +3,7 @@ import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Loader2, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
-    KeyRound, Settings, Activity
+    KeyRound, Settings, Activity, Calendar
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import Reports from './Reports';
 import DailyQueueTracker from './DailyDemandLaunch'
+import SundaySchedule from './SundaySchedule'; // ADICIONE ESTA LINHA
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -116,10 +117,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 return <MyHistory currentUserId={currentUserId} />;
             case 'reports':
                 return <Reports />;
+            case 'schedule':
+                return <SundaySchedule readOnly={true} />; // ADICIONE ESTA LINHA
+            case 'DailyQueueTracker':
+                return <DailyQueueTracker />;
             default:
                 return <MyDashboardOverview currentUserId={currentUserId} currentUser={currentUser} />;
-                case 'DailyQueueTracker':
-                    return <DailyQueueTracker/>;
+
         }
     };
 
@@ -145,12 +149,17 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                         <span className="font-medium">Meu Histórico</span>
                     </button>
 
+                    {/* ADICIONE O NOVO BOTÃO DA ESCALA AQUI */}
+                    <button onClick={() => setActiveTab('schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <Calendar className="w-5 h-5" /> <span className="font-medium">Escala de Plantão</span>
+                    </button>
+
                     <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <ShieldCheck className="w-5 h-5" />
                         <span className="font-medium">Relatórios Críticos</span>
                     </button>
 
-                            <button
+                    <button
                         onClick={() => setActiveTab('DailyQueueTracker')}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'DailyQueueTracker' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
                     >

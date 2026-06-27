@@ -3,7 +3,7 @@ import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy, // ADICIONE O TROPHY AQUI
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
-    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck
+    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays
 } from 'lucide-react';
 import { collection, onSnapshot, doc, query } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -19,6 +19,7 @@ import Reports from './Reports';
 import Audits from './Audits';
 import Rankings from './Rankings';
 import DailyQueueTracker from './DailyDemandLaunch'
+import SundaySchedule from './SundaySchedule';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -37,6 +38,8 @@ const AdminDashboard = () => {
                 return <Rankings />;
             case 'metrics':
                 return <WeeklyMetrics />;
+            case 'schedule':
+                return <SundaySchedule />;
             case 'sector_kpis':
                 return <SectorKPIs />;
             case 'data_manager':
@@ -74,6 +77,11 @@ const AdminDashboard = () => {
                     <button onClick={() => setActiveTab('hub')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'hub' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <Users className="w-5 h-5" />
                         <span className="font-medium">Hub da Equipe</span>
+                    </button>
+
+                    <button onClick={() => setActiveTab('schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <CalendarDays className="w-5 h-5" />
+                        <span className="font-medium">Escala de Plantão</span>
                     </button>
 
                     <button onClick={() => setActiveTab('rankings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'rankings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
