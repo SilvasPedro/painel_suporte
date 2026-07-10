@@ -22,44 +22,42 @@ const NotificationManager = () => {
     const { currentUser } = useAuth();
 
     useEffect(() => {
+        async function requestNotificationPermission() {
+            try {
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    const token = await getToken(messaging, { 
+                        vapidKey: 'BGK2ZQE-DyWlwEk00nwgXppWc8kmJfidnErECA81peK1iUHkgf32D_9NgXxL73N7mED68U1ZEzRvT43tGQ1x0Vg' 
+                    });
+                    
+                    if (token) {
+                        console.log('Token FCM gerado com sucesso:', token);
+                        
+                        if (currentUser.firestoreId) {
+                            try {
+                                await updateDoc(doc(db, 'collaborators', currentUser.firestoreId), {
+                                    fcmToken: token
+                                });
+                                console.log('Token salvo no perfil do usuário com sucesso!');
+                            } catch (e) {
+                                console.error('Erro ao salvar token no banco:', e);
+                            }
+                        }
+                    } else {
+                        console.log('Nenhum token de registro disponível.');
+                    }
+                } else {
+                    console.log('Permissão para notificações foi negada pelo usuário.');
+                }
+            } catch (error) {
+                console.error('Erro ao pedir permissão para notificações:', error);
+            }
+        }
+
         if (currentUser) {
             requestNotificationPermission();
         }
     }, [currentUser]);
-
-    const requestNotificationPermission = async () => {
-        try {
-            const permission = await Notification.requestPermission();
-            if (permission === 'granted') {
-                const token = await getToken(messaging, { 
-                    vapidKey: 'BGK2ZQE-DyWlwEk00nwgXppWc8kmJfidnErECA81peK1iUHkgf32D_9NgXxL73N7mED68U1ZEzRvT43tGQ1x0Vg' 
-                });
-                
-                if (token) {
-                    console.log('Token FCM gerado com sucesso:', token);
-                    
-                    // NOVA PARTE: Salva o token no documento do colaborador
-                    if (currentUser.firestoreId) {
-                        try {
-                            await updateDoc(doc(db, 'collaborators', currentUser.firestoreId), {
-                                fcmToken: token
-                            });
-                            console.log('Token salvo no perfil do usuário com sucesso!');
-                        } catch (e) {
-                            console.error('Erro ao salvar token no banco:', e);
-                        }
-                    }
-
-                } else {
-                    console.log('Nenhum token de registro disponível.');
-                }
-            } else {
-                console.log('Permissão para notificações foi negada pelo usuário.');
-            }
-        } catch (error) {
-            console.error('Erro ao pedir permissão para notificações:', error);
-        }
-    };
 
     return null; 
 };

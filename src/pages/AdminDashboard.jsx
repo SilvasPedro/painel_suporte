@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
-    TrendingUp, Clock, Star, ClipboardList, Target, Trophy, // ADICIONE O TROPHY AQUI
+    TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
-    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network
+    Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
+    ChevronDown, ChevronRight, Menu, X, FileText
 } from 'lucide-react';
-import { collection, onSnapshot, doc, query } from 'firebase/firestore';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { logout } from '../services/auth';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
@@ -25,10 +26,70 @@ import OrgChart from './OrgChart';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
-import logo from '../assets/logo.png'
+const logo = logoExtended;
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [expandedMenus, setExpandedMenus] = useState({
+        geral: true,
+        operacional: true,
+        escalas: true,
+        gestao: true
+    });
+
+    const toggleMenu = (menuId) => {
+        if (isSidebarCollapsed) {
+            setIsSidebarCollapsed(false);
+            setExpandedMenus(prev => ({ ...prev, [menuId]: true }));
+        } else {
+            setExpandedMenus(prev => ({ ...prev, [menuId]: !prev[menuId] }));
+        }
+    };
+
+    const navMenus = [
+        {
+            id: 'geral',
+            title: 'Principal',
+            icon: BarChart2,
+            items: [
+                { id: 'dashboard', label: 'Visão Geral KPIs', icon: BarChart2 },
+                { id: 'hub', label: 'Hub da Equipe', icon: Users },
+                { id: 'orgchart', label: 'Organograma', icon: Network },
+            ]
+        },
+        {
+            id: 'operacional',
+            title: 'Lançamentos/Análise',
+            icon: TrendingUp,
+            items: [
+                { id: 'metrics', label: 'Avaliações Semanais', icon: TrendingUp },
+                { id: 'DailyQueueTracker', label: 'Demanda Diária', icon: Activity },
+                { id: 'reports', label: 'Relatórios Críticos', icon: ClipboardList },
+                { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
+                { id: 'rankings', label: 'Rankings da Equipe', icon: Trophy },
+            ]
+        },
+        {
+            id: 'escalas',
+            title: 'Escalas',
+            icon: Calendar,
+            items: [
+                { id: 'daily_schedule', label: 'Escala Diária', icon: CalendarDays },
+                { id: 'schedule', label: 'Escala de Plantão', icon: Calendar },
+            ]
+        },
+        {
+            id: 'gestao',
+            title: 'Gestão & Sistema',
+            icon: SettingsIcon,
+            items: [
+                { id: 'sector_kpis', label: 'KPIs do Setor', icon: Target },
+                { id: 'data_manager', label: 'Gestão de Dados', icon: Database },
+                { id: 'settings', label: 'Configurações', icon: SettingsIcon },
+            ]
+        }
+    ];
 
     const renderContent = () => {
         switch (activeTab) {
@@ -65,104 +126,71 @@ const AdminDashboard = () => {
 
     return (
         <div className="h-screen bg-gray-50 flex overflow-hidden">
-            <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
-                <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
-                    <div className="flex items-center border-none border-zinc-800 shrink-0">
-                        {/* Tag <img> adicionada aqui para a sua logo estendida */}
-                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
-                    </div>
-                    <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
+            <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800 transition-all duration-300 relative z-20`}>
+                <div className="p-4 flex items-center justify-between border-b border-zinc-800 shrink-0 h-20">
+                    {!isSidebarCollapsed && (
+                        <div className="flex items-center gap-3 overflow-hidden">
+                            <img src={logo} alt="HubDesk Logo" className="h-10 w-auto shrink-0" />
+                            <span className="text-lg font-bold tracking-wider truncate">HUB<span className="text-red-500">DESK</span></span>
+                        </div>
+                    )}
+                    <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 ${isSidebarCollapsed ? 'mx-auto' : ''}`}>
+                        <Menu className="w-5 h-5" />
+                    </button>
                 </div>
 
-                <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
-                    <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <BarChart2 className="w-5 h-5" />
-                        <span className="font-medium">Visão Geral KPIs</span>
-                    </button>
+                <nav className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-hide">
+                    {navMenus.map(menu => (
+                        <div key={menu.id} className="space-y-1">
+                            {/* Header do Menu */}
+                            {!isSidebarCollapsed ? (
+                                <button 
+                                    onClick={() => toggleMenu(menu.id)}
+                                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                                >
+                                    <span>{menu.title}</span>
+                                    {expandedMenus[menu.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                </button>
+                            ) : (
+                                <div className="flex justify-center py-2 mb-1 border-b border-zinc-800/50">
+                                    <menu.icon className="w-4 h-4 text-zinc-600" title={menu.title} />
+                                </div>
+                            )}
 
-                    <button onClick={() => setActiveTab('hub')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'hub' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Users className="w-5 h-5" />
-                        <span className="font-medium">Hub da Equipe</span>
-                    </button>
-
-                    {/* NOVO BOTÃO: ORGANOGRAMA */}
-                    <button onClick={() => setActiveTab('orgchart')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'orgchart' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Network className="w-5 h-5" />
-                        <span className="font-medium">Organograma</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Calendar className="w-5 h-5" />
-                        <span className="font-medium">Escala de Plantão</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('daily_schedule')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'daily_schedule' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <CalendarDays className="w-5 h-5" />
-                        <span className="font-medium">Escala Diária</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('rankings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'rankings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Trophy className="w-5 h-5" />
-                        <span className="font-medium">Rankings da Equipe</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('metrics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'metrics' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <TrendingUp className="w-5 h-5" />
-                        <span className="font-medium">Avaliações Semanais</span>
-                    </button>
-
-                    <button
-                        onClick={() => setActiveTab('DailyQueueTracker')}
-                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'DailyQueueTracker' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
-                    >
-                        <Activity className="w-5 h-5" />
-                        <span className="font-medium">Demanda Diária</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('sector_kpis')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'sector_kpis' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Target className="w-5 h-5" />
-                        <span className="font-medium">KPIs do Setor</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('data_manager')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'data_manager' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <Database className="w-5 h-5" />
-                        <span className="font-medium">Gestão de Dados</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <ClipboardList className="w-5 h-5" />
-                        <span className="font-medium">Relatórios Críticos</span>
-                    </button>
-
-                    <button onClick={() => setActiveTab('audits')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'audits' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <ShieldCheck className="w-5 h-5" />
-                        <span className="font-medium">Auditorias QA</span>
-                    </button>
-
-
-
-                    <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <SettingsIcon className="w-5 h-5" />
-                        <span className="font-medium">Configurações</span>
-                    </button>
-
-
-
+                            {/* Itens do Menu */}
+                            {(expandedMenus[menu.id] || isSidebarCollapsed) && (
+                                <div className="space-y-1">
+                                    {menu.items.map(item => {
+                                        const Icon = item.icon;
+                                        const isActive = activeTab === item.id;
+                                        return (
+                                            <button 
+                                                key={item.id}
+                                                onClick={() => setActiveTab(item.id)} 
+                                                title={isSidebarCollapsed ? item.label : ""}
+                                                className={`w-full flex items-center rounded-lg transition-colors ${
+                                                    isSidebarCollapsed ? 'justify-center p-3' : 'px-4 py-2.5 gap-3'
+                                                } ${
+                                                    isActive 
+                                                    ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' 
+                                                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'
+                                                }`}
+                                            >
+                                                <Icon className={`${isSidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} shrink-0`} />
+                                                {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    ))}
                 </nav>
 
                 <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
-                    <div className="flex items-center gap-3 mb-4 px-2">
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-                            <ShieldAlert className="w-4 h-4 text-zinc-400" />
-                        </div>
-                        <div>
-                            <p className="text-sm font-medium text-white">Admin</p>
-                            <p className="text-xs text-zinc-500">Gestão de TI</p>
-                        </div>
-                    </div>
-                    <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
-                        <LogOut className="w-4 h-4" />
-                        <span className="text-sm font-medium">Sair do sistema</span>
+                    <button onClick={logout} className={`w-full flex items-center py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`} title={isSidebarCollapsed ? "Sair do sistema" : ""}>
+                        <LogOut className="w-5 h-5 shrink-0" />
+                        {!isSidebarCollapsed && <span className="text-sm font-medium">Sair do sistema</span>}
                     </button>
                 </div>
             </aside>

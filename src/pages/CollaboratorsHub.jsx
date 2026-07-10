@@ -44,6 +44,17 @@ const formatTime = (decimalMinutes) => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
+const calcularPontuacao = (metrics) => {
+    if (!metrics) return 0;
+    // Pega tanto as chaves formatadas no relatório quanto as diretas do BD
+    const ptsFinalizados = (Number(metrics.finalizados) || Number(metrics.Atendimentos_Finalizados) || 0) * 1;
+    const ptsLigacoes = (Number(metrics.ligAtendidas) || Number(metrics.Ligacoes_Atendidas) || 0) * 2;
+    const ptsHuggy = (Number(metrics.huggyVol) || Number(metrics.Atendimentos_Huggy) || 0) * 1;
+    const ptsPerdidas = (Number(metrics.ligPerdidas) || Number(metrics.Ligacoes_Perdidas) || 0) * -5;
+    
+    return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
+};
+
 const CollaboratorsHub = () => {
     const { showToast } = useNotification();
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -55,7 +66,9 @@ const CollaboratorsHub = () => {
 
     // --- ESTADOS DE PESQUISA E FILTRO ---
     const [searchTerm, setSearchTerm] = useState('');
-    const [showOnlyActive, setShowOnlyActive] = useState(false);
+    const [showInactives, setShowInactives] = useState(false);
+    const [shiftFilter, setShiftFilter] = useState('');
+    const [evaluations, setEvaluations] = useState([]);
 
     // --- CONEXÃO EM TEMPO REAL ---
     useEffect(() => {
@@ -72,8 +85,20 @@ const CollaboratorsHub = () => {
             setLoading(false);
         });
 
-        return () => unsubscribe();
-    }, []);
+        const qEvals = query(collection(db, "weekly_evaluations"));
+        const unsubEvals = onSnapshot(qEvals, (snapshot) => {
+            const evals = [];
+            snapshot.forEach((doc) => {
+                evals.push({ id: doc.id, ...doc.data() });
+            });
+            setEvaluations(evals);
+        });
+
+        return () => {
+            unsubscribe();
+            unsubEvals();
+        };
+    }, [showToast]);
 
     // --- FUNÇÃO DE INATIVAÇÃO ---
     const handleToggleActive = async (colab) => {
@@ -99,12 +124,15 @@ const CollaboratorsHub = () => {
         return collaborators.filter(colab => {
             const searchLower = searchTerm.toLowerCase();
             const matchesSearch = (colab.name && colab.name.toLowerCase().includes(searchLower)) || 
-                                  (colab.shift && colab.shift.toLowerCase().includes(searchLower));
-            const matchesActive = showOnlyActive ? colab.active !== false : true;
+                                  (colab.shift && colab.shift.toLowerCase().includes(searchLower)) ||
+                                  (colab.role && colab.role.toLowerCase().includes(searchLower));
             
-            return matchesSearch && matchesActive;
+            const matchesActive = showInactives ? true : colab.active !== false;
+            const matchesShift = shiftFilter ? colab.shift === shiftFilter : true;
+            
+            return matchesSearch && matchesActive && matchesShift;
         });
-    }, [collaborators, searchTerm, showOnlyActive]);
+    }, [collaborators, searchTerm, showInactives, shiftFilter]);
 
     if (loading) {
         return (
@@ -158,24 +186,36 @@ const CollaboratorsHub = () => {
 
             {/* Barra de Pesquisa e Filtros */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="relative w-full md:w-96">
-                    <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-                    <input
-                        type="text"
-                        placeholder="Pesquisar por nome ou turno..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600 transition-shadow text-sm"
-                    />
+                <div className="flex w-full md:w-auto items-center gap-4 flex-wrap flex-1">
+                    <div className="relative w-full md:w-96">
+                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+                        <input
+                            type="text"
+                            placeholder="Pesquisar por nome, cargo ou turno..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600 transition-shadow text-sm"
+                        />
+                    </div>
+                    <select 
+                        value={shiftFilter} 
+                        onChange={e => setShiftFilter(e.target.value)}
+                        className="p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600 text-sm bg-white min-w-[120px]"
+                    >
+                        <option value="">Todos os Turnos</option>
+                        <option value="Manhã">Manhã</option>
+                        <option value="Tarde">Tarde</option>
+                        <option value="Noite">Noite</option>
+                    </select>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 shrink-0">
                     <input
                         type="checkbox"
-                        checked={showOnlyActive}
-                        onChange={(e) => setShowOnlyActive(e.target.checked)}
+                        checked={showInactives}
+                        onChange={(e) => setShowInactives(e.target.checked)}
                         className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
                     />
-                    Mostrar somente ativos
+                    Mostrar inativos
                 </label>
             </div>
 
@@ -188,16 +228,28 @@ const CollaboratorsHub = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredCollaborators.map((colab) => (
-                        <CollaboratorCard
-                            key={colab.id}
-                            colab={colab}
-                            onEdit={() => setEditingColab(colab)}
-                            onFeedback={() => setFeedbackColab(colab)}
-                            onReport={() => setReportColab(colab)}
-                            onToggleActive={() => handleToggleActive(colab)}
-                        />
-                    ))}
+                    {filteredCollaborators.map((colab) => {
+                        // Achar a última avaliação deste colaborador
+                        const colabEvals = evaluations.filter(e => e.colabId === colab.id);
+                        colabEvals.sort((a, b) => {
+                            const timeA = a.date !== 'Semana Atual' ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+                            const timeB = b.date !== 'Semana Atual' ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+                            return timeA - timeB; 
+                        });
+                        const latestEval = colabEvals.length > 0 ? colabEvals[colabEvals.length - 1] : null;
+
+                        return (
+                            <CollaboratorCard
+                                key={colab.id}
+                                colab={colab}
+                                latestEval={latestEval}
+                                onEdit={() => setEditingColab(colab)}
+                                onFeedback={() => setFeedbackColab(colab)}
+                                onReport={() => setReportColab(colab)}
+                                onToggleActive={() => handleToggleActive(colab)}
+                            />
+                        );
+                    })}
                 </div>
             )}
 
@@ -210,47 +262,71 @@ const CollaboratorsHub = () => {
 };
 
 // --- COMPONENTE DO CARD ---
-const CollaboratorCard = ({ colab, onEdit, onFeedback, onReport, onToggleActive }) => (
-    <div className={`bg-white rounded-xl border ${colab.active === false ? 'border-gray-200 opacity-60' : 'border-gray-200'} shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-red-200`}>
-        <div className="p-5 border-b border-gray-100 flex items-start gap-4">
-            <div className={`w-12 h-12 rounded-full ${colab.active === false ? 'bg-gray-400' : 'bg-zinc-950'} text-white flex items-center justify-center font-bold text-lg flex-shrink-0`}>
-                {colab.name?.charAt(0)}
-            </div>
-            <div className="overflow-hidden">
-                <div className="flex items-center gap-2 mb-1">
-                    <h3 className="font-bold text-gray-900 truncate" title={colab.name}>{colab.name}</h3>
-                    {colab.active === false && <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 uppercase">Inativo</span>}
+const CollaboratorCard = ({ colab, latestEval, onEdit, onFeedback, onReport, onToggleActive }) => {
+    const score = latestEval ? calcularPontuacao(latestEval) : null;
+    
+    return (
+        <div className={`bg-white rounded-xl border ${colab.active === false ? 'border-gray-200 opacity-60' : 'border-gray-200'} shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-red-200`}>
+            <div className="p-5 border-b border-gray-100 flex items-start gap-4">
+                <div className={`w-12 h-12 rounded-full ${colab.active === false ? 'bg-gray-400' : 'bg-zinc-950'} text-white flex items-center justify-center font-bold text-lg flex-shrink-0`}>
+                    {colab.name?.charAt(0)}
                 </div>
-                <p className="text-xs text-gray-500 mb-2 truncate" title={colab.email}>{colab.email}</p>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                    colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
-                        'bg-zinc-100 text-zinc-700 border border-zinc-200'
-                    }`}>
-                    {colab.shift}
-                </span>
+                <div className="overflow-hidden flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-gray-900 truncate" title={colab.name}>{colab.name}</h3>
+                        {colab.active === false && <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 uppercase">Inativo</span>}
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2 truncate" title={colab.email}>{colab.email}</p>
+                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
+                        colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
+                            'bg-zinc-100 text-zinc-700 border border-zinc-200'
+                        }`}>
+                        {colab.shift}
+                    </span>
+                </div>
+            </div>
+
+            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                <div className="flex justify-between items-center text-xs">
+                    <span className="text-gray-500 font-medium flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                        Última avaliação:
+                    </span>
+                    <span className="font-bold text-gray-900">
+                        {latestEval ? (latestEval.date || 'Sem data') : 'Nenhuma'}
+                    </span>
+                </div>
+                {latestEval && (
+                    <div className="flex justify-between items-center text-xs mt-2">
+                        <span className="text-gray-500 font-medium">Pontuação:</span>
+                        <span className={`font-black ${score < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {score} pts
+                        </span>
+                    </div>
+                )}
+            </div>
+
+            <div className="p-2 bg-gray-50 grid grid-cols-4 gap-1">
+                <button onClick={onEdit} className="flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-zinc-950 hover:bg-white rounded-lg transition-all">
+                    <Edit className="w-4 h-4" />
+                    <span className="text-[9px] font-bold uppercase">Editar</span>
+                </button>
+                <button onClick={onReport} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
+                    <FileText className="w-4 h-4" />
+                    <span className="text-[9px] font-bold uppercase">Relatório</span>
+                </button>
+                <button onClick={onFeedback} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
+                    <MessageSquare className="w-4 h-4" />
+                    <span className="text-[9px] font-bold uppercase">Feedback</span>
+                </button>
+                <button onClick={onToggleActive} className={`flex flex-col items-center gap-1 p-2 ${colab.active === false ? 'text-emerald-600' : 'text-red-600'} hover:bg-white rounded-lg transition-all`}>
+                    {colab.active === false ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
+                    <span className="text-[9px] font-bold uppercase">{colab.active === false ? 'Ativar' : 'Inativar'}</span>
+                </button>
             </div>
         </div>
-
-        <div className="p-2 bg-gray-50 grid grid-cols-4 gap-1">
-            <button onClick={onEdit} className="flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-zinc-950 hover:bg-white rounded-lg transition-all">
-                <Edit className="w-4 h-4" />
-                <span className="text-[9px] font-bold uppercase">Editar</span>
-            </button>
-            <button onClick={onReport} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
-                <FileText className="w-4 h-4" />
-                <span className="text-[9px] font-bold uppercase">Relatório</span>
-            </button>
-            <button onClick={onFeedback} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
-                <MessageSquare className="w-4 h-4" />
-                <span className="text-[9px] font-bold uppercase">Feedback</span>
-            </button>
-            <button onClick={onToggleActive} className={`flex flex-col items-center gap-1 p-2 ${colab.active === false ? 'text-emerald-600' : 'text-red-600'} hover:bg-white rounded-lg transition-all`}>
-                {colab.active === false ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                <span className="text-[9px] font-bold uppercase">{colab.active === false ? 'Ativar' : 'Inativar'}</span>
-            </button>
-        </div>
-    </div>
-);
+    );
+};
 
 // --- COMPONENTE DO MODAL DE EDIÇÃO ---
 const EditCollaboratorModal = ({ colab, onClose }) => {
@@ -521,16 +597,6 @@ const ReportDashboardModal = ({ colab, onClose }) => {
     const [dateFilter, setDateFilter] = useState('');
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-
-    const calcularPontuacao = (metrics) => {
-        if (!metrics) return 0;
-        const ptsFinalizados = (metrics.finalizados || 0) * 1;
-        const ptsLigacoes = (metrics.ligAtendidas || 0) * 2;
-        const ptsHuggy = (metrics.huggyVol || 0) * 1;
-        const ptsPerdidas = (metrics.ligPerdidas || 0) * -5;
-        
-        return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
-    };
 
     useEffect(() => {
         const q = query(

@@ -57,7 +57,7 @@ const OrgChart = ({ readOnly = false }) => {
                 } else {
                     setChart(defaultStructure);
                 }
-            } catch (error) {
+            } catch {
                 showToast("Erro ao carregar o organograma.", "error");
             } finally {
                 setLoading(false);
@@ -89,7 +89,7 @@ const OrgChart = ({ readOnly = false }) => {
                 updatedAt: new Date()
             });
             showToast("Organograma salvo com sucesso!", "success");
-        } catch (error) {
+        } catch {
             showToast("Erro ao salvar organograma.", "error");
         } finally {
             setSaving(false);

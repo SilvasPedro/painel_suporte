@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+/* eslint-disable react-hooks/purity */
 import React, { createContext, useContext, useState } from 'react';
 import { CheckCircle, XCircle, Info, X } from 'lucide-react';
 

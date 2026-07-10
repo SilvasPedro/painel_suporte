@@ -23,7 +23,7 @@ export default function DailyDemandLaunch() {
 
     // Data States
     const [historicalData, setHistoricalData] = useState([]);
-    const [loading, setLoading] = useState(true);
+    
     
     // Filter State (Inicia no mês atual: YYYY-MM)
     const [filterPeriod, setFilterPeriod] = useState(new Date().toISOString().slice(0, 7));
@@ -37,6 +37,7 @@ export default function DailyDemandLaunch() {
         if (isModalOpen) {
             const todayData = historicalData.find(d => d.date === date);
             if (todayData) {
+                // eslint-disable-next-line react-hooks/set-state-in-effect
                 setStartTickets(todayData.startTickets ?? '');
                 setStartChats(todayData.startChats ?? '');
                 setEndTickets(todayData.endTickets ?? '');
@@ -50,8 +51,7 @@ export default function DailyDemandLaunch() {
         }
     }, [date, historicalData, isModalOpen]);
 
-    const fetchHistoricalData = async () => {
-        setLoading(true);
+    async function fetchHistoricalData() {
         try {
             const q = query(collection(db, 'dailyDemand'), orderBy('date', 'asc'));
             const snapshot = await getDocs(q);
@@ -59,10 +59,8 @@ export default function DailyDemandLaunch() {
             setHistoricalData(data);
         } catch (error) {
             console.error('Erro ao buscar dados históricos:', error);
-        } finally {
-            setLoading(false);
         }
-    };
+        }
 
     const handleSave = async (e) => {
         e.preventDefault();
@@ -97,7 +95,6 @@ export default function DailyDemandLaunch() {
         } catch (error) {
             console.error('Erro ao salvar dados:', error);
             setMessage('Erro ao salvar. Verifique sua conexão.');
-        } finally {
             setIsSaving(false);
         }
     };

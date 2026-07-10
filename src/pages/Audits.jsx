@@ -197,7 +197,7 @@ const Audits = () => {
             await deleteDoc(doc(db, "qa_audits", deletingId));
             showToast("Auditoria excluída.", "success");
             setDeletingId(null);
-        } catch (error) {
+        } catch {
             showToast("Erro ao excluir.", "error");
         }
     };

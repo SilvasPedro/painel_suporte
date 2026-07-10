@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Database, Search, Calendar, Eye, Edit2, Trash2, X, Loader2, MessageSquare, TrendingUp, Target, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { collection, onSnapshot, query, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+const collectionMap = {
+    "feedbacks": "feedbacks",
+    "metrics": "weekly_evaluations",
+    "kpis": "sector_kpis",
+    "audits": "qa_audits"
+};
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
 
@@ -45,18 +51,13 @@ const DataManager = () => {
     const [loading, setLoading] = useState(true);
     
     const [collaboratorsMap, setCollaboratorsMap] = useState({});
+    const [qaProcesses, setQaProcesses] = useState({});
     
     const [viewingItem, setViewingItem] = useState(null);
     const [editingItem, setEditingItem] = useState(null);
     const [deletingItem, setDeletingItem] = useState(null);
 
     // Mapeamento atualizado das coleções
-    const collectionMap = {
-        'feedbacks': 'feedbacks', 
-        'metrics': 'weekly_evaluations',
-        'kpis': 'sector_kpis',
-        'audits': 'qa_audits'
-    };
 
     const getSafeDateString = (item) => {
         if (item.date) {
@@ -72,7 +73,7 @@ const DataManager = () => {
             }
             try {
                 return new Date(item.createdAt).toLocaleDateString('pt-BR');
-            } catch (e) {
+            } catch {
                 return 'Data inválida';
             }
         }
@@ -82,16 +83,28 @@ const DataManager = () => {
     useEffect(() => {
         const unsubColabs = onSnapshot(collection(db, "collaborators"), (snapshot) => {
             const map = {};
-            snapshot.forEach(doc => {
-                map[doc.id] = doc.data().name; 
+            snapshot.forEach((doc) => {
+                map[doc.id] = doc.data().name;
             });
             setCollaboratorsMap(map);
         });
         
-        return () => unsubColabs();
+        const unsubQA = onSnapshot(collection(db, "qa_processes"), (snapshot) => {
+            const map = {};
+            snapshot.forEach((doc) => {
+                map[doc.id] = doc.data();
+            });
+            setQaProcesses(map);
+        });
+
+        return () => {
+            unsubColabs();
+            unsubQA();
+        };
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         const currentCollection = collectionMap[activeTab];
         const q = query(collection(db, currentCollection)); 
@@ -103,9 +116,21 @@ const DataManager = () => {
             });
             
             fetchedData.sort((a, b) => {
-                const dateA = typeof a.createdAt?.toMillis === 'function' ? a.createdAt.toMillis() : 0;
-                const dateB = typeof b.createdAt?.toMillis === 'function' ? b.createdAt.toMillis() : 0;
-                return dateB - dateA;
+                const getDateValue = (item) => {
+                    if (item.date) {
+                        if (typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                            return new Date(item.date).getTime();
+                        }
+                    }
+                    if (item.createdAt && typeof item.createdAt.toMillis === 'function') {
+                        return item.createdAt.toMillis();
+                    }
+                    if (item.createdAt) {
+                        return new Date(item.createdAt).getTime();
+                    }
+                    return 0;
+                };
+                return getDateValue(b) - getDateValue(a);
             });
             
             setData(fetchedData);
@@ -116,7 +141,7 @@ const DataManager = () => {
         });
 
         return () => unsubscribe();
-    }, [activeTab]);
+    }, [activeTab, showToast]);
 
     const filteredData = data.filter(item => {
         const mappedName = collaboratorsMap[item.colabId || item.collaboratorId] || '';
@@ -280,9 +305,9 @@ const DataManager = () => {
                 )}
             </div>
 
-            {viewingItem && <ViewModal item={viewingItem} collaboratorsMap={collaboratorsMap} onClose={() => setViewingItem(null)} />}
+            {viewingItem && <ViewModal activeTab={activeTab} collaboratorsMap={collaboratorsMap} qaProcesses={qaProcesses} item={viewingItem} onClose={() => setViewingItem(null)} />}
             {deletingItem && <DeleteModal onClose={() => setDeletingItem(null)} onConfirm={handleDelete} />}
-            {editingItem && <EditModal activeTab={activeTab} item={editingItem} collaboratorsMap={collaboratorsMap} onClose={() => setEditingItem(null)} onSave={handleEditSave} />}
+            {editingItem && <EditModal activeTab={activeTab} item={editingItem} onClose={() => setEditingItem(null)} onSave={handleEditSave} />}
         </div>
     );
 };
@@ -298,37 +323,75 @@ const TabButton = ({ active, onClick, icon, text }) => (
         {text}
     </button>
 );
-
-const ViewModal = ({ item, collaboratorsMap, onClose }) => (
-    <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-        <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div className="p-4 bg-zinc-950 text-white flex justify-between items-center">
-                <h3 className="font-bold">Detalhes do Registro</h3>
-                <button onClick={onClose}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
-            </div>
-            <div className="p-6 space-y-4 text-sm max-h-[60vh] overflow-y-auto">
-                {Object.entries(item).map(([key, value]) => {
-                    if (key === 'id' || key === 'createdAt') return null; 
+const ViewModal = ({ activeTab, item, collaboratorsMap, qaProcesses, onClose }) => {
+    return (
+        <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
+            <div className={`bg-white rounded-xl shadow-2xl w-full ${activeTab === 'audits' ? 'max-w-2xl' : 'max-w-md'} overflow-hidden flex flex-col max-h-[90vh]`}>
+                <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
+                    <h3 className="font-bold">Detalhes do Registro</h3>
+                    <button onClick={onClose}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
+                </div>
+                <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
+                    {Object.entries(item).map(([key, value]) => {
+                        if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId', 'checklistResults', 'processId'].includes(key)) return null;
+                        
+                        let displayValue = value;
+                        if (value && typeof value === 'object') {
+                            if (typeof value.toDate === 'function') {
+                                displayValue = value.toDate().toLocaleString('pt-BR');
+                            } else if (value.seconds !== undefined) {
+                                displayValue = new Date(value.seconds * 1000).toLocaleString('pt-BR');
+                            } else {
+                                displayValue = JSON.stringify(value);
+                            }
+                        }
+                        
+                        let displayString = displayValue?.toString() || 'Vazio';
+                        if ((key === 'colabId' || key === 'collaboratorId') && collaboratorsMap && collaboratorsMap[value]) {
+                            displayString = collaboratorsMap[value]; 
+                        }
+                        
+                        return (
+                            <div key={key} className="border-b border-gray-100 pb-2">
+                                <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(key)}</span>
+                                <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayString}</span>
+                            </div>
+                        );
+                    })}
                     
-                    let displayValue = value?.toString() || 'Vazio';
-                    if ((key === 'colabId' || key === 'collaboratorId') && collaboratorsMap[value]) {
-                        displayValue = collaboratorsMap[value]; 
-                    }
-
-                    return (
-                        <div key={key} className="border-b border-gray-100 pb-2">
-                            <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(key)}</span>
-                            <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayValue}</span>
+                    {/* EXIBIÇÃO DEDICADA DA CHECKLIST DE AUDITORIA */}
+                    {activeTab === 'audits' && item.checklistResults && Object.keys(item.checklistResults).length > 0 && (
+                        <div className="mt-6 border-t border-gray-200 pt-4">
+                            <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                <ShieldCheck className="w-4 h-4 text-red-500" /> Checklist da Avaliação
+                            </h4>
+                            <div className="space-y-3">
+                                {Object.entries(item.checklistResults).map(([idx, status]) => {
+                                    const process = qaProcesses && item.processId ? qaProcesses[item.processId] : null;
+                                    const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
+                                    let statusColor = "text-gray-600 bg-gray-100 border-gray-200";
+                                    if (status === 'Passou') statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+                                    if (status === 'Falhou') statusColor = "text-red-700 bg-red-50 border-red-200";
+                                    return (
+                                        <div key={idx} className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                            <span className="text-sm text-gray-700 font-medium leading-snug">{question}</span>
+                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${statusColor}`}>
+                                                {status}
+                                            </span>
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    );
-                })}
-            </div>
-            <div className="p-4 bg-gray-50 border-t border-gray-200">
-                <button onClick={onClose} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button>
+                    )}
+                </div>
+                <div className="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
+                    <button onClick={onClose} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button>
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
+};
 
 const DeleteModal = ({ onClose, onConfirm }) => (
     <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
@@ -346,7 +409,7 @@ const DeleteModal = ({ onClose, onConfirm }) => (
     </div>
 );
 
-const EditModal = ({ activeTab, item, collaboratorsMap, onClose, onSave }) => {
+const EditModal = ({ activeTab, item, onClose, onSave }) => {
     const [formData, setFormData] = useState({ ...item });
 
     const handleChange = (key, value) => {

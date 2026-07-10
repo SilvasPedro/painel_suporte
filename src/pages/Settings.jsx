@@ -48,7 +48,7 @@ const Settings = () => {
         try {
             await setDoc(doc(db, "system_settings", "sector_goals"), goals);
             showToast("Metas atualizadas com sucesso!", "success");
-        } catch (error) {
+        } catch {
             showToast("Erro ao atualizar metas.", "error");
         } finally {
             setSavingGoals(false);
@@ -112,7 +112,7 @@ const Settings = () => {
                 showToast("Novo processo criado!", "success");
             }
             setIsProcessModalOpen(false);
-        } catch (error) {
+        } catch {
             showToast("Erro ao salvar processo.", "error");
         } finally {
             setSavingProcess(false);
@@ -124,7 +124,7 @@ const Settings = () => {
         try {
             await deleteDoc(doc(db, "qa_processes", id));
             showToast("Processo apagado.", "success");
-        } catch (error) {
+        } catch {
             showToast("Erro ao apagar.", "error");
         }
     };

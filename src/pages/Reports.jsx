@@ -48,7 +48,7 @@ const Reports = () => {
     // --- PERMISSÕES CORRIGIDAS ---
     const isAdmin = currentUser?.role === 'Admin';
     const canEditOrDelete = (report) => isAdmin || report.creatorId === currentUser?.firestoreId;
-    const canChangeStatus = isAdmin;
+    
 
     // --- BUSCA DE DADOS ---
     useEffect(() => {
@@ -168,7 +168,7 @@ const Reports = () => {
             await deleteDoc(doc(db, "critical_reports", deletingReport.id));
             showToast("Solicitação excluída permanentemente.", "success");
             setDeletingReport(null);
-        } catch (error) {
+        } catch {
             showToast("Erro ao excluir.", "error");
         }
     };
@@ -190,7 +190,7 @@ const Reports = () => {
             });
             showToast("Andamento do ticket atualizado!", "success");
             setViewingReport(prev => ({ ...prev, status: quickStatus, adminComment: quickComment }));
-        } catch (error) {
+        } catch {
             showToast("Erro ao atualizar ticket.", "error");
         } finally {
             setQuickSaving(false);

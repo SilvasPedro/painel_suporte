@@ -20,7 +20,7 @@ import OrgChart from './OrgChart';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
-import logo from '../assets/logo.png'
+const logo = logoExtended;
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -433,7 +433,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
     const formatDateBR = (dateStr) => {
         if (!dateStr) return '';
-        const [y, m, d] = dateStr.split('-');
+        const [_y, m, d] = dateStr.split('-');
         return `${d}/${m}`;
     };
 
@@ -647,6 +647,7 @@ const MyHistory = ({ currentUserId }) => {
             setQaProcesses(map);
         });
 
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         let col = '';
         if (activeTab === 'feedbacks') col = 'feedbacks';
@@ -681,7 +682,7 @@ const MyHistory = ({ currentUserId }) => {
         try {
             await updateDoc(doc(db, "feedbacks", id), { read: true });
             showToast("Feedback marcado como lido!", "success");
-        } catch (error) {
+        } catch {
             showToast("Erro ao atualizar status.", "error");
         }
     };

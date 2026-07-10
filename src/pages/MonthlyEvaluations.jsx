@@ -169,7 +169,7 @@ const MonthlyEvaluations = () => {
             await deleteDoc(doc(db, "monthly_evaluations", deletingEval.id));
             showToast("Avaliação excluída permanentemente.", "success");
             setDeletingEval(null);
-        } catch (error) {
+        } catch {
             showToast("Erro ao excluir.", "error");
         }
     };

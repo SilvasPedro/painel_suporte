@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
-import logo from '../assets/logo.png';
+import logo from '../assets/logo_extended.png';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -32,7 +32,7 @@ const Login = () => {
     try {
       await login(email, password);
       // O redirecionamento acontece automaticamente pelo useEffect acima assim que o Firebase confirmar o login
-    } catch (err) {
+    } catch {
       setError("Credenciais inválidas. Verifique os dados e tente novamente.");
       setIsLoading(false);
     }

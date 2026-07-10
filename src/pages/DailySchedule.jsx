@@ -65,7 +65,7 @@ const DailySchedule = ({ readOnly = false }) => {
                 } else {
                     setSchedule({});
                 }
-            } catch (error) {
+            } catch {
                 showToast("Erro ao carregar a escala.", "error");
             } finally {
                 setLoading(false);
@@ -86,7 +86,7 @@ const DailySchedule = ({ readOnly = false }) => {
                 updatedAt: new Date()
             });
             showToast("Escala diária salva com sucesso!", "success");
-        } catch (error) {
+        } catch {
             showToast("Erro ao salvar escala.", "error");
         } finally {
             setSaving(false);
