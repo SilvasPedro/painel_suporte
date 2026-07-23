@@ -424,12 +424,12 @@ const MonthlyEvaluations = () => {
                                         <textarea rows="2" placeholder="Atrasos, faltas, gestão de pausas..." value={formData.punctuality} onChange={(e) => setFormData({...formData, punctuality: e.target.value})} className="w-full p-3 outline-none resize-y min-h-[60px] text-sm text-gray-700" />
                                     </div>
 
-                                    {/* CONSIDERAÇÕES FINAIS */}
+                                    {/* RELATÓRIO COMPLETO / CONSIDERAÇÕES FINAIS */}
                                     <div className="bg-white p-1 rounded-xl border border-gray-200 shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-red-500 transition-shadow">
                                         <label className="flex items-center gap-2 text-sm font-bold text-gray-800 bg-gray-50 p-3 border-b border-gray-100">
-                                            <MessageSquare className="w-4 h-4 text-gray-500" /> Considerações Finais / Plano de Ação
+                                            <MessageSquare className="w-4 h-4 text-gray-500" /> Relatório Completo do Mês / Considerações Finais
                                         </label>
-                                        <textarea rows="2" placeholder="Alinhamentos finais e próximos passos..." value={formData.generalComments} onChange={(e) => setFormData({...formData, generalComments: e.target.value})} className="w-full p-3 outline-none resize-y min-h-[60px] text-sm text-gray-700" />
+                                        <textarea rows="8" placeholder="Relatório detalhado do mês, alinhamentos finais e próximos passos..." value={formData.generalComments} onChange={(e) => setFormData({...formData, generalComments: e.target.value})} className="w-full p-3 outline-none resize-y min-h-[150px] text-sm text-gray-700" />
                                     </div>
                                 </div>
                             </form>
@@ -538,7 +538,7 @@ const MonthlyEvaluations = () => {
                                     {viewingEval.generalComments && (
                                         <div className="space-y-2 pt-4 mt-6 border-t-2 border-gray-100">
                                             <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                <MessageSquare className="w-4 h-4 text-gray-500"/> Plano de Ação / Considerações
+                                                <MessageSquare className="w-4 h-4 text-gray-500"/> Relatório Completo do Mês / Considerações Finais
                                             </h4>
                                             <div className="text-gray-800 text-sm prose prose-sm max-w-none bg-gray-50 p-4 rounded-lg border border-gray-200">
                                                 <ReactMarkdown>{viewingEval.generalComments}</ReactMarkdown>

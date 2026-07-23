@@ -3,7 +3,8 @@ import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
-    KeyRound, Settings, Activity, Calendar, CalendarDays, Network
+    KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText,
+    ThumbsUp, Minus, ThumbsDown
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
@@ -12,6 +13,7 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
+import ReactMarkdown from 'react-markdown';
 import Reports from './Reports';
 import DailyQueueTracker from './DailyDemandLaunch'
 import SundaySchedule from './SundaySchedule'; // ADICIONE ESTA LINHA
@@ -46,7 +48,18 @@ const translateKey = (key) => {
         status: 'Resultado QA',
         notes: 'Observações do Auditor',
         evaluatorName: 'Auditado por',
-        processName: 'Processo Auditado'
+        processName: 'Processo Auditado',
+        referenceMonth: 'Mês de Referência',
+        classification: 'Classificação Geral',
+        performance: 'Desempenho e Produtividade',
+        performanceScore: 'Nota Desempenho',
+        behavior: 'Comportamento e Postura',
+        behaviorScore: 'Nota Comportamento',
+        punctuality: 'Assiduidade e Pontualidade',
+        punctualityScore: 'Nota Assiduidade',
+        quality: 'Qualidade e Processos',
+        qualityScore: 'Nota Qualidade',
+        generalComments: 'Relatório Completo do Mês / Considerações Finais'
     };
     return dictionary[key] || key;
 };
@@ -67,6 +80,21 @@ const parseDateObj = (dateStr) => {
         }
     }
     return 0;
+};
+
+const formatMonth = (yyyyMm) => {
+    if (!yyyyMm) return '--';
+    const [year, month] = yyyyMm.split('-');
+    return `${month}/${year}`;
+};
+
+const getClassificationBadge = (classification) => {
+    switch (classification) {
+        case 'Positiva': return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1 w-max"><ThumbsUp className="w-3 h-3"/> Positiva</span>;
+        case 'Neutra': return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 flex items-center gap-1 w-max"><Minus className="w-3 h-3"/> Neutra</span>;
+        case 'Negativa': return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-red-100 text-red-700 flex items-center gap-1 w-max"><ThumbsDown className="w-3 h-3"/> Negativa</span>;
+        default: return <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-700 flex items-center gap-1 w-max"><Minus className="w-3 h-3"/> N/A</span>;
+    }
 };
 
 const CollaboratorDashboard = ({ currentUserId }) => {
@@ -653,6 +681,7 @@ const MyHistory = ({ currentUserId }) => {
         if (activeTab === 'feedbacks') col = 'feedbacks';
         else if (activeTab === 'metrics') col = 'weekly_evaluations';
         else if (activeTab === 'audits') col = 'qa_audits';
+        else if (activeTab === 'monthly') col = 'monthly_evaluations';
 
         const q = query(collection(db, col));
 
@@ -731,7 +760,10 @@ const MyHistory = ({ currentUserId }) => {
                         <MessageSquare className="w-4 h-4" /> Feedbacks
                     </button>
                     <button onClick={() => setActiveTab('metrics')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'metrics' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                        <TrendingUp className="w-4 h-4" /> Desempenho
+                        <TrendingUp className="w-4 h-4" /> Semanal
+                    </button>
+                    <button onClick={() => setActiveTab('monthly')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'monthly' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                        <FileText className="w-4 h-4" /> Mensal
                     </button>
                     <button onClick={() => setActiveTab('audits')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'audits' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                         <ShieldCheck className="w-4 h-4" /> Auditorias
@@ -792,6 +824,9 @@ const MyHistory = ({ currentUserId }) => {
                                             {activeTab === 'metrics' && (
                                                 <span className="text-gray-600">Pontuação: <strong className="text-gray-900">{i.pontuacao || 0} pts</strong></span>
                                             )}
+                                            {activeTab === 'monthly' && (
+                                                <span className="text-gray-600">Mês: <strong className="text-gray-900">{i.referenceMonth || '--'}</strong> | Classificação: <strong className="text-gray-900">{i.classification || '--'}</strong></span>
+                                            )}
                                             {activeTab === 'audits' && (
                                                 <span className="text-gray-600">
                                                     Status: <strong className={i.status === 'Conforme' ? 'text-emerald-600' : 'text-red-600'}>{i.status}</strong> | Protocolo: <strong className="text-gray-900">{i.protocol || '--'}</strong>
@@ -815,6 +850,107 @@ const MyHistory = ({ currentUserId }) => {
             </div>
 
             {viewingItem && (
+                activeTab === 'monthly' ? (
+                    <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
+                        <div className="bg-gray-100 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
+                            <div className="p-4 bg-white border-b border-gray-200 flex justify-between items-center shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-red-50 text-red-600 rounded-lg">
+                                        <CalendarDays className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-lg text-gray-900 leading-tight">Relatório de Avaliação Mensal</h3>
+                                        <p className="text-xs text-gray-500">Mês de Referência: <strong className="text-gray-700">{formatMonth(viewingItem.referenceMonth)}</strong></p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setViewingItem(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5 text-gray-500" /></button>
+                            </div>
+                            
+                            <div className="p-6 overflow-y-auto flex-1">
+                                <div className="bg-white p-8 rounded border border-gray-200 shadow-sm mx-auto max-w-3xl">
+                                    <div className="border-b-2 border-gray-900 pb-4 mb-6 flex justify-between items-end">
+                                        <div>
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Colaborador Avaliado</span>
+                                            <span className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                                                {viewingItem.colabName}
+                                                {getClassificationBadge(viewingItem.classification)}
+                                            </span>
+                                        </div>
+                                        <div className="text-right">
+                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Avaliador Responsável</span>
+                                            <span className="text-base font-bold text-gray-700">{viewingItem.evaluatorName}</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-8 markdown-body">
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <Star className="w-4 h-4 text-amber-500"/> Desempenho e Produtividade
+                                                </h4>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.performanceScore || '-'}</strong>/10</span>
+                                            </div>
+                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
+                                                <ReactMarkdown>{viewingItem.performance || '*Sem observações neste pilar.*'}</ReactMarkdown>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <ShieldCheck className="w-4 h-4 text-emerald-500"/> Qualidade e Processos
+                                                </h4>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.qualityScore || '-'}</strong>/10</span>
+                                            </div>
+                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
+                                                <ReactMarkdown>{viewingItem.quality || '*Sem observações neste pilar.*'}</ReactMarkdown>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <User className="w-4 h-4 text-blue-500"/> Comportamento e Postura
+                                                </h4>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.behaviorScore || '-'}</strong>/10</span>
+                                            </div>
+                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
+                                                <ReactMarkdown>{viewingItem.behavior || '*Sem observações neste pilar.*'}</ReactMarkdown>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
+                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <Clock className="w-4 h-4 text-purple-500"/> Assiduidade e Pontualidade
+                                                </h4>
+                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.punctualityScore || '-'}</strong>/10</span>
+                                            </div>
+                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
+                                                <ReactMarkdown>{viewingItem.punctuality || '*Sem observações neste pilar.*'}</ReactMarkdown>
+                                            </div>
+                                        </div>
+
+                                        {viewingItem.generalComments && (
+                                            <div className="space-y-2 pt-4 mt-6 border-t-2 border-gray-100">
+                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <MessageSquare className="w-4 h-4 text-gray-500"/> Relatório Completo do Mês / Considerações Finais
+                                                </h4>
+                                                <div className="text-gray-800 text-sm prose prose-sm max-w-none bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                                    <ReactMarkdown>{viewingItem.generalComments}</ReactMarkdown>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="p-4 bg-white border-t border-gray-200 flex justify-end shrink-0">
+                                <button onClick={() => setViewingItem(null)} className="px-8 py-2 bg-gray-900 text-white rounded-lg font-bold hover:bg-black transition-colors">Fechar Documento</button>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
                     <div className={`bg-white rounded-xl shadow-2xl w-full ${activeTab === 'audits' ? 'max-w-2xl' : 'max-w-md'} overflow-hidden flex flex-col max-h-[90vh]`}>
                         <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
@@ -879,6 +1015,7 @@ const MyHistory = ({ currentUserId }) => {
                         </div>
                     </div>
                 </div>
+                )
             )}
         </div>
     );

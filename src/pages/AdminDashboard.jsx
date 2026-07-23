@@ -23,6 +23,7 @@ import DailyQueueTracker from './DailyDemandLaunch'
 import SundaySchedule from './SundaySchedule';
 import DailySchedule from './DailySchedule';
 import OrgChart from './OrgChart';
+import MonthlyEvaluations from './MonthlyEvaluations';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -64,6 +65,7 @@ const AdminDashboard = () => {
             icon: TrendingUp,
             items: [
                 { id: 'metrics', label: 'Avaliações Semanais', icon: TrendingUp },
+                { id: 'monthly_evaluations', label: 'Análise Mensal (1:1)', icon: FileText },
                 { id: 'DailyQueueTracker', label: 'Demanda Diária', icon: Activity },
                 { id: 'reports', label: 'Relatórios Críticos', icon: ClipboardList },
                 { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
@@ -103,6 +105,8 @@ const AdminDashboard = () => {
                 return <OrgChart />;
             case 'metrics':
                 return <WeeklyMetrics />;
+            case 'monthly_evaluations':
+                return <MonthlyEvaluations />;
             case 'schedule':
                 return <SundaySchedule />;
             case 'daily_schedule':

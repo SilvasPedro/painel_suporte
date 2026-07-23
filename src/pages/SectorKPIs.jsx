@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Rocket, Target, TrendingUp, RefreshCw, Save, Edit3, Calendar, Loader2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { collection, onSnapshot, query, orderBy, addDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
 
@@ -14,8 +14,14 @@ const SectorKPIs = () => {
     // Estado do formulário de Lançamento da Semana
     const [kpiForm, setKpiForm] = useState({ date: '', tmr: '', fcr: '', recurrence: '' });
 
-    // Estado do formulário de Metas (A "Cola")
-    const [goalsForm, setGoalsForm] = useState({ tmr: '00:20:00', fcr: '80.0', recurrence: '20.0' });
+    // Estado para filtro de mês
+    const getCurrentMonth = () => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        return `${year}-${month}`;
+    };
+    const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
 
     // Dados reais do gráfico
     const [chartData, setChartData] = useState([]);
@@ -47,7 +53,7 @@ const SectorKPIs = () => {
 
     // --- PUXANDO DADOS DO FIREBASE ---
     useEffect(() => {
-        // 1. Puxa o histórico de KPIs do setor
+        // Puxa o histórico de KPIs do setor
         const q = query(collection(db, "sector_kpis"), orderBy("date", "asc"));
         
         const unsubscribeKpis = onSnapshot(q, (snapshot) => {
@@ -56,6 +62,7 @@ const SectorKPIs = () => {
                 const dbData = doc.data();
                 fetchedData.push({
                     id: doc.id,
+                    fullDate: dbData.date, // "YYYY-MM-DD"
                     date: formatChartDate(dbData.date),
                     fcr: Number(dbData.fcr) || 0,
                     reincidencia: Number(dbData.recurrence) || 0,
@@ -63,21 +70,19 @@ const SectorKPIs = () => {
                 });
             });
             setChartData(fetchedData);
-        });
-
-        // 2. Puxa as metas globais salvas
-        const unsubscribeGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
-            if (docSnap.exists()) {
-                setGoalsForm(docSnap.data());
-            }
             setLoading(false);
         });
 
         return () => {
             unsubscribeKpis();
-            unsubscribeGoals();
         };
     }, []);
+
+    // Filtra dados do gráfico baseado no mês selecionado
+    const filteredChartData = chartData.filter(item => {
+        if (!selectedMonth) return true;
+        return item.fullDate && item.fullDate.startsWith(selectedMonth);
+    });
 
     // --- SALVAR NOVO LANÇAMENTO (GRÁFICO) ---
     const handleSaveKPI = async (e) => {
@@ -98,19 +103,6 @@ const SectorKPIs = () => {
             showToast("Erro ao salvar lançamento.", "error");
         } finally {
             setSaving(false);
-        }
-    };
-
-    // --- ATUALIZAR METAS (A COLA) ---
-    const handleUpdateGoals = async (e) => {
-        e.preventDefault();
-        try {
-            // Cria ou atualiza um documento fixo chamado "sector_goals" dentro de uma coleção "system_settings"
-            await setDoc(doc(db, "system_settings", "sector_goals"), goalsForm);
-            showToast("Metas globais atualizadas!", "success");
-        } catch (error) {
-            console.error(error);
-            showToast("Erro ao atualizar as metas.", "error");
         }
     };
 
@@ -145,7 +137,7 @@ const SectorKPIs = () => {
             </header>
 
             {/* GRID SUPERIOR: Formulários */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div className="mb-6">
                 
                 {/* CARD 1: Lançar KPIs */}
                 <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col">
@@ -155,7 +147,7 @@ const SectorKPIs = () => {
                     </h2>
                     
                     <form onSubmit={handleSaveKPI} className="space-y-4 flex-1 flex flex-col justify-between">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Semana Referência</label>
                                 <input 
@@ -206,62 +198,10 @@ const SectorKPIs = () => {
                         <button 
                             type="submit" 
                             disabled={saving}
-                            className="w-full mt-6 py-3 px-4 bg-zinc-950 text-white rounded-lg hover:bg-black transition-colors font-bold flex items-center justify-center gap-2 disabled:opacity-70"
+                            className="w-full md:w-auto md:self-end mt-6 py-3 px-8 bg-zinc-950 text-white rounded-lg hover:bg-black transition-colors font-bold flex items-center justify-center gap-2 disabled:opacity-70"
                         >
                             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                             SALVAR LANÇAMENTO
-                        </button>
-                    </form>
-                </div>
-
-                {/* CARD 2: Metas Atuais */}
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col">
-                    <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <Target className="w-5 h-5 text-red-600" />
-                        Metas Atuais (Cola)
-                    </h2>
-                    
-                    <form onSubmit={handleUpdateGoals} className="space-y-4 flex-1 flex flex-col justify-between">
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Meta TMR</label>
-                                <input 
-                                    type="text" 
-                                    value={goalsForm.tmr}
-                                    onChange={(e) => setGoalsForm({...goalsForm, tmr: e.target.value})}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-zinc-900 outline-none text-gray-700 font-medium"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Meta FCR (%)</label>
-                                <input 
-                                    type="number" 
-                                    step="0.1"
-                                    value={goalsForm.fcr}
-                                    onChange={(e) => setGoalsForm({...goalsForm, fcr: e.target.value})}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-zinc-900 outline-none text-gray-700 font-medium"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Meta Reincid. (%)</label>
-                                <input 
-                                    type="number" 
-                                    step="0.1"
-                                    value={goalsForm.recurrence}
-                                    onChange={(e) => setGoalsForm({...goalsForm, recurrence: e.target.value})}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-zinc-900 outline-none text-gray-700 font-medium"
-                                />
-                            </div>
-                        </div>
-
-                        <div className="flex-1"></div>
-
-                        <button 
-                            type="submit" 
-                            className="w-full mt-6 py-3 px-4 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-bold flex items-center justify-center gap-2"
-                        >
-                            <Edit3 className="w-4 h-4" />
-                            ATUALIZAR METAS GLOBAIS
                         </button>
                     </form>
                 </div>
@@ -269,54 +209,104 @@ const SectorKPIs = () => {
 
             {/* CARD 3: Gráfico de Evolução */}
             <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
                     <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-blue-500" />
-                        Evolução Mensal
+                        Evolução Mensal dos KPIs
                     </h2>
+                    <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-3 py-1.5 rounded-lg">
+                        <Calendar className="w-4 h-4 text-gray-500" />
+                        <input 
+                            type="month" 
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-transparent outline-none text-sm font-medium text-gray-700"
+                        />
+                    </div>
                 </div>
 
-                <div className="h-80 w-full mt-4">
-                    {chartData.length === 0 ? (
-                        <div className="h-full flex items-center justify-center text-gray-400">
-                            Nenhum lançamento registrado no banco de dados.
+                <div className="w-full mt-4">
+                    {filteredChartData.length === 0 ? (
+                        <div className="h-80 flex items-center justify-center text-gray-400 bg-gray-50 rounded-lg border border-dashed border-gray-200">
+                            Nenhum lançamento registrado no banco de dados para este mês.
                         </div>
                     ) : (
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                <defs>
-                                    <linearGradient id="colorFcr" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorRecorrence" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                                    </linearGradient>
-                                    <linearGradient id="colorTmr" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
-                                
-                                {/* O Tooltip dinâmico: Mostra % para as taxas, e converte de volta pra Relógio pro TMR */}
-                                <Tooltip 
-                                    contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
-                                    formatter={(value, name) => {
-                                        if (name === "TMR") return [formatTime(value), "TMR"];
-                                        return [`${value}%`, name];
-                                    }}
-                                />
-                                <Legend verticalAlign="top" height={36} iconType="rect" />
-                                
-                                <Area type="monotone" dataKey="fcr" name="FCR (%)" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorFcr)" activeDot={{ r: 6 }} />
-                                <Area type="monotone" dataKey="tmrDecimal" name="TMR" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorTmr)" activeDot={{ r: 6 }} />
-                                <Area type="monotone" dataKey="reincidencia" name="Reincidência (%)" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorRecorrence)" activeDot={{ r: 6 }} />
-                            </AreaChart>
-                        </ResponsiveContainer>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            {/* Gráfico FCR */}
+                            <div className="h-72 bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col">
+                                <h3 className="text-sm font-bold text-gray-700 mb-4 text-center">First Call Resolution (FCR)</h3>
+                                <div className="flex-1 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={filteredChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorFcr" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
+                                            <Tooltip 
+                                                contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                                                formatter={(value) => [`${value}%`, 'FCR (%)']}
+                                            />
+                                            <Area type="monotone" dataKey="fcr" name="FCR (%)" stroke="#22c55e" strokeWidth={2} fillOpacity={1} fill="url(#colorFcr)" activeDot={{ r: 6 }} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Gráfico TMR */}
+                            <div className="h-72 bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col">
+                                <h3 className="text-sm font-bold text-gray-700 mb-4 text-center">Tempo Médio de Resposta (TMR)</h3>
+                                <div className="flex-1 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={filteredChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorTmr" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
+                                            <Tooltip 
+                                                contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                                                formatter={(value) => [formatTime(value), 'TMR']}
+                                            />
+                                            <Area type="monotone" dataKey="tmrDecimal" name="TMR" stroke="#3b82f6" strokeWidth={2} fillOpacity={1} fill="url(#colorTmr)" activeDot={{ r: 6 }} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+
+                            {/* Gráfico Reincidência */}
+                            <div className="h-72 bg-gray-50 p-4 rounded-xl border border-gray-100 flex flex-col">
+                                <h3 className="text-sm font-bold text-gray-700 mb-4 text-center">Taxa de Reincidência</h3>
+                                <div className="flex-1 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <AreaChart data={filteredChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <defs>
+                                                <linearGradient id="colorRecorrence" x1="0" y1="0" x2="0" y2="1">
+                                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
+                                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
+                                                </linearGradient>
+                                            </defs>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                                            <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
+                                            <Tooltip 
+                                                contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}}
+                                                formatter={(value) => [`${value}%`, 'Reincidência (%)']}
+                                            />
+                                            <Area type="monotone" dataKey="reincidencia" name="Reincidência (%)" stroke="#ef4444" strokeWidth={2} fillOpacity={1} fill="url(#colorRecorrence)" activeDot={{ r: 6 }} />
+                                        </AreaChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </div>
+                        </div>
                     )}
                 </div>
             </div>
