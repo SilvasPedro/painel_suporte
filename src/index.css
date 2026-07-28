@@ -8,3 +8,25 @@
     -ms-overflow-style: none;  /* IE e Edge */
     scrollbar-width: none;  /* Firefox */
 }
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(100vh) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+    transform: translateY(80vh) scale(1);
+  }
+  80% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(50vh) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.animate-float {
+  animation: floatUp ease-in infinite;
+}

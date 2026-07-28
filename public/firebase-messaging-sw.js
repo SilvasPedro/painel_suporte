@@ -3,13 +3,13 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.1/firebase-messaging-compat.js');
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDyJHliLhSH5Oxq9iS5m1WA2yfFNgfQQAE",
-    authDomain: "prodigyapp-73141.firebaseapp.com",
-    projectId: "prodigyapp-73141",
-    storageBucket: "prodigyapp-73141.firebasestorage.app",
-    messagingSenderId: "573565202933",
-    appId: "1:573565202933:web:65794d32184aeeab1430bc",
-    measurementId: "G-SLMR72TY9F"
+    apiKey: "mock-api-key",
+    authDomain: "mock-app.firebaseapp.com",
+    projectId: "mock-project-id",
+    storageBucket: "mock-app.firebasestorage.app",
+    messagingSenderId: "000000000000",
+    appId: "1:000000000000:web:000000000000000000",
+    measurementId: "G-0000000000"
 };
 
 firebase.initializeApp(firebaseConfig);

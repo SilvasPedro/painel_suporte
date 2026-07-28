@@ -4,7 +4,7 @@ import {
     ShieldCheck, Rocket, User, Hourglass, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
     KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText,
-    ThumbsUp, Minus, ThumbsDown
+    ThumbsUp, Minus, ThumbsDown, AlertTriangle
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
 import { updatePassword } from 'firebase/auth';
@@ -519,7 +519,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             {/* CARDS DE PLANTÃO */}
             <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Card Plantão Hoje */}
-                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-sm ${myTaskToday ? 'bg-red-900 text-white border-red-900 shadow-sm' : 'bg-white border-gray-200'}`}>
+                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${myTaskToday ? 'bg-red-900 text-white border-red-900 shadow-sm' : 'bg-white/60 backdrop-blur-xl border-white/80'}`}>
                     <div className={`p-3 rounded-lg ${myTaskToday ? 'bg-red-700' : 'bg-gray-100'}`}>
                         <CalendarDays className={`w-6 h-6 ${myTaskToday ? 'text-white' : 'text-gray-500'}`} />
                     </div>
@@ -532,7 +532,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
 
                 {/* Card Próximo Domingo */}
-                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-sm ${nextSundayShift ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white border-gray-200'}`}>
+                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${nextSundayShift ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white/60 backdrop-blur-xl border-white/80'}`}>
                     <div className={`p-3 rounded-lg ${nextSundayShift ? 'bg-emerald-700' : 'bg-gray-100'}`}>
                         <Users className={`w-6 h-6 ${nextSundayShift ? 'text-white' : 'text-gray-500'}`} />
                     </div>
@@ -544,50 +544,50 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                     </div>
                 </div>
             </div>
-            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4 shrink-0">
+            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white/60 backdrop-blur-xl p-6 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
                     <p className="text-sm text-gray-500">Visão geral de indicadores e qualidade.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-fuchsia-50 px-4 py-2.5 rounded-lg border border-fuchsia-100 shadow-sm min-w-[140px]">
-                        <div className="p-1.5 bg-fuchsia-500 rounded-md shrink-0">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 px-4 py-2.5 rounded-lg border border-fuchsia-400 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-white/20 rounded-md shrink-0">
                             <MessageSquare className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-fuchsia-600 uppercase tracking-tight line-clamp-1">Feedbacks Novos</span>
-                            <span className="text-xl font-black text-fuchsia-900 leading-tight">{unreadFeedbacks}</span>
+                            <span className="text-[10px] font-bold text-fuchsia-100 uppercase tracking-tight line-clamp-1">Feedbacks Novos</span>
+                            <span className="text-xl font-black text-white leading-tight">{unreadFeedbacks}</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-amber-50 px-4 py-2.5 rounded-lg border border-amber-100 shadow-sm min-w-[140px]">
-                        <div className="p-1.5 bg-amber-500 rounded-md shrink-0">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-gradient-to-br from-amber-500 to-amber-600 px-4 py-2.5 rounded-lg border border-amber-400 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-white/20 rounded-md shrink-0">
                             <Clock className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-tight line-clamp-1">Relatos Pendentes</span>
-                            <span className="text-xl font-black text-amber-900 leading-tight">{reportStats.pending}</span>
+                            <span className="text-[10px] font-bold text-amber-100 uppercase tracking-tight line-clamp-1">Relatos Pendentes</span>
+                            <span className="text-xl font-black text-white leading-tight">{reportStats.pending}</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100 shadow-sm min-w-[140px]">
-                        <div className="p-1.5 bg-blue-500 rounded-md shrink-0">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-gradient-to-br from-blue-500 to-blue-600 px-4 py-2.5 rounded-lg border border-blue-400 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-white/20 rounded-md shrink-0">
                             <Hourglass className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tight line-clamp-1">Em Andamento</span>
-                            <span className="text-xl font-black text-blue-900 leading-tight">{reportStats.inProgress}</span>
+                            <span className="text-[10px] font-bold text-blue-100 uppercase tracking-tight line-clamp-1">Em Andamento</span>
+                            <span className="text-xl font-black text-white leading-tight">{reportStats.inProgress}</span>
                         </div>
                     </div>
 
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-lg border border-emerald-100 shadow-sm min-w-[140px]">
-                        <div className="p-1.5 bg-emerald-500 rounded-md shrink-0">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-2.5 rounded-lg border border-emerald-400 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-white/20 rounded-md shrink-0">
                             <CheckCircle className="w-4 h-4 text-white" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-tight line-clamp-1">Relatos Concluídos</span>
-                            <span className="text-xl font-black text-emerald-900 leading-tight">{reportStats.resolved}</span>
+                            <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-tight line-clamp-1">Relatos Concluídos</span>
+                            <span className="text-xl font-black text-white leading-tight">{reportStats.resolved}</span>
                         </div>
                     </div>
 
@@ -619,9 +619,9 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4"><TrendingUp className="w-4 h-4 text-gray-500" /> Evolução Temporal</h2>
                 {chartData.length === 0 ? <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center text-gray-400">Nenhuma avaliação registrada para desenhar o gráfico.</div> : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">Produtividade</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" /></AreaChart></ResponsiveContainer></div>
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">TMA Telefonia</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Tel"]} /><Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" /></AreaChart></ResponsiveContainer></div>
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72"><h3 className="text-sm font-bold text-gray-700 mb-4">TMA Huggy</h3><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData}><defs><linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Huggy"]} /><Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" /></AreaChart></ResponsiveContainer></div>
+                        <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">Produtividade</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" /></AreaChart></ResponsiveContainer></div></div>
+                        <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">TMA Telefonia</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Tel"]} /><Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" /></AreaChart></ResponsiveContainer></div></div>
+                        <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">TMA Huggy</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Huggy"]} /><Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" /></AreaChart></ResponsiveContainer></div></div>
                     </div>
                 )}
             </div>
@@ -630,7 +630,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 };
 
 const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
-    <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 flex flex-col relative overflow-hidden h-full">
+    <div className="bg-white/60 backdrop-blur-xl rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 border border-white/80 flex flex-col relative overflow-hidden h-full">
         <div className="flex justify-between items-start mb-2">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</h3>
             <div className="p-1 bg-gray-50 rounded-full border border-gray-100">{icon}</div>
@@ -950,6 +950,72 @@ const MyHistory = ({ currentUserId }) => {
                             </div>
                         </div>
                     </div>
+                ) : activeTab === 'metrics' ? (
+                    <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl aspect-video overflow-hidden flex flex-col relative max-h-[90vh]">
+                            <div className="p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 bg-red-500/20 text-red-500 rounded-lg">
+                                        <TrendingUp className="w-5 h-5" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-lg leading-tight">Desempenho Semanal</h3>
+                                        <p className="text-xs text-gray-400">Data de Referência: <strong className="text-gray-200">{viewingItem.date}</strong></p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setViewingItem(null)} className="p-2 hover:bg-zinc-800 rounded-full transition-colors"><X className="w-5 h-5 text-gray-400" /></button>
+                            </div>
+                            <div className="p-6 overflow-y-auto flex-1 bg-gray-50/50">
+                                <div className="grid grid-cols-3 gap-6 h-full">
+                                    {/* Left Column: Negative metrics & neutral */}
+                                    <div className="flex flex-col gap-6">
+                                        <div className="bg-rose-50 rounded-xl p-5 border border-rose-100 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-rose-600 uppercase tracking-widest mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Ligações Perdidas</div>
+                                            <div className="text-4xl font-black text-rose-700">{viewingItem.Ligacoes_Perdidas || 0}</div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-5 border border-gray-200 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Phone className="w-4 h-4"/> TME Telefonia</div>
+                                            <div className="text-3xl font-black text-gray-800">{viewingItem.TME_Telefonia || '00:00:00'}</div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-5 border border-gray-200 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4"/> Atendimentos Huggy</div>
+                                            <div className="text-3xl font-black text-gray-800">{viewingItem.Atendimentos_Huggy || 0}</div>
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Middle Column: Central Highlight */}
+                                    <div className="flex flex-col gap-6">
+                                        <div className="bg-gradient-to-b from-amber-50 to-white rounded-xl p-6 border-2 border-amber-200 flex flex-col items-center justify-center shadow-md flex-[2] relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-amber-400 opacity-20 blur-2xl"></div>
+                                            <div className="text-xs font-bold text-amber-600 uppercase tracking-widest mb-2 flex items-center gap-2 z-10"><TrendingUp className="w-4 h-4"/> Pontuação Final</div>
+                                            <div className="text-6xl font-black text-amber-600 z-10">{viewingItem.pontuacao !== undefined ? viewingItem.pontuacao : (Number(viewingItem.Atendimentos_Finalizados || 0) * 1 + Number(viewingItem.Ligacoes_Atendidas || 0) * 2 + Number(viewingItem.Atendimentos_Huggy || 0) * 1 + Number(viewingItem.Ligacoes_Perdidas || 0) * -5)}</div>
+                                            <div className="text-sm font-bold text-amber-500 mt-2 z-10">pts</div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-5 border border-gray-200 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Ligações Atendidas</div>
+                                            <div className="text-3xl font-black text-gray-800">{viewingItem.Ligacoes_Atendidas || 0}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column: Positive metrics & neutral */}
+                                    <div className="flex flex-col gap-6">
+                                        <div className="bg-emerald-50 rounded-xl p-5 border border-emerald-100 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-2 flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Atendimentos Fin.</div>
+                                            <div className="text-4xl font-black text-emerald-700">{viewingItem.Atendimentos_Finalizados || 0}</div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-5 border border-gray-200 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4"/> TMA Huggy</div>
+                                            <div className="text-3xl font-black text-gray-800">{viewingItem.TMA_Huggy || '00:00:00'}</div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-5 border border-gray-200 flex flex-col justify-between shadow-sm flex-1">
+                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2 flex items-center gap-2"><Phone className="w-4 h-4"/> TMA Telefonia</div>
+                                            <div className="text-3xl font-black text-gray-800">{viewingItem.TMA_Telefonia || '00:00:00'}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 ) : (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
                     <div className={`bg-white rounded-xl shadow-2xl w-full ${activeTab === 'audits' ? 'max-w-2xl' : 'max-w-md'} overflow-hidden flex flex-col max-h-[90vh]`}>
@@ -958,57 +1024,118 @@ const MyHistory = ({ currentUserId }) => {
                             <button onClick={() => setViewingItem(null)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
                         </div>
                         <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
-                            {Object.entries(viewingItem).map(([k, v]) => {
-                                // Ocultando os campos de controle
-                                if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId', 'checklistResults', 'processId'].includes(k)) return null;
-
-                                let displayValue = v;
-                                if (v && typeof v === 'object') {
-                                    if (typeof v.toDate === 'function') {
-                                        displayValue = v.toDate().toLocaleString('pt-BR');
-                                    } else if (v.seconds !== undefined) {
-                                        displayValue = new Date(v.seconds * 1000).toLocaleString('pt-BR');
-                                    } else {
-                                        displayValue = JSON.stringify(v);
-                                    }
-                                }
-
-                                return (
-                                    <div key={k} className="border-b border-gray-100 pb-2">
-                                        <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span>
-                                        <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayValue?.toString() || 'Vazio'}</span>
+                            {activeTab === 'feedbacks' ? (
+                                <div className="space-y-6">
+                                    <div className="flex flex-wrap gap-2">
+                                        {viewingItem.type && (
+                                            <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${viewingItem.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : viewingItem.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 'bg-blue-100 text-blue-700 border border-blue-200'}`}>
+                                                {viewingItem.type}
+                                            </span>
+                                        )}
+                                        {viewingItem.method && (
+                                            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-100 text-purple-700 border border-purple-200">
+                                                Meio: {viewingItem.method}
+                                            </span>
+                                        )}
+                                        {viewingItem.protocol && viewingItem.protocol !== "N/A" && (
+                                            <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                                Protocolo: {viewingItem.protocol}
+                                            </span>
+                                        )}
                                     </div>
-                                );
-                            })}
-
-                            {/* EXIBIÇÃO DEDICADA DA CHECKLIST DE AUDITORIA */}
-                            {activeTab === 'audits' && viewingItem.checklistResults && Object.keys(viewingItem.checklistResults).length > 0 && (
-                                <div className="mt-6 border-t border-gray-200 pt-4">
-                                    <h4 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                        <ShieldCheck className="w-4 h-4 text-red-500" /> Checklist da Avaliação
-                                    </h4>
-                                    <div className="space-y-3">
-                                        {Object.entries(viewingItem.checklistResults).map(([idx, status]) => {
-                                            const process = qaProcesses[viewingItem.processId];
-                                            const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
-
-                                            let statusColor = "text-gray-600 bg-gray-100 border-gray-200";
-                                            if (status === 'Passou') statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
-                                            if (status === 'Falhou') statusColor = "text-red-700 bg-red-50 border-red-200";
-
-                                            return (
-                                                <div key={idx} className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                                    <span className="text-sm text-gray-700 font-medium leading-snug">{question}</span>
-                                                    <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${statusColor}`}>
-                                                        {status}
-                                                    </span>
-                                                </div>
-                                            );
-                                        })}
+                                    <div className="bg-gray-50 p-5 rounded-xl border border-gray-200">
+                                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Mensagem do Feedback</h4>
+                                        <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">{viewingItem.comment || 'Sem mensagem descritiva.'}</p>
                                     </div>
+                                    {viewingItem.createdBy && (
+                                         <div className="flex justify-end text-xs text-gray-500 font-medium">
+                                            Enviado por: <strong className="text-gray-700 ml-1">{viewingItem.createdBy}</strong>
+                                         </div>
+                                    )}
                                 </div>
-                            )}
+                            ) : activeTab === 'audits' ? (
+                                <div className="space-y-6">
+                                    <div className="flex flex-col items-center justify-center bg-gray-50 rounded-xl p-6 border border-gray-100 relative overflow-hidden">
+                                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Resultado QA</div>
+                                        <div className={`text-3xl font-black ${viewingItem.status === 'Conforme' ? 'text-emerald-600' : viewingItem.status === 'Não Conforme' ? 'text-red-600' : 'text-gray-900'}`}>{viewingItem.status || 'N/A'}</div>
+                                        <div className="text-xs font-medium text-gray-500 mt-2">Data de Referência: {getSafeDateString(viewingItem)}</div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-sm">
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Protocolo</div>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-100">{viewingItem.protocol || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-sm">
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Processo Auditado</div>
+                                            <div className="text-sm font-bold text-gray-900 truncate mt-1">{viewingItem.processName || qaProcesses[viewingItem.processId]?.name || 'N/A'}</div>
+                                        </div>
+                                    </div>
 
+                                    <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-sm">
+                                        <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Auditado por</div>
+                                        <div className="text-sm font-bold text-gray-900 mt-1">{viewingItem.evaluatorName || 'N/A'}</div>
+                                    </div>
+
+                                    {viewingItem.notes && (
+                                        <div className="bg-yellow-50/50 p-5 rounded-xl border border-yellow-100 shadow-sm">
+                                            <h4 className="text-[10px] font-bold text-yellow-800 uppercase tracking-widest mb-3 flex items-center gap-2"><MessageSquare className="w-3.5 h-3.5"/> Observações do Auditor</h4>
+                                            <p className="text-yellow-900 text-sm whitespace-pre-wrap leading-relaxed">{viewingItem.notes}</p>
+                                        </div>
+                                    )}
+
+                                    {viewingItem.checklistResults && Object.keys(viewingItem.checklistResults).length > 0 && (
+                                        <div className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
+                                            <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <ShieldCheck className="w-4 h-4 text-gray-400" /> Itens Auditados
+                                            </h4>
+                                            <div className="space-y-3">
+                                                {Object.entries(viewingItem.checklistResults).map(([idx, status]) => {
+                                                    const process = qaProcesses[viewingItem.processId];
+                                                    const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
+                                                    let statusColor = "text-gray-600 bg-gray-100 border-gray-200";
+                                                    if (status === 'Passou') statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+                                                    if (status === 'Falhou') statusColor = "text-red-700 bg-red-50 border-red-200";
+
+                                                    return (
+                                                        <div key={idx} className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                            <span className="text-sm text-gray-700 font-medium leading-snug">{question}</span>
+                                                            <span className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${statusColor}`}>
+                                                                {status}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                Object.entries(viewingItem).map(([k, v]) => {
+                                    // Ocultando os campos de controle
+                                    if (['id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 'read', 'evaluatorId', 'checklistResults', 'processId'].includes(k)) return null;
+
+                                    let displayValue = v;
+                                    if (v && typeof v === 'object') {
+                                        if (typeof v.toDate === 'function') {
+                                            displayValue = v.toDate().toLocaleString('pt-BR');
+                                        } else if (v.seconds !== undefined) {
+                                            displayValue = new Date(v.seconds * 1000).toLocaleString('pt-BR');
+                                        } else {
+                                            displayValue = JSON.stringify(v);
+                                        }
+                                    }
+
+                                    return (
+                                        <div key={k} className="border-b border-gray-100 pb-2">
+                                            <span className="block text-xs font-bold text-gray-400 uppercase">{translateKey(k)}</span>
+                                            <span className="block text-gray-900 mt-1 whitespace-pre-wrap">{displayValue?.toString() || 'Vazio'}</span>
+                                        </div>
+                                    );
+                                })
+                            )}
                         </div>
                         <div className="p-4 bg-gray-50 border-t border-gray-200 shrink-0">
                             <button onClick={() => setViewingItem(null)} className="w-full py-2 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300">Fechar</button>

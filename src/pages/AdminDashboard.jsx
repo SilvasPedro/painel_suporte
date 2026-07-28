@@ -4,7 +4,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText
+    ChevronDown, ChevronRight, Menu, X, FileText, Info
 } from 'lucide-react';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -259,6 +259,7 @@ const DashboardOverview = () => {
     const [auditsList, setAuditsList] = useState([]);
 
     const [reportStats, setReportStats] = useState({ pending: 0, inProgress: 0, resolved: 0 });
+    const [modalInfo, setModalInfo] = useState(null);
 
     useEffect(() => {
         const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
@@ -331,12 +332,23 @@ const DashboardOverview = () => {
             avgVol: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00',
             maxTmaTel: { val: '00:00:00', name: '--' }, maxTmaHuggy: { val: '00:00:00', name: '--' },
             topDay: { name: '--', val: 0 }, topNight: { name: '--', val: 0 },
-            avgPtsDay: 0, avgPtsNight: 0
+            avgPtsDay: 0, avgPtsNight: 0,
+            lowestAvgVol: { val: 0, name: '--' },
+            rankings: {
+                topPointsDay: [],
+                topPointsNight: [],
+                maxTmaTel: [],
+                maxTmaHuggy: [],
+                lowestVol: []
+            }
         };
 
         if (evalsList.length === 0) return defaultStats;
 
         const accumulatedPoints = {};
+        const accumulatedVol = {};
+        const accumulatedTmaTel = {};
+        const accumulatedTmaHuggy = {};
 
         evalsList.forEach(e => {
             const colabId = e.colabId || e.collaboratorId;
@@ -351,22 +363,73 @@ const DashboardOverview = () => {
                         (Number(e.Ligacoes_Perdidas || 0) * -5);
                 }
                 accumulatedPoints[colabId] = (accumulatedPoints[colabId] || 0) + pts;
+                
+                if (!accumulatedVol[colabId]) accumulatedVol[colabId] = { sum: 0, count: 0 };
+                accumulatedVol[colabId].sum += (Number(e.Atendimentos_Finalizados) || 0);
+                accumulatedVol[colabId].count += 1;
+
+                if (!accumulatedTmaTel[colabId]) accumulatedTmaTel[colabId] = { sum: 0, count: 0 };
+                accumulatedTmaTel[colabId].sum += timeToDecimal(e.TMA_Telefonia);
+                accumulatedTmaTel[colabId].count += 1;
+                
+                if (!accumulatedTmaHuggy[colabId]) accumulatedTmaHuggy[colabId] = { sum: 0, count: 0 };
+                accumulatedTmaHuggy[colabId].sum += timeToDecimal(e.TMA_Huggy);
+                accumulatedTmaHuggy[colabId].count += 1;
             }
         });
 
-        let topDay = { val: -Infinity, id: '' };
-        let topNight = { val: -Infinity, id: '' };
-
+        // Points ranking
+        const topPointsDayList = [];
+        const topPointsNightList = [];
+        
         Object.entries(accumulatedPoints).forEach(([colabId, score]) => {
             const colabInfo = colabsFull[colabId];
             if (colabInfo && colabInfo.active !== false) {
-                if ((colabInfo.shift === 'Manhã' || colabInfo.shift === 'Tarde') && score > topDay.val) {
-                    topDay = { val: score, id: colabId };
-                } else if (colabInfo.shift === 'Noite' && score > topNight.val) {
-                    topNight = { val: score, id: colabId };
+                if (colabInfo.shift === 'Manhã' || colabInfo.shift === 'Tarde') {
+                    topPointsDayList.push({ id: colabId, name: colabInfo.name, val: score });
+                } else if (colabInfo.shift === 'Noite') {
+                    topPointsNightList.push({ id: colabId, name: colabInfo.name, val: score });
                 }
             }
         });
+
+        topPointsDayList.sort((a, b) => b.val - a.val);
+        topPointsNightList.sort((a, b) => b.val - a.val);
+
+        const topDay = topPointsDayList.length > 0 ? topPointsDayList[0] : { val: 0, name: '--' };
+        const topNight = topPointsNightList.length > 0 ? topPointsNightList[0] : { val: 0, name: '--' };
+
+        // Average TMA ranking
+        const avgTmaTelList = [];
+        Object.entries(accumulatedTmaTel).forEach(([colabId, data]) => {
+            if (data.count > 0) {
+                const avg = data.sum / data.count;
+                avgTmaTelList.push({ id: colabId, name: colabsFull[colabId]?.name || '--', valDec: avg, val: formatTime(avg) });
+            }
+        });
+        avgTmaTelList.sort((a, b) => b.valDec - a.valDec);
+        const maxTmaTel = avgTmaTelList.length > 0 ? avgTmaTelList[0] : { val: '00:00:00', name: '--' };
+
+        const avgTmaHuggyList = [];
+        Object.entries(accumulatedTmaHuggy).forEach(([colabId, data]) => {
+            if (data.count > 0) {
+                const avg = data.sum / data.count;
+                avgTmaHuggyList.push({ id: colabId, name: colabsFull[colabId]?.name || '--', valDec: avg, val: formatTime(avg) });
+            }
+        });
+        avgTmaHuggyList.sort((a, b) => b.valDec - a.valDec);
+        const maxTmaHuggy = avgTmaHuggyList.length > 0 ? avgTmaHuggyList[0] : { val: '00:00:00', name: '--' };
+
+        // Lowest Volume ranking
+        const avgVolList = [];
+        Object.entries(accumulatedVol).forEach(([colabId, data]) => {
+            if (data.count > 0) {
+                const avg = data.sum / data.count;
+                avgVolList.push({ id: colabId, name: colabsFull[colabId]?.name || '--', val: Math.round(avg) });
+            }
+        });
+        avgVolList.sort((a, b) => a.val - b.val); // ascending
+        const lowestAvgVol = avgVolList.length > 0 ? avgVolList[0] : { val: 0, name: '--' };
 
         const latestDate = evalsList.reduce((max, e) => (e.date > max ? e.date : max), '');
         const currentWeek = evalsList.filter(e => e.date === latestDate);
@@ -374,8 +437,6 @@ const DashboardOverview = () => {
         let sumVol = 0, sumTmaTel = 0, sumTmaHuggy = 0;
         let sumPtsDay = 0, countDay = 0;
         let sumPtsNight = 0, countNight = 0;
-        let maxTel = { val: -1, id: '' };
-        let maxHuggy = { val: -1, id: '' };
         let activeCurrentWeekCount = 0;
 
         if (currentWeek.length > 0) {
@@ -386,14 +447,8 @@ const DashboardOverview = () => {
                 if (colabInfo && colabInfo.active !== false) {
                     activeCurrentWeekCount++;
                     sumVol += Number(e.Atendimentos_Finalizados) || 0;
-                    const telDec = timeToDecimal(e.TMA_Telefonia);
-                    const huggyDec = timeToDecimal(e.TMA_Huggy);
-
-                    sumTmaTel += telDec;
-                    sumTmaHuggy += huggyDec;
-
-                    if (telDec > maxTel.val) maxTel = { val: telDec, id: colabId };
-                    if (huggyDec > maxHuggy.val) maxHuggy = { val: huggyDec, id: colabId };
+                    sumTmaTel += timeToDecimal(e.TMA_Telefonia);
+                    sumTmaHuggy += timeToDecimal(e.TMA_Huggy);
 
                     let currentPts = e.pontuacao;
                     if (currentPts === undefined) {
@@ -420,25 +475,33 @@ const DashboardOverview = () => {
             avgVol: activeCurrentWeekCount > 0 ? Math.round(sumVol / count) : 0,
             avgTmaTel: formatTime(sumTmaTel / count),
             avgTmaHuggy: formatTime(sumTmaHuggy / count),
-            maxTmaTel: { val: formatTime(maxTel.val), name: colabsFull[maxTel.id]?.name || '--' },
-            maxTmaHuggy: { val: formatTime(maxHuggy.val), name: colabsFull[maxHuggy.id]?.name || '--' },
-            topDay: { val: topDay.val !== -Infinity ? topDay.val : 0, name: colabsFull[topDay.id]?.name || '--' },
-            topNight: { val: topNight.val !== -Infinity ? topNight.val : 0, name: colabsFull[topNight.id]?.name || '--' },
+            maxTmaTel,
+            maxTmaHuggy,
+            lowestAvgVol,
+            topDay: { val: topDay.val !== -Infinity ? topDay.val : 0, name: topDay.name },
+            topNight: { val: topNight.val !== -Infinity ? topNight.val : 0, name: topNight.name },
             avgPtsDay: countDay > 0 ? Math.round(sumPtsDay / countDay) : 0,
-            avgPtsNight: countNight > 0 ? Math.round(sumPtsNight / countNight) : 0
+            avgPtsNight: countNight > 0 ? Math.round(sumPtsNight / countNight) : 0,
+            rankings: {
+                topPointsDay: topPointsDayList,
+                topPointsNight: topPointsNightList,
+                maxTmaTel: avgTmaTelList,
+                maxTmaHuggy: avgTmaHuggyList,
+                lowestVol: avgVolList
+            }
         };
     }, [evalsList, colabsFull]);
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto">
-            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white p-6 rounded-xl border border-gray-200 shadow-sm gap-4">
+            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white/60 backdrop-blur-xl p-6 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Visão Geral da Gestão</h1>
                     <p className="text-sm text-gray-500">Monitoramento consolidado de toda a operação.</p>
                 </div>
 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto">
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-amber-50 px-4 py-2.5 rounded-lg border border-amber-100 shadow-sm min-w-[140px]">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-amber-50/60 backdrop-blur-md px-4 py-2.5 rounded-lg border border-amber-200/60 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-amber-500 rounded-md shrink-0">
                             <Clock className="w-4 h-4 text-white" />
                         </div>
@@ -448,7 +511,7 @@ const DashboardOverview = () => {
                         </div>
                     </div>
 
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50 px-4 py-2.5 rounded-lg border border-blue-100 shadow-sm min-w-[140px]">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-blue-50/60 backdrop-blur-md px-4 py-2.5 rounded-lg border border-blue-200/60 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-blue-500 rounded-md shrink-0">
                             <Loader2 className="w-4 h-4 text-white animate-spin" />
                         </div>
@@ -458,7 +521,7 @@ const DashboardOverview = () => {
                         </div>
                     </div>
 
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-emerald-50 px-4 py-2.5 rounded-lg border border-emerald-100 shadow-sm min-w-[140px]">
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-emerald-50/60 backdrop-blur-md px-4 py-2.5 rounded-lg border border-emerald-200/60 shadow-sm min-w-[140px]">
                         <div className="p-1.5 bg-emerald-500 rounded-md shrink-0">
                             <CheckCircle className="w-4 h-4 text-white" />
                         </div>
@@ -476,7 +539,7 @@ const DashboardOverview = () => {
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <Clock className="w-4 h-4 text-purple-500" /> TMR (Setor)
                         </div>
@@ -487,7 +550,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-3 font-medium">Meta: ≤ {goals.tmr}</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <Target className="w-4 h-4 text-rose-500" /> FCR (Setor)
                         </div>
@@ -498,7 +561,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-3 font-medium">Meta: ≥ {goals.fcr}%</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col justify-between">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <Activity className="w-4 h-4 text-blue-500" /> Reincidência
                         </div>
@@ -509,7 +572,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-3 font-medium">Meta: ≤ {goals.recurrence}%</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center relative overflow-hidden">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col items-center justify-center relative overflow-hidden">
                         <div className="absolute top-5 left-5 flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
                             <Star className="w-4 h-4 text-amber-400" /> % QA (Equipe Ativa)
                         </div>
@@ -554,7 +617,7 @@ const DashboardOverview = () => {
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col border-l-4 border-l-emerald-500">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col border-l-4 border-l-emerald-500">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <CheckSquare className="w-4 h-4 text-emerald-500" /> Vol. Médio / Agente
                         </div>
@@ -562,7 +625,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-2 font-medium">Finalizações Semanais</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <Phone className="w-4 h-4 text-rose-500" /> TMA Médio (Voz)
                         </div>
@@ -570,7 +633,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-2 font-medium">Tempo Médio em Linha</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <MessageCircle className="w-4 h-4 text-indigo-400" /> TMA Médio (Chat)
                         </div>
@@ -578,7 +641,7 @@ const DashboardOverview = () => {
                         <div className="text-xs text-gray-400 mt-2 font-medium">Tempo Médio de Chat</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col border-l-4 border-l-blue-500 justify-between">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col border-l-4 border-l-blue-500 justify-between">
                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
                             <Star className="w-4 h-4 text-blue-500" /> Média de Pontos (Semana)
                         </div>
@@ -602,18 +665,31 @@ const DashboardOverview = () => {
                     <Award className="w-4 h-4 text-amber-500" /> Destaques & Pontos de Atenção
                 </h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="bg-emerald-600 text-white p-5 rounded-xl shadow-sm flex flex-col justify-between">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-200 uppercase tracking-widest mb-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div className="bg-gradient-to-br from-emerald-500 via-emerald-600 to-emerald-800 text-white p-5 rounded-xl shadow-lg border border-emerald-400/30 flex flex-col justify-between relative overflow-hidden backdrop-blur-xl group">
+                        <button 
+                            onClick={() => setModalInfo({ title: 'Top Desempenho (Dia)', data: teamStats.rankings.topPointsDay, formatVal: (v) => `${v} pts` })}
+                            className="absolute top-3 right-3 p-1.5 bg-black/10 hover:bg-black/20 rounded-lg text-white/70 hover:text-white transition-colors z-20 opacity-0 group-hover:opacity-100"
+                        >
+                            <Info className="w-4 h-4" />
+                        </button>
+                        <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 rounded-full bg-emerald-400 opacity-20 blur-2xl"></div>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-emerald-100 uppercase tracking-widest mb-3 relative z-10">
                             <Award className="w-4 h-4 text-amber-300" /> Top 1 Desempenho (Acumulado)
                         </div>
-                        <div className="grid grid-cols-2 gap-2 mt-1">
-                            <div className="border-r border-emerald-500 pr-2">
+                        <div className="grid grid-cols-2 gap-2 mt-1 relative z-10">
+                            <div className="border-r border-emerald-500/50 pr-2">
                                 <div className="text-[10px] text-emerald-200 font-bold uppercase mb-1">Manhã/Tarde</div>
                                 <div className="text-lg font-extrabold tracking-tight truncate" title={teamStats.topDay.name}>{teamStats.topDay.name}</div>
                                 <div className="text-emerald-100 text-xs font-medium"><span className="font-bold text-white">{teamStats.topDay.val}</span> pts</div>
                             </div>
-                            <div className="pl-2">
+                            <div className="pl-2 relative">
+                                <button 
+                                    onClick={() => setModalInfo({ title: 'Top Desempenho (Noite)', data: teamStats.rankings.topPointsNight, formatVal: (v) => `${v} pts` })}
+                                    className="absolute -top-6 -right-1 p-1 bg-black/10 hover:bg-black/20 rounded-lg text-white/70 hover:text-white transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                    <Info className="w-3 h-3" />
+                                </button>
                                 <div className="text-[10px] text-emerald-200 font-bold uppercase mb-1">Noite</div>
                                 <div className="text-lg font-extrabold tracking-tight truncate" title={teamStats.topNight.name}>{teamStats.topNight.name}</div>
                                 <div className="text-emerald-100 text-xs font-medium"><span className="font-bold text-white">{teamStats.topNight.val}</span> pts</div>
@@ -621,24 +697,83 @@ const DashboardOverview = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col border-l-4 border-l-red-500">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col border-l-4 border-l-red-500 relative group">
+                        <button 
+                            onClick={() => setModalInfo({ title: 'Maiores TMAs (Voz)', data: teamStats.rankings.maxTmaTel })}
+                            className="absolute top-3 right-3 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                            <Info className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 pr-6">
                             <AlertTriangle className="w-4 h-4 text-amber-500" /> Maior TMA (Voz)
                         </div>
                         <span className="text-3xl font-extrabold text-red-600 tracking-tight mb-1">{teamStats.maxTmaTel.val}</span>
                         <div className="text-sm text-gray-500 font-medium truncate" title={teamStats.maxTmaTel.name}>{teamStats.maxTmaTel.name}</div>
                     </div>
 
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col border-l-4 border-l-red-500">
-                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col border-l-4 border-l-red-500 relative group">
+                        <button 
+                            onClick={() => setModalInfo({ title: 'Maiores TMAs (Chat)', data: teamStats.rankings.maxTmaHuggy })}
+                            className="absolute top-3 right-3 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                            <Info className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 pr-6">
                             <AlertTriangle className="w-4 h-4 text-amber-500" /> Maior TMA (Chat)
                         </div>
                         <span className="text-3xl font-extrabold text-red-600 tracking-tight mb-1">{teamStats.maxTmaHuggy.val}</span>
                         <div className="text-sm text-gray-500 font-medium truncate" title={teamStats.maxTmaHuggy.name}>{teamStats.maxTmaHuggy.name}</div>
                     </div>
+
+                    <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex flex-col border-l-4 border-l-amber-500 relative group">
+                        <button 
+                            onClick={() => setModalInfo({ title: 'Menor Média Finalizações', data: teamStats.rankings.lowestVol })}
+                            className="absolute top-3 right-3 p-1.5 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-500 transition-colors opacity-0 group-hover:opacity-100"
+                        >
+                            <Info className="w-4 h-4" />
+                        </button>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 pr-6">
+                            <AlertTriangle className="w-4 h-4 text-amber-500" /> Menor Média Finalizações
+                        </div>
+                        <span className="text-3xl font-extrabold text-amber-600 tracking-tight mb-1">{teamStats.lowestAvgVol.val}</span>
+                        <div className="text-sm text-gray-500 font-medium truncate" title={teamStats.lowestAvgVol.name}>{teamStats.lowestAvgVol.name}</div>
+                    </div>
                 </div>
             </div>
 
+            {modalInfo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[80vh] flex flex-col">
+                        <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                            <h3 className="font-bold text-gray-900">{modalInfo.title}</h3>
+                            <button onClick={() => setModalInfo(null)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto">
+                            {modalInfo.data.length > 0 ? (
+                                modalInfo.data.map((item, idx) => (
+                                    <div key={item.id} className="flex justify-between items-center py-2.5 border-b border-gray-50 last:border-0">
+                                        <div className="flex items-center gap-3">
+                                            <span className={`font-bold w-5 text-center text-sm ${idx < 3 ? 'text-amber-500' : 'text-gray-400'}`}>
+                                                {idx + 1}º
+                                            </span>
+                                            <span className="font-medium text-gray-700">{item.name}</span>
+                                        </div>
+                                        <span className="font-bold text-gray-900 text-sm">
+                                            {modalInfo.formatVal ? modalInfo.formatVal(item.val) : item.val}
+                                        </span>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center text-gray-500 py-8 text-sm">
+                                    Nenhum dado disponível.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

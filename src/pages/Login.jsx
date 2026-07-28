@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
 import logo from '../assets/logo_extended.png';
+
+const BUBBLES_DATA = Array.from({ length: 40 }).map(() => ({
+  size: Math.random() * 20 + 8,
+  left: Math.random() * 100,
+  animationDuration: Math.random() * 5 + 4,
+  animationDelay: Math.random() * 5,
+  isRed: Math.random() > 0.5,
+}));
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -38,13 +46,37 @@ const Login = () => {
     }
   };
 
+  const bubbles = useMemo(() => {
+    return BUBBLES_DATA.map((bubble, i) => (
+        <div
+          key={i}
+          className={`absolute rounded-full animate-float ${
+            bubble.isRed ? 'bg-red-500/10 border border-red-500/20' : 'bg-white/10 border border-white/20'
+          } backdrop-blur-md shadow-[0_4px_30px_rgba(0,0,0,0.1)]`}
+          style={{
+            width: `${bubble.size}px`,
+            height: `${bubble.size}px`,
+            left: `${bubble.left}%`,
+            animationDuration: `${bubble.animationDuration}s`,
+            animationDelay: `${bubble.animationDelay}s`,
+            bottom: '-20px',
+          }}
+        />
+      ));
+  }, []);
+
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4 sm:p-6 lg:p-8">
+    <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-hidden">
+      {/* Background Bubbles */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {bubbles}
+      </div>
+
       {/* Container Principal */}
-      <div className="max-w-5xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
+      <div className="max-w-5xl w-full bg-white/10 backdrop-blur-2xl border border-white/20 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)] rounded-2xl overflow-hidden flex flex-col md:flex-row relative z-10">
         
         {/* Lado Esquerdo - Branding (Preto e Vermelho) */}
-        <div className="md:w-1/2 bg-zinc-950 p-12 text-white flex flex-col justify-between relative overflow-hidden">
+        <div className="md:w-1/2 bg-black/50 p-12 text-white flex flex-col justify-between relative overflow-hidden backdrop-blur-sm border-r border-white/10">
           {/* Elemento de design no fundo */}
           <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-red-600 opacity-10 blur-3xl"></div>
           
@@ -70,11 +102,12 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Lado Direito - Formulário (Branco, Cinza e Preto) */}
-        <div className="md:w-1/2 p-12 flex flex-col justify-center bg-white">
-          <div className="max-w-md w-full mx-auto">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Acesse sua conta</h2>
-            <p className="text-gray-500 mb-8">Insira suas credenciais para gerenciar a equipe.</p>
+        {/* Lado Direito - Formulário */}
+        <div className="md:w-1/2 p-12 flex flex-col justify-center bg-white/5 relative">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+          <div className="max-w-md w-full mx-auto relative z-10">
+            <h2 className="text-3xl font-bold text-white mb-2">Acesse sua conta</h2>
+            <p className="text-zinc-400 mb-8">Insira suas credenciais para gerenciar a equipe.</p>
 
             <form onSubmit={handleLogin} className="space-y-6">
               
@@ -88,17 +121,17 @@ const Login = () => {
 
               {/* Input E-mail */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">E-mail corporativo</label>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">E-mail corporativo</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Mail className="h-5 w-5 text-gray-400" />
+                    <Mail className="h-5 w-5 text-zinc-400" />
                   </div>
                   <input
                     type="email"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 bg-gray-50 text-gray-900 transition-colors"
+                    className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-black/20 text-white placeholder-zinc-500 transition-colors backdrop-blur-sm"
                     placeholder="voce@empresa.com"
                   />
                 </div>
@@ -106,17 +139,17 @@ const Login = () => {
 
               {/* Input Senha */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+                <label className="block text-sm font-medium text-zinc-300 mb-1">Senha</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <Lock className="h-5 w-5 text-gray-400" />
+                    <Lock className="h-5 w-5 text-zinc-400" />
                   </div>
                   <input
                     type="password"
                     required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 bg-gray-50 text-gray-900 transition-colors"
+                    className="block w-full pl-10 pr-3 py-3 border border-white/20 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-black/20 text-white placeholder-zinc-500 transition-colors backdrop-blur-sm"
                     placeholder="••••••••"
                   />
                 </div>
