@@ -97,6 +97,76 @@ const getClassificationBadge = (classification) => {
     }
 };
 
+const ExtensionsBalloon = () => {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className="fixed bottom-6 right-6 z-50">
+            {isOpen && (
+                <div className="absolute bottom-16 right-0 mb-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+                    <div className="bg-zinc-950 p-4 text-white flex justify-between items-center shrink-0">
+                        <div className="flex items-center gap-2">
+                            <Phone className="w-4 h-4 text-red-500" />
+                            <h3 className="font-bold text-sm">Lista de Ramais</h3>
+                        </div>
+                        <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4 text-sm">
+                        
+                        <div>
+                            <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2 border-b pb-1">Uso Geral</h4>
+                            <ul className="space-y-1">
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Suporte</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">20</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Financeiro</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">21</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Comercial</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">22</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Torre de Serviços</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">25</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Retenção</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">28</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Cobrança</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">32</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Auto-Desbloqueio</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">5002</strong></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2 border-b pb-1">Feriados</h4>
+                            <ul className="space-y-1">
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Suporte Feriado</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">27</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Financeiro Feriado</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">34</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-gray-700">Comercial Feriado</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">30</strong></li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2 border-b pb-1">Transferências</h4>
+                            <ul className="space-y-1">
+                                <li className="text-gray-700"><strong className="text-red-600 text-base">##</strong> - Transferência Direta</li>
+                                <li className="text-gray-700"><strong className="text-red-600 text-base">**</strong> - Transferência Assistida</li>
+                            </ul>
+                        </div>
+
+                        <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg">
+                            <h4 className="font-bold text-[10px] text-blue-600 uppercase tracking-widest flex items-center gap-1.5 mb-1"><Clock className="w-3.5 h-3.5" /> Horários ETECC Resolve</h4>
+                            <p className="text-xs text-blue-800 leading-relaxed">
+                                Seg a Sex: <strong className="text-blue-900">08:30 às 17:30</strong><br/>
+                                Sábados: <strong className="text-blue-900">08:30 às 16:00</strong>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+            
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center transition-all ${isOpen ? 'bg-zinc-800 text-white shadow-zinc-500/20 rotate-12' : 'bg-red-600 text-white hover:bg-red-700 hover:scale-105 shadow-red-600/30'}`}
+                title="Lista de Ramais"
+            >
+                {isOpen ? <X className="w-6 h-6" /> : <Phone className="w-6 h-6" />}
+            </button>
+        </div>
+    );
+};
+
 const CollaboratorDashboard = ({ currentUserId }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
     const { currentUser } = useAuth();
@@ -244,6 +314,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
                 {renderContent()}
+                <ExtensionsBalloon />
             </main>
 
             {/* MODAL DE ALTERAÇÃO DE SENHA */}
