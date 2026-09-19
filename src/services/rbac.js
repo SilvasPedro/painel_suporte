@@ -41,6 +41,18 @@ export const ROLES = [
 export const SYSTEM_MODULES = [
     // Grupo: Principal
     {
+        id: 'my_dashboard',
+        label: 'Meu Desempenho',
+        group: 'Principal',
+        description: 'Painel individual do colaborador com tarefas do dia, plantões, métricas e evolução de TMA pessoal.'
+    },
+    {
+        id: 'my_history',
+        label: 'Meu Histórico',
+        group: 'Principal',
+        description: 'Histórico individual de feedbacks recebidos, avaliações 1:1, métricas e auditorias QA.'
+    },
+    {
         id: 'dashboard',
         label: 'Visão Geral KPIs',
         group: 'Principal',
@@ -137,6 +149,8 @@ export const SYSTEM_MODULES = [
 // -------------------------------------------------------------
 export const DEFAULT_ROLE_PERMISSIONS = {
     gestor: {
+        my_dashboard: { view: true, edit: true },
+        my_history: { view: true, edit: true },
         dashboard: { view: true, edit: true },
         hub: { view: true, edit: true },
         orgchart: { view: true, edit: true },
@@ -153,6 +167,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         settings: { view: true, edit: true }
     },
     supervisor: {
+        my_dashboard: { view: true, edit: false },
+        my_history: { view: true, edit: false },
         dashboard: { view: true, edit: false },
         hub: { view: true, edit: true },
         orgchart: { view: true, edit: false },
@@ -169,6 +185,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         settings: { view: false, edit: false }
     },
     apoio: {
+        my_dashboard: { view: true, edit: false },
+        my_history: { view: true, edit: false },
         dashboard: { view: true, edit: false },
         hub: { view: true, edit: false },
         orgchart: { view: true, edit: false },
@@ -185,6 +203,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         settings: { view: false, edit: false }
     },
     colaborador: {
+        my_dashboard: { view: true, edit: false },
+        my_history: { view: true, edit: false },
         dashboard: { view: false, edit: false },
         hub: { view: false, edit: false },
         orgchart: { view: true, edit: false },

@@ -4,13 +4,15 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock
 } from 'lucide-react';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { updatePassword } from 'firebase/auth';
+import { db, auth } from '../services/firebase';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { useNotification } from '../context/NotificationContext';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 import CollaboratorsHub from './CollaboratorsHub';
@@ -21,11 +23,13 @@ import Settings from './Settings';
 import Reports from './Reports';
 import Audits from './Audits';
 import Rankings from './Rankings';
-import DailyQueueTracker from './DailyDemandLaunch'
+import DailyQueueTracker from './DailyDemandLaunch';
 import SundaySchedule from './SundaySchedule';
 import DailySchedule from './DailySchedule';
 import OrgChart from './OrgChart';
 import MonthlyEvaluations from './MonthlyEvaluations';
+import MyDashboard from './MyDashboard';
+import MyHistory from './MyHistory';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -34,10 +38,17 @@ const logo = logoExtended;
 const AdminDashboard = () => {
     const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
     const { currentUser } = useAuth();
+    const { showToast } = useNotification();
 
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [loadingPassword, setLoadingPassword] = useState(false);
+
     const [expandedMenus, setExpandedMenus] = useState({
+        individual: true,
         geral: true,
         operacional: true,
         escalas: true,
@@ -53,7 +64,45 @@ const AdminDashboard = () => {
         }
     };
 
+    const handleUpdatePassword = async (e) => {
+        e.preventDefault();
+        if (newPassword !== confirmPassword) {
+            showToast("As senhas digitadas não coincidem.", "error");
+            return;
+        }
+        if (newPassword.length < 6) {
+            showToast("A senha deve ter pelo menos 6 caracteres.", "error");
+            return;
+        }
+
+        setLoadingPassword(true);
+        try {
+            await updatePassword(auth.currentUser, newPassword);
+            showToast("Senha alterada com sucesso!", "success");
+            setIsPasswordModalOpen(false);
+            setNewPassword('');
+            setConfirmPassword('');
+        } catch (error) {
+            if (error.code === 'auth/requires-recent-login') {
+                showToast("Por segurança, saia e faça login novamente para alterar sua senha.", "error");
+            } else {
+                showToast("Erro ao alterar senha: " + error.message, "error");
+            }
+        } finally {
+            setLoadingPassword(false);
+        }
+    };
+
     const navMenus = useMemo(() => [
+        {
+            id: 'individual',
+            title: 'Meu Espaço',
+            icon: User,
+            items: [
+                { id: 'my_dashboard', label: 'Meu Desempenho', icon: Activity },
+                { id: 'my_history', label: 'Meu Histórico', icon: History },
+            ]
+        },
         {
             id: 'geral',
             title: 'Principal',
@@ -143,6 +192,10 @@ const AdminDashboard = () => {
         }
 
         switch (effectiveActiveTab) {
+            case 'my_dashboard':
+                return <MyDashboard currentUserId={currentUser?.firestoreId || currentUser?.uid} currentUser={currentUser} />;
+            case 'my_history':
+                return <MyHistory currentUserId={currentUser?.firestoreId || currentUser?.uid} />;
             case 'dashboard':
                 return <DashboardOverview />;
             case 'hub':
@@ -150,7 +203,7 @@ const AdminDashboard = () => {
             case 'rankings':
                 return <Rankings />;
             case 'orgchart':
-                return <OrgChart />;
+                return <OrgChart readOnly={!canEdit('orgchart')} />;
             case 'metrics':
                 return <WeeklyMetrics />;
             case 'monthly_evaluations':
@@ -262,8 +315,16 @@ const AdminDashboard = () => {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
-                    <button onClick={logout} className={`w-full flex items-center py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`} title={isSidebarCollapsed ? "Sair do sistema" : ""}>
+                <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50 space-y-1">
+                    <button 
+                        onClick={() => setIsPasswordModalOpen(true)} 
+                        className={`w-full flex items-center py-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`} 
+                        title={isSidebarCollapsed ? "Alterar Senha" : ""}
+                    >
+                        <Lock className="w-5 h-5 shrink-0" />
+                        {!isSidebarCollapsed && <span className="text-sm font-medium">Alterar Senha</span>}
+                    </button>
+                    <button onClick={logout} className={`w-full flex items-center py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`} title={isSidebarCollapsed ? "Sair do sistema" : ""}>
                         <LogOut className="w-5 h-5 shrink-0" />
                         {!isSidebarCollapsed && <span className="text-sm font-medium">Sair do sistema</span>}
                     </button>
@@ -273,6 +334,63 @@ const AdminDashboard = () => {
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
                 {renderContent()}
             </main>
+
+            {isPasswordModalOpen && (
+                <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[90] backdrop-blur-sm">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center">
+                            <h3 className="font-bold flex items-center gap-2">
+                                <Lock className="w-4 h-4 text-red-500" /> Alterar Minha Senha
+                            </h3>
+                            <button onClick={() => setIsPasswordModalOpen(false)} className="text-gray-400 hover:text-white cursor-pointer">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleUpdatePassword} className="p-6 space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Nova Senha</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    minLength={6} 
+                                    value={newPassword} 
+                                    onChange={(e) => setNewPassword(e.target.value)} 
+                                    placeholder="Mínimo 6 caracteres" 
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1">Confirmar Nova Senha</label>
+                                <input 
+                                    type="password" 
+                                    required 
+                                    minLength={6} 
+                                    value={confirmPassword} 
+                                    onChange={(e) => setConfirmPassword(e.target.value)} 
+                                    placeholder="Repita a nova senha" 
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm" 
+                                />
+                            </div>
+                            <div className="pt-2 flex justify-end gap-2">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setIsPasswordModalOpen(false)} 
+                                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 font-medium cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button 
+                                    type="submit" 
+                                    disabled={loadingPassword} 
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 cursor-pointer"
+                                >
+                                    {loadingPassword ? 'Salvando...' : 'Atualizar Senha'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

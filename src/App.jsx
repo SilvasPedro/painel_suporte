@@ -13,7 +13,6 @@ import FloatingExtensions from './components/FloatingExtensions';
 // Importação das páginas
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
-import CollaboratorDashboard from './pages/CollaboratorDashboard';
 
 // ==========================================
 // GERENCIADOR DE NOTIFICAÇÕES (Invisível)
@@ -68,9 +67,9 @@ const NotificationManager = () => {
 // ==========================================
 // PROTEÇÃO DE ROTAS (RBAC ATUALIZADO)
 // ==========================================
-const PrivateRoute = ({ children, requiredRole }) => {
+const PrivateRoute = ({ children }) => {
     const { currentUser, loading } = useAuth();
-    const { normalizedRole, hasAnyAdminTabAccess, isMasterAdmin, loadingPermissions } = usePermissions();
+    const { loadingPermissions } = usePermissions();
 
     if (loading || loadingPermissions) {
         return (
@@ -84,13 +83,6 @@ const PrivateRoute = ({ children, requiredRole }) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole === 'Admin') {
-        const canAccessAdmin = isMasterAdmin || normalizedRole === 'gestor' || normalizedRole === 'supervisor' || normalizedRole === 'apoio' || hasAnyAdminTabAccess;
-        if (!canAccessAdmin) {
-            return <Navigate to="/collaborator" replace />;
-        }
-    }
-
     return children;
 };
 
@@ -98,29 +90,27 @@ const PrivateRoute = ({ children, requiredRole }) => {
 // GERENCIADOR DE ROTAS (Filho do AuthProvider)
 // ==========================================
 const AppRoutes = () => {
-    const { currentUser } = useAuth();
-
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
             
-            {/* Rota do Painel Operacional/Gestão com RBAC */}
+            {/* Rota Unificada com RBAC por Perfil */}
             <Route path="/admin/*" element={
-                <PrivateRoute requiredRole="Admin">
+                <PrivateRoute>
                     <AdminDashboard />
                 </PrivateRoute>
             } />
             
-            {/* Rota do Colaborador */}
+            {/* Redirecionamento de compatibilidade da rota /collaborator para /admin */}
             <Route path="/collaborator/*" element={
                 <PrivateRoute>
-                    <CollaboratorDashboard currentUserId={currentUser?.firestoreId} />
+                    <Navigate to="/admin" replace />
                 </PrivateRoute>
             } />
 
             {/* Redirecionamento Padrão */}
-            <Route path="/" element={<Navigate to="/login" replace />} />
-            <Route path="*" element={<Navigate to="/login" replace />} />
+            <Route path="/" element={<Navigate to="/admin" replace />} />
+            <Route path="*" element={<Navigate to="/admin" replace />} />
         </Routes>
     );
 };
