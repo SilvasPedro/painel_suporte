@@ -1,15 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { sendPasswordResetEmail } from 'firebase/auth';
 import { 
-    Users, UserPlus, Edit, FileText, MessageSquare, 
+    Users, UserPlus, Edit3, FileText, MessageSquare, 
     X, Loader2, Calendar, Phone, PhoneMissed, 
-    CheckCircle, Clock, Filter, KeyRound, UserX, UserCheck, Search 
+    CheckCircle, Clock, Filter, KeyRound, UserX, UserCheck, 
+    Search, Shield, Eye, LayoutGrid, List, Table, Layers, 
+    Sun, Sunset, Moon, ArrowUpDown, ChevronDown, ChevronRight, 
+    Award, TrendingUp, Sparkles, AlertCircle, Check, Mail, MoreVertical
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, where, doc, updateDoc } from 'firebase/firestore';
-import { db, auth } from '../services/firebase';
-import { registerCollaborator, updateCollaboratorProfile, registerFeedback } from '../services/adminAuth';
+import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { usePermissions } from '../context/PermissionsContext';
+import { ROLES, normalizeRole } from '../services/rbac';
+
+// Sub-componentes modais modernos
+import CreateCollaboratorModal from '../components/collaborators/CreateCollaboratorModal';
+import EditCollaboratorModal from '../components/collaborators/EditCollaboratorModal';
+import FeedbackModal from '../components/collaborators/FeedbackModal';
+import ReportDashboardModal from '../components/collaborators/ReportDashboardModal';
 
 // --- FUNÇÕES AUXILIARES ---
 const parseDateObj = (dateStr) => {
@@ -25,58 +33,60 @@ const parseDateObj = (dateStr) => {
     return 0;
 };
 
-const timeToDecimal = (timeStr) => {
-    if (!timeStr) return 0;
-    const parts = timeStr.split(':');
-    if (parts.length !== 3) return 0;
-    const hours = parseInt(parts[0], 10);
-    const minutes = parseInt(parts[1], 10);
-    const seconds = parseInt(parts[2], 10);
-    return (hours * 60) + minutes + (seconds / 60);
-};
-
-const formatTime = (decimalMinutes) => {
-    if (!decimalMinutes && decimalMinutes !== 0) return "00:00:00";
-    const totalSeconds = Math.round(decimalMinutes * 60);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
 const calcularPontuacao = (metrics) => {
-    if (!metrics) return 0;
-    // Pega tanto as chaves formatadas no relatório quanto as diretas do BD
+    if (!metrics) return null;
     const ptsFinalizados = (Number(metrics.finalizados) || Number(metrics.Atendimentos_Finalizados) || 0) * 1;
     const ptsLigacoes = (Number(metrics.ligAtendidas) || Number(metrics.Ligacoes_Atendidas) || 0) * 2;
     const ptsHuggy = (Number(metrics.huggyVol) || Number(metrics.Atendimentos_Huggy) || 0) * 1;
     const ptsPerdidas = (Number(metrics.ligPerdidas) || Number(metrics.Ligacoes_Perdidas) || 0) * -5;
-    
     return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
+};
+
+const getRoleMeta = (roleString) => {
+    const key = normalizeRole(roleString);
+    const found = ROLES.find(r => r.id === key);
+    if (found) return found;
+    return {
+        id: 'colaborador',
+        label: roleString || 'Colaborador',
+        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        activeBadgeColor: 'bg-emerald-600 text-white'
+    };
 };
 
 const CollaboratorsHub = () => {
     const { showToast } = useNotification();
+    const { canEdit, activeRoleInfo, normalizedRole } = usePermissions();
+    const isEditable = canEdit('hub');
+
+    // Modais
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [editingColab, setEditingColab] = useState(null);
     const [feedbackColab, setFeedbackColab] = useState(null);
-    const [reportColab, setReportColab] = useState(null); 
+    const [reportColab, setReportColab] = useState(null);
+
+    // Dados
     const [collaborators, setCollaborators] = useState([]);
+    const [evaluations, setEvaluations] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // --- ESTADOS DE PESQUISA E FILTRO ---
+    // Visualização e Filtros
+    // 'grid' (Grade), 'table' (Tabela), 'compact' (Diretório), 'grouped' (Agrupado)
+    const [viewMode, setViewMode] = useState('grid');
+    const [groupBy, setGroupBy] = useState('shift'); // 'shift' ou 'role'
     const [searchTerm, setSearchTerm] = useState('');
-    const [showInactives, setShowInactives] = useState(false);
     const [shiftFilter, setShiftFilter] = useState('');
-    const [evaluations, setEvaluations] = useState([]);
+    const [roleFilter, setRoleFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
+    const [sortBy, setSortBy] = useState('name_asc'); // 'name_asc', 'name_desc', 'score_desc', 'score_asc'
 
-    // --- CONEXÃO EM TEMPO REAL ---
+    // --- CONEXÃO COM FIRESTORE ---
     useEffect(() => {
         const q = query(collection(db, "collaborators"), orderBy("name", "asc"));
         const unsubscribe = onSnapshot(q, (querySnapshot) => {
             const docs = [];
-            querySnapshot.forEach((doc) => {
-                docs.push({ id: doc.id, ...doc.data() });
+            querySnapshot.forEach((d) => {
+                docs.push({ id: d.id, ...d.data() });
             });
             setCollaborators(docs);
             setLoading(false);
@@ -88,8 +98,8 @@ const CollaboratorsHub = () => {
         const qEvals = query(collection(db, "weekly_evaluations"));
         const unsubEvals = onSnapshot(qEvals, (snapshot) => {
             const evals = [];
-            snapshot.forEach((doc) => {
-                evals.push({ id: doc.id, ...doc.data() });
+            snapshot.forEach((d) => {
+                evals.push({ id: d.id, ...d.data() });
             });
             setEvaluations(evals);
         });
@@ -100,706 +110,926 @@ const CollaboratorsHub = () => {
         };
     }, [showToast]);
 
-    // --- FUNÇÃO DE INATIVAÇÃO ---
+    // Mapeamento da última avaliação por colaborador
+    const latestEvalMap = useMemo(() => {
+        const map = {};
+        evaluations.forEach(ev => {
+            if (!ev.colabId) return;
+            const current = map[ev.colabId];
+            const currentScoreTime = current 
+                ? (current.date !== 'Semana Atual' ? parseDateObj(current.date) : (current.createdAt?.toMillis?.() || 0))
+                : -1;
+            const evTime = ev.date !== 'Semana Atual' ? parseDateObj(ev.date) : (ev.createdAt?.toMillis?.() || 0);
+
+            if (!current || evTime >= currentScoreTime) {
+                map[ev.colabId] = ev;
+            }
+        });
+        return map;
+    }, [evaluations]);
+
+    // Alternar status ativo/inativo
     const handleToggleActive = async (colab) => {
+        if (!isEditable) {
+            showToast("Seu perfil tem apenas permissão de visualização.", "error");
+            return;
+        }
         try {
             const newStatus = colab.active === false ? true : false;
-            await updateDoc(doc(db, "collaborators", colab.id), { active: newStatus });
+            await updateDoc(doc(db, "collaborators", colab.id), { 
+                active: newStatus,
+                status: newStatus ? "Ativo" : "Inativo"
+            });
             showToast(`Colaborador ${newStatus ? 'ativado' : 'inativado'} com sucesso!`, "success");
         } catch (error) {
             showToast("Erro ao alterar status: " + error.message, "error");
         }
     };
 
-    // --- LÓGICA DO GRÁFICO DE TURNOS (APENAS ATIVOS) ---
-    const activeColabs = collaborators.filter(c => c.active !== false);
-    const total = activeColabs.length;
-    const manha = activeColabs.filter(c => c.shift === 'Manhã').length;
-    const tarde = activeColabs.filter(c => c.shift === 'Tarde').length;
-    const noite = activeColabs.filter(c => c.shift === 'Noite').length;
-    const getPercent = (value) => total > 0 ? (value / total) * 100 : 0;
+    // Estatísticas gerais
+    const { totalCount, activeCount, inactiveCount, manhaCount, tardeCount, noiteCount } = useMemo(() => {
+        const total = collaborators.length;
+        const active = collaborators.filter(c => c.active !== false);
+        const inactive = total - active.length;
+        const manha = active.filter(c => c.shift === 'Manhã').length;
+        const tarde = active.filter(c => c.shift === 'Tarde').length;
+        const noite = active.filter(c => c.shift === 'Noite').length;
+        return {
+            totalCount: total,
+            activeCount: active.length,
+            inactiveCount: inactive,
+            manhaCount: manha,
+            tardeCount: tarde,
+            noiteCount: noite
+        };
+    }, [collaborators]);
 
-    // --- LÓGICA DE FILTRAGEM ---
+    const getPercent = (value) => activeCount > 0 ? (value / activeCount) * 100 : 0;
+
+    // Média de pontuação dos ativos avaliados
+    const avgActiveScore = useMemo(() => {
+        let sum = 0;
+        let count = 0;
+        collaborators.forEach(c => {
+            if (c.active === false) return;
+            const ev = latestEvalMap[c.id];
+            if (ev) {
+                const score = calcularPontuacao(ev);
+                if (score !== null) {
+                    sum += score;
+                    count++;
+                }
+            }
+        });
+        return count > 0 ? Math.round(sum / count) : null;
+    }, [collaborators, latestEvalMap]);
+
+    // Filtragem e Ordenação
     const filteredCollaborators = useMemo(() => {
         return collaborators.filter(colab => {
-            const searchLower = searchTerm.toLowerCase();
-            const matchesSearch = (colab.name && colab.name.toLowerCase().includes(searchLower)) || 
-                                  (colab.shift && colab.shift.toLowerCase().includes(searchLower)) ||
-                                  (colab.role && colab.role.toLowerCase().includes(searchLower));
-            
-            const matchesActive = showInactives ? true : colab.active !== false;
+            const term = searchTerm.toLowerCase().trim();
+            const matchesSearch = !term || (
+                (colab.name && colab.name.toLowerCase().includes(term)) ||
+                (colab.email && colab.email.toLowerCase().includes(term)) ||
+                (colab.role && colab.role.toLowerCase().includes(term)) ||
+                (colab.shift && colab.shift.toLowerCase().includes(term))
+            );
+
+            const isActive = colab.active !== false;
+            const matchesStatus = 
+                statusFilter === 'all' ? true :
+                statusFilter === 'active' ? isActive : !isActive;
+
             const matchesShift = shiftFilter ? colab.shift === shiftFilter : true;
-            
-            return matchesSearch && matchesActive && matchesShift;
+            const matchesRole = roleFilter ? normalizeRole(colab.role) === normalizeRole(roleFilter) : true;
+
+            return matchesSearch && matchesStatus && matchesShift && matchesRole;
+        }).sort((a, b) => {
+            if (sortBy === 'name_asc') {
+                return (a.name || '').localeCompare(b.name || '');
+            }
+            if (sortBy === 'name_desc') {
+                return (b.name || '').localeCompare(a.name || '');
+            }
+            if (sortBy === 'score_desc' || sortBy === 'score_asc') {
+                const scoreA = calcularPontuacao(latestEvalMap[a.id]) ?? -9999;
+                const scoreB = calcularPontuacao(latestEvalMap[b.id]) ?? -9999;
+                return sortBy === 'score_desc' ? scoreB - scoreA : scoreA - scoreB;
+            }
+            return 0;
         });
-    }, [collaborators, searchTerm, showInactives, shiftFilter]);
+    }, [collaborators, searchTerm, statusFilter, shiftFilter, roleFilter, sortBy, latestEvalMap]);
+
+    const hasActiveFilters = searchTerm || shiftFilter || roleFilter || statusFilter !== 'all';
+
+    const clearFilters = () => {
+        setSearchTerm('');
+        setShiftFilter('');
+        setRoleFilter('');
+        setStatusFilter('all');
+    };
 
     if (loading) {
         return (
-            <div className="flex-1 flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
+            <div className="flex-1 flex flex-col items-center justify-center p-12 bg-gray-50 h-full">
+                <Loader2 className="w-9 h-9 text-red-600 animate-spin mb-3" />
+                <span className="text-sm font-semibold text-gray-500">Carregando Hub da Equipe...</span>
             </div>
         );
     }
 
     return (
         <div className="flex-1 p-6 bg-gray-50 h-full overflow-y-auto">
-            <header className="flex justify-between items-center mb-8">
+            {/* CABEÇALHO EXECUTIVO */}
+            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Hub de Colaboradores</h1>
-                    <p className="text-sm text-gray-500">Total de {total} colaboradores <strong>ativos</strong> na equipe.</p>
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-red-600 uppercase tracking-wider">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Gestão de Pessoas & Operação</span>
+                    </div>
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Hub da Equipe</h1>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Central de colaboradores, acompanhamento de turnos, perfis de acesso e registros individuais.
+                    </p>
                 </div>
-                <button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-2.5 rounded-lg font-medium transition-colors shadow-sm"
-                >
-                    <UserPlus className="w-5 h-5" />
-                    Novo Colaborador
-                </button>
+
+                <div className="flex items-center gap-3">
+                    {isEditable ? (
+                        <button
+                            onClick={() => setIsCreateModalOpen(true)}
+                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm cursor-pointer hover:shadow"
+                        >
+                            <UserPlus className="w-4 h-4" />
+                            <span>Novo Colaborador</span>
+                        </button>
+                    ) : (
+                        <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-medium shadow-2xs">
+                            <Eye className="w-4 h-4 text-blue-500" />
+                            <span>Modo Leitura ({activeRoleInfo?.label || normalizedRole})</span>
+                        </div>
+                    )}
+                </div>
             </header>
 
-            {/* Gráfico de Distribuição por Turno */}
-            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm mb-6">
-                <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Distribuição da Equipe Ativa</h2>
-                <div className="flex items-center gap-4 mb-3">
-                    <div className="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden flex">
-                        <div style={{ width: `${getPercent(manha)}%` }} className="bg-amber-400 transition-all duration-700"></div>
-                        <div style={{ width: `${getPercent(tarde)}%` }} className="bg-orange-500 transition-all duration-700"></div>
-                        <div style={{ width: `${getPercent(noite)}%` }} className="bg-zinc-900 transition-all duration-700"></div>
+            {/* CARDS DE RESUMO & PAINEL DE TURNOS */}
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
+                {/* Métricas rápidas */}
+                <div className="lg:col-span-1 grid grid-cols-2 gap-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ativos</span>
+                        <div className="flex items-baseline gap-2 mt-1">
+                            <span className="text-2xl font-black text-gray-900">{activeCount}</span>
+                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
+                                {totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0}%
+                            </span>
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">De {totalCount} ({inactiveCount} inat.)</span>
                     </div>
-                </div>
-                <div className="flex flex-wrap gap-6 text-sm">
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                        <span className="font-medium text-gray-700">Manhã: {manha} ({getPercent(manha).toFixed(0)}%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-orange-500"></div>
-                        <span className="font-medium text-gray-700">Tarde: {tarde} ({getPercent(tarde).toFixed(0)}%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-zinc-900"></div>
-                        <span className="font-medium text-gray-700">Noite: {noite} ({getPercent(noite).toFixed(0)}%)</span>
-                    </div>
-                </div>
-            </div>
 
-            {/* Barra de Pesquisa e Filtros */}
-            <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4 bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
-                <div className="flex w-full md:w-auto items-center gap-4 flex-wrap flex-1">
-                    <div className="relative w-full md:w-96">
-                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
-                        <input
-                            type="text"
-                            placeholder="Pesquisar por nome, cargo ou turno..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600 transition-shadow text-sm"
+                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Média Score</span>
+                        <div className="flex items-baseline gap-1.5 mt-1">
+                            <span className={`text-2xl font-black ${avgActiveScore !== null && avgActiveScore >= 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
+                                {avgActiveScore !== null ? avgActiveScore : '—'}
+                            </span>
+                            {avgActiveScore !== null && <span className="text-xs font-bold text-gray-400">pts</span>}
+                        </div>
+                        <span className="text-[10px] text-gray-400 mt-1">Última avaliação</span>
+                    </div>
+                </div>
+
+                {/* Distribuição por Turno */}
+                <div className="lg:col-span-3 bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                            <Sun className="w-4 h-4 text-amber-500" />
+                            <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Distribuição por Turno (Equipe Ativa)</h2>
+                        </div>
+                        <span className="text-[11px] font-semibold text-gray-500">
+                            Total Ativo: <strong className="text-gray-900">{activeCount}</strong>
+                        </span>
+                    </div>
+
+                    {/* Barra de progresso multi-cor */}
+                    <div className="w-full h-3.5 bg-gray-100 rounded-full overflow-hidden flex my-2 border border-gray-100">
+                        <div 
+                            style={{ width: `${getPercent(manhaCount)}%` }} 
+                            className="bg-amber-400 transition-all duration-500 hover:brightness-105" 
+                            title={`Manhã: ${manhaCount} (${getPercent(manhaCount).toFixed(0)}%)`}
+                        />
+                        <div 
+                            style={{ width: `${getPercent(tardeCount)}%` }} 
+                            className="bg-orange-500 transition-all duration-500 hover:brightness-105" 
+                            title={`Tarde: ${tardeCount} (${getPercent(tardeCount).toFixed(0)}%)`}
+                        />
+                        <div 
+                            style={{ width: `${getPercent(noiteCount)}%` }} 
+                            className="bg-zinc-900 transition-all duration-500 hover:brightness-125" 
+                            title={`Noite: ${noiteCount} (${getPercent(noiteCount).toFixed(0)}%)`}
                         />
                     </div>
-                    <select 
-                        value={shiftFilter} 
-                        onChange={e => setShiftFilter(e.target.value)}
-                        className="p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600 text-sm bg-white min-w-[120px]"
-                    >
-                        <option value="">Todos os Turnos</option>
-                        <option value="Manhã">Manhã</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Noite">Noite</option>
-                    </select>
+
+                    {/* Legenda clicável para filtrar */}
+                    <div className="grid grid-cols-3 gap-2 pt-1 text-xs">
+                        <button
+                            type="button"
+                            onClick={() => setShiftFilter(shiftFilter === 'Manhã' ? '' : 'Manhã')}
+                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                shiftFilter === 'Manhã' ? 'border-amber-400 bg-amber-50/70' : 'border-gray-100 hover:bg-gray-50'
+                            }`}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
+                                <span className="font-semibold text-gray-700">Manhã</span>
+                            </div>
+                            <span className="font-bold text-gray-900">{manhaCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(manhaCount).toFixed(0)}%)</span></span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setShiftFilter(shiftFilter === 'Tarde' ? '' : 'Tarde')}
+                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                shiftFilter === 'Tarde' ? 'border-orange-400 bg-orange-50/70' : 'border-gray-100 hover:bg-gray-50'
+                            }`}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
+                                <span className="font-semibold text-gray-700">Tarde</span>
+                            </div>
+                            <span className="font-bold text-gray-900">{tardeCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(tardeCount).toFixed(0)}%)</span></span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setShiftFilter(shiftFilter === 'Noite' ? '' : 'Noite')}
+                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                shiftFilter === 'Noite' ? 'border-zinc-800 bg-zinc-100' : 'border-gray-100 hover:bg-gray-50'
+                            }`}
+                        >
+                            <div className="flex items-center gap-1.5">
+                                <span className="w-2.5 h-2.5 rounded-full bg-zinc-900 shrink-0" />
+                                <span className="font-semibold text-gray-700">Noite</span>
+                            </div>
+                            <span className="font-bold text-gray-900">{noiteCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(noiteCount).toFixed(0)}%)</span></span>
+                        </button>
+                    </div>
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors bg-gray-50 px-4 py-2 rounded-lg border border-gray-200 shrink-0">
-                    <input
-                        type="checkbox"
-                        checked={showInactives}
-                        onChange={(e) => setShowInactives(e.target.checked)}
-                        className="w-4 h-4 text-red-600 rounded border-gray-300 focus:ring-red-500 cursor-pointer"
-                    />
-                    Mostrar inativos
-                </label>
             </div>
 
-            {/* Grid de Cards dos Colaboradores */}
+            {/* BARRA DE CONTROLE: PESQUISA, FILTROS, ORDENAÇÃO E MODOS DE VISUALIZAÇÃO */}
+            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs mb-6 space-y-3">
+                <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
+                    {/* Campo de Pesquisa */}
+                    <div className="relative flex-1">
+                        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                        <input
+                            type="text"
+                            placeholder="Buscar por nome, e-mail, cargo ou turno..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full pl-9 pr-9 py-2 bg-gray-50/60 border border-gray-300 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all text-xs"
+                        />
+                        {searchTerm && (
+                            <button
+                                onClick={() => setSearchTerm('')}
+                                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-0.5"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Filtros Dropdowns */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* Filtro Turno */}
+                        <select 
+                            value={shiftFilter} 
+                            onChange={e => setShiftFilter(e.target.value)}
+                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                        >
+                            <option value="">Todos os Turnos</option>
+                            <option value="Manhã">Manhã</option>
+                            <option value="Tarde">Tarde</option>
+                            <option value="Noite">Noite</option>
+                        </select>
+
+                        {/* Filtro Cargo */}
+                        <select 
+                            value={roleFilter} 
+                            onChange={e => setRoleFilter(e.target.value)}
+                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                        >
+                            <option value="">Todos os Cargos</option>
+                            <option value="Gestor">Gestor</option>
+                            <option value="Supervisor">Supervisor</option>
+                            <option value="Apoio">Apoio</option>
+                            <option value="Colaborador">Colaborador</option>
+                        </select>
+
+                        {/* Filtro Status */}
+                        <select 
+                            value={statusFilter} 
+                            onChange={e => setStatusFilter(e.target.value)}
+                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                        >
+                            <option value="all">Status: Todos</option>
+                            <option value="active">Apenas Ativos</option>
+                            <option value="inactive">Apenas Inativos</option>
+                        </select>
+
+                        {/* Ordenação */}
+                        <select 
+                            value={sortBy} 
+                            onChange={e => setSortBy(e.target.value)}
+                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                        >
+                            <option value="name_asc">Nome (A → Z)</option>
+                            <option value="name_desc">Nome (Z → A)</option>
+                            <option value="score_desc">Maior Pontuação</option>
+                            <option value="score_asc">Menor Pontuação</option>
+                        </select>
+                    </div>
+
+                    {/* SELETOR DE MODOS DE VISUALIZAÇÃO (O GRANDE DESTAQUE) */}
+                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 self-start xl:self-auto shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('grid')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                viewMode === 'grid' 
+                                    ? 'bg-white text-red-600 shadow-xs' 
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Visualização em Grade de Cards"
+                        >
+                            <LayoutGrid className="w-3.5 h-3.5" />
+                            <span>Grade</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('table')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                viewMode === 'table' 
+                                    ? 'bg-white text-red-600 shadow-xs' 
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Visualização em Tabela Detalhada"
+                        >
+                            <Table className="w-3.5 h-3.5" />
+                            <span>Tabela</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('compact')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                viewMode === 'compact' 
+                                    ? 'bg-white text-red-600 shadow-xs' 
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Visualização em Diretório Compacto"
+                        >
+                            <List className="w-3.5 h-3.5" />
+                            <span>Diretório</span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('grouped')}
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                viewMode === 'grouped' 
+                                    ? 'bg-white text-red-600 shadow-xs' 
+                                    : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Visualização Agrupada por Categoria"
+                        >
+                            <Layers className="w-3.5 h-3.5" />
+                            <span>Agrupado</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Sub-barra com contadores e botão de limpar filtros */}
+                <div className="flex items-center justify-between text-xs text-gray-500 pt-1 border-t border-gray-100 flex-wrap gap-2">
+                    <div className="flex items-center gap-2">
+                        <span>Exibindo <strong className="text-gray-800">{filteredCollaborators.length}</strong> de {totalCount} colaboradores</span>
+                        {hasActiveFilters && (
+                            <button
+                                onClick={clearFilters}
+                                className="text-red-600 hover:text-red-700 font-bold hover:underline ml-2 cursor-pointer"
+                            >
+                                Limpar filtros
+                            </button>
+                        )}
+                    </div>
+
+                    {viewMode === 'grouped' && (
+                        <div className="flex items-center gap-2 text-xs">
+                            <span className="font-semibold text-gray-600">Agrupar por:</span>
+                            <div className="flex gap-1">
+                                <button
+                                    onClick={() => setGroupBy('shift')}
+                                    className={`px-2 py-0.5 rounded font-bold text-[11px] cursor-pointer ${
+                                        groupBy === 'shift' ? 'bg-zinc-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    Turno
+                                </button>
+                                <button
+                                    onClick={() => setGroupBy('role')}
+                                    className={`px-2 py-0.5 rounded font-bold text-[11px] cursor-pointer ${
+                                        groupBy === 'role' ? 'bg-zinc-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    Cargo (RBAC)
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* CONTEÚDO PRINCIPAL CONFORME O MODO DE VISUALIZAÇÃO */}
             {filteredCollaborators.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-xl border-2 border-dashed border-gray-200">
-                    <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-bold text-gray-700">Nenhum colaborador encontrado</h3>
-                    <p className="text-gray-500">Tente ajustar a sua pesquisa ou filtros.</p>
+                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
+                    <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <h3 className="text-base font-bold text-gray-700">Nenhum colaborador encontrado</h3>
+                    <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                        Não encontramos nenhum membro com os filtros atuais. Tente ajustar o termo de busca ou limpar os filtros.
+                    </p>
+                    {hasActiveFilters && (
+                        <button
+                            onClick={clearFilters}
+                            className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                        >
+                            Limpar Filtros
+                        </button>
+                    )}
+                </div>
+            ) : viewMode === 'grid' ? (
+                /* 1. VISUALIZAÇÃO EM GRADE (CARDS MODERNIZADOS) */
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredCollaborators.map(colab => (
+                        <CollaboratorModernCard
+                            key={colab.id}
+                            colab={colab}
+                            latestEval={latestEvalMap[colab.id]}
+                            isEditable={isEditable}
+                            onEdit={() => setEditingColab(colab)}
+                            onFeedback={() => setFeedbackColab(colab)}
+                            onReport={() => setReportColab(colab)}
+                            onToggleActive={() => handleToggleActive(colab)}
+                        />
+                    ))}
+                </div>
+            ) : viewMode === 'table' ? (
+                /* 2. VISUALIZAÇÃO EM TABELA ENTERPRISE */
+                <CollaboratorTableView
+                    collaborators={filteredCollaborators}
+                    latestEvalMap={latestEvalMap}
+                    isEditable={isEditable}
+                    onEdit={setEditingColab}
+                    onFeedback={setFeedbackColab}
+                    onReport={setReportColab}
+                    onToggleActive={handleToggleActive}
+                />
+            ) : viewMode === 'compact' ? (
+                /* 3. VISUALIZAÇÃO EM DIRETÓRIO COMPACTO */
+                <div className="space-y-2">
+                    {filteredCollaborators.map(colab => (
+                        <CollaboratorCompactRow
+                            key={colab.id}
+                            colab={colab}
+                            latestEval={latestEvalMap[colab.id]}
+                            isEditable={isEditable}
+                            onEdit={() => setEditingColab(colab)}
+                            onFeedback={() => setFeedbackColab(colab)}
+                            onReport={() => setReportColab(colab)}
+                            onToggleActive={() => handleToggleActive(colab)}
+                        />
+                    ))}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {filteredCollaborators.map((colab) => {
-                        // Achar a última avaliação deste colaborador
-                        const colabEvals = evaluations.filter(e => e.colabId === colab.id);
-                        colabEvals.sort((a, b) => {
-                            const timeA = a.date !== 'Semana Atual' ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
-                            const timeB = b.date !== 'Semana Atual' ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-                            return timeA - timeB; 
-                        });
-                        const latestEval = colabEvals.length > 0 ? colabEvals[colabEvals.length - 1] : null;
-
-                        return (
-                            <CollaboratorCard
-                                key={colab.id}
-                                colab={colab}
-                                latestEval={latestEval}
-                                onEdit={() => setEditingColab(colab)}
-                                onFeedback={() => setFeedbackColab(colab)}
-                                onReport={() => setReportColab(colab)}
-                                onToggleActive={() => handleToggleActive(colab)}
-                            />
-                        );
-                    })}
-                </div>
+                /* 4. VISUALIZAÇÃO AGRUPADA (POR TURNO OU POR CARGO) */
+                <CollaboratorGroupedView
+                    collaborators={filteredCollaborators}
+                    groupBy={groupBy}
+                    latestEvalMap={latestEvalMap}
+                    isEditable={isEditable}
+                    onEdit={setEditingColab}
+                    onFeedback={setFeedbackColab}
+                    onReport={setReportColab}
+                    onToggleActive={handleToggleActive}
+                />
             )}
 
-            {isCreateModalOpen && <CreateCollaboratorModal onClose={() => setIsCreateModalOpen(false)} onSuccess={() => setIsCreateModalOpen(false)} />}
-            {editingColab && <EditCollaboratorModal colab={editingColab} onClose={() => setEditingColab(null)} />}
-            {feedbackColab && <FeedbackModal colab={feedbackColab} onClose={() => setFeedbackColab(null)} />}
-            {reportColab && <ReportDashboardModal colab={reportColab} onClose={() => setReportColab(null)} />}
+            {/* MODAIS REESTILIZADOS */}
+            {isCreateModalOpen && (
+                <CreateCollaboratorModal 
+                    onClose={() => setIsCreateModalOpen(false)} 
+                    onSuccess={() => setIsCreateModalOpen(false)} 
+                />
+            )}
+            {editingColab && (
+                <EditCollaboratorModal 
+                    colab={editingColab} 
+                    onClose={() => setEditingColab(null)} 
+                />
+            )}
+            {feedbackColab && (
+                <FeedbackModal 
+                    colab={feedbackColab} 
+                    onClose={() => setFeedbackColab(null)} 
+                />
+            )}
+            {reportColab && (
+                <ReportDashboardModal 
+                    colab={reportColab} 
+                    onClose={() => setReportColab(null)} 
+                />
+            )}
         </div>
     );
 };
 
-// --- COMPONENTE DO CARD ---
-const CollaboratorCard = ({ colab, latestEval, onEdit, onFeedback, onReport, onToggleActive }) => {
+// =========================================================================
+// COMPONENTE 1: CARD MODERNO DA GRADE
+// =========================================================================
+const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
     const score = latestEval ? calcularPontuacao(latestEval) : null;
-    
+    const roleMeta = getRoleMeta(colab.role);
+    const isActive = colab.active !== false;
+
     return (
-        <div className={`bg-white rounded-xl border ${colab.active === false ? 'border-gray-200 opacity-60' : 'border-gray-200'} shadow-sm overflow-hidden flex flex-col transition-all hover:shadow-md hover:border-red-200`}>
-            <div className="p-5 border-b border-gray-100 flex items-start gap-4">
-                <div className={`w-12 h-12 rounded-full ${colab.active === false ? 'bg-gray-400' : 'bg-zinc-950'} text-white flex items-center justify-center font-bold text-lg flex-shrink-0`}>
-                    {colab.name?.charAt(0)}
-                </div>
-                <div className="overflow-hidden flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-gray-900 truncate" title={colab.name}>{colab.name}</h3>
-                        {colab.active === false && <span className="px-2 py-0.5 rounded text-[9px] font-bold bg-red-100 text-red-700 uppercase">Inativo</span>}
-                    </div>
-                    <p className="text-xs text-gray-500 mb-2 truncate" title={colab.email}>{colab.email}</p>
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                        colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-700 border border-orange-100' :
-                            'bg-zinc-100 text-zinc-700 border border-zinc-200'
+        <div className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-2xs hover:shadow-md ${
+            isActive ? 'border-gray-200 hover:border-red-300' : 'border-gray-200 opacity-60 bg-gray-50/50'
+        }`}>
+            {/* Topo: Avatar, Nome, Status e Badges */}
+            <div className="p-4">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="relative">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-base select-none ${
+                            isActive ? 'bg-zinc-950 text-white shadow-xs' : 'bg-gray-400 text-white'
                         }`}>
-                        {colab.shift}
-                    </span>
+                            {colab.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <span 
+                            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                                isActive ? 'bg-emerald-500' : 'bg-gray-400'
+                            }`}
+                            title={isActive ? 'Ativo' : 'Inativo'}
+                        />
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleMeta.badgeColor}`}>
+                            {roleMeta.label || colab.role || 'Colaborador'}
+                        </span>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                            colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                            colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-800 border-orange-200' :
+                            'bg-zinc-100 text-zinc-800 border-zinc-200'
+                        }`}>
+                            {colab.shift === 'Manhã' ? <Sun className="w-2.5 h-2.5 text-amber-500" /> :
+                             colab.shift === 'Tarde' ? <Sunset className="w-2.5 h-2.5 text-orange-500" /> :
+                             <Moon className="w-2.5 h-2.5 text-zinc-700" />}
+                            {colab.shift || 'Sem Turno'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Nome e E-mail */}
+                <h3 className="font-bold text-sm text-gray-900 truncate leading-snug" title={colab.name}>
+                    {colab.name}
+                </h3>
+                <p className="text-[11px] text-gray-500 truncate flex items-center gap-1 mt-0.5" title={colab.email}>
+                    <Mail className="w-3 h-3 text-gray-400 shrink-0" />
+                    <span>{colab.email}</span>
+                </p>
+
+                {/* Métricas e Última Avaliação */}
+                <div className="mt-3.5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
+                    <div>
+                        <span className="text-[10px] font-semibold text-gray-400 uppercase block">Última Avaliação</span>
+                        <span className="font-medium text-gray-700 flex items-center gap-1 mt-0.5">
+                            <Calendar className="w-3 h-3 text-gray-400" />
+                            {latestEval?.date || 'Sem registro'}
+                        </span>
+                    </div>
+
+                    <div className="text-right">
+                        <span className="text-[10px] font-semibold text-gray-400 uppercase block">Pontuação</span>
+                        {score !== null ? (
+                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${
+                                score < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
+                            }`}>
+                                {score} pts
+                            </span>
+                        ) : (
+                            <span className="text-[11px] text-gray-400 font-medium">—</span>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="p-4 border-b border-gray-100 bg-gray-50/50">
-                <div className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500 font-medium flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-gray-400" />
-                        Última avaliação:
-                    </span>
-                    <span className="font-bold text-gray-900">
-                        {latestEval ? (latestEval.date || 'Sem data') : 'Nenhuma'}
-                    </span>
-                </div>
-                {latestEval && (
-                    <div className="flex justify-between items-center text-xs mt-2">
-                        <span className="text-gray-500 font-medium">Pontuação:</span>
-                        <span className={`font-black ${score < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                            {score} pts
-                        </span>
+            {/* Rodapé de Ações */}
+            <div className="p-1.5 bg-gray-50 border-t border-gray-100 grid grid-cols-4 gap-1">
+                {isEditable ? (
+                    <button 
+                        onClick={onEdit} 
+                        className="flex flex-col items-center justify-center p-1.5 text-gray-600 hover:text-gray-950 hover:bg-white rounded-lg transition-all cursor-pointer"
+                        title="Editar Informações"
+                    >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold mt-0.5">Editar</span>
+                    </button>
+                ) : (
+                    <div className="flex flex-col items-center justify-center p-1.5 text-gray-300 cursor-not-allowed">
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold mt-0.5">Editar</span>
+                    </div>
+                )}
+
+                <button 
+                    onClick={onReport} 
+                    className="flex flex-col items-center justify-center p-1.5 text-red-600 hover:text-red-700 hover:bg-white rounded-lg transition-all cursor-pointer"
+                    title="Ver Relatório de Desempenho"
+                >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-bold mt-0.5">Relatório</span>
+                </button>
+
+                {isEditable ? (
+                    <button 
+                        onClick={onFeedback} 
+                        className="flex flex-col items-center justify-center p-1.5 text-amber-700 hover:text-amber-800 hover:bg-white rounded-lg transition-all cursor-pointer"
+                        title="Registrar Feedback"
+                    >
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold mt-0.5">Feedback</span>
+                    </button>
+                ) : (
+                    <div className="flex flex-col items-center justify-center p-1.5 text-gray-300 cursor-not-allowed">
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold mt-0.5">Feedback</span>
+                    </div>
+                )}
+
+                {isEditable ? (
+                    <button 
+                        onClick={onToggleActive} 
+                        className={`flex flex-col items-center justify-center p-1.5 ${
+                            isActive ? 'text-gray-500 hover:text-red-600' : 'text-emerald-600 hover:text-emerald-700'
+                        } hover:bg-white rounded-lg transition-all cursor-pointer`}
+                        title={isActive ? 'Inativar Colaborador' : 'Ativar Colaborador'}
+                    >
+                        {isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                        <span className="text-[9px] font-bold mt-0.5">{isActive ? 'Inativar' : 'Ativar'}</span>
+                    </button>
+                ) : (
+                    <div className="flex flex-col items-center justify-center p-1.5 text-gray-300 cursor-not-allowed">
+                        <UserX className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-bold mt-0.5">Status</span>
                     </div>
                 )}
             </div>
+        </div>
+    );
+};
 
-            <div className="p-2 bg-gray-50 grid grid-cols-4 gap-1">
-                <button onClick={onEdit} className="flex flex-col items-center gap-1 p-2 text-zinc-500 hover:text-zinc-950 hover:bg-white rounded-lg transition-all">
-                    <Edit className="w-4 h-4" />
-                    <span className="text-[9px] font-bold uppercase">Editar</span>
-                </button>
-                <button onClick={onReport} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
-                    <FileText className="w-4 h-4" />
-                    <span className="text-[9px] font-bold uppercase">Relatório</span>
-                </button>
-                <button onClick={onFeedback} className="flex flex-col items-center gap-1 p-2 text-red-600 hover:bg-white rounded-lg transition-all">
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="text-[9px] font-bold uppercase">Feedback</span>
-                </button>
-                <button onClick={onToggleActive} className={`flex flex-col items-center gap-1 p-2 ${colab.active === false ? 'text-emerald-600' : 'text-red-600'} hover:bg-white rounded-lg transition-all`}>
-                    {colab.active === false ? <UserCheck className="w-4 h-4" /> : <UserX className="w-4 h-4" />}
-                    <span className="text-[9px] font-bold uppercase">{colab.active === false ? 'Ativar' : 'Inativar'}</span>
-                </button>
+// =========================================================================
+// COMPONENTE 2: VISUALIZAÇÃO EM TABELA ENTERPRISE
+// =========================================================================
+const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
+    return (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-zinc-950 text-white text-[11px] uppercase tracking-wider font-bold">
+                            <th className="py-3 px-4">Colaborador</th>
+                            <th className="py-3 px-4">Cargo (RBAC)</th>
+                            <th className="py-3 px-4">Turno</th>
+                            <th className="py-3 px-4">Status</th>
+                            <th className="py-3 px-4">Última Avaliação</th>
+                            <th className="py-3 px-4">Pontuação</th>
+                            <th className="py-3 px-4 text-right">Ações Rápidas</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 text-xs">
+                        {collaborators.map(colab => {
+                            const evalData = latestEvalMap[colab.id];
+                            const score = evalData ? calcularPontuacao(evalData) : null;
+                            const roleMeta = getRoleMeta(colab.role);
+                            const isActive = colab.active !== false;
+
+                            return (
+                                <tr key={colab.id} className="hover:bg-gray-50/80 transition-colors">
+                                    {/* Nome + Avatar + Email */}
+                                    <td className="py-3 px-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 ${
+                                                isActive ? 'bg-zinc-900' : 'bg-gray-400'
+                                            }`}>
+                                                {colab.name?.charAt(0)?.toUpperCase() || '?'}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="font-bold text-gray-900 truncate max-w-[200px]" title={colab.name}>
+                                                    {colab.name}
+                                                </div>
+                                                <div className="text-[11px] text-gray-500 truncate max-w-[200px]" title={colab.email}>
+                                                    {colab.email}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+
+                                    {/* Cargo */}
+                                    <td className="py-3 px-4">
+                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${roleMeta.badgeColor}`}>
+                                            {roleMeta.label}
+                                        </span>
+                                    </td>
+
+                                    {/* Turno */}
+                                    <td className="py-3 px-4">
+                                        <span className="inline-flex items-center gap-1 text-gray-700 font-semibold text-xs">
+                                            {colab.shift === 'Manhã' && <Sun className="w-3 h-3 text-amber-500" />}
+                                            {colab.shift === 'Tarde' && <Sunset className="w-3 h-3 text-orange-500" />}
+                                            {colab.shift === 'Noite' && <Moon className="w-3 h-3 text-zinc-700" />}
+                                            {colab.shift || '—'}
+                                        </span>
+                                    </td>
+
+                                    {/* Status */}
+                                    <td className="py-3 px-4">
+                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                            isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
+                                        }`}>
+                                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                            {isActive ? 'Ativo' : 'Inativo'}
+                                        </span>
+                                    </td>
+
+                                    {/* Data */}
+                                    <td className="py-3 px-4 text-gray-600 font-medium">
+                                        {evalData?.date || <span className="text-gray-400">Sem registro</span>}
+                                    </td>
+
+                                    {/* Pontuação */}
+                                    <td className="py-3 px-4">
+                                        {score !== null ? (
+                                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${
+                                                score < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
+                                            }`}>
+                                                {score} pts
+                                            </span>
+                                        ) : (
+                                            <span className="text-gray-400 font-medium">—</span>
+                                        )}
+                                    </td>
+
+                                    {/* Ações */}
+                                    <td className="py-3 px-4 text-right">
+                                        <div className="flex items-center justify-end gap-1">
+                                            <button
+                                                onClick={() => onReport(colab)}
+                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                title="Relatório"
+                                            >
+                                                <FileText className="w-4 h-4" />
+                                            </button>
+
+                                            {isEditable && (
+                                                <>
+                                                    <button
+                                                        onClick={() => onFeedback(colab)}
+                                                        className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                        title="Feedback"
+                                                    >
+                                                        <MessageSquare className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onEdit(colab)}
+                                                        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit3 className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => onToggleActive(colab)}
+                                                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                                            isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
+                                                        }`}
+                                                        title={isActive ? 'Inativar' : 'Ativar'}
+                                                    >
+                                                        {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
             </div>
         </div>
     );
 };
 
-// --- COMPONENTE DO MODAL DE EDIÇÃO ---
-const EditCollaboratorModal = ({ colab, onClose }) => {
-    const { showToast } = useNotification();
-    const [formData, setFormData] = useState({
-        name: colab.name,
-        role: colab.role,
-        shift: colab.shift
-    });
-    const [loading, setLoading] = useState(false);
-    const [resetting, setResetting] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await updateCollaboratorProfile(colab.id, formData);
-            showToast("Dados do colaborador atualizados com sucesso!", "success");
-            onClose();
-        } catch (error) {
-            showToast("Erro ao atualizar: " + error.message, "error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleResetPassword = async () => {
-        if (!window.confirm(`Tem certeza que deseja enviar um e-mail de redefinição de senha para ${colab.email}?`)) return;
-        
-        setResetting(true);
-        try {
-            await sendPasswordResetEmail(auth, colab.email);
-            showToast("E-mail de redefinição enviado com sucesso!", "success");
-        } catch (error) {
-            console.error(error);
-            showToast("Erro ao enviar e-mail: " + error.message, "error");
-        } finally {
-            setResetting(false);
-        }
-    };
+// =========================================================================
+// COMPONENTE 3: VISUALIZAÇÃO EM DIRETÓRIO COMPACTO
+// =========================================================================
+const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
+    const score = latestEval ? calcularPontuacao(latestEval) : null;
+    const roleMeta = getRoleMeta(colab.role);
+    const isActive = colab.active !== false;
 
     return (
-        <div className="fixed inset-0 bg-zinc-950/50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                <div className="p-5 bg-zinc-950 flex justify-between items-center text-white">
-                    <h2 className="text-lg font-bold">Editar Perfil</h2>
-                    <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
+        <div className={`bg-white p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all hover:border-gray-300 shadow-2xs ${
+            isActive ? 'border-gray-200' : 'border-gray-200 opacity-65 bg-gray-50'
+        }`}>
+            {/* Informações básicas */}
+            <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 ${
+                    isActive ? 'bg-zinc-950' : 'bg-gray-400'
+                }`}>
+                    {colab.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                        <input type="text" required value={formData.name} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                            onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="font-bold text-xs text-gray-900 truncate" title={colab.name}>{colab.name}</h4>
+                        <span className={`text-[10px] font-bold px-2 py-0.2 rounded border ${roleMeta.badgeColor}`}>
+                            {roleMeta.label}
+                        </span>
+                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded flex items-center gap-1">
+                            {colab.shift === 'Manhã' ? <Sun className="w-2.5 h-2.5 text-amber-500" /> :
+                             colab.shift === 'Tarde' ? <Sunset className="w-2.5 h-2.5 text-orange-500" /> :
+                             <Moon className="w-2.5 h-2.5 text-zinc-700" />}
+                            {colab.shift || 'Sem Turno'}
+                        </span>
+                        {!isActive && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-red-100 text-red-700 rounded">
+                                Inativo
+                            </span>
+                        )}
                     </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">E-mail (Apenas Leitura)</label>
-                        <input type="email" disabled value={colab.email} className="w-full p-2 border border-gray-200 bg-gray-50 text-gray-500 rounded-lg outline-none cursor-not-allowed" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                            <input type="text" required value={formData.role} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                                onChange={e => setFormData({ ...formData, role: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-                            <select value={formData.shift} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" onChange={e => setFormData({ ...formData, shift: e.target.value })}>
-                                <option value="Manhã">Manhã</option>
-                                <option value="Tarde">Tarde</option>
-                                <option value="Noite">Noite</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={onClose} className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2 px-4 bg-zinc-900 text-white rounded-lg hover:bg-black transition-colors disabled:opacity-50">
-                            {loading ? 'Salvando...' : 'Salvar Alterações'}
-                        </button>
-                    </div>
-                </form>
-
-                <div className="p-6 bg-red-50 border-t border-red-100 flex items-center justify-between">
-                    <div>
-                        <h4 className="text-sm font-bold text-red-800">Acesso</h4>
-                        <p className="text-xs text-red-600">Restaurar senha do usuário.</p>
-                    </div>
-                    <button 
-                        type="button" 
-                        onClick={handleResetPassword}
-                        disabled={resetting}
-                        className="px-4 py-2 bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white rounded-lg transition-colors text-xs font-bold flex items-center gap-2 shadow-sm"
-                    >
-                        {resetting ? <Loader2 className="w-4 h-4 animate-spin" /> : <KeyRound className="w-4 h-4" />}
-                        Resetar Senha
-                    </button>
+                    <p className="text-[11px] text-gray-500 truncate mt-0.5">{colab.email}</p>
                 </div>
             </div>
-        </div>
-    );
-};
 
-// --- COMPONENTE DO MODAL DE CRIAÇÃO ---
-const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
-    const { showToast } = useNotification();
-    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'Analista de Suporte', shift: 'Manhã', active: true });
-    const [loading, setLoading] = useState(false);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await registerCollaborator(formData.name, formData.email, formData.password, formData.role, formData.shift);
-            showToast("Colaborador cadastrado com sucesso!", "success");
-            onSuccess();
-        } catch (error) {
-            showToast(error.message, "error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-zinc-950/50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                <div className="p-5 bg-zinc-950 flex justify-between items-center text-white">
-                    <h2 className="text-lg font-bold">Cadastrar Novo Colaborador</h2>
-                    <button onClick={onClose} className="text-zinc-400 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Nome Completo</label>
-                        <input type="text" required className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                            onChange={e => setFormData({ ...formData, name: e.target.value })} />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">E-mail (Login)</label>
-                        <input type="email" required className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                            onChange={e => setFormData({ ...formData, email: e.target.value })} />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Senha Provisória</label>
-                        <input type="password" required minLength="6" className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                            onChange={e => setFormData({ ...formData, password: e.target.value })} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Cargo</label>
-                            <input type="text" required defaultValue="Analista de Suporte" className="w-full p-2 border border-gray-300 rounded-lg outline-none"
-                                onChange={e => setFormData({ ...formData, role: e.target.value })} />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Turno</label>
-                            <select className="w-full p-2 border border-gray-300 rounded-lg outline-none" onChange={e => setFormData({ ...formData, shift: e.target.value })}>
-                                <option value="Manhã">Manhã</option>
-                                <option value="Tarde">Tarde</option>
-                                <option value="Noite">Noite</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div className="pt-4 flex gap-3">
-                        <button type="button" onClick={onClose} className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
-                            {loading ? 'Cadastrando...' : 'Salvar Cadastro'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// --- COMPONENTE DO MODAL DE FEEDBACK ---
-const FeedbackModal = ({ colab, onClose }) => {
-    const { showToast } = useNotification();
-    const [loading, setLoading] = useState(false);
-    const [formData, setFormData] = useState({
-        type: 'Elogio',
-        method: 'Presencial',
-        protocol: '',
-        comment: ''
-    });
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await registerFeedback(colab.id, formData);
-            showToast("Feedback registrado com sucesso!", "success");
-            onClose();
-        } catch (error) {
-            showToast("Erro ao registrar feedback: " + error.message, "error");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-zinc-950/50 flex items-center justify-center p-4 z-[60] backdrop-blur-sm">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-                <div className="p-5 bg-red-600 flex justify-between items-center text-white">
-                    <div>
-                        <h2 className="text-lg font-bold">Registrar Feedback</h2>
-                        <p className="text-xs text-red-100">Para: {colab.name}</p>
-                    </div>
-                    <button onClick={onClose} className="text-red-200 hover:text-white transition-colors"><X className="w-5 h-5" /></button>
-                </div>
-
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Feedback</label>
-                            <select className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600"
-                                onChange={e => setFormData({ ...formData, type: e.target.value })}>
-                                <option value="Elogio">Elogio</option>
-                                <option value="Ponto de Melhoria">Ponto de Melhoria</option>
-                                <option value="Orientação">Orientação</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Meio de Observação</label>
-                            <select className="w-full p-2 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-red-600"
-                                onChange={e => setFormData({ ...formData, method: e.target.value })}>
-                                <option value="Presencial">Presencial</option>
-                                <option value="Sistema">Sistema</option>
-                                <option value="Telefonia">Telefonia</option>
-                                <option value="Chat">Chat</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Protocolo de Atendimento <span className="text-gray-400 font-normal">(Opcional)</span>
-                        </label>
-                        <input type="text" placeholder="Ex: 2026041288..." className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                            onChange={e => setFormData({ ...formData, protocol: e.target.value })} />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Comentários e Observações</label>
-                        <textarea required rows="3" placeholder="Descreva o contexto do feedback..." className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none resize-none"
-                            onChange={e => setFormData({ ...formData, comment: e.target.value })}></textarea>
-                    </div>
-
-                    <div className="pt-2 flex gap-3">
-                        <button type="button" onClick={onClose} className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-                        <button type="submit" disabled={loading} className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50">
-                            {loading ? 'Registrando...' : 'Registrar Feedback'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
-
-// --- COMPONENTE DO MODAL DE RELATÓRIO ---
-const ReportDashboardModal = ({ colab, onClose }) => {
-    const [dateFilter, setDateFilter] = useState('');
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        const q = query(
-            collection(db, "weekly_evaluations"),
-            where("colabId", "==", colab.id)
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedData = [];
-            snapshot.forEach((doc) => {
-                const dbData = doc.data();
-                fetchedData.push({
-                    id: doc.id,
-                    date: dbData.date || 'Semana Atual',
-                    finalizados: Number(dbData.Atendimentos_Finalizados) || 0,
-                    ligAtendidas: Number(dbData.Ligacoes_Atendidas) || 0,
-                    ligPerdidas: Number(dbData.Ligacoes_Perdidas) || 0,
-                    huggyVol: Number(dbData.Atendimentos_Huggy) || 0,
-                    tmaTel: timeToDecimal(dbData.TMA_Telefonia),
-                    tmaHuggy: timeToDecimal(dbData.TMA_Huggy),
-                    tme: timeToDecimal(dbData.TME_Telefonia),
-                    createdAt: dbData.createdAt
-                });
-            });
-
-            fetchedData.sort((a, b) => {
-                const timeA = a.date !== 'Semana Atual' ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
-                const timeB = b.date !== 'Semana Atual' ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-                return timeA - timeB; 
-            });
-
-            setData(fetchedData);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [colab.id]);
-
-    const filterOptions = useMemo(() => {
-        const months = new Set();
-        const dates = new Set();
-
-        data.forEach(item => {
-            const safeDate = item.date;
-            if (safeDate && safeDate !== 'Sem data' && safeDate !== 'Semana Atual') {
-                dates.add(safeDate);
-                const parts = safeDate.split('/');
-                if (parts.length === 3) {
-                    months.add(`${parts[1]}/${parts[2]}`);
-                }
-            }
-        });
-
-        const sortedDates = Array.from(dates).sort((a, b) => parseDateObj(b) - parseDateObj(a));
-        const sortedMonths = Array.from(months).sort((a, b) => {
-            const [m1, y1] = a.split('/');
-            const [m2, y2] = b.split('/');
-            return new Date(y2, m2 - 1, 1).getTime() - new Date(y1, m1 - 1, 1).getTime();
-        });
-
-        return { months: sortedMonths, dates: sortedDates };
-    }, [data]);
-
-    const filteredData = useMemo(() => {
-        return data.filter(item => {
-            if (dateFilter === '') return true;
-            return item.date.includes(dateFilter);
-        });
-    }, [data, dateFilter]);
-
-    const currentData = filteredData.length > 0 ? filteredData[filteredData.length - 1] : {
-        finalizados: 0, ligAtendidas: 0, ligPerdidas: 0, huggyVol: 0, tmaTel: 0, tme: 0, tmaHuggy: 0
-    };
-
-    if (loading) {
-        return (
-            <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center z-[70] backdrop-blur-sm">
-                <Loader2 className="w-10 h-10 text-red-500 animate-spin" />
-            </div>
-        );
-    }
-
-    return (
-        <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[70] backdrop-blur-sm">
-            <div className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
-                <div className="p-5 bg-zinc-950 flex flex-col md:flex-row justify-between items-start md:items-center text-white shrink-0 gap-4">
-                    <div>
-                        <h2 className="text-xl font-bold flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-red-500" />
-                            Relatório de Desempenho
-                        </h2>
-                        <p className="text-sm text-zinc-400">Analisando métricas de: <span className="text-white font-medium">{colab.name}</span></p>
-                    </div>
-                    <div className="flex items-center gap-4 w-full md:w-auto">
-                        <div className="relative flex-1 md:w-64">
-                            <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
-                            <select 
-                                value={dateFilter}
-                                onChange={(e) => setDateFilter(e.target.value)}
-                                className="w-full pl-9 pr-4 py-2 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-red-500 outline-none text-sm appearance-none bg-zinc-900 cursor-pointer text-white font-medium"
-                            >
-                                <option value="">Todo o Período</option>
-                                {filterOptions.months.length > 0 && (
-                                    <optgroup label="Por Mês" className="bg-white text-gray-900">
-                                        {filterOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
-                                    </optgroup>
-                                )}
-                                {filterOptions.dates.length > 0 && (
-                                    <optgroup label="Datas Específicas" className="bg-white text-gray-900">
-                                        {filterOptions.dates.map(d => <option key={d} value={d}>{d}</option>)}
-                                    </optgroup>
-                                )}
-                            </select>
-                        </div>
-                        <button onClick={onClose} className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors shrink-0">
-                            <X className="w-6 h-6" />
-                        </button>
-                    </div>
-                </div>
-
-                <div className="p-6 overflow-y-auto flex-1 space-y-6">
-                    {filteredData.length === 0 ? (
-                        <div className="text-center py-20 flex flex-col items-center justify-center">
-                            <FileText className="w-16 h-16 text-gray-300 mb-4" />
-                            <h3 className="text-lg font-bold text-gray-700">Nenhum dado encontrado</h3>
-                            <p className="text-gray-500">Ainda não há avaliações lançadas neste período para este colaborador.</p>
-                        </div>
+            {/* Score + Ações Rápidas */}
+            <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+                <div className="text-left sm:text-right">
+                    <span className="text-[10px] text-gray-400 block font-medium">Último Score</span>
+                    {score !== null ? (
+                        <span className={`font-black text-xs ${score < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                            {score} pts
+                        </span>
                     ) : (
+                        <span className="text-[11px] text-gray-400">—</span>
+                    )}
+                </div>
+
+                <div className="flex items-center gap-1">
+                    <button
+                        onClick={onReport}
+                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
+                        title="Relatório"
+                    >
+                        <FileText className="w-4 h-4" />
+                        <span className="hidden md:inline text-[11px]">Relatório</span>
+                    </button>
+
+                    {isEditable && (
                         <>
-                            <div className="bg-white border border-gray-200 p-3 rounded-xl flex items-center gap-2 shadow-sm">
-                                <Calendar className="w-5 h-5 text-red-600" />
-                                <span className="font-medium text-gray-700">Visualizando dados mais recentes em:</span>
-                                <span className="font-bold text-gray-900">{currentData.date || 'Último lançamento'}</span>
-                            </div>
-
-                            <div className="space-y-6">
-                                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                    <h3 className="text-sm font-bold text-gray-700 text-center mb-6 flex items-center justify-center gap-2">
-                                        <CheckCircle className="w-4 h-4 text-emerald-500" /> 
-                                        Evolução: Atendimentos Finalizados
-                                    </h3>
-                                    <div className="h-64">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={filteredData}>
-                                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                                <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                                                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} />
-                                                <Tooltip cursor={{fill: '#F3F4F6'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                                <Bar dataKey="finalizados" fill="#86efac" radius={[4, 4, 0, 0]} name="Atendimentos Finalizados" />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                        <h3 className="text-sm font-bold text-gray-700 text-center mb-6 flex items-center justify-center gap-2">
-                                            <Clock className="w-4 h-4 text-blue-500" /> 
-                                            Evolução TMA Telefonia
-                                        </h3>
-                                        <div className="h-56">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={filteredData}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} tickFormatter={formatTime} />
-                                                    <Tooltip contentStyle={{borderRadius: '8px'}} formatter={(value) => formatTime(value)} />
-                                                    <Line type="monotone" dataKey="tmaTel" stroke="#3b82f6" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} name="TMA Telefonia" />
-                                                </LineChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm">
-                                        <h3 className="text-sm font-bold text-gray-700 text-center mb-6 flex items-center justify-center gap-2">
-                                            <MessageSquare className="w-4 h-4 text-purple-500" /> 
-                                            Evolução TMA Huggy
-                                        </h3>
-                                        <div className="h-56">
-                                            <ResponsiveContainer width="100%" height="100%">
-                                                <LineChart data={filteredData}>
-                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} dy={10} />
-                                                    <YAxis axisLine={false} tickLine={false} tick={{fill: '#6B7280', fontSize: 12}} tickFormatter={formatTime} />
-                                                    <Tooltip contentStyle={{borderRadius: '8px'}} formatter={(value) => formatTime(value)} />
-                                                    <Line type="monotone" dataKey="tmaHuggy" stroke="#a855f7" strokeWidth={3} dot={{r: 4, strokeWidth: 2}} name="TMA Huggy" />
-                                                </LineChart>
-                                            </ResponsiveContainer>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 pt-4">
-                                <ReportCard title="Pontuação Total" value={`${calcularPontuacao(currentData)} pts`} valueColor={calcularPontuacao(currentData) < 0 ? "text-red-600" : "text-amber-500"} />
-                                <ReportCard title="Atend. Finalizados" value={currentData.finalizados} valueColor="text-emerald-600" />
-                                <ReportCard title="Lig. Recebidas" value={currentData.ligAtendidas} icon={<Phone className="w-4 h-4 text-blue-500"/>} />
-                                <ReportCard title="Lig. Perdidas" value={currentData.ligPerdidas} valueColor="text-red-600" icon={<PhoneMissed className="w-4 h-4 text-red-500"/>} />
-                                <ReportCard title="Vol. Huggy" value={currentData.huggyVol} />
-                                <ReportCard title="TMA Tel" value={formatTime(currentData.tmaTel)} valueColor="text-blue-600" />
-                                <ReportCard title="TME Tel" value={formatTime(currentData.tme)} />
-                                <ReportCard title="TMA Huggy" value={formatTime(currentData.tmaHuggy)} valueColor="text-purple-600" />
-                            </div>
+                            <button
+                                onClick={onFeedback}
+                                className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
+                                title="Feedback"
+                            >
+                                <MessageSquare className="w-4 h-4" />
+                                <span className="hidden md:inline text-[11px]">Feedback</span>
+                            </button>
+                            <button
+                                onClick={onEdit}
+                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                title="Editar"
+                            >
+                                <Edit3 className="w-4 h-4" />
+                            </button>
+                            <button
+                                onClick={onToggleActive}
+                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                                    isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
+                                }`}
+                                title={isActive ? 'Inativar' : 'Ativar'}
+                            >
+                                {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                            </button>
                         </>
                     )}
                 </div>
@@ -808,11 +1038,90 @@ const ReportDashboardModal = ({ colab, onClose }) => {
     );
 };
 
-const ReportCard = ({ title, value, valueColor = "text-gray-900", icon }) => (
-    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center text-center">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">{icon}{title}</div>
-        <div className={`text-2xl font-black ${valueColor}`}>{value}</div>
-    </div>
-);
+// =========================================================================
+// COMPONENTE 4: VISUALIZAÇÃO AGRUPADA (POR TURNO OU POR CARGO)
+// =========================================================================
+const CollaboratorGroupedView = ({ collaborators, groupBy, latestEvalMap, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
+    // Monta grupos
+    const groups = useMemo(() => {
+        const map = {};
+        if (groupBy === 'shift') {
+            ['Manhã', 'Tarde', 'Noite', 'Outros'].forEach(k => { map[k] = []; });
+            collaborators.forEach(c => {
+                const s = c.shift === 'Manhã' || c.shift === 'Tarde' || c.shift === 'Noite' ? c.shift : 'Outros';
+                map[s].push(c);
+            });
+        } else {
+            // por role
+            ['gestor', 'supervisor', 'apoio', 'colaborador'].forEach(r => { map[r] = []; });
+            collaborators.forEach(c => {
+                const r = normalizeRole(c.role);
+                if (!map[r]) map[r] = [];
+                map[r].push(c);
+            });
+        }
+        return map;
+    }, [collaborators, groupBy]);
+
+    return (
+        <div className="space-y-6">
+            {Object.entries(groups).map(([groupKey, groupColabs]) => {
+                if (groupColabs.length === 0) return null;
+
+                const roleMeta = groupBy === 'role' ? ROLES.find(r => r.id === groupKey) : null;
+                const groupTitle = groupBy === 'shift' ? `Turno ${groupKey}` : (roleMeta?.label || groupKey);
+                const activeInGroup = groupColabs.filter(c => c.active !== false).length;
+
+                return (
+                    <div key={groupKey} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs">
+                        {/* Header do Grupo */}
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                            <div className="flex items-center gap-2.5">
+                                {groupBy === 'shift' ? (
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                        groupKey === 'Manhã' ? 'bg-amber-100 text-amber-800' :
+                                        groupKey === 'Tarde' ? 'bg-orange-100 text-orange-800' : 'bg-zinc-900 text-white'
+                                    }`}>
+                                        {groupKey === 'Manhã' ? <Sun className="w-4 h-4" /> :
+                                         groupKey === 'Tarde' ? <Sunset className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                                    </div>
+                                ) : (
+                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${roleMeta?.badgeColor || 'bg-gray-100'}`}>
+                                        <Shield className="w-4 h-4" />
+                                    </div>
+                                )}
+                                <div>
+                                    <h3 className="font-bold text-base text-gray-900">{groupTitle}</h3>
+                                    <span className="text-[11px] text-gray-500">
+                                        {activeInGroup} ativos de {groupColabs.length} membros
+                                    </span>
+                                </div>
+                            </div>
+                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
+                                {groupColabs.length} {groupColabs.length === 1 ? 'membro' : 'membros'}
+                            </span>
+                        </div>
+
+                        {/* Cards do grupo */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                            {groupColabs.map(colab => (
+                                <CollaboratorModernCard
+                                    key={colab.id}
+                                    colab={colab}
+                                    latestEval={latestEvalMap[colab.id]}
+                                    isEditable={isEditable}
+                                    onEdit={() => onEdit(colab)}
+                                    onFeedback={() => onFeedback(colab)}
+                                    onReport={() => onReport(colab)}
+                                    onToggleActive={() => onToggleActive(colab)}
+                                />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
 
 export default CollaboratorsHub;

@@ -23,20 +23,26 @@ export const AuthProvider = ({ children }) => {
                         const colabDoc = querySnapshot.docs[0];
                         const colabData = colabDoc.data();
                         
-                        // Define quem é admin baseado no cargo
-                        const role = colabData.role?.toLowerCase() || '';
-                        if (role.includes('admin') || role.includes('gestor') || role.includes('supervisor')) {
+                        // Define quem tem acesso administrativo/operacional baseado no cargo
+                        const roleLower = colabData.role?.toLowerCase() || '';
+                        const hasAdminAccess = roleLower.includes('admin') || roleLower.includes('gestor') || roleLower.includes('supervisor') || roleLower.includes('apoio');
+                        if (hasAdminAccess) {
                             setUserRole('admin');
                         } else {
                             setUserRole('colab');
                         }
                         
-                        // Salva os dados logados passando o ID do banco (firestoreId)
-                        setCurrentUser({ ...user, firestoreId: colabDoc.id, ...colabData });
+                        // Salva os dados logados mantendo o cargo real (Gestor, Supervisor, Apoio, Colaborador)
+                        setCurrentUser({ 
+                            ...user, 
+                            firestoreId: colabDoc.id, 
+                            ...colabData, 
+                            role: colabData.role || (hasAdminAccess ? 'Gestor' : 'Colaborador') 
+                        });
                     } else {
                         // Se for uma conta master que criou o firebase mas não tá na tabela de equipe
                         setUserRole('admin');
-                        setCurrentUser({ ...user, firestoreId: user.uid });
+                        setCurrentUser({ ...user, firestoreId: user.uid, role: 'Gestor' });
                     }
                 } catch (error) {
                     console.error("Erro ao buscar perfil:", error);

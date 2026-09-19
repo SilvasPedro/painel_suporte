@@ -4,11 +4,13 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield
 } from 'lucide-react';
 import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { logout } from '../services/auth';
+import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 import CollaboratorsHub from './CollaboratorsHub';
@@ -30,6 +32,9 @@ import logoExtended from '../assets/logo_extended.png';
 const logo = logoExtended;
 
 const AdminDashboard = () => {
+    const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
+    const { currentUser } = useAuth();
+
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [expandedMenus, setExpandedMenus] = useState({
@@ -48,7 +53,7 @@ const AdminDashboard = () => {
         }
     };
 
-    const navMenus = [
+    const navMenus = useMemo(() => [
         {
             id: 'geral',
             title: 'Principal',
@@ -91,15 +96,58 @@ const AdminDashboard = () => {
                 { id: 'settings', label: 'Configurações', icon: SettingsIcon },
             ]
         }
-    ];
+    ], []);
+
+    // Menus visíveis conforme matriz de permissões RBAC
+    const visibleMenus = useMemo(() => {
+        return navMenus.map(menu => ({
+            ...menu,
+            items: menu.items.filter(item => canView(item.id))
+        })).filter(menu => menu.items.length > 0);
+    }, [canView, navMenus]);
+
+    // Primeira aba permitida para fallback seguro
+    const firstAllowedTab = useMemo(() => {
+        for (const menu of visibleMenus) {
+            if (menu.items.length > 0) {
+                return menu.items[0].id;
+            }
+        }
+        return null;
+    }, [visibleMenus]);
+
+    // Determina a aba efetivamente ativa sem disparar re-render em cascata
+    const effectiveActiveTab = canView(activeTab) ? activeTab : (firstAllowedTab || activeTab);
 
     const renderContent = () => {
-        switch (activeTab) {
+        if (!canView(effectiveActiveTab)) {
+            return (
+                <div className="flex-1 p-8 flex flex-col items-center justify-center text-center bg-gray-50 h-full">
+                    <div className="w-16 h-16 rounded-2xl bg-amber-100 border border-amber-200 flex items-center justify-center text-amber-600 mb-4 shadow-sm">
+                        <ShieldAlert className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-xl font-bold text-gray-900">Acesso Restrito ao Módulo</h2>
+                    <p className="text-sm text-gray-500 max-w-md mt-2 leading-relaxed">
+                        Seu perfil atual (<strong className="text-gray-800">{activeRoleInfo?.label || normalizedRole}</strong>) não possui permissão de visualização para este módulo.
+                    </p>
+                    {firstAllowedTab && (
+                        <button
+                            onClick={() => setActiveTab(firstAllowedTab)}
+                            className="mt-6 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all cursor-pointer"
+                        >
+                            Ir para Início
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        switch (effectiveActiveTab) {
             case 'dashboard':
                 return <DashboardOverview />;
             case 'hub':
                 return <CollaboratorsHub />;
-            case 'rankings':             // ADICIONE ESTAS DUAS LINHAS
+            case 'rankings':
                 return <Rankings />;
             case 'orgchart':
                 return <OrgChart />;
@@ -108,9 +156,9 @@ const AdminDashboard = () => {
             case 'monthly_evaluations':
                 return <MonthlyEvaluations />;
             case 'schedule':
-                return <SundaySchedule />;
+                return <SundaySchedule readOnly={!canEdit('schedule')} />;
             case 'daily_schedule':
-                return <DailySchedule />;
+                return <DailySchedule readOnly={!canEdit('daily_schedule')} />;
             case 'sector_kpis':
                 return <SectorKPIs />;
             case 'data_manager':
@@ -143,8 +191,31 @@ const AdminDashboard = () => {
                     </button>
                 </div>
 
+                {/* Badge do Usuário e Cargo RBAC */}
+                {!isSidebarCollapsed ? (
+                    <div className="mx-3 mt-3 p-3 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0">
+                            {activeRoleInfo?.label?.charAt(0) || 'U'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-white truncate">
+                                {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
+                            </p>
+                            <span className={`inline-block mt-0.5 text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
+                                {activeRoleInfo?.label || normalizedRole}
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="flex justify-center mt-3">
+                        <div className="w-9 h-9 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs" title={`Cargo: ${activeRoleInfo?.label || normalizedRole}`}>
+                            {activeRoleInfo?.label?.charAt(0) || 'U'}
+                        </div>
+                    </div>
+                )}
+
                 <nav className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-hide">
-                    {navMenus.map(menu => (
+                    {visibleMenus.map(menu => (
                         <div key={menu.id} className="space-y-1">
                             {/* Header do Menu */}
                             {!isSidebarCollapsed ? (
@@ -166,7 +237,7 @@ const AdminDashboard = () => {
                                 <div className="space-y-1">
                                     {menu.items.map(item => {
                                         const Icon = item.icon;
-                                        const isActive = activeTab === item.id;
+                                        const isActive = effectiveActiveTab === item.id;
                                         return (
                                             <button 
                                                 key={item.id}

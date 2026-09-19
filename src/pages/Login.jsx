@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
 import logo from '../assets/logo_extended.png';
@@ -21,17 +22,19 @@ const Login = () => {
 
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  const { normalizedRole, hasAnyAdminTabAccess, isMasterAdmin } = usePermissions();
 
-  // Escuta as mudanças de login. Se o usuário estiver logado, redireciona para o painel correto.
+  // Escuta as mudanças de login. Se o usuário estiver logado, redireciona para o painel correto com base no RBAC.
   useEffect(() => {
     if (currentUser) {
-      if (currentUser.role === 'Admin') {
+      const canAccessAdmin = isMasterAdmin || normalizedRole === 'gestor' || normalizedRole === 'supervisor' || normalizedRole === 'apoio' || hasAnyAdminTabAccess;
+      if (canAccessAdmin) {
         navigate('/admin', { replace: true });
       } else {
         navigate('/collaborator', { replace: true });
       }
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, normalizedRole, hasAnyAdminTabAccess, isMasterAdmin, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

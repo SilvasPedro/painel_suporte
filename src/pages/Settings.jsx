@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Target, ShieldCheck, Plus, Trash2, Edit2, X, Loader2, Save } from 'lucide-react';
+import { Settings as SettingsIcon, Target, ShieldCheck, Plus, Trash2, Edit2, X, Loader2, Save, Shield, Eye } from 'lucide-react';
 import { collection, doc, onSnapshot, updateDoc, setDoc, addDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
+import { usePermissions } from '../context/PermissionsContext';
+import RbacSettingsTab from '../components/RbacSettingsTab';
 
 const Settings = () => {
     const { showToast } = useNotification();
+    const { canEdit, activeRoleInfo, normalizedRole } = usePermissions();
+    const isEditable = canEdit('settings');
+
     const [activeTab, setActiveTab] = useState('goals');
 
     // Estado das Metas
@@ -138,16 +143,29 @@ const Settings = () => {
                     </h1>
                     <p className="text-sm text-gray-500">Ajuste de metas e padronização de processos.</p>
                 </div>
+                {!isEditable && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-semibold">
+                        <Eye className="w-4 h-4 text-amber-600" />
+                        Apenas Leitura ({activeRoleInfo?.label || normalizedRole})
+                    </div>
+                )}
             </header>
 
             <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 flex space-x-2 overflow-x-auto">
-                <button onClick={() => setActiveTab('goals')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'goals' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                <button onClick={() => setActiveTab('goals')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'goals' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                     <Target className="w-4 h-4"/> Metas Globais
                 </button>
-                <button onClick={() => setActiveTab('qa')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap ${activeTab === 'qa' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                <button onClick={() => setActiveTab('qa')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'qa' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                     <ShieldCheck className="w-4 h-4"/> Processos QA & Checklists
                 </button>
+                <button onClick={() => setActiveTab('roles')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'roles' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    <Shield className="w-4 h-4"/> Cargos e Permissões (RBAC)
+                </button>
             </div>
+
+            {activeTab === 'roles' && (
+                <RbacSettingsTab />
+            )}
 
             {activeTab === 'goals' && (
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 max-w-2xl">
@@ -156,20 +174,26 @@ const Settings = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Meta TMR (hh:mm:ss)</label>
-                                <input type="step" step="1" required value={goals.tmr} onChange={(e) => setGoals({...goals, tmr: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" />
+                                <input type="step" step="1" required disabled={!isEditable} value={goals.tmr} onChange={(e) => setGoals({...goals, tmr: e.target.value})} className={`w-full p-2 border rounded-lg outline-none ${!isEditable ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-300 focus:ring-2 focus:ring-red-600'}`} />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Meta FCR (%)</label>
-                                <input type="number" required value={goals.fcr} onChange={(e) => setGoals({...goals, fcr: Number(e.target.value)})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" />
+                                <input type="number" required disabled={!isEditable} value={goals.fcr} onChange={(e) => setGoals({...goals, fcr: Number(e.target.value)})} className={`w-full p-2 border rounded-lg outline-none ${!isEditable ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-300 focus:ring-2 focus:ring-red-600'}`} />
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Taxa de Reincidência (%)</label>
-                                <input type="number" required value={goals.recurrence} onChange={(e) => setGoals({...goals, recurrence: Number(e.target.value)})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none" />
+                                <input type="number" required disabled={!isEditable} value={goals.recurrence} onChange={(e) => setGoals({...goals, recurrence: Number(e.target.value)})} className={`w-full p-2 border rounded-lg outline-none ${!isEditable ? 'bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed' : 'border-gray-300 focus:ring-2 focus:ring-red-600'}`} />
                             </div>
                         </div>
-                        <button type="submit" disabled={savingGoals} className="py-2.5 px-6 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors disabled:opacity-70 flex items-center gap-2">
-                            {savingGoals ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Salvar Metas
-                        </button>
+                        {isEditable ? (
+                            <button type="submit" disabled={savingGoals} className="py-2.5 px-6 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors disabled:opacity-70 flex items-center gap-2 cursor-pointer">
+                                {savingGoals ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Salvar Metas
+                            </button>
+                        ) : (
+                            <div className="text-xs text-gray-400 italic">
+                                * Apenas usuários com permissão de edição em Configurações podem alterar as metas do setor.
+                            </div>
+                        )}
                     </form>
                 </div>
             )}
@@ -178,9 +202,13 @@ const Settings = () => {
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col flex-1 overflow-hidden">
                     <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
                         <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">Processos Auditáveis (Checklists)</h2>
-                        <button onClick={() => openProcessModal()} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 font-bold transition-colors">
-                            <Plus className="w-4 h-4" /> Novo Processo
-                        </button>
+                        {isEditable ? (
+                            <button onClick={() => openProcessModal()} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700 font-bold transition-colors cursor-pointer">
+                                <Plus className="w-4 h-4" /> Novo Processo
+                            </button>
+                        ) : (
+                            <span className="text-xs text-gray-400 font-medium">Modo Leitura</span>
+                        )}
                     </div>
                     
                     <div className="overflow-y-auto flex-1 p-4">
@@ -197,10 +225,12 @@ const Settings = () => {
                                     <div key={proc.id} className="border border-gray-200 rounded-xl p-4 flex flex-col hover:border-red-200 transition-colors shadow-sm">
                                         <div className="flex justify-between items-start mb-3">
                                             <h3 className="font-bold text-gray-900 line-clamp-1">{proc.name}</h3>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => openProcessModal(proc)} className="p-1 text-gray-400 hover:text-amber-500 rounded"><Edit2 className="w-4 h-4"/></button>
-                                                <button onClick={() => handleDeleteProcess(proc.id)} className="p-1 text-gray-400 hover:text-red-500 rounded"><Trash2 className="w-4 h-4"/></button>
-                                            </div>
+                                            {isEditable && (
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => openProcessModal(proc)} className="p-1 text-gray-400 hover:text-amber-500 rounded cursor-pointer"><Edit2 className="w-4 h-4"/></button>
+                                                    <button onClick={() => handleDeleteProcess(proc.id)} className="p-1 text-gray-400 hover:text-red-500 rounded cursor-pointer"><Trash2 className="w-4 h-4"/></button>
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="flex-1 bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1 overflow-hidden">
                                             <span className="font-bold text-gray-500 block mb-2 uppercase tracking-wider">{proc.checklist?.length || 0} Itens de Verificação:</span>

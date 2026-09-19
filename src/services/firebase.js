@@ -19,5 +19,14 @@ const app = initializeApp(firebaseConfig);
 
 // Exporta as instâncias para usar nos componentes
 export const db = getFirestore(app);
-export const messaging = getMessaging(app);
 export const auth = getAuth(app);
+
+let messagingInstance = null;
+try {
+  if (typeof window !== 'undefined' && 'Notification' in window && 'serviceWorker' in navigator) {
+    messagingInstance = getMessaging(app);
+  }
+} catch (e) {
+  console.warn('Firebase Messaging não suportado neste navegador:', e);
+}
+export const messaging = messagingInstance;

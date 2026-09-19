@@ -2,7 +2,7 @@ import { GoogleGenAI } from '@google/genai';
 
 let aiInstance = null;
 function getAI() {
- const apiKey = process.env.VITE_GEMINI_API_KEY;
+  const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   if (!apiKey) return null;
   if (!aiInstance) {
     aiInstance = new GoogleGenAI({ apiKey });
@@ -43,9 +43,8 @@ ${contextData ? JSON.stringify(contextData, null, 2) : 'Nenhum dado de contexto 
       parts: [{ text: msg.content || msg.text || '' }]
     }));
 
-    // String atualizada para contornar o bloqueio de novas chaves
     const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash-lite", 
+      model: "gemini-2.5-flash", 
       contents: [
         ...formattedHistory,
         { role: 'user', parts: [{ text: message }] }

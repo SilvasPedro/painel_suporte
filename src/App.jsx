@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { messaging } from './services/firebase';
 import { getToken } from 'firebase/messaging';
@@ -17,15 +18,15 @@ import CollaboratorDashboard from './pages/CollaboratorDashboard';
 // ==========================================
 // GERENCIADOR DE NOTIFICAÇÕES (Invisível)
 // ==========================================
-// ==========================================
-// GERENCIADOR DE NOTIFICAÇÕES (Invisível)
-// ==========================================
 const NotificationManager = () => {
     const { currentUser } = useAuth();
 
     useEffect(() => {
         async function requestNotificationPermission() {
             try {
+                if (!messaging || typeof window === 'undefined' || !('Notification' in window)) {
+                    return;
+                }
                 const permission = await Notification.requestPermission();
                 if (permission === 'granted') {
                     const token = await getToken(messaging, { 
@@ -65,12 +66,13 @@ const NotificationManager = () => {
 };
 
 // ==========================================
-// PROTEÇÃO DE ROTAS
+// PROTEÇÃO DE ROTAS (RBAC ATUALIZADO)
 // ==========================================
 const PrivateRoute = ({ children, requiredRole }) => {
     const { currentUser, loading } = useAuth();
+    const { normalizedRole, hasAnyAdminTabAccess, isMasterAdmin, loadingPermissions } = usePermissions();
 
-    if (loading) {
+    if (loading || loadingPermissions) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-50">
                 <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
@@ -82,8 +84,11 @@ const PrivateRoute = ({ children, requiredRole }) => {
         return <Navigate to="/login" replace />;
     }
 
-    if (requiredRole === 'Admin' && currentUser.role !== 'Admin') {
-        return <Navigate to="/collaborator" replace />;
+    if (requiredRole === 'Admin') {
+        const canAccessAdmin = isMasterAdmin || normalizedRole === 'gestor' || normalizedRole === 'supervisor' || normalizedRole === 'apoio' || hasAnyAdminTabAccess;
+        if (!canAccessAdmin) {
+            return <Navigate to="/collaborator" replace />;
+        }
     }
 
     return children;
@@ -93,13 +98,13 @@ const PrivateRoute = ({ children, requiredRole }) => {
 // GERENCIADOR DE ROTAS (Filho do AuthProvider)
 // ==========================================
 const AppRoutes = () => {
-    const { currentUser } = useAuth(); // Agora funciona perfeitamente!
+    const { currentUser } = useAuth();
 
     return (
         <Routes>
             <Route path="/login" element={<Login />} />
             
-            {/* Rota do Gestor */}
+            {/* Rota do Painel Operacional/Gestão com RBAC */}
             <Route path="/admin/*" element={
                 <PrivateRoute requiredRole="Admin">
                     <AdminDashboard />
@@ -127,12 +132,14 @@ function App() {
     return (
         <NotificationProvider>
             <AuthProvider>
-                <BrowserRouter>
-                    <NotificationManager />
-                    <AppRoutes /> {/* As rotas agora ficam aqui dentro */}
-                    <FloatingChat />
-                    <FloatingExtensions />
-                </BrowserRouter>
+                <PermissionsProvider>
+                    <BrowserRouter>
+                        <NotificationManager />
+                        <AppRoutes />
+                        <FloatingChat />
+                        <FloatingExtensions />
+                    </BrowserRouter>
+                </PermissionsProvider>
             </AuthProvider>
         </NotificationProvider>
     );
