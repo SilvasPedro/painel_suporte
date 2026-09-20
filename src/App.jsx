@@ -13,12 +13,13 @@ import FloatingExtensions from './components/FloatingExtensions';
 // Importação das páginas
 import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
+import AccountInactive from './pages/AccountInactive';
 
 // ==========================================
 // GERENCIADOR DE NOTIFICAÇÕES (Invisível)
 // ==========================================
 const NotificationManager = () => {
-    const { currentUser } = useAuth();
+    const { currentUser, isInactive } = useAuth();
 
     useEffect(() => {
         async function requestNotificationPermission() {
@@ -56,10 +57,10 @@ const NotificationManager = () => {
             }
         }
 
-        if (currentUser) {
+        if (currentUser && !isInactive && !currentUser.isInactive) {
             requestNotificationPermission();
         }
-    }, [currentUser]);
+    }, [currentUser, isInactive]);
 
     return null; 
 };
@@ -68,7 +69,7 @@ const NotificationManager = () => {
 // PROTEÇÃO DE ROTAS (RBAC ATUALIZADO)
 // ==========================================
 const PrivateRoute = ({ children }) => {
-    const { currentUser, loading } = useAuth();
+    const { currentUser, isInactive, loading } = useAuth();
     const { loadingPermissions } = usePermissions();
 
     if (loading || loadingPermissions) {
@@ -83,7 +84,63 @@ const PrivateRoute = ({ children }) => {
         return <Navigate to="/login" replace />;
     }
 
+    // Se o usuário estiver inativo no sistema, bloqueia o acesso e direciona para a tela de aviso
+    if (isInactive || currentUser.isInactive) {
+        return <Navigate to="/inactive" replace />;
+    }
+
     return children;
+};
+
+// ==========================================
+// ROTA DEDICADA PARA USUÁRIO INATIVO
+// ==========================================
+const InactiveRoute = () => {
+    const { currentUser, isInactive, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-zinc-950">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    // Se o usuário estiver ativo, não deve ficar preso na tela de inativo
+    if (!isInactive && !currentUser.isInactive) {
+        return <Navigate to="/home" replace />;
+    }
+
+    return <AccountInactive />;
+};
+
+// ==========================================
+// REDIRECIONAMENTO RAIZ INTELIGENTE
+// ==========================================
+const RootRedirect = () => {
+    const { currentUser, isInactive, loading } = useAuth();
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-gray-50">
+                <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
+    if (!currentUser) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (isInactive || currentUser.isInactive) {
+        return <Navigate to="/inactive" replace />;
+    }
+
+    return <Navigate to="/home" replace />;
 };
 
 // ==========================================
@@ -94,6 +151,9 @@ const AppRoutes = () => {
         <Routes>
             <Route path="/login" element={<Login />} />
             
+            {/* Rota exclusiva para aviso de usuário desativado */}
+            <Route path="/inactive" element={<InactiveRoute />} />
+
             {/* Rota Unificada Genérica com RBAC por Perfil */}
             <Route path="/home/*" element={
                 <PrivateRoute>
@@ -121,8 +181,8 @@ const AppRoutes = () => {
             } />
 
             {/* Redirecionamento Padrão */}
-            <Route path="/" element={<Navigate to="/home" replace />} />
-            <Route path="*" element={<Navigate to="/home" replace />} />
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="*" element={<RootRedirect />} />
         </Routes>
     );
 };

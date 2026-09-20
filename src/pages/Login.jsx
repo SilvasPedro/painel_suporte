@@ -20,14 +20,20 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, isInactive } = useAuth();
 
-  // Escuta as mudanças de login. Se o usuário estiver logado, redireciona para a rota unificada /home.
+  // Escuta as mudanças de login. Se o usuário estiver logado:
+  // Se estiver marcado como inativo, vai diretamente para a tela de aviso /inactive.
+  // Caso contrário, redireciona para a rota unificada /home.
   useEffect(() => {
     if (currentUser) {
-      navigate('/home', { replace: true });
+      if (isInactive || currentUser.isInactive) {
+        navigate('/inactive', { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
     }
-  }, [currentUser, navigate]);
+  }, [currentUser, isInactive, navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

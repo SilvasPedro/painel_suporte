@@ -57,7 +57,7 @@ export default function FloatingChat() {
     }
   }, [isOpen, contextData]);
 
-  if (!currentUser || currentUser.role !== 'Admin') return null;
+  if (!currentUser || currentUser.isInactive || currentUser.role !== 'Admin') return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();

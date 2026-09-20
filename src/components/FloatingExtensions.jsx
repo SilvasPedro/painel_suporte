@@ -90,8 +90,8 @@ export default function FloatingExtensions() {
     }).filter(group => group.items.length > 0);
   }, [searchQuery]);
 
-  // Não renderiza se o usuário não estiver autenticado
-  if (!currentUser) return null;
+  // Não renderiza se o usuário não estiver autenticado ou se estiver desativado
+  if (!currentUser || currentUser.isInactive) return null;
 
   // Se o usuário for Admin, posiciona ao lado do chat do sistema para não sobrepor
   const isAdmin = currentUser.role === 'Admin';
