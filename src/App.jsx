@@ -94,23 +94,35 @@ const AppRoutes = () => {
         <Routes>
             <Route path="/login" element={<Login />} />
             
-            {/* Rota Unificada com RBAC por Perfil */}
-            <Route path="/admin/*" element={
+            {/* Rota Unificada Genérica com RBAC por Perfil */}
+            <Route path="/home/*" element={
+                <PrivateRoute>
+                    <AdminDashboard />
+                </PrivateRoute>
+            } />
+
+            {/* Rota alternativa /logged com suporte a navegação direta */}
+            <Route path="/logged/*" element={
                 <PrivateRoute>
                     <AdminDashboard />
                 </PrivateRoute>
             } />
             
-            {/* Redirecionamento de compatibilidade da rota /collaborator para /admin */}
+            {/* Redirecionamento de compatibilidade das rotas legadas (/admin e /collaborator) para /home */}
+            <Route path="/admin/*" element={
+                <PrivateRoute>
+                    <Navigate to="/home" replace />
+                </PrivateRoute>
+            } />
             <Route path="/collaborator/*" element={
                 <PrivateRoute>
-                    <Navigate to="/admin" replace />
+                    <Navigate to="/home" replace />
                 </PrivateRoute>
             } />
 
             {/* Redirecionamento Padrão */}
-            <Route path="/" element={<Navigate to="/admin" replace />} />
-            <Route path="*" element={<Navigate to="/admin" replace />} />
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="*" element={<Navigate to="/home" replace />} />
         </Routes>
     );
 };

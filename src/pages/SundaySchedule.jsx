@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
-    CalendarDays, ChevronLeft, ChevronRight, Save, 
+    Calendar, ChevronLeft, ChevronRight, Save, 
     Loader2, Users, GripVertical, X
 } from 'lucide-react';
 import { collection, onSnapshot, query, doc, getDoc, setDoc } from 'firebase/firestore';
@@ -169,7 +169,7 @@ const SundaySchedule = ({ readOnly = false }) => {
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <CalendarDays className="w-6 h-6 text-red-600" />
+                        <Calendar className="w-6 h-6 text-red-600" />
                         Escala de Plantão (Domingos)
                     </h1>
                     <p className="text-sm text-gray-500 mt-1">

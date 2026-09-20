@@ -7,8 +7,7 @@ import {
     ThumbsUp, Minus, ThumbsDown, AlertTriangle
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc, updateDoc } from 'firebase/firestore';
-import { updatePassword } from 'firebase/auth';
-import { db, auth } from '../services/firebase';
+import { db } from '../services/firebase';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +18,8 @@ import DailyQueueTracker from './DailyDemandLaunch'
 import SundaySchedule from './SundaySchedule'; // ADICIONE ESTA LINHA
 import DailySchedule from './DailySchedule';
 import OrgChart from './OrgChart';
+import ChangePasswordModal from '../components/ChangePasswordModal';
+import LogoutConfirmModal from '../components/LogoutConfirmModal';
 
 // Importação da logo estendida
 import logoExtended from '../assets/logo_extended.png';
@@ -172,42 +173,9 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     const { currentUser } = useAuth();
     const { showToast } = useNotification();
 
-    // Estados do Modal de Senha
+    // Estados dos Modais
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
-    const [newPassword, setNewPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [loadingPassword, setLoadingPassword] = useState(false);
-
-    const handleUpdatePassword = async (e) => {
-        e.preventDefault();
-
-        if (newPassword !== confirmPassword) {
-            showToast("As senhas digitadas não coincidem.", "error");
-            return;
-        }
-        if (newPassword.length < 6) {
-            showToast("A senha deve ter pelo menos 6 caracteres.", "error");
-            return;
-        }
-
-        setLoadingPassword(true);
-        try {
-            await updatePassword(auth.currentUser, newPassword);
-            showToast("Senha alterada com sucesso!", "success");
-            setIsPasswordModalOpen(false);
-            setNewPassword('');
-            setConfirmPassword('');
-        } catch (error) {
-            // O Firebase exige login recente para trocar a senha. Se o token expirou, pedimos para relogar.
-            if (error.code === 'auth/requires-recent-login') {
-                showToast("Por segurança, você precisa sair e entrar novamente no sistema para alterar sua senha.", "error");
-            } else {
-                showToast("Erro ao alterar senha: " + error.message, "error");
-            }
-        } finally {
-            setLoadingPassword(false);
-        }
-    };
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
     const renderContent = () => {
         switch (activeTab) {
@@ -300,15 +268,34 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                         </div>
                     </div>
 
-                    <button onClick={() => setIsPasswordModalOpen(true)} className="w-full flex items-center gap-3 px-4 py-2 mb-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors">
+                    <button 
+                        onClick={() => setIsPasswordModalOpen(true)} 
+                        className="w-full flex items-center gap-3 px-4 py-2 mb-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                    >
                         <KeyRound className="w-4 h-4" />
                         <span className="text-sm font-medium">Alterar senha</span>
                     </button>
 
-                    <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                    <button 
+                        onClick={() => setIsLogoutModalOpen(true)} 
+                        className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+                    >
                         <LogOut className="w-4 h-4" />
                         <span className="text-sm font-medium">Sair do sistema</span>
                     </button>
+
+                    {/* Rodapé com a versão v3.0 do projeto */}
+                    <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between px-1">
+                        <span className="text-[11px] font-medium text-zinc-500 tracking-wide">
+                            HubDesk Suporte
+                        </span>
+                        <span 
+                            className="px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-[10px] font-mono font-bold text-zinc-400 shadow-2xs"
+                            title="Versão do Sistema: v3.0"
+                        >
+                            v3.0
+                        </span>
+                    </div>
                 </div>
             </aside>
 
@@ -318,48 +305,19 @@ const CollaboratorDashboard = ({ currentUserId }) => {
             </main>
 
             {/* MODAL DE ALTERAÇÃO DE SENHA */}
-            {isPasswordModalOpen && (
-                <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[90] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
-                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
-                            <h3 className="font-bold flex items-center gap-2"><KeyRound className="w-5 h-5 text-red-500" /> Alterar Senha</h3>
-                            <button onClick={() => setIsPasswordModalOpen(false)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
-                        </div>
+            <ChangePasswordModal 
+                isOpen={isPasswordModalOpen} 
+                onClose={() => setIsPasswordModalOpen(false)} 
+                showToast={showToast} 
+            />
 
-                        <form onSubmit={handleUpdatePassword} className="p-6 space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Nova Senha</label>
-                                <input
-                                    type="password"
-                                    required
-                                    minLength="6"
-                                    value={newPassword}
-                                    onChange={(e) => setNewPassword(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar Nova Senha</label>
-                                <input
-                                    type="password"
-                                    required
-                                    minLength="6"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
-                                />
-                            </div>
-
-                            <div className="pt-4 flex gap-3">
-                                <button type="button" onClick={() => setIsPasswordModalOpen(false)} className="flex-1 py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">Cancelar</button>
-                                <button type="submit" disabled={loadingPassword} className="flex-1 py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex justify-center items-center">
-                                    {loadingPassword ? <Hourglass className="w-5 h-5 text-white" /> : 'Atualizar'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            {/* MODAL DE CONFIRMAÇÃO DE LOGOUT */}
+            <LogoutConfirmModal
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+                onConfirm={logout}
+                userName={currentUser?.name}
+            />
 
         </div>
     );

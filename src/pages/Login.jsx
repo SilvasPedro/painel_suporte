@@ -22,10 +22,10 @@ const Login = () => {
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
-  // Escuta as mudanças de login. Se o usuário estiver logado, redireciona para o painel oficial com RBAC.
+  // Escuta as mudanças de login. Se o usuário estiver logado, redireciona para a rota unificada /home.
   useEffect(() => {
     if (currentUser) {
-      navigate('/admin', { replace: true });
+      navigate('/home', { replace: true });
     }
   }, [currentUser, navigate]);
 
@@ -93,8 +93,9 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="mt-12 text-sm text-zinc-500">
-            &copy; 2026 Sistema de Gestão Interna
+          <div className="mt-12 text-sm text-zinc-500 flex items-center justify-between">
+            <span>&copy; 2026 Sistema de Gestão Interna</span>
+            <span className="font-mono text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-400">v3.0</span>
           </div>
         </div>
 
