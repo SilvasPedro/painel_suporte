@@ -22,9 +22,9 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 
-// Importação da logo da barra de navegação (navbar_logo_red)
-import navbarLogoRed from '../assets/navbar_logo_red.png';
-const logo = navbarLogoRed;
+// Importação do ícone da barra de navegação (mesmo ícone do favicon)
+import faviconLogo from '../assets/favicon_red.png';
+const logo = faviconLogo;
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -205,11 +205,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
                 <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
-                    <div className="flex items-center border-none border-zinc-800 shrink-0">
-                        {/* Logo oficial da barra de navegação */}
-                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto object-contain" />
+                    <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center shrink-0 p-1.5 shadow-2xs">
+                        {/* Ícone oficial da barra de navegação (mesmo do favicon) */}
+                        <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
                     </div>
-                    <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
+                    <span className="font-brand text-xl font-extrabold tracking-tight text-white flex items-center select-none truncate">
+                        HUB<span className="text-red-500 font-black ml-0.5">DESK</span>
+                    </span>
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
@@ -286,13 +288,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                         <span className="text-sm font-medium">Sair do sistema</span>
                     </button>
 
-                    {/* Rodapé com a versão v3.1 do projeto e trigger do Changelog */}
+                    {/* Rodapé com a versão v3.2 do projeto e trigger do Changelog */}
                     <button 
                         type="button"
                         id="colab-version-card"
                         onClick={() => setIsChangelogModalOpen(true)}
                         className="w-full pt-3 mt-1 border-t border-zinc-800/80 flex items-center justify-between px-1 group transition-colors cursor-pointer text-left"
-                        title="Versão do Sistema: v3.1 • Clique para ver o Changelog"
+                        title="Versão do Sistema: v3.2 • Clique para ver o Changelog"
                     >
                         <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors tracking-wide">
                             HubDesk Suporte
@@ -301,7 +303,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             className="px-2 py-0.5 rounded-md bg-zinc-900 group-hover:bg-red-950/60 border border-zinc-800 group-hover:border-red-800/60 text-[10px] font-mono font-bold text-zinc-400 group-hover:text-red-400 shadow-2xs transition-all flex items-center gap-1.5"
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            v3.1
+                            v3.2
                         </span>
                     </button>
                 </div>

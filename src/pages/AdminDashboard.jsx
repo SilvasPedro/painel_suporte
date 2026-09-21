@@ -31,9 +31,9 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 
-// Importação da logo da barra de navegação (navbar_logo_red)
-import navbarLogoRed from '../assets/navbar_logo_red.png';
-const logo = navbarLogoRed;
+// Importação do ícone da barra de navegação (mesmo ícone do favicon)
+import faviconLogo from '../assets/favicon_red.png';
+const logo = faviconLogo;
 
 const AdminDashboard = () => {
     const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
@@ -205,12 +205,18 @@ const AdminDashboard = () => {
                 <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-1' : 'justify-between'} border-b border-zinc-800 shrink-0 h-20`}>
                     {!isSidebarCollapsed ? (
                         <div className="flex items-center gap-3 overflow-hidden">
-                            <img src={logo} alt="HubDesk Logo" className="h-10 w-auto shrink-0 object-contain" />
-                            <span className="text-lg font-bold tracking-wider truncate">HUB<span className="text-red-500">DESK</span></span>
+                            <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center shrink-0 p-1.5 shadow-2xs">
+                                <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
+                            </div>
+                            <span className="font-brand text-xl font-extrabold tracking-tight text-white flex items-center select-none truncate">
+                                HUB<span className="text-red-500 font-black ml-0.5">DESK</span>
+                            </span>
                         </div>
                     ) : (
-                        <button onClick={() => setIsSidebarCollapsed(false)} className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer" title="Expandir menu">
-                            <img src={logo} alt="HubDesk Logo" className="h-8 w-auto shrink-0 object-contain" />
+                        <button onClick={() => setIsSidebarCollapsed(false)} className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors shrink-0 flex items-center justify-center cursor-pointer" title="Expandir menu">
+                            <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center shrink-0 p-1.5 shadow-2xs">
+                                <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
+                            </div>
                         </button>
                     )}
                     <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 ${isSidebarCollapsed ? 'hidden' : ''}`} title="Recolher menu">
@@ -309,13 +315,13 @@ const AdminDashboard = () => {
                         {!isSidebarCollapsed && <span className="text-sm font-medium">Sair do sistema</span>}
                     </button>
 
-                    {/* Rodapé com a versão v3.1 do projeto e trigger do Changelog */}
+                    {/* Rodapé com a versão v3.2 do projeto e trigger do Changelog */}
                     <button
                         type="button"
                         id="system-version-card"
                         onClick={() => setIsChangelogModalOpen(true)}
                         className={`w-full pt-3 mt-1 border-t border-zinc-800/80 flex items-center group transition-colors cursor-pointer text-left ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-1'}`}
-                        title="Versão do Sistema: v3.1 • Clique para ver o Changelog"
+                        title="Versão do Sistema: v3.2 • Clique para ver o Changelog"
                     >
                         {!isSidebarCollapsed && (
                             <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors tracking-wide">
@@ -327,7 +333,7 @@ const AdminDashboard = () => {
                             className="px-2 py-0.5 rounded-md bg-zinc-900 group-hover:bg-red-950/60 border border-zinc-800 group-hover:border-red-800/60 text-[10px] font-mono font-bold text-zinc-400 group-hover:text-red-400 shadow-2xs transition-all flex items-center gap-1.5"
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            v3.1
+                            v3.2
                         </span>
                     </button>
                 </div>

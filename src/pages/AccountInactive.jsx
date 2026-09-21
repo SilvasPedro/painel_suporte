@@ -85,7 +85,7 @@ export default function AccountInactive() {
 
         {/* Identificador sutil de versão */}
         <div className="mt-8 text-[11px] text-zinc-600 font-mono">
-          HubDesk Suporte &bull; v3.1
+          HubDesk Suporte &bull; v3.2
         </div>
       </div>
     </div>
