@@ -29,6 +29,7 @@ import MyDashboard from './MyDashboard';
 import MyHistory from './MyHistory';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
+import VersionChangelogModal from '../components/VersionChangelogModal';
 
 // Importação da logo da barra de navegação (navbar_logo_red)
 import navbarLogoRed from '../assets/navbar_logo_red.png';
@@ -43,6 +44,7 @@ const AdminDashboard = () => {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+    const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
 
     const [expandedMenus, setExpandedMenus] = useState({
         individual: true,
@@ -307,21 +309,27 @@ const AdminDashboard = () => {
                         {!isSidebarCollapsed && <span className="text-sm font-medium">Sair do sistema</span>}
                     </button>
 
-                    {/* Rodapé com a versão v3.0 do projeto */}
-                    <div className={`pt-3 border-t border-zinc-800/80 flex items-center ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-1'}`}>
+                    {/* Rodapé com a versão v3.1 do projeto e trigger do Changelog */}
+                    <button
+                        type="button"
+                        id="system-version-card"
+                        onClick={() => setIsChangelogModalOpen(true)}
+                        className={`w-full pt-3 mt-1 border-t border-zinc-800/80 flex items-center group transition-colors cursor-pointer text-left ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-1'}`}
+                        title="Versão do Sistema: v3.1 • Clique para ver o Changelog"
+                    >
                         {!isSidebarCollapsed && (
-                            <span className="text-[11px] font-medium text-zinc-500 tracking-wide">
+                            <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors tracking-wide">
                                 HubDesk Suporte
                             </span>
                         )}
                         <span 
                             id="system-version-badge"
-                            className="px-2 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-[10px] font-mono font-bold text-zinc-400 shadow-2xs"
-                            title="Versão do Sistema: v3.0"
+                            className="px-2 py-0.5 rounded-md bg-zinc-900 group-hover:bg-red-950/60 border border-zinc-800 group-hover:border-red-800/60 text-[10px] font-mono font-bold text-zinc-400 group-hover:text-red-400 shadow-2xs transition-all flex items-center gap-1.5"
                         >
-                            v3.0
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            v3.1
                         </span>
-                    </div>
+                    </button>
                 </div>
             </aside>
 
@@ -342,6 +350,12 @@ const AdminDashboard = () => {
                 onClose={() => setIsLogoutModalOpen(false)}
                 onConfirm={logout}
                 userName={currentUser?.name}
+            />
+
+            {/* Modal de Changelog da Versão 3.1 */}
+            <VersionChangelogModal
+                isOpen={isChangelogModalOpen}
+                onClose={() => setIsChangelogModalOpen(false)}
             />
         </div>
     );

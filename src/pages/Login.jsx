@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { login } from '../services/auth';
 import logo from '../assets/logo_extended.png';
+import VersionChangelogModal from '../components/VersionChangelogModal';
 
 const BUBBLES_DATA = Array.from({ length: 40 }).map(() => ({
   size: Math.random() * 20 + 8,
@@ -18,6 +19,7 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
 
   const navigate = useNavigate();
   const { currentUser, isInactive } = useAuth();
@@ -101,7 +103,15 @@ const Login = () => {
 
           <div className="mt-12 text-sm text-zinc-500 flex items-center justify-between">
             <span>&copy; 2026 Sistema de Gestão Interna</span>
-            <span className="font-mono text-xs px-2 py-0.5 rounded bg-white/5 border border-white/10 text-zinc-400">v3.0</span>
+            <button 
+              type="button"
+              onClick={() => setIsChangelogModalOpen(true)}
+              className="font-mono text-xs px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 hover:border-red-500/30 text-zinc-400 hover:text-white transition-all cursor-pointer flex items-center gap-1.5"
+              title="Versão do Sistema: v3.1 • Clique para ver o Changelog"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              v3.1
+            </button>
           </div>
         </div>
 
@@ -172,6 +182,12 @@ const Login = () => {
         </div>
 
       </div>
+
+      {/* Modal de Changelog da Versão 3.1 */}
+      <VersionChangelogModal
+        isOpen={isChangelogModalOpen}
+        onClose={() => setIsChangelogModalOpen(false)}
+      />
     </div>
   );
 };
