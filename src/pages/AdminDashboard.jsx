@@ -30,9 +30,9 @@ import MyHistory from './MyHistory';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 
-// Importação da logo estendida
-import logoExtended from '../assets/logo_extended.png';
-const logo = logoExtended;
+// Importação da logo da barra de navegação (navbar_logo_red)
+import navbarLogoRed from '../assets/navbar_logo_red.png';
+const logo = navbarLogoRed;
 
 const AdminDashboard = () => {
     const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
@@ -200,14 +200,18 @@ const AdminDashboard = () => {
     return (
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800 transition-all duration-300 relative z-20`}>
-                <div className="p-4 flex items-center justify-between border-b border-zinc-800 shrink-0 h-20">
-                    {!isSidebarCollapsed && (
+                <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-1' : 'justify-between'} border-b border-zinc-800 shrink-0 h-20`}>
+                    {!isSidebarCollapsed ? (
                         <div className="flex items-center gap-3 overflow-hidden">
-                            <img src={logo} alt="HubDesk Logo" className="h-10 w-auto shrink-0" />
+                            <img src={logo} alt="HubDesk Logo" className="h-10 w-auto shrink-0 object-contain" />
                             <span className="text-lg font-bold tracking-wider truncate">HUB<span className="text-red-500">DESK</span></span>
                         </div>
+                    ) : (
+                        <button onClick={() => setIsSidebarCollapsed(false)} className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 flex items-center justify-center cursor-pointer" title="Expandir menu">
+                            <img src={logo} alt="HubDesk Logo" className="h-8 w-auto shrink-0 object-contain" />
+                        </button>
                     )}
-                    <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 ${isSidebarCollapsed ? 'mx-auto' : ''}`}>
+                    <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 ${isSidebarCollapsed ? 'hidden' : ''}`} title="Recolher menu">
                         <Menu className="w-5 h-5" />
                     </button>
                 </div>

@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-    ShieldCheck, Plus, Search, Edit2, Trash2, X, Loader2, 
-    AlertTriangle, CheckCircle, XCircle, BarChart2, Award, FileText, Settings, ListChecks
+    ShieldCheck, Plus, Loader2, AlertTriangle, PieChart as PieIcon 
 } from 'lucide-react';
 import { collection, onSnapshot, query, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -9,7 +8,14 @@ import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
-const Audits = () => {
+import AuditMetrics from '../components/audits/AuditMetrics';
+import AuditFilters from '../components/audits/AuditFilters';
+import AuditRanking from '../components/audits/AuditRanking';
+import AuditTable from '../components/audits/AuditTable';
+import AuditFormModal from '../components/audits/AuditFormModal';
+import AuditDetailsModal from '../components/audits/AuditDetailsModal';
+
+export default function Audits() {
     const { showToast } = useNotification();
     const { currentUser } = useAuth();
     
@@ -18,28 +24,26 @@ const Audits = () => {
     const [collaboratorsMap, setCollaboratorsMap] = useState({});
     const [collaboratorsList, setCollaboratorsList] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
 
-    const [isModalOpen, setIsModalOpen] = useState(false);
+    // Estados de Filtros
+    const [searchTerm, setSearchTerm] = useState('');
+    const [periodFilter, setPeriodFilter] = useState('all'); // 'all' | 'today' | '7d' | 'month'
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'Conforme' | 'Não Conforme'
+    const [processFilter, setProcessFilter] = useState('all');
+    const [colabFilter, setColabFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'oldest' | 'score_desc' | 'score_asc'
+
+    // Modais
+    const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+    const [editingAudit, setEditingAudit] = useState(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [viewingAudit, setViewingAudit] = useState(null);
     const [deletingId, setDeletingId] = useState(null);
-    
-    // Formulário do Modal
-    const [editingId, setEditingId] = useState(null);
-    const [formData, setFormData] = useState({
-        colabId: '',
-        date: new Date().toISOString().split('T')[0],
-        protocol: '',
-        processId: '',
-        processName: '',
-        status: 'Conforme',
-        notes: '',
-        checklistResults: {} // Armazena { "Pergunta 1": "Conforme", "Pergunta 2": "Não Conforme" }
-    });
-    const [activeChecklist, setActiveChecklist] = useState([]);
     const [saving, setSaving] = useState(false);
 
+    // --- CARREGAMENTO DO FIRESTORE EM TEMPO REAL ---
     useEffect(() => {
-        // Busca Colaboradores
+        // 1. Busca Colaboradores
         const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
             const map = {};
             const list = [];
@@ -52,7 +56,7 @@ const Audits = () => {
             setCollaboratorsList(list);
         });
 
-        // Busca Processos/Checklists de QA
+        // 2. Busca Processos/Checklists de QA
         const unsubProcesses = onSnapshot(collection(db, "qa_processes"), (snap) => {
             const fetched = [];
             snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
@@ -60,48 +64,142 @@ const Audits = () => {
             setQaProcesses(fetched);
         });
 
-        // Busca Auditorias
+        // 3. Busca Auditorias
         const qAudits = query(collection(db, "qa_audits"));
         const unsubAudits = onSnapshot(qAudits, (snap) => {
             const fetched = [];
             snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
-            fetched.sort((a, b) => {
-                const dateA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-                const dateB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
-                return dateB - dateA;
-            });
             setAudits(fetched);
             setLoading(false);
         });
 
-        return () => { unsubColabs(); unsubProcesses(); unsubAudits(); };
+        return () => { 
+            unsubColabs(); 
+            unsubProcesses(); 
+            unsubAudits(); 
+        };
     }, []);
 
-    // --- CÁLCULOS DO DASHBOARD E RANKING ---
+    // --- FILTRAGEM E ORDENAÇÃO DE AUDITORIAS ---
+    const filteredAudits = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const sevenDaysAgo = startOfToday - (7 * 24 * 60 * 60 * 1000);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+        return audits.filter(audit => {
+            // 1. Filtro de Texto (busca)
+            if (searchTerm.trim()) {
+                const query = searchTerm.toLowerCase();
+                const colabName = (collaboratorsMap[audit.colabId] || '').toLowerCase();
+                const protocol = (audit.protocol || '').toLowerCase();
+                const processName = (audit.processName || '').toLowerCase();
+                const notes = (audit.notes || '').toLowerCase();
+
+                const match = colabName.includes(query) || 
+                              protocol.includes(query) || 
+                              processName.includes(query) || 
+                              notes.includes(query);
+                if (!match) return false;
+            }
+
+            // 2. Filtro de Status
+            if (statusFilter !== 'all' && audit.status !== statusFilter) {
+                return false;
+            }
+
+            // 3. Filtro de Processo
+            if (processFilter !== 'all' && audit.processId !== processFilter) {
+                return false;
+            }
+
+            // 4. Filtro de Colaborador
+            if (colabFilter !== 'all' && audit.colabId !== colabFilter) {
+                return false;
+            }
+
+            // 5. Filtro de Período
+            if (periodFilter !== 'all' && audit.date) {
+                const auditTime = new Date(audit.date).getTime();
+                if (periodFilter === 'today' && auditTime < startOfToday) {
+                    return false;
+                }
+                if (periodFilter === '7d' && auditTime < sevenDaysAgo) {
+                    return false;
+                }
+                if (periodFilter === 'month' && auditTime < startOfMonth) {
+                    return false;
+                }
+            }
+
+            return true;
+        }).sort((a, b) => {
+            // Ordenação
+            if (sortBy === 'recent') {
+                const timeA = a.date ? new Date(a.date).getTime() : 0;
+                const timeB = b.date ? new Date(b.date).getTime() : 0;
+                return timeB - timeA;
+            }
+            if (sortBy === 'oldest') {
+                const timeA = a.date ? new Date(a.date).getTime() : 0;
+                const timeB = b.date ? new Date(b.date).getTime() : 0;
+                return timeA - timeB;
+            }
+            if (sortBy === 'score_desc') {
+                const scoreA = a.score !== undefined ? a.score : (a.status === 'Conforme' ? 100 : 0);
+                const scoreB = b.score !== undefined ? b.score : (b.status === 'Conforme' ? 100 : 0);
+                return scoreB - scoreA;
+            }
+            if (sortBy === 'score_asc') {
+                const scoreA = a.score !== undefined ? a.score : (a.status === 'Conforme' ? 100 : 0);
+                const scoreB = b.score !== undefined ? b.score : (b.status === 'Conforme' ? 100 : 0);
+                return scoreA - scoreB;
+            }
+            return 0;
+        });
+    }, [audits, searchTerm, statusFilter, processFilter, colabFilter, periodFilter, sortBy, collaboratorsMap]);
+
+    // --- CÁLCULO DE DASHBOARD STATS E RANKING ---
     const { dashboardStats, rankingData, pieData } = useMemo(() => {
-        const stats = { total: 0, conformes: 0, naoConformes: 0, taxa: 0 };
+        const stats = { 
+            total: 0, 
+            conformes: 0, 
+            naoConformes: 0, 
+            taxa: 0,
+            evaluatedColabsCount: 0,
+            totalColabsCount: collaboratorsList.length
+        };
         const colabStats = {};
 
-        audits.forEach(audit => {
+        // Baseia as estatísticas na seleção filtrada atual
+        filteredAudits.forEach(audit => {
             stats.total++;
             const isConforme = audit.status === 'Conforme';
             
             if (isConforme) stats.conformes++;
             else stats.naoConformes++;
 
-            if (!colabStats[audit.colabId]) {
-                colabStats[audit.colabId] = { id: audit.colabId, name: collaboratorsMap[audit.colabId] || 'Desconhecido', total: 0, conformes: 0 };
+            if (audit.colabId) {
+                if (!colabStats[audit.colabId]) {
+                    colabStats[audit.colabId] = { 
+                        id: audit.colabId, 
+                        name: collaboratorsMap[audit.colabId] || 'Desconhecido', 
+                        total: 0, 
+                        conformes: 0 
+                    };
+                }
+                colabStats[audit.colabId].total++;
+                if (isConforme) colabStats[audit.colabId].conformes++;
             }
-            colabStats[audit.colabId].total++;
-            if (isConforme) colabStats[audit.colabId].conformes++;
         });
 
-        stats.taxa = stats.total > 0 ? ((stats.conformes / stats.total) * 100).toFixed(1) : 0;
+        stats.taxa = stats.total > 0 ? ((stats.conformes / stats.total) * 100).toFixed(1) : '0.0';
+        stats.evaluatedColabsCount = Object.keys(colabStats).length;
 
         const ranking = Object.values(colabStats).map(c => ({
             ...c,
             taxa: ((c.conformes / c.total) * 100).toFixed(1)
-        })).sort((a, b) => b.taxa - a.taxa || b.total - a.total); 
+        })).sort((a, b) => parseFloat(b.taxa) - parseFloat(a.taxa) || b.total - a.total); 
 
         const pData = [
             { name: 'Conformes', value: stats.conformes, color: '#10b981' },
@@ -109,82 +207,56 @@ const Audits = () => {
         ];
 
         return { dashboardStats: stats, rankingData: ranking, pieData: pData };
-    }, [audits, collaboratorsMap]);
+    }, [filteredAudits, collaboratorsMap, collaboratorsList]);
 
-    // --- AÇÕES DO MODAL ---
-    const openNewModal = () => {
-        setEditingId(null);
-        setFormData({ 
-            colabId: '', date: new Date().toISOString().split('T')[0], protocol: '', 
-            processId: '', processName: '', status: 'Conforme', notes: '', checklistResults: {} 
-        });
-        setActiveChecklist([]);
-        setIsModalOpen(true);
+    const hasActiveFilters = searchTerm !== '' || periodFilter !== 'all' || statusFilter !== 'all' || processFilter !== 'all' || colabFilter !== 'all' || sortBy !== 'recent';
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setPeriodFilter('all');
+        setStatusFilter('all');
+        setProcessFilter('all');
+        setColabFilter('all');
+        setSortBy('recent');
     };
 
-    const openEditModal = (audit) => {
-        setEditingId(audit.id);
-        setFormData({
-            colabId: audit.colabId || '',
-            date: audit.date || '',
-            protocol: audit.protocol || '',
-            processId: audit.processId || '',
-            processName: audit.processName || '',
-            status: audit.status || 'Conforme',
-            notes: audit.notes || '',
-            checklistResults: audit.checklistResults || {}
-        });
-        
-        // Carrega a checklist do processo salvo, se existir
-        const process = qaProcesses.find(p => p.id === audit.processId);
-        setActiveChecklist(process ? process.checklist : []);
-        setIsModalOpen(true);
+    // --- AÇÕES DO FORMULÁRIO (SALVAR AUDITORIA) ---
+    const handleOpenNewModal = () => {
+        setEditingAudit(null);
+        setIsFormModalOpen(true);
     };
 
-    const handleProcessChange = (e) => {
-        const procId = e.target.value;
-        const process = qaProcesses.find(p => p.id === procId);
-        
-        setFormData({
-            ...formData,
-            processId: procId,
-            processName: process ? process.name : '',
-            checklistResults: {} // Limpa as respostas se trocar de processo
-        });
-        setActiveChecklist(process ? process.checklist : []);
+    const handleOpenEditModal = (audit) => {
+        setEditingAudit(audit);
+        setIsFormModalOpen(true);
     };
 
-    const handleChecklistMark = (itemIndex, statusOption) => {
-        setFormData(prev => ({
-            ...prev,
-            checklistResults: {
-                ...prev.checklistResults,
-                [itemIndex]: statusOption
-            }
-        }));
+    const handleOpenViewModal = (audit) => {
+        setViewingAudit(audit);
+        setIsDetailsModalOpen(true);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        if (!formData.colabId) { showToast("Selecione um colaborador.", "error"); return; }
-        if (!formData.processId) { showToast("Selecione um processo auditado.", "error"); return; }
-
+    const handleSaveAudit = async (payload) => {
         setSaving(true);
         try {
-            const payload = { ...formData, updatedAt: new Date() };
+            const dataToSave = {
+                ...payload,
+                updatedAt: new Date()
+            };
 
-            if (editingId) {
-                await updateDoc(doc(db, "qa_audits", editingId), payload);
-                showToast("Auditoria atualizada!", "success");
+            if (editingAudit?.id) {
+                await updateDoc(doc(db, "qa_audits", editingAudit.id), dataToSave);
+                showToast("Auditoria atualizada com sucesso!", "success");
             } else {
-                payload.evaluatorId = currentUser?.firestoreId || currentUser?.uid || 'unknown';
-                payload.evaluatorName = currentUser?.name || currentUser?.displayName || currentUser?.email || 'Administrador';
-                payload.createdAt = new Date();
+                dataToSave.evaluatorId = currentUser?.firestoreId || currentUser?.uid || 'unknown';
+                dataToSave.evaluatorName = currentUser?.name || currentUser?.displayName || currentUser?.email || 'Administrador';
+                dataToSave.createdAt = new Date();
                 
-                await addDoc(collection(db, "qa_audits"), payload);
+                await addDoc(collection(db, "qa_audits"), dataToSave);
                 showToast("Auditoria registrada com sucesso!", "success");
             }
-            setIsModalOpen(false);
+            setIsFormModalOpen(false);
+            setEditingAudit(null);
         } catch (error) {
             showToast("Erro ao salvar: " + error.message, "error");
         } finally {
@@ -192,309 +264,252 @@ const Audits = () => {
         }
     };
 
-    const handleDelete = async () => {
+    const handleDeleteAudit = async () => {
+        if (!deletingId) return;
         try {
             await deleteDoc(doc(db, "qa_audits", deletingId));
-            showToast("Auditoria excluída.", "success");
+            showToast("Auditoria removida com sucesso.", "success");
             setDeletingId(null);
-        } catch {
-            showToast("Erro ao excluir.", "error");
+        } catch (error) {
+            showToast("Erro ao excluir auditoria: " + error.message, "error");
         }
     };
 
-    const filteredAudits = audits.filter(a => {
-        const colabName = collaboratorsMap[a.colabId] || '';
-        return searchTerm === '' || 
-               colabName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-               (a.protocol && a.protocol.toLowerCase().includes(searchTerm.toLowerCase())) ||
-               (a.processName && a.processName.toLowerCase().includes(searchTerm.toLowerCase()));
-    });
+    // --- EXPORTAR CSV ---
+    const handleExportCsv = () => {
+        if (filteredAudits.length === 0) {
+            showToast("Nenhum registro para exportar com os filtros atuais.", "error");
+            return;
+        }
+
+        const headers = ["Data", "Colaborador", "Protocolo", "Canal", "Processo", "Status", "Score(%)", "Avaliador", "Observações"];
+        const rows = filteredAudits.map(a => [
+            `"${a.date || ''}"`,
+            `"${(collaboratorsMap[a.colabId] || 'Desconhecido').replace(/"/g, '""')}"`,
+            `"${(a.protocol || '').replace(/"/g, '""')}"`,
+            `"${(a.channel || 'Ticket').replace(/"/g, '""')}"`,
+            `"${(a.processName || '').replace(/"/g, '""')}"`,
+            `"${a.status || ''}"`,
+            `"${a.score !== undefined ? a.score : (a.status === 'Conforme' ? 100 : 0)}"`,
+            `"${(a.evaluatorName || '').replace(/"/g, '""')}"`,
+            `"${(a.notes || '').replace(/"/g, '""').replace(/\n/g, ' ')}"`
+        ]);
+
+        const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map(e => e.join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `auditorias_qa_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+
+        showToast("Relatório CSV gerado com sucesso!", "success");
+    };
 
     if (loading) {
-        return <div className="flex-1 flex justify-center items-center h-full"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
+        return (
+            <div className="flex-1 flex flex-col justify-center items-center h-full bg-gray-50">
+                <Loader2 className="w-9 h-9 text-red-600 animate-spin mb-3" />
+                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    Carregando painel de qualidade...
+                </span>
+            </div>
+        );
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <ShieldCheck className="w-6 h-6 text-red-600" /> Auditorias de Qualidade (QA)
-                    </h1>
-                    <p className="text-sm text-gray-500">Avaliação padronizada com checklists dinâmicos.</p>
+        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto bg-gray-50/70 flex flex-col">
+            {/* Cabeçalho da Página */}
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs shrink-0">
+                <div className="flex items-center gap-3.5">
+                    <div className="w-12 h-12 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                        <ShieldCheck className="w-6 h-6" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                            Auditorias de Qualidade (QA)
+                        </h1>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            Gestão de conformidade, checklists auditáveis e histórico de desempenho da equipe.
+                        </p>
+                    </div>
                 </div>
-                <button onClick={openNewModal} className="flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors shadow-sm">
-                    <Plus className="w-5 h-5" /> Nova Auditoria
-                </button>
+
+                <div className="flex items-center gap-2.5 self-stretch sm:self-auto">
+                    <button 
+                        id="btn-nova-auditoria"
+                        onClick={handleOpenNewModal} 
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow cursor-pointer"
+                    >
+                        <Plus className="w-4 h-4" />
+                        <span>Nova Auditoria</span>
+                    </button>
+                </div>
             </header>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 shrink-0">
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1"><BarChart2 className="w-3 h-3"/> Total Auditado</span>
-                    <span className="text-3xl font-extrabold text-gray-900 mt-2">{dashboardStats.total}</span>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between border-l-4 border-l-emerald-500">
-                    <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1"><CheckCircle className="w-3 h-3"/> Conformes</span>
-                    <span className="text-3xl font-extrabold text-gray-900 mt-2">{dashboardStats.conformes}</span>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between border-l-4 border-l-red-500">
-                    <span className="text-[10px] font-bold text-red-600 uppercase tracking-widest flex items-center gap-1"><XCircle className="w-3 h-3"/> Não Conformes</span>
-                    <span className="text-3xl font-extrabold text-gray-900 mt-2">{dashboardStats.naoConformes}</span>
-                </div>
-                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm flex flex-col justify-between relative overflow-hidden bg-zinc-950 text-white">
-                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1"><ShieldCheck className="w-3 h-3"/> Taxa Global (QA)</span>
-                    <span className="text-3xl font-extrabold mt-2 text-emerald-400">{dashboardStats.taxa}%</span>
-                </div>
-            </div>
+            {/* Painel de Métricas e Indicadores Rápidos */}
+            <AuditMetrics stats={dashboardStats} targetRate={80} />
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 shrink-0">
-                <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center h-80">
-                    <h3 className="text-sm font-bold text-gray-700 w-full text-left mb-2">Distribuição de Resultados</h3>
-                    {dashboardStats.total === 0 ? (
-                        <p className="text-gray-400 text-sm m-auto">Sem dados suficientes.</p>
-                    ) : (
-                        <div className="w-full h-full" style={{ minHeight: '150px' }}>
+            {/* Linha Analítica: Distribuição (Gráfico Donut) e Ranking de Conformidade */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6 shrink-0">
+                {/* Gráfico de Distribuição Donut (4 colunas no desktop) */}
+                <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+                        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                            <PieIcon className="w-4 h-4 text-gray-500" />
+                            Distribuição dos Resultados
+                        </h3>
+                        <span className="text-[10px] font-mono font-bold text-gray-400">
+                            {dashboardStats.total} avaliações
+                        </span>
+                    </div>
+
+                    <div className="h-56 my-auto flex items-center justify-center">
+                        {dashboardStats.total === 0 ? (
+                            <div className="text-center text-gray-400 text-xs">
+                                Sem dados no período filtrado.
+                            </div>
+                        ) : (
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
-                                    <Pie data={pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={5} dataKey="value">
-                                        {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.color} />)}
+                                    <Pie 
+                                        data={pieData} 
+                                        cx="50%" 
+                                        cy="50%" 
+                                        innerRadius={55} 
+                                        outerRadius={80} 
+                                        paddingAngle={5} 
+                                        dataKey="value"
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
                                     </Pie>
-                                    <RechartsTooltip contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle"/>
+                                    <RechartsTooltip 
+                                        contentStyle={{
+                                            borderRadius: '12px', 
+                                            border: '1px solid #e5e7eb', 
+                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                                            fontSize: '12px',
+                                            fontWeight: 'bold'
+                                        }} 
+                                    />
+                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
                                 </PieChart>
                             </ResponsiveContainer>
-                        </div>
-                    )}
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm col-span-1 lg:col-span-2 flex flex-col h-80 overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
-                        <Award className="w-5 h-5 text-amber-500" />
-                        <h3 className="text-sm font-bold text-gray-700">Ranking de Conformidade (QA)</h3>
-                    </div>
-                    <div className="overflow-y-auto flex-1 p-2">
-                        {rankingData.length === 0 ? (
-                            <p className="text-gray-400 text-sm text-center mt-10">Nenhum colaborador avaliado.</p>
-                        ) : (
-                            <table className="min-w-full text-sm">
-                                <thead>
-                                    <tr className="text-gray-400 text-[10px] uppercase tracking-wider text-left border-b border-gray-100">
-                                        <th className="pb-2 pl-4">Posição</th>
-                                        <th className="pb-2">Colaborador</th>
-                                        <th className="pb-2 text-center">Auditorias</th>
-                                        <th className="pb-2 text-right pr-4">Taxa (%)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {rankingData.map((colab, index) => (
-                                        <tr key={colab.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                            <td className="py-3 pl-4 font-bold text-gray-500">{index + 1}º</td>
-                                            <td className="py-3 font-medium text-gray-900">{colab.name}</td>
-                                            <td className="py-3 text-center text-gray-500">{colab.total}</td>
-                                            <td className="py-3 text-right pr-4">
-                                                <span className={`font-bold px-2 py-1 rounded-lg ${colab.taxa >= 80 ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                                                    {colab.taxa}%
-                                                </span>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
                         )}
                     </div>
+
+                    {/* Rodapé do Card do Gráfico */}
+                    <div className="pt-2 border-t border-gray-100 flex justify-between text-xs">
+                        <span className="text-gray-500">Aproveitamento Global:</span>
+                        <span className={`font-black font-mono ${
+                            parseFloat(dashboardStats.taxa) >= 80 ? 'text-emerald-600' : 'text-amber-600'
+                        }`}>
+                            {dashboardStats.taxa}% de conformidade
+                        </span>
+                    </div>
+                </div>
+
+                {/* Ranking de Conformidade dos Colaboradores (8 colunas no desktop) */}
+                <div className="lg:col-span-8">
+                    <AuditRanking rankingData={rankingData} targetRate={80} />
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
-                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2"><FileText className="w-4 h-4"/> Últimos 3 Registros</h3>
-                    <div className="relative w-64">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2" />
-                        <input type="text" placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-9 pr-3 py-1.5 border border-gray-300 rounded-lg text-sm outline-none focus:ring-1 focus:ring-red-500" />
-                    </div>
-                </div>
-                <div className="overflow-x-auto flex-1">
-                    <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
-                        <thead className="bg-zinc-950 text-white sticky top-0 z-10">
-                            <tr>
-                                <th className="px-6 py-3 text-left font-semibold">Data</th>
-                                <th className="px-6 py-3 text-left font-semibold">Colaborador</th>
-                                <th className="px-6 py-3 text-left font-semibold">Processo Auditado</th>
-                                <th className="px-6 py-3 text-left font-semibold">Resultado</th>
-                                <th className="px-6 py-3 text-right font-semibold">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {filteredAudits.length === 0 ? (
-                                <tr><td colSpan="5" className="px-6 py-8 text-center text-gray-400">Nenhuma auditoria encontrada.</td></tr>
-                            ) : (
-                                filteredAudits.slice(0, 3).map((a) => (
-                                    <tr key={a.id} className="hover:bg-gray-50 transition-colors">
-                                        <td className="px-6 py-4 text-gray-500">
-                                            {a.date ? new Date(a.date).toLocaleDateString('pt-BR', {timeZone:'UTC'}) : '--'}
-                                        </td>
-                                        <td className="px-6 py-4 font-bold text-gray-900">{collaboratorsMap[a.colabId] || 'Desconhecido'}</td>
-                                        <td className="px-6 py-4 text-gray-600 truncate max-w-[200px]" title={a.processName}>{a.processName || a.protocol || '--'}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1 w-max ${a.status === 'Conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                                                {a.status === 'Conforme' ? <CheckCircle className="w-3 h-3"/> : <XCircle className="w-3 h-3"/>}
-                                                {a.status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                            <button onClick={() => openEditModal(a)} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Editar"><Edit2 className="w-4 h-4" /></button>
-                                            <button onClick={() => setDeletingId(a.id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Excluir"><Trash2 className="w-4 h-4" /></button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="p-3 bg-gray-50 border-t border-gray-100 text-center text-xs text-gray-500 font-medium">
-                    Para visualizar o histórico completo de auditorias, acesse o painel de <strong>Gestão de Dados</strong>.
-                </div>
-            </div>
+            {/* Barra de Filtros Completos */}
+            <AuditFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                periodFilter={periodFilter}
+                setPeriodFilter={setPeriodFilter}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                processFilter={processFilter}
+                setProcessFilter={setProcessFilter}
+                colabFilter={colabFilter}
+                setColabFilter={setColabFilter}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                onResetFilters={handleResetFilters}
+                hasActiveFilters={hasActiveFilters}
+                processesList={qaProcesses}
+                collaboratorsList={collaboratorsList}
+                totalFiltered={filteredAudits.length}
+                onExportCsv={handleExportCsv}
+            />
 
-            {/* NOVO MODAL MAX-W-4XL E DUAS COLUNAS */}
-            {isModalOpen && (
-                <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[95vh]">
-                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
-                            <h3 className="font-bold flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-red-500" /> {editingId ? 'Editar Auditoria' : 'Nova Auditoria Estruturada'}</h3>
-                            <button onClick={() => setIsModalOpen(false)}><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
-                        </div>
-                        
-                        <div className="flex-1 overflow-y-auto bg-gray-50">
-                            <form id="auditForm" onSubmit={handleSubmit} className="p-6">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                    
-                                    {/* COLUNA ESQUERDA: Informações Gerais */}
-                                    <div className="space-y-5">
-                                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 flex items-center gap-2">
-                                            <FileText className="w-4 h-4 text-gray-500"/> Informações Básicas
-                                        </h4>
-                                        
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Colaborador</label>
-                                            <select required value={formData.colabId} onChange={(e) => setFormData({...formData, colabId: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white">
-                                                <option value="" disabled>Selecione um colaborador...</option>
-                                                {collaboratorsList.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                            </select>
-                                        </div>
+            {/* Tabela de Auditorias Completa com Paginação */}
+            <AuditTable
+                audits={filteredAudits}
+                collaboratorsMap={collaboratorsMap}
+                onView={handleOpenViewModal}
+                onEdit={handleOpenEditModal}
+                onDelete={(id) => setDeletingId(id)}
+            />
 
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Data</label>
-                                                <input type="date" required value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Protocolo / ID</label>
-                                                <input type="text" required placeholder="Nº do ticket..." value={formData.protocol} onChange={(e) => setFormData({...formData, protocol: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white" />
-                                            </div>
-                                        </div>
+            {/* Modal de Nova / Editar Auditoria */}
+            <AuditFormModal
+                isOpen={isFormModalOpen}
+                onClose={() => { setIsFormModalOpen(false); setEditingAudit(null); }}
+                auditToEdit={editingAudit}
+                collaboratorsList={collaboratorsList}
+                qaProcesses={qaProcesses}
+                onSave={handleSaveAudit}
+                isSaving={saving}
+            />
 
-                                        <div className="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Processo / Assunto Auditado</label>
-                                            {qaProcesses.length === 0 ? (
-                                                <div className="text-sm text-red-600 bg-red-50 p-2 rounded flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Vá em Configurações para criar Processos QA.</div>
-                                            ) : (
-                                                <select required value={formData.processId} onChange={handleProcessChange} className="w-full p-2.5 font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-gray-50">
-                                                    <option value="" disabled>Selecione o procedimento de suporte...</option>
-                                                    {qaProcesses.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                                                </select>
-                                            )}
-                                        </div>
+            {/* Modal de Detalhes da Auditoria */}
+            <AuditDetailsModal
+                isOpen={isDetailsModalOpen}
+                onClose={() => { setIsDetailsModalOpen(false); setViewingAudit(null); }}
+                audit={viewingAudit}
+                collaboratorName={viewingAudit ? collaboratorsMap[viewingAudit.colabId] : ''}
+                onEdit={(audit) => {
+                    setIsDetailsModalOpen(false);
+                    handleOpenEditModal(audit);
+                }}
+            />
 
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Status Global (Resultado Final)</label>
-                                            <div className="flex gap-4">
-                                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.status === 'Conforme' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
-                                                    <input type="radio" name="status" value="Conforme" checked={formData.status === 'Conforme'} onChange={(e) => setFormData({...formData, status: e.target.value})} className="hidden" />
-                                                    <CheckCircle className="w-5 h-5"/> <span className="font-bold">Conforme</span>
-                                                </label>
-                                                <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${formData.status === 'Não Conforme' ? 'border-red-500 bg-red-50 text-red-700' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'}`}>
-                                                    <input type="radio" name="status" value="Não Conforme" checked={formData.status === 'Não Conforme'} onChange={(e) => setFormData({...formData, status: e.target.value})} className="hidden" />
-                                                    <XCircle className="w-5 h-5"/> <span className="font-bold">Inconforme</span>
-                                                </label>
-                                            </div>
-                                        </div>
-
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Anotações do Avaliador</label>
-                                            <textarea rows="3" placeholder="Comentários gerais..." value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-white resize-none" />
-                                        </div>
-                                    </div>
-
-                                    {/* COLUNA DIREITA: Checklist Dinâmica */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 flex items-center gap-2">
-                                            <ListChecks className="w-4 h-4 text-red-500"/> Checklist do Procedimento
-                                        </h4>
-                                        
-                                        {!formData.processId ? (
-                                            <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-200 rounded-xl text-gray-400 bg-white p-6 text-center">
-                                                <Settings className="w-8 h-8 mb-2 opacity-20" />
-                                                <p className="text-sm font-medium">Selecione um processo na lateral para carregar as perguntas de verificação.</p>
-                                            </div>
-                                        ) : activeChecklist.length === 0 ? (
-                                            <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-amber-700 text-sm">
-                                                Este processo não possui itens de checklist cadastrados.
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-3 pr-2" style={{ maxHeight: 'calc(100vh - 350px)' }}>
-                                                {activeChecklist.map((item, idx) => (
-                                                    <div key={idx} className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm flex flex-col gap-3 hover:border-gray-300 transition-colors">
-                                                        <span className="text-sm font-medium text-gray-800 leading-snug">{item}</span>
-                                                        <div className="flex bg-gray-50 p-1 rounded-lg border border-gray-100 self-start">
-                                                            <label className={`cursor-pointer px-3 py-1.5 text-xs font-bold rounded-md transition-all ${formData.checklistResults[idx] === 'Passou' ? 'bg-emerald-100 text-emerald-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}>
-                                                                <input type="radio" name={`item_${idx}`} value="Passou" className="hidden" checked={formData.checklistResults[idx] === 'Passou'} onChange={() => handleChecklistMark(idx, 'Passou')} />
-                                                                Passou
-                                                            </label>
-                                                            <label className={`cursor-pointer px-3 py-1.5 text-xs font-bold rounded-md transition-all ${formData.checklistResults[idx] === 'Falhou' ? 'bg-red-100 text-red-700 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}>
-                                                                <input type="radio" name={`item_${idx}`} value="Falhou" className="hidden" checked={formData.checklistResults[idx] === 'Falhou'} onChange={() => handleChecklistMark(idx, 'Falhou')} />
-                                                                Falhou
-                                                            </label>
-                                                            <label className={`cursor-pointer px-3 py-1.5 text-xs font-bold rounded-md transition-all ${formData.checklistResults[idx] === 'N/A' ? 'bg-gray-300 text-gray-800 shadow-sm' : 'text-gray-500 hover:bg-gray-200'}`}>
-                                                                <input type="radio" name={`item_${idx}`} value="N/A" className="hidden" checked={formData.checklistResults[idx] === 'N/A'} onChange={() => handleChecklistMark(idx, 'N/A')} />
-                                                                N/A
-                                                            </label>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="p-4 bg-white border-t border-gray-200 flex gap-3 shrink-0 justify-end">
-                            <button type="button" onClick={() => setIsModalOpen(false)} className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors">Cancelar</button>
-                            <button type="submit" form="auditForm" disabled={saving} className="px-8 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold transition-colors disabled:opacity-70 flex items-center gap-2">
-                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar Auditoria'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
+            {/* Modal de Confirmação de Exclusão */}
             {deletingId && (
-                <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><AlertTriangle className="w-8 h-8 text-red-600" /></div>
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">Apagar Auditoria?</h3>
-                        <p className="text-gray-500 text-sm mb-6">Esta ação removerá o registro permanentemente do sistema.</p>
-                        <div className="flex gap-3">
-                            <button onClick={() => setDeletingId(null)} className="flex-1 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">Cancelar</button>
-                            <button onClick={handleDelete} className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium">Sim, Apagar</button>
+                <div 
+                    id="audit-delete-dialog-backdrop"
+                    className="fixed inset-0 bg-zinc-950/75 flex items-center justify-center p-4 z-[90] backdrop-blur-xs animate-in fade-in duration-150"
+                >
+                    <div 
+                        id="audit-delete-dialog"
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 border border-gray-200"
+                    >
+                        <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                            <AlertTriangle className="w-7 h-7" />
+                        </div>
+                        <h3 className="text-base font-bold text-gray-900 mb-1.5">
+                            Excluir Registro de Auditoria?
+                        </h3>
+                        <p className="text-gray-500 text-xs mb-6 leading-relaxed">
+                            Esta ação removerá esta auditoria permanentemente do histórico e atualizará os índices de conformidade da equipe.
+                        </p>
+                        <div className="flex gap-2.5">
+                            <button 
+                                type="button"
+                                onClick={() => setDeletingId(null)} 
+                                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button 
+                                type="button"
+                                onClick={handleDeleteAudit} 
+                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors shadow-xs cursor-pointer"
+                            >
+                                Sim, Excluir
+                            </button>
                         </div>
                     </div>
                 </div>
             )}
         </div>
     );
-};
-
-export default Audits;
+}

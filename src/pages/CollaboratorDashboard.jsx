@@ -21,9 +21,9 @@ import OrgChart from './OrgChart';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 
-// Importação da logo estendida
-import logoExtended from '../assets/logo_extended.png';
-const logo = logoExtended;
+// Importação da logo da barra de navegação (navbar_logo_red)
+import navbarLogoRed from '../assets/navbar_logo_red.png';
+const logo = navbarLogoRed;
 
 // --- DICIONÁRIO DE TRADUÇÃO ---
 const translateKey = (key) => {
@@ -204,8 +204,8 @@ const CollaboratorDashboard = ({ currentUserId }) => {
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
                 <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
                     <div className="flex items-center border-none border-zinc-800 shrink-0">
-                        {/* Tag <img> adicionada aqui para a sua logo estendida */}
-                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto" />
+                        {/* Logo oficial da barra de navegação */}
+                        <img src={logo} alt="HubDesk Logo" className="h-10 w-auto object-contain" />
                     </div>
                     <span className="text-lg font-bold tracking-wider">HUB<span className="text-red-500">DESK</span></span>
                 </div>
