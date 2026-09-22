@@ -2,55 +2,93 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     History, MessageSquare, TrendingUp, FileText, ShieldCheck,
     Search, Filter, Database, Hourglass, Eye, X, CalendarDays,
-    Star, User, Clock, AlertTriangle, CheckCircle, Phone, ThumbsUp, Minus, ThumbsDown
+    Star, User, Clock, AlertTriangle, CheckCircle2, Phone, ThumbsUp, 
+    Minus, ThumbsDown, LayoutGrid, Table, Download, RotateCcw,
+    Layers, Check, Sparkles, XCircle, MinusCircle, Award, CheckCheck,
+    Calendar, ArrowUpDown
 } from 'lucide-react';
 import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
-import ReactMarkdown from 'react-markdown';
+import AuditDetailModal from '../components/history/AuditDetailModal';
+import FeedbackDetailModal from '../components/history/FeedbackDetailModal';
+import WeeklyMetricDetailModal from '../components/history/WeeklyMetricDetailModal';
+import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluationDetailModal';
 
 const parseDateObj = (dateStr) => {
     if (!dateStr) return 0;
-    if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) {
-            return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+    if (typeof dateStr === 'object' && dateStr.toMillis) return dateStr.toMillis();
+    if (typeof dateStr === 'object' && dateStr.getTime) return dateStr.getTime();
+    if (typeof dateStr === 'string') {
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+            }
+        }
+        if (dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+            }
         }
     }
-    if (dateStr.includes('-')) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3) {
-            return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
-        }
-    }
-    return 0;
+    const parsed = new Date(dateStr).getTime();
+    return isNaN(parsed) ? 0 : parsed;
 };
 
 const formatMonth = (yyyyMm) => {
     if (!yyyyMm) return '--';
-    const [year, month] = yyyyMm.split('-');
-    return `${month}/${year}`;
+    const parts = yyyyMm.split('-');
+    if (parts.length === 2) {
+        return `${parts[1]}/${parts[0]}`;
+    }
+    return yyyyMm;
 };
 
 const getClassificationBadge = (classification) => {
     switch (classification) {
         case 'Positiva': 
-            return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700 flex items-center gap-1 w-max"><ThumbsUp className="w-3.5 h-3.5"/> Positiva</span>;
+            return (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-max shadow-2xs">
+                    <ThumbsUp className="w-3 h-3 text-emerald-600"/> Positiva
+                </span>
+            );
         case 'Neutra': 
-            return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-700 flex items-center gap-1 w-max"><Minus className="w-3.5 h-3.5"/> Neutra</span>;
+            return (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 w-max shadow-2xs">
+                    <Minus className="w-3 h-3 text-amber-600"/> Neutra
+                </span>
+            );
         case 'Negativa': 
-            return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 flex items-center gap-1 w-max"><ThumbsDown className="w-3.5 h-3.5"/> Negativa</span>;
+            return (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 w-max shadow-2xs">
+                    <ThumbsDown className="w-3 h-3 text-rose-600"/> Negativa
+                </span>
+            );
         default: 
-            return <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 flex items-center gap-1 w-max"><Minus className="w-3.5 h-3.5"/> N/A</span>;
+            return (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 w-max">
+                    <Minus className="w-3 h-3 text-gray-500"/> {classification || 'N/A'}
+                </span>
+            );
     }
 };
 
 const MyHistory = ({ currentUserId }) => {
     const { showToast } = useNotification();
     const [activeTab, setActiveTab] = useState('feedbacks');
+    
+    // Filtros e Visualização
+    const [viewMode, setViewMode] = useState('table'); // 'table' | 'cards'
     const [searchTerm, setSearchTerm] = useState('');
+    const [periodFilter, setPeriodFilter] = useState('all'); // 'all' | '7d' | '30d' | 'this_month' | 'last_month'
     const [dateFilter, setDateFilter] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+    const [processFilter, setProcessFilter] = useState('all');
+    const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'oldest' | 'score_high' | 'score_low'
 
+    // Dados e Modais
     const [data, setData] = useState([]);
     const [qaProcesses, setQaProcesses] = useState({});
     const [loading, setLoading] = useState(Boolean(currentUserId));
@@ -60,6 +98,11 @@ const MyHistory = ({ currentUserId }) => {
         if (tab !== activeTab) {
             setActiveTab(tab);
             setLoading(true);
+            setStatusFilter('all');
+            setProcessFilter('all');
+            setSearchTerm('');
+            setDateFilter('');
+            setPeriodFilter('all');
         }
     };
 
@@ -77,7 +120,7 @@ const MyHistory = ({ currentUserId }) => {
     useEffect(() => {
         const unsubQA = onSnapshot(collection(db, "qa_processes"), snap => {
             const map = {};
-            snap.forEach(d => { map[d.id] = d.data(); });
+            snap.forEach(d => { map[d.id] = { id: d.id, ...d.data() }; });
             setQaProcesses(map);
         });
 
@@ -122,6 +165,11 @@ const MyHistory = ({ currentUserId }) => {
         try {
             await updateDoc(doc(db, "feedbacks", id), { read: true });
             showToast("Feedback marcado como lido!", "success");
+            // Atualiza localmente
+            setData(prev => prev.map(item => item.id === id ? { ...item, read: true } : item));
+            if (viewingItem && viewingItem.id === id) {
+                setViewingItem(prev => ({ ...prev, read: true }));
+            }
         } catch {
             showToast("Erro ao atualizar status.", "error");
         }
@@ -134,6 +182,7 @@ const MyHistory = ({ currentUserId }) => {
         }
     };
 
+    // Opções de Meses e Datas disponíveis nos registros carregados
     const filterOptions = useMemo(() => {
         const months = new Set();
         const dates = new Set();
@@ -144,6 +193,9 @@ const MyHistory = ({ currentUserId }) => {
                 const parts = safeDate.split('/');
                 if (parts.length === 3) months.add(`${parts[1]}/${parts[2]}`);
             }
+            if (item.referenceMonth) {
+                months.add(formatMonth(item.referenceMonth));
+            }
         });
         return {
             months: Array.from(months).sort((a, b) => b.localeCompare(a)),
@@ -151,424 +203,858 @@ const MyHistory = ({ currentUserId }) => {
         };
     }, [data]);
 
-    const filteredData = data.filter(i => {
-        const matchSearch = searchTerm === '' || 
-            (i.type && i.type.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (i.comment && i.comment.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            (i.protocol && String(i.protocol).toLowerCase().includes(searchTerm.toLowerCase()));
-        const safeDate = getSafeDateString(i);
-        const matchDate = dateFilter === '' || safeDate.includes(dateFilter);
-        return matchSearch && matchDate;
-    });
+    // Lista de processos presentes nas auditorias para filtro
+    const availableProcesses = useMemo(() => {
+        if (activeTab !== 'audits') return [];
+        const procMap = new Map();
+        data.forEach(item => {
+            const pId = item.processId;
+            const pName = item.processName || qaProcesses[pId]?.name || 'Procedimento Padrão';
+            if (pId && !procMap.has(pId)) {
+                procMap.set(pId, pName);
+            }
+        });
+        return Array.from(procMap.entries()).map(([id, name]) => ({ id, name }));
+    }, [data, activeTab, qaProcesses]);
+
+    // CÁLCULO DAS ESTATÍSTICAS DO TOPO CONTEXTUAIS POR ABA
+    const summaryStats = useMemo(() => {
+        if (activeTab === 'feedbacks') {
+            const total = data.length;
+            const praises = data.filter(i => i.type === 'Elogio').length;
+            const improvements = data.filter(i => i.type === 'Ponto de Melhoria').length;
+            const unread = data.filter(i => !i.read).length;
+            return [
+                { label: 'Total de Feedbacks', value: total, icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { label: 'Elogios Recebidos', value: praises, icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { label: 'Pontos de Melhoria', value: improvements, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50' },
+                { label: 'Não Lidos', value: unread, icon: Clock, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' }
+            ];
+        }
+
+        if (activeTab === 'metrics') {
+            const total = data.length;
+            let totalScore = 0;
+            let maxScore = 0;
+            let totalCalls = 0;
+            data.forEach(i => {
+                const score = Number(i.pontuacao !== undefined ? i.pontuacao : (Number(i.Atendimentos_Finalizados || 0) + Number(i.Ligacoes_Atendidas || 0) * 2 + Number(i.Atendimentos_Huggy || 0) - Number(i.Ligacoes_Perdidas || 0) * 5));
+                totalScore += score;
+                if (score > maxScore) maxScore = score;
+                totalCalls += Number(i.Ligacoes_Atendidas || 0);
+            });
+            const avgScore = total > 0 ? Math.round(totalScore / total) : 0;
+            return [
+                { label: 'Avaliações Semanais', value: total, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
+                { label: 'Média de Pontuação', value: `${avgScore} pts`, icon: Sparkles, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { label: 'Maior Pontuação', value: `${maxScore} pts`, icon: Award, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { label: 'Ligações Atendidas', value: totalCalls, icon: Phone, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+            ];
+        }
+
+        if (activeTab === 'monthly') {
+            const total = data.length;
+            const positives = data.filter(i => i.classification === 'Positiva').length;
+            const neutrals = data.filter(i => i.classification === 'Neutra').length;
+            const negatives = data.filter(i => i.classification === 'Negativa').length;
+            return [
+                { label: 'Avaliações 1:1', value: total, icon: CalendarDays, color: 'text-red-600', bg: 'bg-red-50' },
+                { label: 'Classificação Positiva', value: positives, icon: ThumbsUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { label: 'Classificação Neutra', value: neutrals, icon: Minus, color: 'text-amber-600', bg: 'bg-amber-50' },
+                { label: 'Em Desenvolvimento', value: negatives, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50' }
+            ];
+        }
+
+        if (activeTab === 'audits') {
+            const total = data.length;
+            const conformes = data.filter(i => i.status === 'Conforme').length;
+            const naoConformes = data.filter(i => i.status !== 'Conforme').length;
+            const taxa = total > 0 ? Math.round((conformes / total) * 100) : 100;
+            return [
+                { label: 'Auditorias Recebidas', value: total, icon: ShieldCheck, color: 'text-red-600', bg: 'bg-red-50' },
+                { label: 'Conformes (Aprovadas)', value: conformes, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                { label: 'Não Conformes', value: naoConformes, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+                { label: 'Taxa de Conformidade', value: `${taxa}%`, icon: Sparkles, color: taxa >= 80 ? 'text-emerald-600' : 'text-amber-600', bg: taxa >= 80 ? 'bg-emerald-50' : 'bg-amber-50' }
+            ];
+        }
+
+        return [];
+    }, [data, activeTab]);
+
+    // FILTRAGEM E ORDENAÇÃO AVANÇADA
+    const filteredData = useMemo(() => {
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const sevenDaysAgo = startOfToday - (7 * 24 * 60 * 60 * 1000);
+        const thirtyDaysAgo = startOfToday - (30 * 24 * 60 * 60 * 1000);
+        const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).getTime();
+        const endOfLastMonth = startOfThisMonth - 1;
+
+        return data.filter(item => {
+            // 1. Busca por texto
+            if (searchTerm.trim()) {
+                const term = searchTerm.toLowerCase();
+                const matchType = (item.type || '').toLowerCase().includes(term);
+                const matchComment = (item.comment || '').toLowerCase().includes(term);
+                const matchNotes = (item.notes || '').toLowerCase().includes(term);
+                const matchProtocol = String(item.protocol || '').toLowerCase().includes(term);
+                const matchEvaluator = (item.evaluatorName || item.createdBy || '').toLowerCase().includes(term);
+                const matchProcess = (item.processName || qaProcesses[item.processId]?.name || '').toLowerCase().includes(term);
+                const matchChannel = (item.channel || item.method || '').toLowerCase().includes(term);
+
+                if (!matchType && !matchComment && !matchNotes && !matchProtocol && !matchEvaluator && !matchProcess && !matchChannel) {
+                    return false;
+                }
+            }
+
+            // 2. Filtro de Período Rápido
+            const itemTime = item.date ? parseDateObj(item.date) : (item.createdAt?.toMillis ? item.createdAt.toMillis() : 0);
+            if (periodFilter === '7d' && itemTime < sevenDaysAgo) return false;
+            if (periodFilter === '30d' && itemTime < thirtyDaysAgo) return false;
+            if (periodFilter === 'this_month' && itemTime < startOfThisMonth) return false;
+            if (periodFilter === 'last_month' && (itemTime < startOfLastMonth || itemTime > endOfLastMonth)) return false;
+
+            // 3. Filtro de Data Específica / Mês
+            if (dateFilter) {
+                const safeDate = getSafeDateString(item);
+                const matchMonth = item.referenceMonth && formatMonth(item.referenceMonth).includes(dateFilter);
+                if (!safeDate.includes(dateFilter) && !matchMonth) {
+                    return false;
+                }
+            }
+
+            // 4. Filtro de Status Contextual por Aba
+            if (statusFilter !== 'all') {
+                if (activeTab === 'feedbacks') {
+                    if (statusFilter === 'unread' && item.read) return false;
+                    if (statusFilter === 'read' && !item.read) return false;
+                    if (statusFilter !== 'unread' && statusFilter !== 'read' && item.type !== statusFilter) return false;
+                } else if (activeTab === 'audits') {
+                    if (item.status !== statusFilter) return false;
+                } else if (activeTab === 'monthly') {
+                    if (item.classification !== statusFilter) return false;
+                } else if (activeTab === 'metrics') {
+                    const score = Number(item.pontuacao !== undefined ? item.pontuacao : (Number(item.Atendimentos_Finalizados || 0) + Number(item.Ligacoes_Atendidas || 0) * 2 + Number(item.Atendimentos_Huggy || 0) - Number(item.Ligacoes_Perdidas || 0) * 5));
+                    if (statusFilter === 'high' && score < 100) return false;
+                    if (statusFilter === 'medium' && (score < 50 || score >= 100)) return false;
+                    if (statusFilter === 'low' && score >= 50) return false;
+                }
+            }
+
+            // 5. Filtro de Processo QA (Auditorias)
+            if (activeTab === 'audits' && processFilter !== 'all') {
+                if (item.processId !== processFilter) return false;
+            }
+
+            return true;
+        }).sort((a, b) => {
+            const timeA = a.date ? parseDateObj(a.date) : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+            const timeB = b.date ? parseDateObj(b.date) : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+
+            if (sortBy === 'recent') return timeB - timeA;
+            if (sortBy === 'oldest') return timeA - timeB;
+
+            if (sortBy === 'score_high') {
+                const scoreA = Number(a.pontuacao || a.score || (a.status === 'Conforme' ? 100 : 0));
+                const scoreB = Number(b.pontuacao || b.score || (b.status === 'Conforme' ? 100 : 0));
+                return scoreB - scoreA;
+            }
+            if (sortBy === 'score_low') {
+                const scoreA = Number(a.pontuacao || a.score || (a.status === 'Conforme' ? 100 : 0));
+                const scoreB = Number(b.pontuacao || b.score || (b.status === 'Conforme' ? 100 : 0));
+                return scoreA - scoreB;
+            }
+
+            return timeB - timeA;
+        });
+    }, [data, searchTerm, periodFilter, dateFilter, statusFilter, processFilter, sortBy, activeTab, qaProcesses]);
+
+    const hasActiveFilters = searchTerm !== '' || periodFilter !== 'all' || dateFilter !== '' || statusFilter !== 'all' || processFilter !== 'all' || sortBy !== 'recent';
+
+    const handleResetFilters = () => {
+        setSearchTerm('');
+        setPeriodFilter('all');
+        setDateFilter('');
+        setStatusFilter('all');
+        setProcessFilter('all');
+        setSortBy('recent');
+    };
+
+    // Exportação em formato CSV
+    const handleExportCsv = () => {
+        if (filteredData.length === 0) {
+            showToast("Nenhum dado para exportar.", "info");
+            return;
+        }
+
+        let headers = [];
+        let rows = [];
+
+        if (activeTab === 'feedbacks') {
+            headers = ['Data', 'Tipo', 'Canal', 'Protocolo', 'Avaliador', 'Mensagem', 'Lido'];
+            rows = filteredData.map(i => [
+                getSafeDateString(i),
+                i.type || '',
+                i.method || '',
+                i.protocol || '',
+                i.createdBy || '',
+                `"${(i.comment || '').replace(/"/g, '""')}"`,
+                i.read ? 'Sim' : 'Não'
+            ]);
+        } else if (activeTab === 'audits') {
+            headers = ['Data', 'Protocolo', 'Processo', 'Status', 'Score (%)', 'Canal', 'Auditor', 'Observações'];
+            rows = filteredData.map(i => [
+                getSafeDateString(i),
+                i.protocol || '',
+                `"${(i.processName || qaProcesses[i.processId]?.name || '').replace(/"/g, '""')}"`,
+                i.status || '',
+                i.score !== undefined ? `${i.score}%` : (i.status === 'Conforme' ? '100%' : '0%'),
+                i.channel || '',
+                i.evaluatorName || '',
+                `"${(i.notes || '').replace(/"/g, '""')}"`
+            ]);
+        } else if (activeTab === 'metrics') {
+            headers = ['Data Referência', 'Pontuação', 'Ligações Atendidas', 'Ligações Perdidas', 'TME Telefonia', 'TMA Telefonia', 'Atendimentos Huggy', 'Finalizados', 'TMA Huggy'];
+            rows = filteredData.map(i => [
+                getSafeDateString(i),
+                i.pontuacao || 0,
+                i.Ligacoes_Atendidas || 0,
+                i.Ligacoes_Perdidas || 0,
+                i.TME_Telefonia || '',
+                i.TMA_Telefonia || '',
+                i.Atendimentos_Huggy || 0,
+                i.Atendimentos_Finalizados || 0,
+                i.TMA_Huggy || ''
+            ]);
+        } else if (activeTab === 'monthly') {
+            headers = ['Mês Referência', 'Classificação', 'Avaliador', 'Desempenho (Nota)', 'Qualidade (Nota)', 'Comportamento (Nota)', 'Assiduidade (Nota)', 'Considerações Finais'];
+            rows = filteredData.map(i => [
+                formatMonth(i.referenceMonth),
+                i.classification || '',
+                i.evaluatorName || '',
+                i.performanceScore || '',
+                i.qualityScore || '',
+                i.behaviorScore || '',
+                i.punctualityScore || '',
+                `"${(i.generalComments || '').replace(/"/g, '""')}"`
+            ]);
+        }
+
+        const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+            + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `meu_historico_${activeTab}_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast("Relatório exportado com sucesso!", "success");
+    };
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto flex flex-col bg-gray-50">
-            <header className="mb-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
-                <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <History className="w-6 h-6 text-red-600" /> Meu Histórico
-                </h1>
-                <p className="text-sm text-gray-500 mt-0.5">
-                    Acompanhe suas avaliações, feedbacks e auditorias recebidas.
-                </p>
+        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto flex flex-col bg-gray-50/70 font-sans">
+            
+            {/* CABEÇALHO DA PÁGINA */}
+            <header className="mb-6 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200/90 shadow-2xs shrink-0 flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+                <div>
+                    <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2.5">
+                        <History className="w-6 h-6 text-red-600 shrink-0" />
+                        <span>Meu Histórico & Performance</span>
+                    </h1>
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1 max-w-2xl leading-relaxed">
+                        Consulte suas auditorias operacionais detalhadas, feedbacks recebidos, avaliações semanais e alinhamentos mensais 1:1.
+                    </p>
+                </div>
+
+                {/* Alternância de Modo de Exibição */}
+                <div className="flex items-center gap-2 self-start sm:self-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0">
+                    <button
+                        type="button"
+                        onClick={() => setViewMode('table')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            viewMode === 'table'
+                                ? 'bg-white text-gray-900 shadow-2xs'
+                                : 'text-gray-500 hover:text-gray-800'
+                        }`}
+                        title="Visualizar em tabela detalhada"
+                    >
+                        <Table className="w-3.5 h-3.5" />
+                        <span>Tabela</span>
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => setViewMode('cards')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                            viewMode === 'cards'
+                                ? 'bg-white text-gray-900 shadow-2xs'
+                                : 'text-gray-500 hover:text-gray-800'
+                        }`}
+                        title="Visualizar em grade de cards visuais"
+                    >
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span>Cards</span>
+                    </button>
+                </div>
             </header>
 
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 space-y-4">
-                <div className="flex space-x-2 border-b border-gray-100 pb-3 overflow-x-auto">
+            {/* CARDS DE RESUMO ESTATÍSTICO (DINÂMICOS POR ABA) */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 shrink-0">
+                {summaryStats.map((stat, idx) => {
+                    const IconComponent = stat.icon;
+                    return (
+                        <div key={idx} className="bg-white rounded-2xl p-4 border border-gray-200 shadow-2xs flex items-center justify-between gap-3">
+                            <div>
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                    {stat.label}
+                                </span>
+                                <span className="text-xl sm:text-2xl font-black text-gray-900 mt-1 block">
+                                    {stat.value}
+                                </span>
+                            </div>
+                            <div className={`w-10 h-10 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0 border border-gray-100 shadow-inner`}>
+                                <IconComponent className="w-5 h-5" />
+                            </div>
+                        </div>
+                    );
+                })}
+            </div>
+
+            {/* SELEÇÃO DE ABAS & TOOLBAR DE FILTROS AVANÇADOS */}
+            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200 shadow-2xs mb-6 shrink-0 space-y-4">
+                
+                {/* Abas de Navegação */}
+                <div className="flex space-x-2 border-b border-gray-100 pb-3 overflow-x-auto scrollbar-none">
                     <button 
                         onClick={() => handleTabChange('feedbacks')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
-                            activeTab === 'feedbacks' ? 'bg-red-600 text-white shadow-xs font-bold' : 'text-gray-600 hover:bg-gray-100'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                            activeTab === 'feedbacks' 
+                                ? 'bg-zinc-950 text-white shadow-xs' 
+                                : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >
-                        <MessageSquare className="w-4 h-4" /> Feedbacks
-                    </button>
-                    <button 
-                        onClick={() => handleTabChange('metrics')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
-                            activeTab === 'metrics' ? 'bg-red-600 text-white shadow-xs font-bold' : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                    >
-                        <TrendingUp className="w-4 h-4" /> Avaliações Semanais
-                    </button>
-                    <button 
-                        onClick={() => handleTabChange('monthly')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
-                            activeTab === 'monthly' ? 'bg-red-600 text-white shadow-xs font-bold' : 'text-gray-600 hover:bg-gray-100'
-                        }`}
-                    >
-                        <FileText className="w-4 h-4" /> Análise Mensal (1:1)
+                        <MessageSquare className="w-4 h-4 text-red-500" />
+                        <span>Feedbacks</span>
                     </button>
                     <button 
                         onClick={() => handleTabChange('audits')} 
-                        className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${
-                            activeTab === 'audits' ? 'bg-red-600 text-white shadow-xs font-bold' : 'text-gray-600 hover:bg-gray-100'
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                            activeTab === 'audits' 
+                                ? 'bg-zinc-950 text-white shadow-xs' 
+                                : 'text-gray-600 hover:bg-gray-100'
                         }`}
                     >
-                        <ShieldCheck className="w-4 h-4" /> Auditorias QA
+                        <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                        <span>Auditorias QA</span>
+                    </button>
+                    <button 
+                        onClick={() => handleTabChange('metrics')} 
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                            activeTab === 'metrics' 
+                                ? 'bg-zinc-950 text-white shadow-xs' 
+                                : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                        <TrendingUp className="w-4 h-4 text-amber-500" />
+                        <span>Avaliações Semanais</span>
+                    </button>
+                    <button 
+                        onClick={() => handleTabChange('monthly')} 
+                        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap cursor-pointer ${
+                            activeTab === 'monthly' 
+                                ? 'bg-zinc-950 text-white shadow-xs' 
+                                : 'text-gray-600 hover:bg-gray-100'
+                        }`}
+                    >
+                        <FileText className="w-4 h-4 text-blue-500" />
+                        <span>Análise Mensal (1:1)</span>
                     </button>
                 </div>
 
-                <div className="flex flex-col md:flex-row gap-3">
-                    <div className="flex-1 relative">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                {/* Grid de Filtros Avançados */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
+                    
+                    {/* Campo de Busca */}
+                    <div className="lg:col-span-4 relative">
+                        <Search className="w-4 h-4 text-gray-400 absolute left-3 top-3 pointer-events-none" />
                         <input 
                             type="text" 
-                            placeholder="Buscar no histórico..." 
+                            placeholder={activeTab === 'audits' ? "Buscar por protocolo, processo, auditor..." : "Buscar no histórico..."}
                             value={searchTerm} 
                             onChange={e => setSearchTerm(e.target.value)} 
-                            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg outline-none text-sm focus:ring-2 focus:ring-red-600 focus:border-red-600" 
+                            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-xl outline-none text-xs sm:text-sm focus:ring-2 focus:ring-red-500/20 focus:border-red-500 bg-white shadow-inner" 
                         />
                     </div>
 
-                    <div className="md:w-64 relative">
-                        <Filter className="w-4 h-4 text-gray-400 absolute left-3 top-3" />
+                    {/* Filtro Rápido de Período */}
+                    <div className="lg:col-span-2 relative">
+                        <select
+                            value={periodFilter}
+                            onChange={(e) => setPeriodFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs appearance-none bg-white cursor-pointer text-gray-700 font-semibold"
+                        >
+                            <option value="all">Todo o Período</option>
+                            <option value="7d">Últimos 7 dias</option>
+                            <option value="30d">Últimos 30 dias</option>
+                            <option value="this_month">Este Mês</option>
+                            <option value="last_month">Mês Anterior</option>
+                        </select>
+                    </div>
+
+                    {/* Filtro de Data / Mês Específico */}
+                    <div className="lg:col-span-2 relative">
                         <select
                             value={dateFilter}
                             onChange={(e) => setDateFilter(e.target.value)}
-                            className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none text-sm appearance-none bg-white cursor-pointer text-gray-700 font-medium"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs appearance-none bg-white cursor-pointer text-gray-700 font-semibold"
                         >
-                            <option value="">Todo o Período</option>
+                            <option value="">Data Específica</option>
                             {filterOptions.months.length > 0 && (
                                 <optgroup label="Por Mês">
                                     {filterOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
                                 </optgroup>
                             )}
                             {filterOptions.dates.length > 0 && (
-                                <optgroup label="Datas Específicas">
+                                <optgroup label="Por Data">
                                     {filterOptions.dates.map(d => <option key={d} value={d}>{d}</option>)}
                                 </optgroup>
                             )}
                         </select>
                     </div>
+
+                    {/* Filtro Contextual de Status / Categoria */}
+                    <div className="lg:col-span-2 relative">
+                        <select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs appearance-none bg-white cursor-pointer text-gray-700 font-semibold"
+                        >
+                            <option value="all">
+                                {activeTab === 'feedbacks' ? 'Todos os Tipos' : 
+                                 activeTab === 'audits' ? 'Todos os Status' : 
+                                 activeTab === 'monthly' ? 'Todas Classificações' : 
+                                 'Todas as Pontuações'}
+                            </option>
+                            {activeTab === 'feedbacks' && (
+                                <>
+                                    <option value="Elogio">Elogio</option>
+                                    <option value="Ponto de Melhoria">Ponto de Melhoria</option>
+                                    <option value="unread">Não Lidos</option>
+                                    <option value="read">Lidos</option>
+                                </>
+                            )}
+                            {activeTab === 'audits' && (
+                                <>
+                                    <option value="Conforme">Conforme</option>
+                                    <option value="Não Conforme">Não Conforme</option>
+                                </>
+                            )}
+                            {activeTab === 'monthly' && (
+                                <>
+                                    <option value="Positiva">Positiva</option>
+                                    <option value="Neutra">Neutra</option>
+                                    <option value="Negativa">Negativa</option>
+                                </>
+                            )}
+                            {activeTab === 'metrics' && (
+                                <>
+                                    <option value="high">Pontuação Alta (≥ 100)</option>
+                                    <option value="medium">Média (50 a 99)</option>
+                                    <option value="low">Baixa (&lt; 50)</option>
+                                </>
+                            )}
+                        </select>
+                    </div>
+
+                    {/* Filtro por Processo QA (Somente em Auditorias) OU Ordenação */}
+                    {activeTab === 'audits' && availableProcesses.length > 0 ? (
+                        <div className="lg:col-span-2 relative">
+                            <select
+                                value={processFilter}
+                                onChange={(e) => setProcessFilter(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs appearance-none bg-white cursor-pointer text-gray-700 font-semibold"
+                            >
+                                <option value="all">Todos os Processos</option>
+                                {availableProcesses.map(p => (
+                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                    ) : (
+                        <div className="lg:col-span-2 relative">
+                            <select
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs appearance-none bg-white cursor-pointer text-gray-700 font-semibold"
+                            >
+                                <option value="recent">Mais Recentes</option>
+                                <option value="oldest">Mais Antigos</option>
+                                <option value="score_high">Maior Score</option>
+                                <option value="score_low">Menor Score</option>
+                            </select>
+                        </div>
+                    )}
+                </div>
+
+                {/* Linha de Feedback de Filtros & Ações Rápidas */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs border-t border-gray-100">
+                    <div className="flex items-center gap-2">
+                        <span className="text-gray-500">
+                            Exibindo <strong className="text-gray-900">{filteredData.length}</strong> {filteredData.length === 1 ? 'registro' : 'registros'}
+                        </span>
+                        {hasActiveFilters && (
+                            <button
+                                type="button"
+                                onClick={handleResetFilters}
+                                className="text-red-600 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer transition-colors ml-2"
+                            >
+                                <RotateCcw className="w-3 h-3" /> Limpar filtros
+                            </button>
+                        )}
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={handleExportCsv}
+                        className="text-gray-600 hover:text-gray-900 font-bold flex items-center gap-1.5 cursor-pointer transition-colors bg-gray-50 hover:bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-xl shadow-2xs"
+                    >
+                        <Download className="w-3.5 h-3.5 text-gray-500" /> Exportar Relatório CSV
+                    </button>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex-1 flex flex-col overflow-hidden">
+            {/* CONTAINER DE CONTEÚDO PRINCIPAL (TABELA OU CARDS) */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs flex-1 flex flex-col overflow-hidden">
                 {loading ? (
-                    <div className="flex-1 flex items-center justify-center p-8">
-                        <Hourglass className="w-8 h-8 text-red-600 animate-spin" />
+                    <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
+                        <Hourglass className="w-8 h-8 text-red-600 animate-spin mb-3" />
+                        <span className="text-xs text-gray-400 font-medium">Carregando seus registros...</span>
                     </div>
                 ) : filteredData.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center">
+                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-12 text-center">
                         <Database className="w-12 h-12 mb-3 opacity-30 text-gray-400" />
-                        <p className="text-base font-medium text-gray-600">Nenhum registro encontrado nesta categoria.</p>
-                        <p className="text-xs text-gray-400 mt-1">Seus novos lançamentos aparecerão aqui automaticamente.</p>
+                        <p className="text-base font-bold text-gray-700">Nenhum registro encontrado.</p>
+                        <p className="text-xs text-gray-400 mt-1 max-w-sm">
+                            {hasActiveFilters 
+                                ? 'Tente ajustar ou limpar os filtros aplicados para ver mais resultados.' 
+                                : 'Seus lançamentos futuros aparecerão aqui automaticamente.'}
+                        </p>
+                        {hasActiveFilters && (
+                            <button
+                                type="button"
+                                onClick={handleResetFilters}
+                                className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                            >
+                                Redefinir Filtros
+                            </button>
+                        )}
                     </div>
-                ) : (
+                ) : viewMode === 'table' ? (
+                    /* VISUALIZAÇÃO EM TABELA DETALHADA */
                     <div className="overflow-x-auto flex-1">
-                        <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
+                        <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm whitespace-nowrap">
                             <thead className="bg-zinc-950 text-white sticky top-0 z-10">
                                 <tr>
-                                    <th className="px-6 py-3 text-left font-semibold text-xs uppercase tracking-wider">Data</th>
-                                    <th className="px-6 py-3 text-left font-semibold text-xs uppercase tracking-wider">Resumo</th>
-                                    <th className="px-6 py-3 text-right font-semibold text-xs uppercase tracking-wider">Ações</th>
+                                    <th className="px-6 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Data</th>
+                                    <th className="px-6 py-3.5 text-left font-bold text-xs uppercase tracking-wider">
+                                        {activeTab === 'feedbacks' ? 'Tipo & Mensagem' :
+                                         activeTab === 'audits' ? 'Auditoria QA (Status & Processo)' :
+                                         activeTab === 'metrics' ? 'Score & Volumes de Atendimento' :
+                                         'Classificação & Mês de Referência'}
+                                    </th>
+                                    <th className="px-6 py-3.5 text-center font-bold text-xs uppercase tracking-wider">
+                                        {activeTab === 'audits' ? 'Protocolo' : 'Detalhe Adicional'}
+                                    </th>
+                                    <th className="px-6 py-3.5 text-right font-bold text-xs uppercase tracking-wider">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                                {filteredData.map(i => (
-                                    <tr key={i.id} className={`hover:bg-gray-50 transition-colors ${activeTab === 'feedbacks' && !i.read ? 'bg-fuchsia-50/30' : ''}`}>
-                                        <td className="px-6 py-4 text-gray-600 font-medium">{getSafeDateString(i)}</td>
+                                {filteredData.map(item => (
+                                    <tr 
+                                        key={item.id} 
+                                        onClick={() => handleViewItem(item)}
+                                        className={`hover:bg-gray-50/80 transition-colors cursor-pointer ${
+                                            activeTab === 'feedbacks' && !item.read ? 'bg-fuchsia-50/40' : ''
+                                        }`}
+                                    >
+                                        <td className="px-6 py-4 text-gray-600 font-medium">
+                                            <div className="flex items-center gap-2">
+                                                <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                                <span>{getSafeDateString(item)}</span>
+                                            </div>
+                                        </td>
+                                        
                                         <td className="px-6 py-4">
+                                            {/* ABA: FEEDBACKS */}
                                             {activeTab === 'feedbacks' && (
-                                                <div className="flex items-center gap-2">
-                                                    {!i.read && <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse"></span>}
-                                                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                        i.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700' : 
-                                                        i.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700' : 
-                                                        'bg-blue-100 text-blue-700'
+                                                <div className="flex items-center gap-2.5">
+                                                    {!item.read && (
+                                                        <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse shrink-0" title="Não lido"></span>
+                                                    )}
+                                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold shrink-0 ${
+                                                        item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 
+                                                        item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-800 border border-amber-200' : 
+                                                        'bg-blue-100 text-blue-800 border border-blue-200'
                                                     }`}>
-                                                        {i.type}
+                                                        {item.type}
                                                     </span>
-                                                    <span className="text-xs text-gray-500 truncate max-w-xs">{i.comment || ''}</span>
+                                                    <span className="text-xs text-gray-600 truncate max-w-sm">
+                                                        {item.comment || 'Sem mensagem descritiva.'}
+                                                    </span>
                                                 </div>
                                             )}
+
+                                            {/* ABA: AUDITORIAS QA */}
+                                            {activeTab === 'audits' && (
+                                                <div className="flex items-center gap-3">
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-black border ${
+                                                        item.status === 'Conforme' 
+                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                                            : 'bg-red-50 text-red-700 border-red-200'
+                                                    }`}>
+                                                        {item.status === 'Conforme' ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> : <XCircle className="w-3.5 h-3.5 text-red-600" />}
+                                                        <span>{item.status}</span>
+                                                    </span>
+                                                    <span className="text-xs font-bold text-gray-900 truncate max-w-xs">
+                                                        {item.processName || qaProcesses[item.processId]?.name || 'Procedimento Padrão'}
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* ABA: MÉTRICAS SEMANAIS */}
                                             {activeTab === 'metrics' && (
-                                                <span className="text-gray-600">
-                                                    Pontuação Final: <strong className="text-gray-900 font-bold">{i.pontuacao || 0} pts</strong>
-                                                    <span className="text-xs text-gray-400 ml-2">| Ligações: {i.Ligacoes_Atendidas || 0} | Huggy: {i.Atendimentos_Huggy || 0}</span>
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs text-gray-700">
+                                                        Pontuação Final: <strong className="text-gray-900 font-mono font-black text-sm">{item.pontuacao || 0} pts</strong>
+                                                    </span>
+                                                    <span className="text-xs text-gray-400">
+                                                        &bull; Ligações: <strong className="text-gray-700">{item.Ligacoes_Atendidas || 0}</strong> | Huggy: <strong className="text-gray-700">{item.Atendimentos_Huggy || 0}</strong>
+                                                    </span>
+                                                </div>
+                                            )}
+
+                                            {/* ABA: ANÁLISE MENSAL */}
+                                            {activeTab === 'monthly' && (
+                                                <div className="flex items-center gap-3">
+                                                    <span className="text-xs text-gray-700">
+                                                        Mês: <strong className="text-gray-900 font-mono font-bold">{formatMonth(item.referenceMonth)}</strong>
+                                                    </span>
+                                                    {getClassificationBadge(item.classification)}
+                                                </div>
+                                            )}
+                                        </td>
+
+                                        {/* COLUNA: DETALHE ADICIONAL */}
+                                        <td className="px-6 py-4 text-center">
+                                            {activeTab === 'audits' && (
+                                                <span className="font-mono font-bold text-xs text-gray-700 bg-gray-50 border border-gray-200 px-2.5 py-1 rounded-lg">
+                                                    {item.protocol || '--'}
+                                                </span>
+                                            )}
+                                            {activeTab === 'feedbacks' && (
+                                                <span className="text-xs text-gray-500 font-medium">
+                                                    {item.createdBy || 'Gestão'}
+                                                </span>
+                                            )}
+                                            {activeTab === 'metrics' && (
+                                                <span className="text-xs text-gray-500">
+                                                    TMA: <strong className="text-gray-700 font-mono">{item.TMA_Telefonia || '--'}</strong>
                                                 </span>
                                             )}
                                             {activeTab === 'monthly' && (
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-gray-700">Mês: <strong className="text-gray-900">{formatMonth(i.referenceMonth)}</strong></span>
-                                                    {getClassificationBadge(i.classification)}
-                                                </div>
-                                            )}
-                                            {activeTab === 'audits' && (
-                                                <span className="text-gray-600">
-                                                    Status: <strong className={i.status === 'Conforme' ? 'text-emerald-600 font-bold' : 'text-red-600 font-bold'}>{i.status}</strong> 
-                                                    <span className="text-gray-400 ml-2">| Protocolo: <strong className="text-gray-800">{i.protocol || '--'}</strong></span>
+                                                <span className="text-xs text-gray-500 font-medium">
+                                                    Avaliador: <strong className="text-gray-700">{item.evaluatorName || 'Gestão'}</strong>
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-right flex justify-end gap-3 items-center">
-                                            {activeTab === 'feedbacks' && !i.read && (
+
+                                        {/* COLUNA: AÇÕES */}
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+                                                {activeTab === 'feedbacks' && !item.read && (
+                                                    <button 
+                                                        onClick={() => handleMarkAsRead(item.id)} 
+                                                        className="text-[11px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase transition-colors cursor-pointer mr-2"
+                                                    >
+                                                        Marcar Lido
+                                                    </button>
+                                                )}
                                                 <button 
-                                                    onClick={(e) => { e.stopPropagation(); handleMarkAsRead(i.id); }} 
-                                                    className="text-[11px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase transition-colors cursor-pointer"
+                                                    onClick={() => handleViewItem(item)} 
+                                                    className="px-3 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-xl flex items-center gap-1.5 transition-colors border border-gray-200 cursor-pointer font-bold text-xs shadow-2xs"
                                                 >
-                                                    Marcar como lido
+                                                    <Eye className="w-3.5 h-3.5 text-red-600" />
+                                                    <span>Ver Detalhes</span>
                                                 </button>
-                                            )}
-                                            <button 
-                                                onClick={() => handleViewItem(i)} 
-                                                className="px-2.5 py-1.5 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-lg flex items-center gap-1.5 transition-colors border border-gray-200 cursor-pointer font-medium text-xs"
-                                            >
-                                                <Eye className="w-3.5 h-3.5 text-red-600" /> Detalhes
-                                            </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
                             </tbody>
                         </table>
                     </div>
+                ) : (
+                    /* VISUALIZAÇÃO EM GRADE DE CARDS INTERATIVOS */
+                    <div className="p-4 sm:p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto flex-1">
+                        {filteredData.map(item => (
+                            <div 
+                                key={item.id}
+                                onClick={() => handleViewItem(item)}
+                                className={`bg-white rounded-2xl p-4 sm:p-5 border transition-all hover:shadow-md cursor-pointer flex flex-col justify-between ${
+                                    activeTab === 'feedbacks' && !item.read 
+                                        ? 'border-fuchsia-300 bg-fuchsia-50/20' 
+                                        : 'border-gray-200 hover:border-red-300'
+                                }`}
+                            >
+                                <div className="space-y-3">
+                                    {/* Topo do Card */}
+                                    <div className="flex justify-between items-center">
+                                        <span className="text-xs text-gray-500 font-medium flex items-center gap-1.5">
+                                            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+                                            {getSafeDateString(item)}
+                                        </span>
+
+                                        {/* Badge Principal */}
+                                        {activeTab === 'feedbacks' && (
+                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                                item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-800' : 
+                                                item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-800' : 
+                                                'bg-blue-100 text-blue-800'
+                                            }`}>
+                                                {item.type}
+                                            </span>
+                                        )}
+                                        {activeTab === 'audits' && (
+                                            <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black border ${
+                                                item.status === 'Conforme' 
+                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                                    : 'bg-red-50 text-red-700 border-red-200'
+                                            }`}>
+                                                {item.status === 'Conforme' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-red-600" />}
+                                                {item.status}
+                                            </span>
+                                        )}
+                                        {activeTab === 'metrics' && (
+                                            <span className="font-mono font-black text-sm text-amber-600 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-200">
+                                                {item.pontuacao || 0} pts
+                                            </span>
+                                        )}
+                                        {activeTab === 'monthly' && getClassificationBadge(item.classification)}
+                                    </div>
+
+                                    {/* Corpo do Card */}
+                                    {activeTab === 'feedbacks' && (
+                                        <div className="space-y-2">
+                                            <p className="text-xs text-gray-700 line-clamp-3 leading-relaxed">
+                                                {item.comment || 'Sem mensagem descritiva.'}
+                                            </p>
+                                            {item.createdBy && (
+                                                <div className="text-[11px] text-gray-400">
+                                                    Por: <strong className="text-gray-700">{item.createdBy}</strong>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'audits' && (
+                                        <div className="space-y-2">
+                                            <h4 className="text-sm font-extrabold text-gray-900 leading-snug">
+                                                {item.processName || qaProcesses[item.processId]?.name || 'Procedimento de Suporte'}
+                                            </h4>
+                                            <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+                                                <span>Protocolo:</span>
+                                                <span className="font-mono font-bold text-gray-800 bg-gray-50 px-2 py-0.5 rounded">
+                                                    {item.protocol || 'N/A'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'metrics' && (
+                                        <div className="space-y-2">
+                                            <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                                                <div className="bg-gray-50 p-2 rounded-lg">
+                                                    <span className="text-[10px] text-gray-400 block font-bold uppercase">Ligações</span>
+                                                    <span className="font-black text-gray-800 text-sm">{item.Ligacoes_Atendidas || 0}</span>
+                                                </div>
+                                                <div className="bg-gray-50 p-2 rounded-lg">
+                                                    <span className="text-[10px] text-gray-400 block font-bold uppercase">Huggy</span>
+                                                    <span className="font-black text-gray-800 text-sm">{item.Atendimentos_Huggy || 0}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {activeTab === 'monthly' && (
+                                        <div className="space-y-2">
+                                            <div className="text-xs text-gray-600">
+                                                Mês Referência: <strong className="font-mono font-bold text-gray-900">{formatMonth(item.referenceMonth)}</strong>
+                                            </div>
+                                            <div className="text-xs text-gray-500">
+                                                Avaliador: <strong className="text-gray-700">{item.evaluatorName || 'Gestão'}</strong>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Rodapé do Card com Ação */}
+                                <div className="mt-4 pt-3 border-t border-gray-100 flex items-center justify-between">
+                                    <span className="text-[11px] font-semibold text-gray-400">Clique para abrir</span>
+                                    <span className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
+                                        <Eye className="w-3.5 h-3.5" /> Detalhes
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
                 )}
             </div>
 
-            {/* MODAIS DE VISUALIZAÇÃO DE DETALHES */}
-            {viewingItem && (
-                activeTab === 'monthly' ? (
-                    <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                        <div className="bg-gray-100 rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh]">
-                            <div className="p-4 bg-white border-b border-gray-200 flex justify-between items-center shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-red-50 text-red-600 rounded-lg">
-                                        <CalendarDays className="w-6 h-6" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-black text-lg text-gray-900 leading-tight">Relatório de Avaliação Mensal</h3>
-                                        <p className="text-xs text-gray-500">Mês de Referência: <strong className="text-gray-700">{formatMonth(viewingItem.referenceMonth)}</strong></p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setViewingItem(null)} className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"><X className="w-5 h-5 text-gray-500" /></button>
-                            </div>
-                            
-                            <div className="p-6 overflow-y-auto flex-1">
-                                <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm mx-auto max-w-3xl">
-                                    <div className="border-b-2 border-gray-900 pb-4 mb-6 flex justify-between items-end">
-                                        <div>
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Colaborador Avaliado</span>
-                                            <span className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                                                {viewingItem.colabName}
-                                                {getClassificationBadge(viewingItem.classification)}
-                                            </span>
-                                        </div>
-                                        <div className="text-right">
-                                            <span className="text-xs font-bold text-gray-500 uppercase tracking-widest block mb-1">Avaliador Responsável</span>
-                                            <span className="text-base font-bold text-gray-700">{viewingItem.evaluatorName || 'Gestão'}</span>
-                                        </div>
-                                    </div>
+            {/* ========================================================================= */}
+            {/* MODAIS REFATORADOS DE VISUALIZAÇÃO DETALHADA                               */}
+            {/* ========================================================================= */}
 
-                                    <div className="space-y-6">
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                    <Star className="w-4 h-4 text-amber-500"/> Desempenho e Produtividade
-                                                </h4>
-                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.performanceScore || '-'}</strong>/10</span>
-                                            </div>
-                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
-                                                <ReactMarkdown>{viewingItem.performance || '*Sem observações neste pilar.*'}</ReactMarkdown>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                    <ShieldCheck className="w-4 h-4 text-emerald-500"/> Qualidade e Processos
-                                                </h4>
-                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.qualityScore || '-'}</strong>/10</span>
-                                            </div>
-                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
-                                                <ReactMarkdown>{viewingItem.quality || '*Sem observações neste pilar.*'}</ReactMarkdown>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                    <User className="w-4 h-4 text-blue-500"/> Comportamento e Postura
-                                                </h4>
-                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.behaviorScore || '-'}</strong>/10</span>
-                                            </div>
-                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
-                                                <ReactMarkdown>{viewingItem.behavior || '*Sem observações neste pilar.*'}</ReactMarkdown>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2">
-                                            <div className="flex justify-between items-center border-b border-gray-100 pb-2">
-                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                    <Clock className="w-4 h-4 text-purple-500"/> Assiduidade e Pontualidade
-                                                </h4>
-                                                <span className="text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">Nota: <strong className="text-gray-900 text-sm">{viewingItem.punctualityScore || '-'}</strong>/10</span>
-                                            </div>
-                                            <div className="text-gray-800 text-sm prose prose-sm max-w-none">
-                                                <ReactMarkdown>{viewingItem.punctuality || '*Sem observações neste pilar.*'}</ReactMarkdown>
-                                            </div>
-                                        </div>
-
-                                        {viewingItem.generalComments && (
-                                            <div className="space-y-2 pt-4 mt-6 border-t-2 border-gray-100">
-                                                <h4 className="text-sm font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                    <MessageSquare className="w-4 h-4 text-gray-500"/> Considerações Finais
-                                                </h4>
-                                                <div className="text-gray-800 text-sm prose prose-sm max-w-none bg-gray-50 p-4 rounded-lg border border-gray-200">
-                                                    <ReactMarkdown>{viewingItem.generalComments}</ReactMarkdown>
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div className="p-4 bg-white border-t border-gray-200 flex justify-end shrink-0">
-                                <button onClick={() => setViewingItem(null)} className="px-6 py-2 bg-gray-900 text-white rounded-lg font-bold hover:bg-black transition-colors cursor-pointer text-sm">Fechar</button>
-                            </div>
-                        </div>
-                    </div>
-                ) : activeTab === 'metrics' ? (
-                    <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col relative max-h-[90vh]">
-                            <div className="p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-red-500/20 text-red-500 rounded-lg">
-                                        <TrendingUp className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <h3 className="font-black text-lg leading-tight">Desempenho Semanal</h3>
-                                        <p className="text-xs text-gray-400">Data de Referência: <strong className="text-gray-200">{viewingItem.date}</strong></p>
-                                    </div>
-                                </div>
-                                <button onClick={() => setViewingItem(null)} className="p-2 hover:bg-zinc-800 rounded-full transition-colors cursor-pointer"><X className="w-5 h-5 text-gray-400" /></button>
-                            </div>
-                            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div className="flex flex-col gap-4">
-                                        <div className="bg-rose-50 rounded-xl p-4 border border-rose-100 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-rose-600 uppercase tracking-wider mb-2 flex items-center gap-2"><AlertTriangle className="w-4 h-4"/> Ligações Perdidas</div>
-                                            <div className="text-3xl font-black text-rose-700">{viewingItem.Ligacoes_Perdidas || 0}</div>
-                                        </div>
-                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2"><Phone className="w-4 h-4"/> TME Telefonia</div>
-                                            <div className="text-2xl font-black text-gray-800">{viewingItem.TME_Telefonia || '00:00:00'}</div>
-                                        </div>
-                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4"/> Atendimentos Huggy</div>
-                                            <div className="text-2xl font-black text-gray-800">{viewingItem.Atendimentos_Huggy || 0}</div>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex flex-col gap-4">
-                                        <div className="bg-linear-to-b from-amber-50 to-white rounded-xl p-6 border-2 border-amber-200 flex flex-col items-center justify-center shadow-xs flex-1">
-                                            <div className="text-xs font-bold text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-2"><TrendingUp className="w-4 h-4"/> Pontuação Semanal</div>
-                                            <div className="text-5xl font-black text-amber-600 my-1">{viewingItem.pontuacao !== undefined ? viewingItem.pontuacao : (Number(viewingItem.Atendimentos_Finalizados || 0) * 1 + Number(viewingItem.Ligacoes_Atendidas || 0) * 2 + Number(viewingItem.Atendimentos_Huggy || 0) * 1 + Number(viewingItem.Ligacoes_Perdidas || 0) * -5)}</div>
-                                            <div className="text-xs font-bold text-amber-500">pontos acumulados</div>
-                                        </div>
-                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Ligações Atendidas</div>
-                                            <div className="text-2xl font-black text-gray-800">{viewingItem.Ligacoes_Atendidas || 0}</div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex flex-col gap-4">
-                                        <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2 flex items-center gap-2"><CheckCircle className="w-4 h-4"/> Atendimentos Finalizados</div>
-                                            <div className="text-3xl font-black text-emerald-700">{viewingItem.Atendimentos_Finalizados || 0}</div>
-                                        </div>
-                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2"><MessageSquare className="w-4 h-4"/> TMA Huggy</div>
-                                            <div className="text-2xl font-black text-gray-800">{viewingItem.TMA_Huggy || '00:00:00'}</div>
-                                        </div>
-                                        <div className="bg-white rounded-xl p-4 border border-gray-200 flex flex-col justify-between shadow-xs">
-                                            <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-2"><Phone className="w-4 h-4"/> TMA Telefonia</div>
-                                            <div className="text-2xl font-black text-gray-800">{viewingItem.TMA_Telefonia || '00:00:00'}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-sm">
-                        <div className={`bg-white rounded-xl shadow-2xl w-full ${activeTab === 'audits' ? 'max-w-2xl' : 'max-w-lg'} overflow-hidden flex flex-col max-h-[90vh]`}>
-                            <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
-                                <h3 className="font-bold text-base">Detalhes do Registro</h3>
-                                <button onClick={() => setViewingItem(null)} className="p-1 hover:bg-zinc-800 rounded-lg cursor-pointer"><X className="w-5 h-5 text-gray-400 hover:text-white" /></button>
-                            </div>
-                            <div className="p-6 space-y-4 text-sm overflow-y-auto flex-1">
-                                {activeTab === 'feedbacks' ? (
-                                    <div className="space-y-4">
-                                        <div className="flex flex-wrap gap-2">
-                                            {viewingItem.type && (
-                                                <span className={`px-3 py-1.5 rounded-lg text-xs font-bold ${
-                                                    viewingItem.type === 'Elogio' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
-                                                    viewingItem.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 
-                                                    'bg-blue-100 text-blue-700 border border-blue-200'
-                                                }`}>
-                                                    {viewingItem.type}
-                                                </span>
-                                            )}
-                                            {viewingItem.method && (
-                                                <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-purple-50 text-purple-700 border border-purple-200">
-                                                    Canal: {viewingItem.method}
-                                                </span>
-                                            )}
-                                            {viewingItem.protocol && viewingItem.protocol !== "N/A" && (
-                                                <span className="px-3 py-1.5 rounded-lg text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
-                                                    Protocolo: {viewingItem.protocol}
-                                                </span>
-                                            )}
-                                        </div>
-                                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Mensagem do Feedback</h4>
-                                            <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">{viewingItem.comment || 'Sem mensagem descritiva.'}</p>
-                                        </div>
-                                        {viewingItem.createdBy && (
-                                             <div className="flex justify-end text-xs text-gray-500 font-medium">
-                                                Enviado por: <strong className="text-gray-800 ml-1">{viewingItem.createdBy}</strong>
-                                             </div>
-                                        )}
-                                    </div>
-                                ) : activeTab === 'audits' ? (
-                                    <div className="space-y-4">
-                                        <div className="flex flex-col items-center justify-center bg-gray-50 rounded-xl p-5 border border-gray-100">
-                                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Resultado da Auditoria</div>
-                                            <div className={`text-3xl font-black ${viewingItem.status === 'Conforme' ? 'text-emerald-600' : 'text-red-600'}`}>
-                                                {viewingItem.status || 'N/A'}
-                                            </div>
-                                            <div className="text-xs font-medium text-gray-500 mt-1">Data: {getSafeDateString(viewingItem)}</div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-white rounded-xl p-3.5 border border-gray-200 shadow-xs">
-                                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Protocolo</div>
-                                                <span className="font-bold text-gray-900 text-sm">{viewingItem.protocol || 'N/A'}</span>
-                                            </div>
-                                            <div className="bg-white rounded-xl p-3.5 border border-gray-200 shadow-xs">
-                                                <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Processo Auditado</div>
-                                                <div className="text-sm font-bold text-gray-900 truncate">{viewingItem.processName || qaProcesses[viewingItem.processId]?.name || 'N/A'}</div>
-                                            </div>
-                                        </div>
-
-                                        <div className="bg-white rounded-xl p-3.5 border border-gray-200 shadow-xs">
-                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">Auditado por</div>
-                                            <div className="text-sm font-bold text-gray-900">{viewingItem.evaluatorName || 'N/A'}</div>
-                                        </div>
-
-                                        {viewingItem.notes && (
-                                            <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
-                                                <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Observações do Auditor</h4>
-                                                <p className="text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">{viewingItem.notes}</p>
-                                            </div>
-                                        )}
-                                    </div>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                )
+            {/* 1. Modal de Análise Detalhada da Auditoria QA (com etapas e critérios) */}
+            {viewingItem && activeTab === 'audits' && (
+                <AuditDetailModal
+                    isOpen={true}
+                    onClose={() => setViewingItem(null)}
+                    audit={viewingItem}
+                    qaProcess={qaProcesses[viewingItem.processId]}
+                    onShowToast={showToast}
+                />
             )}
+
+            {/* 2. Modal Refatorado de Feedback */}
+            {viewingItem && activeTab === 'feedbacks' && (
+                <FeedbackDetailModal
+                    isOpen={true}
+                    onClose={() => setViewingItem(null)}
+                    feedback={viewingItem}
+                    onMarkAsRead={handleMarkAsRead}
+                />
+            )}
+
+            {/* 3. Modal Refatorado de Desempenho Semanal */}
+            {viewingItem && activeTab === 'metrics' && (
+                <WeeklyMetricDetailModal
+                    isOpen={true}
+                    onClose={() => setViewingItem(null)}
+                    metrics={viewingItem}
+                />
+            )}
+
+            {/* 4. Modal Refatorado de Avaliação Mensal 1:1 */}
+            {viewingItem && activeTab === 'monthly' && (
+                <MonthlyEvaluationDetailModal
+                    isOpen={true}
+                    onClose={() => setViewingItem(null)}
+                    evaluation={viewingItem}
+                />
+            )}
+
         </div>
     );
 };
