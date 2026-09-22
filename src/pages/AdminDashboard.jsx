@@ -30,6 +30,7 @@ import MyHistory from './MyHistory';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
+import { CURRENT_VERSION } from '../data/changelogData';
 
 // Importação do ícone da barra de navegação (mesmo ícone do favicon)
 import faviconLogo from '../assets/favicon_red.png';
@@ -315,13 +316,13 @@ const AdminDashboard = () => {
                         {!isSidebarCollapsed && <span className="text-sm font-medium">Sair do sistema</span>}
                     </button>
 
-                    {/* Rodapé com a versão v3.2 do projeto e trigger do Changelog */}
+                    {/* Rodapé com a versão do projeto e trigger do Changelog */}
                     <button
                         type="button"
                         id="system-version-card"
                         onClick={() => setIsChangelogModalOpen(true)}
                         className={`w-full pt-3 mt-1 border-t border-zinc-800/80 flex items-center group transition-colors cursor-pointer text-left ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-1'}`}
-                        title="Versão do Sistema: v3.2 • Clique para ver o Changelog"
+                        title={`Versão do Sistema: ${CURRENT_VERSION} • Clique para ver o Changelog`}
                     >
                         {!isSidebarCollapsed && (
                             <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors tracking-wide">
@@ -333,7 +334,7 @@ const AdminDashboard = () => {
                             className="px-2 py-0.5 rounded-md bg-zinc-900 group-hover:bg-red-950/60 border border-zinc-800 group-hover:border-red-800/60 text-[10px] font-mono font-bold text-zinc-400 group-hover:text-red-400 shadow-2xs transition-all flex items-center gap-1.5"
                         >
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            v3.2
+                            {CURRENT_VERSION}
                         </span>
                     </button>
                 </div>

@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2 } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.2';
+export const CURRENT_VERSION = 'v3.3';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.2',
+    version: 'v3.3',
     date: 'Setembro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
+    summary: 'Análise detalhada passo a passo de auditorias QA, refatoração de todas as visões de Meu Histórico, alternância entre Tabela e Cards e novos filtros avançados.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Análise Detalhada de Auditoria QA com Etapas',
+        category: 'Qualidade & Auditoria',
+        description: 'Substituição do resumo simples por uma análise aprofundada passo a passo (Etapa 01, 02...), exibindo o status de cada critério avaliado, apontamentos específicos do auditor, barra de aproveitamento percentual segmentada e filtros internos de etapas.'
+      },
+      {
+        icon: History,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Refatoração Completa das Visões de Meu Histórico',
+        category: 'Experiência do Colaborador',
+        description: 'Reformulação integral de todos os modais detalhados: Feedbacks com categorização visual (Elogio, Ponto de Melhoria, Orientação), Avaliações Semanais com score consolidado e fórmula transparente de cálculo, e Avaliação Mensal 1:1 com pontuação por pilares e PDI.'
+      },
+      {
+        icon: Layers,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Novas Visualizações: Modo Tabela e Modo Cards',
+        category: 'Visualização de Dados',
+        description: 'Adicionada alternância fluida entre visualização em Tabela detalhada e Grade de Cards visuais interativos, acompanhada por um mini-dashboard de 4 métricas resumidas que se adaptam dinamicamente a cada aba.'
+      },
+      {
+        icon: Filter,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Filtros Avançados & Exportação CSV',
+        category: 'Produtividade & Gestão',
+        description: 'Novo conjunto de filtros combinados: busca instantânea por protocolo, auditor ou processo; atalhos de período rápido (7 dias, 30 dias, mês atual); filtros por status e processo QA; ordenação flexível e exportação dos dados filtrados para CSV.'
+      }
+    ]
+  },
+  {
+    version: 'v3.2',
+    date: 'Setembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Redesenho da tela de login, visualização direta de changelog, nova animação e padronização visual.',
     items: [
       {

@@ -3,6 +3,7 @@ import { UserX, LogOut, ShieldAlert, Mail } from 'lucide-react';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { CURRENT_VERSION } from '../data/changelogData';
 
 export default function AccountInactive() {
   const { currentUser } = useAuth();
@@ -85,7 +86,7 @@ export default function AccountInactive() {
 
         {/* Identificador sutil de versão */}
         <div className="mt-8 text-[11px] text-zinc-600 font-mono">
-          HubDesk Suporte &bull; v3.2
+          HubDesk Suporte &bull; {CURRENT_VERSION}
         </div>
       </div>
     </div>
