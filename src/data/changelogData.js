@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2 } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.3';
+export const CURRENT_VERSION = 'v3.4';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.3',
+    version: 'v3.4',
     date: 'Setembro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
+    summary: 'Nova fórmula equitativa de Líder Geral por pontuação média na Visão Geral de KPIs e Dashboard 360° no Relatório Individual do Colaborador.',
+    items: [
+      {
+        icon: Award,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Nova Fórmula do Líder Geral por Pontuação Média',
+        category: 'Visão Geral KPIs',
+        description: 'A determinação do Líder Geral por turno (Dia e Noite) foi atualizada para utilizar a pontuação média calculada com base nas avaliações efetivamente lançadas, eliminando a distorção da pontuação acumulada bruta. Agora, novos colaboradores e analistas com menos avaliações competem com o mesmo critério e mesma régua de justiça operacional.'
+      },
+      {
+        icon: BarChart3,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Dashboard Individual 360° do Colaborador',
+        category: 'Hub da Equipe',
+        description: 'Reformulação total da tela de relatório individual no Hub da Equipe, transformando-a em uma central de inteligência analítica completa: consolidação do mês vigente por padrão, cards estatísticos de pontuação, finalizações, telefonia (voz), chat Huggy, TMAs e conformidade QA.'
+      },
+      {
+        icon: Sliders,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Filtros Avançados de Período, Mês e Semanas de Avaliação',
+        category: 'Filtros & Análise',
+        description: 'Novos controles de navegação com atalhos rápidos (Mês Vigente, Mês Anterior, Últimos 3 Meses e Todo o Histórico), dropdown seletor de mês e filtro detalhado por semana de avaliação para analisar recortes específicos ou todo o período consolidado.'
+      },
+      {
+        icon: TrendingUp,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Gráficos Analíticos Dinâmicos & Abas Operacionais',
+        category: 'Visualização de Métricas',
+        description: 'Gráficos interativos de produção semanal, curva de pontuação e evolução de tempos médios (TMA e TME), combinados com abas de foco em Voz, Chat Huggy, Produtividade e Auditorias QA, além de extrato detalhado semana a semana com exportação em CSV e impressão.'
+      }
+    ]
+  },
+  {
+    version: 'v3.3',
+    date: 'Setembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Análise detalhada passo a passo de auditorias QA, refatoração de todas as visões de Meu Histórico, alternância entre Tabela e Cards e novos filtros avançados.',
     items: [
       {

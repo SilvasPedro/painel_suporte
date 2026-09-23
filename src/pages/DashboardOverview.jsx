@@ -194,7 +194,7 @@ const DashboardOverview = () => {
         const defaultStats = {
             avgVol: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00',
             maxTmaTel: { val: '00:00:00', name: '--' }, maxTmaHuggy: { val: '00:00:00', name: '--' },
-            topDay: { name: '--', val: 0 }, topNight: { name: '--', val: 0 },
+            topDay: { name: '--', val: 0, evalCount: 0 }, topNight: { name: '--', val: 0, evalCount: 0 },
             avgPtsDay: 0, avgPtsNight: 0,
             lowestAvgVol: { val: 0, name: '--' },
             rankings: {
@@ -212,7 +212,7 @@ const DashboardOverview = () => {
 
         if (evalsList.length === 0) return defaultStats;
 
-        const accumulatedPoints = {};
+        const colabPointsData = {};
         const accumulatedVol = {};
         const accumulatedTmaTel = {};
         const accumulatedTmaHuggy = {};
@@ -229,7 +229,9 @@ const DashboardOverview = () => {
                         (Number(e.Atendimentos_Huggy || 0) * 1) +
                         (Number(e.Ligacoes_Perdidas || 0) * -5);
                 }
-                accumulatedPoints[colabId] = (accumulatedPoints[colabId] || 0) + pts;
+                if (!colabPointsData[colabId]) colabPointsData[colabId] = { sum: 0, count: 0 };
+                colabPointsData[colabId].sum += pts;
+                colabPointsData[colabId].count += 1;
                 
                 if (!accumulatedVol[colabId]) accumulatedVol[colabId] = { sum: 0, count: 0 };
                 accumulatedVol[colabId].sum += (Number(e.Atendimentos_Finalizados) || 0);
@@ -245,18 +247,26 @@ const DashboardOverview = () => {
             }
         });
 
-        // Rankings por Turno
+        // Rankings por Turno baseados na Média de Pontos por Avaliação (Equitativo para novos e antigos colaboradores)
         const topPointsDayList = [];
         const topPointsNightList = [];
         
-        Object.entries(accumulatedPoints).forEach(([colabId, score]) => {
+        Object.entries(colabPointsData).forEach(([colabId, data]) => {
             const colabInfo = colabsFull[colabId];
-            if (colabInfo && colabInfo.active !== false) {
+            if (colabInfo && colabInfo.active !== false && data.count > 0) {
+                const avgScore = Math.round(data.sum / data.count);
                 const shift = String(colabInfo.shift || '').toLowerCase();
+                const item = { 
+                    id: colabId, 
+                    name: colabInfo.name, 
+                    val: avgScore,
+                    evalCount: data.count,
+                    totalPts: data.sum
+                };
                 if (shift.includes('manh') || shift.includes('tard') || shift === 'geral') {
-                    topPointsDayList.push({ id: colabId, name: colabInfo.name, val: score });
+                    topPointsDayList.push(item);
                 } else if (shift.includes('noit')) {
-                    topPointsNightList.push({ id: colabId, name: colabInfo.name, val: score });
+                    topPointsNightList.push(item);
                 }
             }
         });
@@ -264,8 +274,8 @@ const DashboardOverview = () => {
         topPointsDayList.sort((a, b) => b.val - a.val);
         topPointsNightList.sort((a, b) => b.val - a.val);
 
-        const topDay = topPointsDayList.length > 0 ? topPointsDayList[0] : { val: 0, name: '--' };
-        const topNight = topPointsNightList.length > 0 ? topPointsNightList[0] : { val: 0, name: '--' };
+        const topDay = topPointsDayList.length > 0 ? topPointsDayList[0] : { val: 0, name: '--', evalCount: 0 };
+        const topNight = topPointsNightList.length > 0 ? topPointsNightList[0] : { val: 0, name: '--', evalCount: 0 };
 
         // TMA Telefonia
         const avgTmaTelList = [];
@@ -352,8 +362,8 @@ const DashboardOverview = () => {
             maxTmaTel,
             maxTmaHuggy,
             lowestAvgVol,
-            topDay: { val: topDay.val !== -Infinity ? topDay.val : 0, name: topDay.name },
-            topNight: { val: topNight.val !== -Infinity ? topNight.val : 0, name: topNight.name },
+            topDay: { val: topDay.val !== -Infinity ? topDay.val : 0, name: topDay.name, evalCount: topDay.evalCount || 0, totalPts: topDay.totalPts || 0 },
+            topNight: { val: topNight.val !== -Infinity ? topNight.val : 0, name: topNight.name, evalCount: topNight.evalCount || 0, totalPts: topNight.totalPts || 0 },
             avgPtsDay: countDay > 0 ? Math.round(sumPtsDay / countDay) : 0,
             avgPtsNight: countNight > 0 ? Math.round(sumPtsNight / countNight) : 0,
             rankings: {
@@ -890,7 +900,8 @@ const DashboardOverview = () => {
                             
                             {/* TOP PERFORMER DIA */}
                             <div 
-                                onClick={() => setModalInfo({ title: 'Top Desempenho (Manhã / Tarde)', data: teamStats.rankings.topPointsDay, formatVal: (v) => `${v} pts` })}
+                                id="card-leader-day"
+                                onClick={() => setModalInfo({ title: 'Top Desempenho por Média (Manhã / Tarde)', data: teamStats.rankings.topPointsDay, formatVal: (v) => `${v} pts (média)` })}
                                 className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 text-white p-5 rounded-xl shadow-xs border border-emerald-500/30 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group"
                             >
                                 <div className="flex justify-between items-start">
@@ -903,18 +914,24 @@ const DashboardOverview = () => {
                                     <span className="text-lg font-black block truncate" title={teamStats.topDay.name}>
                                         {teamStats.topDay.name}
                                     </span>
-                                    <span className="text-xs text-emerald-100 font-bold">
-                                        {teamStats.topDay.val} pontos acumulados
-                                    </span>
+                                    <div className="text-xs text-emerald-100 font-bold flex items-center gap-1 flex-wrap">
+                                        <span>{teamStats.topDay.val} pts de média</span>
+                                        {teamStats.topDay.evalCount > 0 && (
+                                            <span className="text-[10px] text-emerald-200/90 font-normal">
+                                                ({teamStats.topDay.evalCount} {teamStats.topDay.evalCount === 1 ? 'avaliação' : 'avaliações'})
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <span className="text-[11px] text-emerald-200 flex items-center gap-1 mt-1">
-                                    Ver ranking completo <ChevronRight className="w-3 h-3" />
+                                    Ver ranking por média <ChevronRight className="w-3 h-3" />
                                 </span>
                             </div>
 
                             {/* TOP PERFORMER NOITE */}
                             <div 
-                                onClick={() => setModalInfo({ title: 'Top Desempenho (Noite)', data: teamStats.rankings.topPointsNight, formatVal: (v) => `${v} pts` })}
+                                id="card-leader-night"
+                                onClick={() => setModalInfo({ title: 'Top Desempenho por Média (Noite)', data: teamStats.rankings.topPointsNight, formatVal: (v) => `${v} pts (média)` })}
                                 className="bg-gradient-to-br from-indigo-800 via-indigo-900 to-zinc-950 text-white p-5 rounded-xl shadow-xs border border-indigo-700/30 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group"
                             >
                                 <div className="flex justify-between items-start">
@@ -927,12 +944,17 @@ const DashboardOverview = () => {
                                     <span className="text-lg font-black block truncate" title={teamStats.topNight.name}>
                                         {teamStats.topNight.name}
                                     </span>
-                                    <span className="text-xs text-indigo-100 font-bold">
-                                        {teamStats.topNight.val} pontos acumulados
-                                    </span>
+                                    <div className="text-xs text-indigo-100 font-bold flex items-center gap-1 flex-wrap">
+                                        <span>{teamStats.topNight.val} pts de média</span>
+                                        {teamStats.topNight.evalCount > 0 && (
+                                            <span className="text-[10px] text-indigo-200/90 font-normal">
+                                                ({teamStats.topNight.evalCount} {teamStats.topNight.evalCount === 1 ? 'avaliação' : 'avaliações'})
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <span className="text-[11px] text-indigo-200 flex items-center gap-1 mt-1">
-                                    Ver ranking completo <ChevronRight className="w-3 h-3" />
+                                    Ver ranking por média <ChevronRight className="w-3 h-3" />
                                 </span>
                             </div>
 
@@ -1519,13 +1541,23 @@ const DashboardOverview = () => {
                                 </div>
 
                                 <div className="pt-2 border-t border-gray-100">
-                                    <span className="text-xs font-bold text-gray-700 block mb-2">Destaque do Turno:</span>
+                                    <span className="text-xs font-bold text-gray-700 block mb-2">Destaque do Turno (Líder Geral):</span>
                                     <div className="flex items-center justify-between bg-amber-50/60 p-3 rounded-lg border border-amber-200/60">
                                         <div className="flex items-center gap-2">
                                             <Award className="w-4 h-4 text-amber-600" />
-                                            <span className="text-sm font-bold text-gray-900">{teamStats.topDay.name}</span>
+                                            <div>
+                                                <span className="text-sm font-bold text-gray-900 block">{teamStats.topDay.name}</span>
+                                                {teamStats.topDay.evalCount > 0 && (
+                                                    <span className="text-[10px] text-amber-800/80">
+                                                        {teamStats.topDay.evalCount} {teamStats.topDay.evalCount === 1 ? 'avaliação' : 'avaliações'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span className="text-xs font-extrabold text-amber-700 font-mono">{teamStats.topDay.val} pts</span>
+                                        <div className="text-right">
+                                            <span className="text-xs font-extrabold text-amber-700 font-mono block">{teamStats.topDay.val} pts</span>
+                                            <span className="text-[10px] text-gray-500 font-medium">(média)</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1556,13 +1588,23 @@ const DashboardOverview = () => {
                                 </div>
 
                                 <div className="pt-2 border-t border-gray-100">
-                                    <span className="text-xs font-bold text-gray-700 block mb-2">Destaque do Turno:</span>
+                                    <span className="text-xs font-bold text-gray-700 block mb-2">Destaque do Turno (Líder Geral):</span>
                                     <div className="flex items-center justify-between bg-indigo-50/60 p-3 rounded-lg border border-indigo-200/60">
                                         <div className="flex items-center gap-2">
                                             <Award className="w-4 h-4 text-indigo-600" />
-                                            <span className="text-sm font-bold text-gray-900">{teamStats.topNight.name}</span>
+                                            <div>
+                                                <span className="text-sm font-bold text-gray-900 block">{teamStats.topNight.name}</span>
+                                                {teamStats.topNight.evalCount > 0 && (
+                                                    <span className="text-[10px] text-indigo-800/80">
+                                                        {teamStats.topNight.evalCount} {teamStats.topNight.evalCount === 1 ? 'avaliação' : 'avaliações'}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span className="text-xs font-extrabold text-indigo-700 font-mono">{teamStats.topNight.val} pts</span>
+                                        <div className="text-right">
+                                            <span className="text-xs font-extrabold text-indigo-700 font-mono block">{teamStats.topNight.val} pts</span>
+                                            <span className="text-[10px] text-gray-500 font-medium">(média)</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1589,16 +1631,25 @@ const DashboardOverview = () => {
                         <div className="p-4 overflow-y-auto divide-y divide-gray-100">
                             {modalInfo.data && modalInfo.data.length > 0 ? (
                                 modalInfo.data.map((item, idx) => (
-                                    <div key={item.id || idx} className="flex justify-between items-center py-2.5">
-                                        <div className="flex items-center gap-3">
-                                            <span className={`font-bold w-6 text-center text-xs ${idx < 3 ? 'text-amber-500 font-black' : 'text-gray-400'}`}>
+                                    <div key={item.id || idx} className="flex justify-between items-center py-2.5 gap-2">
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <span className={`font-bold w-6 text-center text-xs shrink-0 ${idx < 3 ? 'text-amber-500 font-black' : 'text-gray-400'}`}>
                                                 {idx + 1}º
                                             </span>
-                                            <span className="font-bold text-gray-800 text-sm">{item.name}</span>
+                                            <div className="min-w-0">
+                                                <span className="font-bold text-gray-800 text-sm block truncate">{item.name}</span>
+                                                {item.evalCount !== undefined && (
+                                                    <span className="text-[11px] text-gray-400 font-medium block">
+                                                        {item.evalCount} {item.evalCount === 1 ? 'avaliação' : 'avaliações'} • Total: {item.totalPts} pts
+                                                    </span>
+                                                )}
+                                            </div>
                                         </div>
-                                        <span className="font-bold text-gray-900 text-sm font-mono">
-                                            {modalInfo.formatVal ? modalInfo.formatVal(item.val) : item.val}
-                                        </span>
+                                        <div className="text-right shrink-0">
+                                            <span className="font-bold text-gray-900 text-sm font-mono block">
+                                                {modalInfo.formatVal ? modalInfo.formatVal(item.val) : item.val}
+                                            </span>
+                                        </div>
                                     </div>
                                 ))
                             ) : (
