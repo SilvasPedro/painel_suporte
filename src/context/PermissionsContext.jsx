@@ -21,13 +21,18 @@ export const PermissionsProvider = ({ children }) => {
     useEffect(() => {
         const unsubscribe = subscribeRolesPermissions((data) => {
             if (data) {
-                // Mescla com os padrões caso falte algum módulo ou role
-                const merged = { ...DEFAULT_ROLE_PERMISSIONS };
+                // Mescla profunda com os padrões para garantir que nenhum módulo ou propriedade de edit/view seja perdida
+                const merged = {};
                 Object.keys(DEFAULT_ROLE_PERMISSIONS).forEach((roleKey) => {
-                    merged[roleKey] = {
-                        ...DEFAULT_ROLE_PERMISSIONS[roleKey],
-                        ...(data[roleKey] || {})
-                    };
+                    merged[roleKey] = { ...DEFAULT_ROLE_PERMISSIONS[roleKey] };
+                    if (data[roleKey]) {
+                        Object.keys(data[roleKey]).forEach((modKey) => {
+                            merged[roleKey][modKey] = {
+                                ...(DEFAULT_ROLE_PERMISSIONS[roleKey]?.[modKey] || { view: false, edit: false }),
+                                ...data[roleKey][modKey]
+                            };
+                        });
+                    }
                 });
                 setPermissionsMatrix(merged);
             } else {
@@ -72,14 +77,29 @@ export const PermissionsProvider = ({ children }) => {
     const canEdit = useCallback((moduleId) => {
         if (!moduleId) return false;
         if (isMasterAdmin) return true;
+
         const rolePerms = permissionsMatrix[normalizedRole];
+        const roleStr = String(currentUser?.role || '').toLowerCase();
+        const isGestor = normalizedRole === 'gestor' || roleStr.includes('gestor') || roleStr.includes('admin');
+
+        // Se houver configuração explícita na matriz para este cargo
+        if (rolePerms && rolePerms[moduleId] && rolePerms[moduleId].edit !== undefined) {
+            // Se não puder ver, não pode editar
+            if (rolePerms[moduleId].view === false) return false;
+            return Boolean(rolePerms[moduleId].edit);
+        }
+
+        // Se for gestor e não houver proibição explícita, permite por padrão
+        if (isGestor) {
+            return DEFAULT_ROLE_PERMISSIONS.gestor?.[moduleId]?.edit ?? true;
+        }
+
         if (!rolePerms || !rolePerms[moduleId]) {
             return DEFAULT_ROLE_PERMISSIONS[normalizedRole]?.[moduleId]?.edit ?? false;
         }
-        // Se não puder ver, por definição não pode editar
         if (!rolePerms[moduleId].view) return false;
         return Boolean(rolePerms[moduleId].edit);
-    }, [isMasterAdmin, permissionsMatrix, normalizedRole]);
+    }, [isMasterAdmin, permissionsMatrix, normalizedRole, currentUser]);
 
     // Checagem se tem acesso a pelo menos uma tela administrativa/operacional
     const hasAnyAdminTabAccess = useMemo(() => {

@@ -1,4 +1,4 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network } from 'lucide-react';
 
 export const CURRENT_VERSION = 'v3.4';
 
@@ -8,8 +8,22 @@ export const CHANGELOG_VERSIONS = [
     date: 'Setembro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
-    summary: 'Nova fórmula equitativa de Líder Geral por pontuação média na Visão Geral de KPIs e Dashboard 360° no Relatório Individual do Colaborador.',
+    summary: 'Nova fórmula equitativa de Líder Geral, Dashboard 360° do Colaborador, Organograma Operacional reformulado com RBAC inteligente e Central de Demanda Diária.',
     items: [
+      {
+        icon: Network,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Organograma Operacional & RBAC de Edição',
+        category: 'Organograma',
+        description: 'Reformulação visual e funcional do Organograma Operacional: reconhecimento inteligente de permissões RBAC para Gestores e perfis com edição liberada, badges de status em tempo real (Modo Edição vs Somente Leitura), novo menu rápido de movimentação por clique (sem depender apenas de drag & drop), auto-distribuição inteligente por cargo cadastrado, busca e filtros por turno nos não alocados, e conector vertical hierárquico refinado.'
+      },
+      {
+        icon: Activity,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Nova Central de Demanda e Fila Diária',
+        category: 'Demanda Diária',
+        description: 'Reformulação visual e analítica profunda do painel de Demanda Diária: novos filtros por presets de período (Mês Atual, 7, 15 e 30 dias, Mês Anterior, Últimos 3 Meses e Personalizado), filtros multicritério por canal (Chamados/Chats), tendência de saldo de fila (Reduziu, Subiu ou Estável), dia da semana (Seg a Dom) e busca rápida. Acompanha novos cards executivos de delta/saldo, gráficos com áreas gradientes de Início vs Fim, comparativo geral por dia da semana e exportação completa em CSV.'
+      },
       {
         icon: Award,
         iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
