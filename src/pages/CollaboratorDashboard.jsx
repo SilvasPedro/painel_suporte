@@ -3,7 +3,7 @@ import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
-    KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText
+    KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText, Menu
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -20,6 +20,7 @@ import OrgChart from './OrgChart';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
+import ThemeSelector from '../components/ThemeSelector';
 import MyHistory from './MyHistory';
 import { CURRENT_VERSION } from '../data/changelogData';
 
@@ -99,6 +100,7 @@ const ExtensionsBalloon = () => {
 
 const CollaboratorDashboard = ({ currentUserId }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { currentUser } = useAuth();
     const { showToast } = useNotification();
 
@@ -106,6 +108,19 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
+
+    const currentTabLabel = useMemo(() => {
+        const labels = {
+            dashboard: 'Meu Desempenho',
+            history: 'Meu Histórico',
+            reports: 'Relatórios Individuais',
+            schedule: 'Escala de Domingo',
+            daily_schedule: 'Escala Diária',
+            orgchart: 'Organograma Operacional',
+            DailyQueueTracker: 'Lançamento de Demandas'
+        };
+        return labels[activeTab] || 'Meu Espaço';
+    }, [activeTab]);
 
     const renderContent = () => {
         switch (activeTab) {
@@ -185,8 +200,8 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
 
 
-                <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
-                    <div className="flex items-center gap-3 mb-4 px-2">
+                <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50 space-y-1">
+                    <div className="flex items-center gap-3 mb-3 px-2">
                         <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
                             <User className="w-4 h-4 text-zinc-400" />
                         </div>
@@ -202,7 +217,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
                     <button 
                         onClick={() => setIsPasswordModalOpen(true)} 
-                        className="w-full flex items-center gap-3 px-4 py-2 mb-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                        className="w-full flex items-center gap-3 px-4 py-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                     >
                         <KeyRound className="w-4 h-4" />
                         <span className="text-sm font-medium">Alterar senha</span>
@@ -237,8 +252,97 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 </div>
             </aside>
 
+            {/* Menu Drawer Mobile para Colaboradores */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 md:hidden flex animate-in fade-in duration-200"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                >
+                    <div 
+                        className="mobile-drawer-sidebar w-72 bg-zinc-950 text-white h-full flex flex-col shadow-2xl border-r border-zinc-800 animate-in slide-in-from-left duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <div className="p-4 flex items-center justify-between border-b border-zinc-800 h-16 shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center p-1 shadow-2xs">
+                                    <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
+                                </div>
+                                <span className="font-brand text-lg font-extrabold tracking-tight text-white flex items-center select-none">
+                                    HUB<span className="text-red-500 font-black ml-0.5">DESK</span>
+                                </span>
+                            </div>
+                            <button 
+                                onClick={() => setIsMobileMenuOpen(false)}
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="p-4 flex-1 space-y-1 overflow-y-auto">
+                            <button onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                                <Activity className="w-5 h-5" /> <span className="font-medium">Meu Desempenho</span>
+                            </button>
+                            <button onClick={() => { setActiveTab('history'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                                <History className="w-5 h-5" /> <span className="font-medium">Meu Histórico</span>
+                            </button>
+                            <button onClick={() => { setActiveTab('demands'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'demands' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                                <Database className="w-5 h-5" /> <span className="font-medium">Lançamentos</span>
+                            </button>
+                            <button onClick={() => { setActiveTab('orgchart'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'orgchart' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                                <Network className="w-5 h-5" /> <span className="font-medium">Organograma</span>
+                            </button>
+                        </div>
+
+                        <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => { setIsMobileMenuOpen(false); setIsPasswordModalOpen(true); }}
+                                    className="flex-1 py-2 text-xs font-semibold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                >
+                                    <KeyRound className="w-3.5 h-3.5" /> Senha
+                                </button>
+                                <button
+                                    onClick={() => { setIsMobileMenuOpen(false); setIsLogoutModalOpen(true); }}
+                                    className="flex-1 py-2 text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                >
+                                    <LogOut className="w-3.5 h-3.5" /> Sair
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
-                {renderContent()}
+                {/* Barra de Topo com Seletor Rápido de Tema */}
+                <header className="h-14 border-b border-gray-200 bg-white px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 shadow-2xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                        <button 
+                            type="button"
+                            onClick={() => setIsMobileMenuOpen(true)} 
+                            className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 md:hidden transition-colors cursor-pointer shrink-0" 
+                            title="Abrir Menu de Navegação"
+                        >
+                            <Menu className="w-5 h-5" />
+                        </button>
+                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 min-w-0">
+                            <span className="text-gray-400 hidden sm:inline">HubDesk</span>
+                            <span className="text-gray-300 hidden sm:inline">/</span>
+                            <span className="text-gray-900 font-bold truncate">
+                                {currentTabLabel}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <ThemeSelector variant="compact" />
+                    </div>
+                </header>
+
+                <div className="flex-1 overflow-hidden flex flex-col">
+                    {renderContent()}
+                </div>
                 <ExtensionsBalloon />
             </main>
 

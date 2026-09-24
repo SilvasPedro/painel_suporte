@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
 import { NotificationProvider } from './context/NotificationContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { messaging } from './services/firebase';
 import { getToken } from 'firebase/messaging';
 import { doc, updateDoc } from 'firebase/firestore';
@@ -192,18 +193,20 @@ const AppRoutes = () => {
 // ==========================================
 function App() {
     return (
-        <NotificationProvider>
-            <AuthProvider>
-                <PermissionsProvider>
-                    <BrowserRouter>
-                        <NotificationManager />
-                        <AppRoutes />
-                        <FloatingChat />
-                        <FloatingExtensions />
-                    </BrowserRouter>
-                </PermissionsProvider>
-            </AuthProvider>
-        </NotificationProvider>
+        <ThemeProvider>
+            <NotificationProvider>
+                <AuthProvider>
+                    <PermissionsProvider>
+                        <BrowserRouter>
+                            <NotificationManager />
+                            <AppRoutes />
+                            <FloatingChat />
+                            <FloatingExtensions />
+                        </BrowserRouter>
+                    </PermissionsProvider>
+                </AuthProvider>
+            </NotificationProvider>
+        </ThemeProvider>
     );
 }
 

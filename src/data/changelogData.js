@@ -1,13 +1,43 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.4';
+export const CURRENT_VERSION = 'v3.5';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.4',
+    version: 'v3.5',
     date: 'Setembro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
+    summary: 'Novos modos globais de visualização: Modo Escuro de alto contraste e Modo Morno para conforto visual sem extremos, disponíveis em todas as telas.',
+    items: [
+      {
+        icon: Moon,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Modo Escuro (Alto Contraste & Tons Profundos)',
+        category: 'Aparência & Ergonomia',
+        description: 'Desenvolvido especialmente para ambientes de baixa luminosidade e plantões noturnos. Apresenta fundo preto obsidiana (#09090b), superfícies carvão profundo (#121215), tipografia nítida de alto contraste (#ffffff) e destaque vibrante nos gráficos e indicadores, proporcionando máximo alívio contra luz azul.'
+      },
+      {
+        icon: Coffee,
+        iconColor: 'text-amber-700 bg-amber-600/10 border-amber-600/20',
+        title: 'Modo Morno (Equilíbrio Sépia, Linho & Conforto Ocular)',
+        category: 'Aparência & Ergonomia',
+        description: 'O meio-termo ideal para quem não se adapta ao branco luminoso e nem ao escuro total. Paleta inspirada em linho aconchegante, pedra e tons terrosos suaves com tipografia espresso (#261f1c), preservando a barra lateral escura original e eliminando a fadiga visual sem poluição luminosa.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Seletor de Modo no Canto Superior Direito',
+        category: 'Navegação & Sistema',
+        description: 'Alternância instantânea de temas em 1 clique posicionada de forma limpa e padronizada exclusivamente no canto superior direito do sistema, presente tanto na visão de Administrador quanto de Colaborador com persistência automática no navegador.'
+      }
+    ]
+  },
+  {
+    version: 'v3.4',
+    date: 'Setembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Nova fórmula equitativa de Líder Geral, Dashboard 360° do Colaborador, Organograma Operacional reformulado com RBAC inteligente e Central de Demanda Diária.',
     items: [
       {

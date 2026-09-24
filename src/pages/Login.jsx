@@ -109,7 +109,7 @@ const Login = () => {
           
           <div>
             {/* Topo: Logo & Identidade Visual */}
-            <div className="flex items-center justify-between gap-4 mb-8">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-zinc-900 border border-zinc-800/90 flex items-center justify-center shrink-0 p-2 shadow-inner">
                   <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />

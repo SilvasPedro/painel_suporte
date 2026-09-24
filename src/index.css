@@ -22,7 +22,7 @@
     opacity: 0.75;
     transform: translateY(-10vh) scale(0.85);
   }
-  35% {
+  25% {
     opacity: 0.7;
     transform: translateY(-30vh) scale(1);
   }
@@ -50,4 +50,476 @@
 
 .animate-float {
   animation: floatBubble70 ease-out infinite;
+}
+
+/* ========================================================================== */
+/* SISTEMA GLOBAL DE TEMAS: ESCURO & MORNO                                    */
+/* ========================================================================== */
+
+/* Transições suaves para alternância de tema */
+html, body {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 1. MODO ESCURO (ALTO CONTRASTE & TONS PROFUNDOS)                           */
+/* -------------------------------------------------------------------------- */
+[data-theme="dark"],
+html[data-theme="dark"] body {
+  color-scheme: dark;
+  background-color: #09090b !important;
+  color: #f4f4f5;
+}
+
+/* Telas principais e canva */
+[data-theme="dark"] .bg-gray-50,
+[data-theme="dark"] .bg-zinc-50,
+[data-theme="dark"] .bg-slate-50,
+[data-theme="dark"] main.bg-gray-50 {
+  background-color: #09090b !important;
+}
+
+/* Cartões, Modais, Paineis e Superfícies Brancas */
+[data-theme="dark"] .bg-white,
+[data-theme="dark"] .bg-white\/80,
+[data-theme="dark"] .bg-white\/90,
+[data-theme="dark"] .bg-white\/95 {
+  background-color: #121215 !important;
+}
+
+/* Superfícies secundárias e cabeçalhos de tabela */
+[data-theme="dark"] .bg-gray-100,
+[data-theme="dark"] .bg-zinc-100,
+[data-theme="dark"] .bg-slate-100,
+[data-theme="dark"] .bg-gray-50\/50,
+[data-theme="dark"] .bg-gray-50\/80 {
+  background-color: #18181c !important;
+}
+
+[data-theme="dark"] .bg-gray-200,
+[data-theme="dark"] .bg-zinc-200,
+[data-theme="dark"] .bg-gray-200\/80 {
+  background-color: #222228 !important;
+}
+
+/* Tipografia de Alto Contraste */
+[data-theme="dark"] .text-gray-900,
+[data-theme="dark"] .text-zinc-900,
+[data-theme="dark"] .text-slate-900,
+[data-theme="dark"] .text-black {
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .text-gray-800,
+[data-theme="dark"] .text-zinc-800 {
+  color: #f4f4f5 !important;
+}
+
+[data-theme="dark"] .text-gray-700,
+[data-theme="dark"] .text-zinc-700 {
+  color: #e4e4e7 !important;
+}
+
+[data-theme="dark"] .text-gray-600,
+[data-theme="dark"] .text-zinc-600 {
+  color: #a1a1aa !important;
+}
+
+[data-theme="dark"] .text-gray-500,
+[data-theme="dark"] .text-zinc-500 {
+  color: #8b8b99 !important;
+}
+
+[data-theme="dark"] .text-gray-400,
+[data-theme="dark"] .text-zinc-400 {
+  color: #71717a !important;
+}
+
+/* Bordas e Divisores Escuros Nítidos */
+[data-theme="dark"] .border-gray-200,
+[data-theme="dark"] .border-zinc-200,
+[data-theme="dark"] .border-slate-200,
+[data-theme="dark"] .border-gray-300,
+[data-theme="dark"] .border-zinc-300,
+[data-theme="dark"] .border-gray-200\/80,
+[data-theme="dark"] .border-zinc-200\/80,
+[data-theme="dark"] .border-gray-300\/80 {
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] .border-gray-100,
+[data-theme="dark"] .border-zinc-100 {
+  border-color: #1f1f23 !important;
+}
+
+[data-theme="dark"] .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+[data-theme="dark"] .divide-zinc-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #27272a !important;
+}
+
+/* Controles de Formulário (Inputs, Selects, Textareas) no modo Escuro */
+[data-theme="dark"] input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]),
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background-color: #151519 !important;
+  color: #ffffff !important;
+  border-color: #2e2e36 !important;
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #6b6b7a !important;
+}
+
+[data-theme="dark"] select option {
+  background-color: #151519 !important;
+  color: #ffffff !important;
+}
+
+/* Tabelas e Linhas */
+[data-theme="dark"] table th {
+  background-color: #16161b !important;
+  color: #e4e4e7 !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="dark"] table td {
+  border-color: #202025 !important;
+}
+
+[data-theme="dark"] tbody tr:hover {
+  background-color: #1a1a22 !important;
+}
+
+/* Badges e Pílulas Translúcidas em Modo Escuro */
+[data-theme="dark"] .bg-emerald-50,
+[data-theme="dark"] .bg-emerald-100 {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border-color: rgba(16, 185, 129, 0.3) !important;
+}
+
+[data-theme="dark"] .bg-amber-50,
+[data-theme="dark"] .bg-amber-100 {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+[data-theme="dark"] .bg-red-50,
+[data-theme="dark"] .bg-red-100 {
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  color: #f87171 !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+}
+
+[data-theme="dark"] .bg-blue-50,
+[data-theme="dark"] .bg-blue-100 {
+  background-color: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+[data-theme="dark"] .bg-purple-50,
+[data-theme="dark"] .bg-purple-100 {
+  background-color: rgba(168, 85, 247, 0.15) !important;
+  color: #c084fc !important;
+  border-color: rgba(168, 85, 247, 0.3) !important;
+}
+
+/* Gráficos Recharts no Modo Escuro */
+[data-theme="dark"] .recharts-cartesian-grid-horizontal line,
+[data-theme="dark"] .recharts-cartesian-grid-vertical line {
+  stroke: #27272a !important;
+}
+
+[data-theme="dark"] .recharts-text {
+  fill: #8b8b99 !important;
+}
+
+[data-theme="dark"] .recharts-default-tooltip {
+  background-color: #16161b !important;
+  border-color: #2e2e38 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6) !important;
+}
+
+/* Barra de rolagem escurecida */
+[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #09090b;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 4px;
+}
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* -------------------------------------------------------------------------- */
+/* 2. MODO MORNO (EQUILÍBRIO SÉPIA, LINHO & PEDRA PARA CONFORTO OCULAR)       */
+/* A barra lateral (sidebar) permanece 100% original e inalterada              */
+/* -------------------------------------------------------------------------- */
+[data-theme="warm"],
+html[data-theme="warm"] body {
+  color-scheme: light;
+  background-color: #dfd7ca !important;
+  color: #261f1c;
+}
+
+/* Telas principais e canva no modo morno */
+[data-theme="warm"] main.bg-gray-50,
+[data-theme="warm"] main .bg-gray-50,
+[data-theme="warm"] main .bg-zinc-50,
+[data-theme="warm"] main .bg-slate-50 {
+  background-color: #dfd7ca !important;
+}
+
+/* Cartões, Modais e Superfícies (Linho e Pedra Aconchegante) */
+[data-theme="warm"] main .bg-white,
+[data-theme="warm"] main .bg-white\/80,
+[data-theme="warm"] main .bg-white\/90,
+[data-theme="warm"] main .bg-white\/95,
+[data-theme="warm"] header.bg-white,
+[data-theme="warm"] .fixed .bg-white {
+  background-color: #ede6dc !important;
+}
+
+/* Superfícies secundárias, cabeçalhos de tabela */
+[data-theme="warm"] main .bg-gray-100,
+[data-theme="warm"] main .bg-zinc-100,
+[data-theme="warm"] main .bg-slate-100,
+[data-theme="warm"] main .bg-gray-50\/50,
+[data-theme="warm"] main .bg-gray-50\/80 {
+  background-color: #ded5c7 !important;
+}
+
+[data-theme="warm"] main .bg-gray-200,
+[data-theme="warm"] main .bg-zinc-200,
+[data-theme="warm"] main .bg-gray-200\/80,
+[data-theme="warm"] header .bg-gray-200\/80 {
+  background-color: #d2c6b4 !important;
+}
+
+/* Tipografia Quente, Orgânica e Equilibrada (apenas fora da barra lateral) */
+[data-theme="warm"] main .text-gray-900,
+[data-theme="warm"] main .text-zinc-900,
+[data-theme="warm"] main .text-slate-900,
+[data-theme="warm"] main .text-black,
+[data-theme="warm"] header .text-gray-900,
+[data-theme="warm"] .fixed .text-gray-900 {
+  color: #261f1c !important;
+}
+
+[data-theme="warm"] main .text-gray-800,
+[data-theme="warm"] main .text-zinc-800,
+[data-theme="warm"] header .text-gray-800,
+[data-theme="warm"] .fixed .text-gray-800 {
+  color: #382e28 !important;
+}
+
+[data-theme="warm"] main .text-gray-700,
+[data-theme="warm"] main .text-zinc-700,
+[data-theme="warm"] header .text-gray-700,
+[data-theme="warm"] .fixed .text-gray-700 {
+  color: #4a3e37 !important;
+}
+
+[data-theme="warm"] main .text-gray-600,
+[data-theme="warm"] main .text-zinc-600,
+[data-theme="warm"] header .text-gray-600,
+[data-theme="warm"] .fixed .text-gray-600 {
+  color: #615248 !important;
+}
+
+[data-theme="warm"] main .text-gray-500,
+[data-theme="warm"] main .text-zinc-500,
+[data-theme="warm"] header .text-gray-500,
+[data-theme="warm"] .fixed .text-gray-500 {
+  color: #78665a !important;
+}
+
+[data-theme="warm"] main .text-gray-400,
+[data-theme="warm"] main .text-zinc-400,
+[data-theme="warm"] header .text-gray-400,
+[data-theme="warm"] .fixed .text-gray-400 {
+  color: #948275 !important;
+}
+
+/* Bordas Orgânicas Cor de Argila / Pedra Natural */
+[data-theme="warm"] main .border-gray-200,
+[data-theme="warm"] main .border-zinc-200,
+[data-theme="warm"] main .border-slate-200,
+[data-theme="warm"] main .border-gray-300,
+[data-theme="warm"] main .border-zinc-300,
+[data-theme="warm"] main .border-gray-200\/80,
+[data-theme="warm"] main .border-zinc-200\/80,
+[data-theme="warm"] main .border-gray-300\/80,
+[data-theme="warm"] header.border-gray-200,
+[data-theme="warm"] header .border-gray-300\/80,
+[data-theme="warm"] .fixed .border-gray-200 {
+  border-color: #cdbfae !important;
+}
+
+[data-theme="warm"] main .border-gray-100,
+[data-theme="warm"] main .border-zinc-100 {
+  border-color: #dcd1c2 !important;
+}
+
+[data-theme="warm"] main .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+[data-theme="warm"] main .divide-zinc-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #cdbfae !important;
+}
+
+/* Preservação estrita e absoluta da Barra Lateral (aside) no Modo Morno */
+[data-theme="warm"] aside,
+[data-theme="warm"] .mobile-drawer-sidebar {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  border-color: #27272a !important;
+}
+
+[data-theme="warm"] aside .bg-zinc-950,
+[data-theme="warm"] aside .bg-zinc-950\/50,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-950,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-950\/50 {
+  background-color: #09090b !important;
+}
+
+[data-theme="warm"] aside .bg-zinc-900,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-900 {
+  background-color: #18181b !important;
+}
+
+[data-theme="warm"] aside .border-zinc-800,
+[data-theme="warm"] aside .border-zinc-800\/80,
+[data-theme="warm"] .mobile-drawer-sidebar .border-zinc-800 {
+  border-color: #27272a !important;
+}
+
+[data-theme="warm"] aside .text-white,
+[data-theme="warm"] .mobile-drawer-sidebar .text-white {
+  color: #ffffff !important;
+}
+
+[data-theme="warm"] aside .text-zinc-300,
+[data-theme="warm"] .mobile-drawer-sidebar .text-zinc-300 {
+  color: #d4d4d8 !important;
+}
+
+[data-theme="warm"] aside .text-zinc-400,
+[data-theme="warm"] .mobile-drawer-sidebar .text-zinc-400 {
+  color: #a1a1aa !important;
+}
+
+[data-theme="warm"] aside .text-zinc-500,
+[data-theme="warm"] .mobile-drawer-sidebar .text-zinc-500 {
+  color: #71717a !important;
+}
+
+/* Controles de Formulário no modo Morno */
+[data-theme="warm"] input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]),
+[data-theme="warm"] select,
+[data-theme="warm"] textarea {
+  background-color: #f5efe6 !important;
+  color: #261f1c !important;
+  border-color: #cdbfae !important;
+}
+
+[data-theme="warm"] input::placeholder,
+[data-theme="warm"] textarea::placeholder {
+  color: #948275 !important;
+}
+
+[data-theme="warm"] select option {
+  background-color: #ede6dc !important;
+  color: #261f1c !important;
+}
+
+/* Tabelas e Linhas no Modo Morno */
+[data-theme="warm"] table th {
+  background-color: #ded5c7 !important;
+  color: #382e28 !important;
+  border-color: #cdbfae !important;
+}
+
+[data-theme="warm"] table td {
+  border-color: #dcd1c2 !important;
+}
+
+[data-theme="warm"] tbody tr:hover {
+  background-color: #e5ded2 !important;
+}
+
+/* Badges e Pílulas no Modo Morno (Tons terrosos e relaxantes) */
+[data-theme="warm"] .bg-emerald-50,
+[data-theme="warm"] .bg-emerald-100 {
+  background-color: #e3ede5 !important;
+  color: #235936 !important;
+  border-color: #bdd6c3 !important;
+}
+
+[data-theme="warm"] .bg-amber-50,
+[data-theme="warm"] .bg-amber-100 {
+  background-color: #f7ede0 !important;
+  color: #8c5318 !important;
+  border-color: #ebd3b6 !important;
+}
+
+[data-theme="warm"] .bg-red-50,
+[data-theme="warm"] .bg-red-100 {
+  background-color: #fce8e6 !important;
+  color: #992828 !important;
+  border-color: #f3c7c5 !important;
+}
+
+[data-theme="warm"] .bg-blue-50,
+[data-theme="warm"] .bg-blue-100 {
+  background-color: #e3ecf5 !important;
+  color: #245682 !important;
+  border-color: #bad3eb !important;
+}
+
+[data-theme="warm"] .bg-purple-50,
+[data-theme="warm"] .bg-purple-100 {
+  background-color: #ede7f5 !important;
+  color: #5d338a !important;
+  border-color: #d2c4e8 !important;
+}
+
+/* Gráficos Recharts no Modo Morno */
+[data-theme="warm"] .recharts-cartesian-grid-horizontal line,
+[data-theme="warm"] .recharts-cartesian-grid-vertical line {
+  stroke: #cdbfae !important;
+}
+
+[data-theme="warm"] .recharts-text {
+  fill: #78665a !important;
+}
+
+[data-theme="warm"] .recharts-default-tooltip {
+  background-color: #ede6dc !important;
+  border-color: #cdbfae !important;
+  color: #261f1c !important;
+  box-shadow: 0 10px 25px -5px rgba(50, 40, 30, 0.2) !important;
+}
+
+/* Barra de rolagem no Modo Morno */
+[data-theme="warm"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+[data-theme="warm"] ::-webkit-scrollbar-track {
+  background: #dfd7ca;
+}
+[data-theme="warm"] ::-webkit-scrollbar-thumb {
+  background: #b8a896;
+  border-radius: 4px;
+}
+[data-theme="warm"] ::-webkit-scrollbar-thumb:hover {
+  background: #a3927f;
 }
