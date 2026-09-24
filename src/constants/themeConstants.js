@@ -33,14 +33,14 @@ export const THEMES = {
     id: 'dark',
     name: 'Modo Escuro',
     shortName: 'Escuro',
-    badge: 'Alto Contraste',
-    description: 'Tons profundos de obsidiana e carvão em contraste total com tipografia ultra nítida. Máximo descanso ocular em ambientes noturnos.',
+    badge: 'Suave & Agradável',
+    description: 'Paleta escura refinada em tons suaves de ardósia e grafite com iluminação equilibrada e descanso visual prolongado sem contrastes agressivos.',
     icon: Moon,
     activeColor: 'text-red-400 bg-red-500/15 border-red-500/30',
     dotColor: 'bg-red-500',
-    swatchBg: '#09090b',
-    swatchCard: '#121215',
-    swatchBorder: '#27272a',
-    swatchText: '#ffffff'
+    swatchBg: '#0f1115',
+    swatchCard: '#181a20',
+    swatchBorder: '#282b35',
+    swatchText: '#e4e6ea'
   }
 };

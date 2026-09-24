@@ -440,7 +440,7 @@ const DataManager = () => {
     };
 
     return (
-        <div className="flex-1 p-4 sm:p-6 bg-gray-50/80 h-full overflow-y-auto flex flex-col space-y-4">
+        <div className="flex-1 p-4 sm:p-6 bg-gray-50 h-full overflow-y-auto flex flex-col space-y-4">
             {/* CABEÇALHO DA PÁGINA */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs shrink-0">
                 <div className="flex items-center gap-3">

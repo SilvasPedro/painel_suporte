@@ -455,7 +455,7 @@ const MyHistory = ({ currentUserId }) => {
     };
 
     return (
-        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto flex flex-col bg-gray-50/70 font-sans">
+        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto flex flex-col bg-gray-50 font-sans">
             
             {/* CABEÇALHO DA PÁGINA */}
             <header className="mb-6 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200/90 shadow-2xs shrink-0 flex flex-col sm:flex-row justify-between sm:items-center gap-4">

@@ -591,12 +591,12 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto">
+        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col space-y-8">
 
             {/* CARDS DE PLANTÃO */}
-            <div className="mb-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Card Plantão Hoje */}
-                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${myTaskToday ? 'bg-red-900 text-white border-red-900 shadow-sm' : 'bg-white/60 backdrop-blur-xl border-white/80'}`}>
+                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-xs ${myTaskToday ? 'bg-red-900 text-white border-red-900 shadow-sm' : 'bg-white border-gray-200'}`}>
                     <div className={`p-3 rounded-lg ${myTaskToday ? 'bg-red-700' : 'bg-gray-100'}`}>
                         <CalendarDays className={`w-6 h-6 ${myTaskToday ? 'text-white' : 'text-gray-500'}`} />
                     </div>
@@ -609,7 +609,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
 
                 {/* Card Próximo Domingo */}
-                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.04)] ${nextSundayShift ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white/60 backdrop-blur-xl border-white/80'}`}>
+                <div className={`p-4 rounded-xl border flex items-center gap-4 shadow-xs ${nextSundayShift ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white border-gray-200'}`}>
                     <div className={`p-3 rounded-lg ${nextSundayShift ? 'bg-emerald-700' : 'bg-gray-100'}`}>
                         <Users className={`w-6 h-6 ${nextSundayShift ? 'text-white' : 'text-gray-500'}`} />
                     </div>
@@ -621,7 +621,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                     </div>
                 </div>
             </div>
-            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center mb-8 bg-white/60 backdrop-blur-xl p-6 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] gap-4 shrink-0">
+            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center bg-white p-6 rounded-xl border border-gray-200 shadow-xs gap-4 shrink-0">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900">Meu Desempenho</h1>
                     <p className="text-sm text-gray-500">Visão geral de indicadores e qualidade.</p>
@@ -696,9 +696,9 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 <h2 className="text-[11px] font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-4"><TrendingUp className="w-4 h-4 text-gray-500" /> Evolução Temporal</h2>
                 {chartData.length === 0 ? <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center text-gray-400">Nenhuma avaliação registrada para desenhar o gráfico.</div> : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">Produtividade</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" /></AreaChart></ResponsiveContainer></div></div>
-                        <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">TMA Telefonia</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Tel"]} /><Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" /></AreaChart></ResponsiveContainer></div></div>
-                        <div className="bg-white/60 backdrop-blur-xl p-5 rounded-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">TMA Huggy</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Huggy"]} /><Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" /></AreaChart></ResponsiveContainer></div></div>
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">Produtividade</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10b981" stopOpacity={0.3} /><stop offset="95%" stopColor="#10b981" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} /><Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" /></AreaChart></ResponsiveContainer></div></div>
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">TMA Telefonia</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} /><stop offset="95%" stopColor="#3b82f6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Tel"]} /><Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" /></AreaChart></ResponsiveContainer></div></div>
+                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs h-72 flex flex-col"><h3 className="text-sm font-bold text-gray-700 mb-4 shrink-0">TMA Huggy</h3><div className="flex-1 min-h-0"><ResponsiveContainer width="100%" height="100%"><AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}><defs><linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} /><stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} /></linearGradient></defs><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" /><XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} /><YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} /><Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Huggy"]} /><Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" /></AreaChart></ResponsiveContainer></div></div>
                     </div>
                 )}
             </div>
@@ -707,7 +707,7 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 };
 
 const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
-    <div className="bg-white/60 backdrop-blur-xl rounded-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] p-5 border border-white/80 flex flex-col relative overflow-hidden h-full">
+    <div className="bg-white rounded-xl shadow-xs p-5 border border-gray-200 flex flex-col relative overflow-hidden h-full">
         <div className="flex justify-between items-start mb-2">
             <h3 className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{title}</h3>
             <div className="p-1 bg-gray-50 rounded-full border border-gray-100">{icon}</div>

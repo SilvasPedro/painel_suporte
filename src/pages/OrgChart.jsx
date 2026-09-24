@@ -464,7 +464,7 @@ const OrgChart = ({ readOnly }) => {
 
     if (loading && allCollaborators.length === 0) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-zinc-50/80 h-full p-8">
+            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 h-full p-8">
                 <Loader2 className="w-10 h-10 text-red-600 animate-spin mb-3" />
                 <p className="text-sm font-semibold text-zinc-600">Carregando dados do organograma...</p>
             </div>
@@ -472,7 +472,7 @@ const OrgChart = ({ readOnly }) => {
     }
 
     return (
-        <div className="h-full overflow-y-auto w-full bg-zinc-50/60 flex flex-col">
+        <div className="h-full overflow-y-auto w-full bg-gray-50 flex flex-col">
             <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6 pb-16 flex-1 flex flex-col">
 
                 {/* ======================================================== */}

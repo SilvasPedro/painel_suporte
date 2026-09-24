@@ -319,7 +319,7 @@ export default function Audits() {
     }
 
     return (
-        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto bg-gray-50/70 flex flex-col">
+        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
             {/* Cabeçalho da Página */}
             <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs shrink-0">
                 <div className="flex items-center gap-3.5">

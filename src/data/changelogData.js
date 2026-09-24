@@ -13,9 +13,9 @@ export const CHANGELOG_VERSIONS = [
       {
         icon: Moon,
         iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
-        title: 'Modo Escuro (Alto Contraste & Tons Profundos)',
+        title: 'Modo Escuro (Paleta Suave, Aveludada & Ergonomia Prolongada)',
         category: 'Aparência & Ergonomia',
-        description: 'Desenvolvido especialmente para ambientes de baixa luminosidade e plantões noturnos. Apresenta fundo preto obsidiana (#09090b), superfícies carvão profundo (#121215), tipografia nítida de alto contraste (#ffffff) e destaque vibrante nos gráficos e indicadores, proporcionando máximo alívio contra luz azul.'
+        description: 'Reformulação completa do modo escuro, substituindo o preto absoluto por tons suaves e repousantes de ardósia (#0f1115) e carvão aveludado (#181a20). Unificação de todas as telas e canva sem descontinuidades, com tipografia suave e barra lateral harmonizada (#121419) para leitura contínua e sem ofuscamento.'
       },
       {
         icon: Coffee,

@@ -619,7 +619,7 @@ export default function DailyDemandLaunch() {
         sortBy !== 'date_desc';
 
     return (
-        <div className="h-full overflow-y-auto w-full bg-zinc-50/60">
+        <div className="h-full overflow-y-auto w-full bg-gray-50">
             <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6 pb-16">
                 
                 {/* ======================================================== */}
