@@ -3,7 +3,7 @@ import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, BarChart2, History, LogOut,
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
-    KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText, Menu
+    KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText, Menu, Sparkles
 } from 'lucide-react';
 import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -23,6 +23,7 @@ import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
 import MyHistory from './MyHistory';
 import MyProfile from './MyProfile';
+import { calculateUserLevel } from '../services/userProfile';
 import { CURRENT_VERSION } from '../data/changelogData';
 
 // Importação do ícone da barra de navegação (mesmo ícone do favicon)
@@ -110,9 +111,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
 
+    // Nível calculado com base nos emblemas ativos (de 1 a 8)
+    const userLevel = useMemo(() => calculateUserLevel(currentUser?.badges), [currentUser?.badges]);
+
     const currentTabLabel = useMemo(() => {
         const labels = {
             profile: 'Meu Perfil',
+            my_profile: 'Meu Perfil',
             dashboard: 'Meu Desempenho',
             history: 'Meu Histórico',
             reports: 'Relatórios Individuais',
@@ -127,6 +132,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     const renderContent = () => {
         switch (activeTab) {
             case 'profile':
+            case 'my_profile':
                 return <MyProfile currentUserId={currentUserId} currentUser={currentUser} />;
             case 'dashboard':
                 return <MyDashboardOverview currentUserId={currentUserId} currentUser={currentUser} />;
@@ -162,11 +168,6 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
-                    <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <User className="w-5 h-5" />
-                        <span className="font-medium">Meu Perfil</span>
-                    </button>
-
                     <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <BarChart2 className="w-5 h-5" />
                         <span className="font-medium">Dashboard</span>
@@ -209,20 +210,39 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
 
 
-                <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50 space-y-1">
-                    <div className="flex items-center gap-3 mb-3 px-2">
-                        <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center border border-zinc-700">
-                            <User className="w-4 h-4 text-zinc-400" />
+                <div className="p-3 border-t border-zinc-800 shrink-0 bg-zinc-950/50 space-y-1">
+                    {/* Card oficial onde detém a Role, a Foto e o Nível com clique para o Perfil */}
+                    <button 
+                        type="button"
+                        onClick={() => setActiveTab('profile')}
+                        className="w-full p-2.5 mb-2 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800/80 flex items-center gap-3 transition-colors text-left cursor-pointer group shadow-2xs"
+                        title={`Meu Perfil (v3.6) • Nível ${userLevel}`}
+                    >
+                        <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs">
+                            {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                currentUser?.name?.charAt(0) || 'C'
+                            )}
                         </div>
-                        <div className="overflow-hidden">
-                            <p className="text-sm font-medium text-white truncate" title={currentUser?.name}>
-                                {currentUser?.name || 'Colaborador'}
+                        <div className="min-w-0 flex-1">
+                            <p className="text-xs font-bold text-white group-hover:text-red-400 truncate transition-colors">
+                                {currentUser?.name || currentUser?.email?.split('@')[0] || 'Colaborador'}
                             </p>
-                            <p className="text-xs text-zinc-500 truncate" title={currentUser?.role}>
-                                {currentUser?.role || 'Atendimento'}
-                            </p>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border bg-zinc-800 text-zinc-300 border-zinc-700">
+                                    {currentUser?.role || 'Atendimento'}
+                                </span>
+                                <span 
+                                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-2xs"
+                                    title={`Nível ${userLevel} de 8 com base nos emblemas ativos`}
+                                >
+                                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                                    Nível {userLevel}
+                                </span>
+                            </div>
                         </div>
-                    </div>
+                    </button>
 
                     <button 
                         onClick={() => setIsPasswordModalOpen(true)} 
@@ -287,6 +307,39 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
+
+                        {/* Card do Usuário no Mobile com clique para Perfil e Nível */}
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setActiveTab('profile');
+                                setIsMobileMenuOpen(false);
+                            }}
+                            className="p-3 mx-3 mt-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 flex items-center gap-3 shrink-0 text-left cursor-pointer transition-colors shadow-2xs"
+                            title={`Ir para Meu Perfil • Nível ${userLevel}`}
+                        >
+                            <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs">
+                                {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                    <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    currentUser?.name?.charAt(0) || 'C'
+                                )}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-xs font-bold text-white truncate">
+                                    {currentUser?.name || currentUser?.email?.split('@')[0] || 'Colaborador'}
+                                </p>
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border bg-zinc-800 text-zinc-300 border-zinc-700">
+                                        {currentUser?.role || 'Atendimento'}
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                        <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                                        Nível {userLevel}
+                                    </span>
+                                </div>
+                            </div>
+                        </button>
 
                         <div className="p-4 flex-1 space-y-1 overflow-y-auto">
                             <button onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>

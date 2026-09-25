@@ -1,19 +1,27 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
-    User, Camera, Upload, Link as LinkIcon, Check, X, ShieldCheck,
+    Camera, Upload, Link as LinkIcon, Check, X, ShieldCheck,
     Trophy, Zap, Star, Rocket, CalendarCheck, Network, Award, Mail,
     Phone, Clock, Sun, Sunset, Moon, ExternalLink, Copy, CheckCircle2,
-    Sparkles, Plus, Trash2, Heart, Edit3, BarChart3, Loader2, Save
+    Sparkles, Plus, Trash2, Heart, Edit3, BarChart3, Loader2, Save,
+    Lock, Info, AlertCircle, Headphones
 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useAuth } from '../context/AuthContext';
+import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
 import { ROLES, normalizeRole } from '../services/rbac';
 import {
     saveUserProfileData,
+    saveSystemShiftsInfo,
     PRESET_AVATARS,
     BADGES_CATALOG,
+    SYSTEM_SHIFTS,
+    SYSTEM_SHIFTS_MAP,
+    THIRD_PARTY_SCHEDULE_INFO,
+    normalizeShiftName,
+    calculateUserLevel,
     DEFAULT_NETWORK_TAG_SUGGESTIONS,
     DEFAULT_INTEREST_SUGGESTIONS
 } from '../services/userProfile';
@@ -28,12 +36,6 @@ const BADGE_ICONS = {
     CalendarCheck,
     Network,
     Award
-};
-
-const SHIFT_INFO = {
-    'Manhã': { label: 'Manhã', hours: '06h às 14h', icon: Sun, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' },
-    'Tarde': { label: 'Tarde', hours: '14h às 22h', icon: Sunset, color: 'text-orange-500 bg-orange-500/10 border-orange-500/20' },
-    'Noite': { label: 'Noite', hours: '22h às 06h', icon: Moon, color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20' }
 };
 
 const NETWORK_LEVELS = [
@@ -60,9 +62,40 @@ const NETWORK_LEVELS = [
     }
 ];
 
+// Funções de conversão matemática de tempos para cálculos reais
+const timeToSeconds = (timeStr) => {
+    if (!timeStr || timeStr === '--' || timeStr === '--:--:--' || timeStr === '00:00:00') return 0;
+    const parts = String(timeStr).trim().split(':');
+    if (parts.length === 3) {
+        return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
+    }
+    if (parts.length === 2) {
+        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+    }
+    return 0;
+};
+
+const secondsToTime = (totalSeconds) => {
+    if (!totalSeconds || isNaN(totalSeconds) || totalSeconds <= 0) return '--:--:--';
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = Math.floor(totalSeconds % 60);
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+const calcularPontuacao = (metrics) => {
+    if (!metrics) return 0;
+    const ptsFinalizados = (Number(metrics.finalizados) || Number(metrics.Atendimentos_Finalizados) || 0) * 1;
+    const ptsLigacoes = (Number(metrics.ligAtendidas) || Number(metrics.Ligacoes_Atendidas) || 0) * 2;
+    const ptsHuggy = (Number(metrics.huggyVol) || Number(metrics.Atendimentos_Huggy) || 0) * 1;
+    const ptsPerdidas = (Number(metrics.ligPerdidas) || Number(metrics.Ligacoes_Perdidas) || 0) * -5;
+    return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
+};
+
 const getInitialFormData = (u) => {
-    const effectiveShift = u?.shift || 'Manhã';
-    const defaultHours = SHIFT_INFO[effectiveShift]?.hours || '08h às 17h';
+    const rawShift = u?.shift || 'Manhã I';
+    const normShift = normalizeShiftName(rawShift);
+    const shiftConfig = SYSTEM_SHIFTS_MAP[normShift] || SYSTEM_SHIFTS[0];
 
     return {
         name: u?.name || u?.displayName || u?.email?.split('@')[0] || '',
@@ -78,15 +111,19 @@ const getInitialFormData = (u) => {
         phone: u?.phone || '',
         additionalEmails: Array.isArray(u?.additionalEmails) ? u.additionalEmails : [],
         slackOrTeams: u?.slackOrTeams || '',
-        workHours: u?.workHours || defaultHours,
+        shift: normShift,
+        workHours: u?.workHours || shiftConfig.hours,
         badges: Array.isArray(u?.badges) ? u.badges : ['top_tma', 'destaque_qa']
     };
 };
 
 const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const { currentUser: authContextUser } = useAuth();
+    const { isMasterAdmin, normalizedRole } = usePermissions();
     const { showToast } = useNotification();
     const user = propUser || authContextUser;
+
+    const isGestor = isMasterAdmin || normalizedRole === 'gestor';
 
     const [saving, setSaving] = useState(false);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -117,65 +154,155 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     }, [user]);
 
-    // Métricas reais do colaborador
-    const [metrics, setMetrics] = useState({
-        totalFinalizados: 0,
-        totalLigacoes: 0,
-        tmaMedio: '--:--:--',
-        qaScore: 0,
-        evalCount: 0
+    // Métricas reais do colaborador (SEM MOCK)
+    const hasTargetUser = Boolean((user?.firestoreId || user?.uid || currentUserId) || user?.name || user?.email);
+    const [realMetrics, setRealMetrics] = useState({
+        loading: hasTargetUser,
+        mediaTmaTelefonia: '--:--:--',
+        mediaTmaChat: '--:--:--',
+        mediaPontos: '--',
+        percentualAuditorias: '--%',
+        totalAvaliacoes: 0,
+        totalAuditorias: 0
     });
+
+    // Carrega dados 100% reais do Firestore para o colaborador (SEM MOCK)
     useEffect(() => {
         const targetId = user?.firestoreId || user?.uid || currentUserId;
-        if (!targetId) return;
+        const targetName = (user?.name || user?.displayName || '').trim().toLowerCase();
+        const targetEmail = (user?.email || '').trim().toLowerCase();
 
-        const fetchMetrics = async () => {
-            try {
-                // Busca avaliações semanais
-                const qEvals = query(collection(db, 'weekly_evaluations'), where('collaboratorId', '==', targetId));
-                const snapEvals = await getDocs(qEvals);
+        if (!targetId && !targetName && !targetEmail) {
+            return;
+        }
 
-                let totalFin = 0;
-                let totalLig = 0;
-                let count = 0;
+        let isMounted = true;
 
-                snapEvals.forEach(d => {
-                    const data = d.data();
-                    totalFin += Number(data.finalizados || data.Atendimentos_Finalizados || 0);
-                    totalLig += Number(data.ligAtendidas || data.Ligacoes_Atendidas || 0);
-                    count++;
-                });
+        // 1. Listener em tempo real para avaliações semanais reais
+        const unsubEvals = onSnapshot(collection(db, 'weekly_evaluations'), (snap) => {
+            if (!isMounted) return;
+            const evalDocs = [];
+            snap.forEach(d => {
+                const dt = d.data();
+                const matchesId = (targetId && (dt.colabId === targetId || dt.collaboratorId === targetId || dt.uid === targetId));
+                const matchesName = targetName && (
+                    (dt.colabName && dt.colabName.trim().toLowerCase() === targetName) ||
+                    (dt.collaboratorName && dt.collaboratorName.trim().toLowerCase() === targetName) ||
+                    (dt.name && dt.name.trim().toLowerCase() === targetName)
+                );
+                const matchesEmail = targetEmail && (
+                    (dt.email && dt.email.trim().toLowerCase() === targetEmail) ||
+                    (dt.colabEmail && dt.colabEmail.trim().toLowerCase() === targetEmail)
+                );
+                if (matchesId || matchesName || matchesEmail) {
+                    evalDocs.push({ id: d.id, ...dt });
+                }
+            });
 
-                // Busca auditorias QA
-                const qAudits = query(collection(db, 'audits'), where('collaboratorId', '==', targetId));
-                const snapAudits = await getDocs(qAudits);
-                let totalQaScore = 0;
-                let qaCount = 0;
+            let totalTmaTelSec = 0;
+            let countTmaTel = 0;
+            let totalTmaChatSec = 0;
+            let countTmaChat = 0;
+            let totalScoreSum = 0;
+            let countEvals = 0;
 
-                snapAudits.forEach(d => {
-                    const data = d.data();
-                    const score = Number(data.score || data.notaFinal || data.percentage || 0);
-                    if (score > 0) {
-                        totalQaScore += score;
-                        qaCount++;
-                    }
-                });
+            evalDocs.forEach(dt => {
+                countEvals++;
 
-                const avgQa = qaCount > 0 ? Math.round(totalQaScore / qaCount) : 95;
+                // Média TMA Telefonia real
+                const tmaTelStr = dt.TMA_Telefonia || dt.tmaTelefonia || dt.tma_tel;
+                const telSec = timeToSeconds(tmaTelStr);
+                if (telSec > 0 && telSec < 86400) {
+                    totalTmaTelSec += telSec;
+                    countTmaTel++;
+                }
 
-                setMetrics({
-                    totalFinalizados: totalFin > 0 ? totalFin : (count > 0 ? count * 45 : 124),
-                    totalLigacoes: totalLig > 0 ? totalLig : 86,
-                    tmaMedio: user?.tmaMeta || '00:18:30',
-                    qaScore: avgQa,
-                    evalCount: count
-                });
-            } catch (err) {
-                console.warn('Erro ao carregar métricas para o perfil:', err);
+                // Média TMA Chat (Huggy) real
+                const tmaChatStr = dt.TMA_Huggy || dt.tmaHuggy || dt.tma_chat || dt.tmaChat;
+                const chatSec = timeToSeconds(tmaChatStr);
+                if (chatSec > 0 && chatSec < 86400) {
+                    totalTmaChatSec += chatSec;
+                    countTmaChat++;
+                }
+
+                // Média de Pontos real
+                const pts = dt.pontuacao !== undefined ? Number(dt.pontuacao) : calcularPontuacao(dt);
+                totalScoreSum += pts;
+            });
+
+            const mediaTmaTel = countTmaTel > 0 ? secondsToTime(totalTmaTelSec / countTmaTel) : '--:--:--';
+            const mediaTmaChat = countTmaChat > 0 ? secondsToTime(totalTmaChatSec / countTmaChat) : '--:--:--';
+            const mediaPts = countEvals > 0 ? `${(totalScoreSum / countEvals).toFixed(1)} pts` : '--';
+
+            setRealMetrics(prev => ({
+                ...prev,
+                mediaTmaTelefonia: mediaTmaTel,
+                mediaTmaChat: mediaTmaChat,
+                mediaPontos: mediaPts,
+                totalAvaliacoes: countEvals
+            }));
+        }, (err) => {
+            console.warn('Aviso no listener de weekly_evaluations:', err);
+        });
+
+        // 2. Listener em tempo real para auditorias QA reais
+        const unsubAudits = onSnapshot(collection(db, 'qa_audits'), (snap) => {
+            if (!isMounted) return;
+            const auditDocs = [];
+            snap.forEach(d => {
+                const dt = d.data();
+                const matchesId = (targetId && (dt.colabId === targetId || dt.collaboratorId === targetId || dt.uid === targetId));
+                const matchesName = targetName && (
+                    (dt.colabName && dt.colabName.trim().toLowerCase() === targetName) ||
+                    (dt.collaboratorName && dt.collaboratorName.trim().toLowerCase() === targetName) ||
+                    (dt.name && dt.name.trim().toLowerCase() === targetName)
+                );
+                if (matchesId || matchesName) {
+                    auditDocs.push({ id: d.id, ...dt });
+                }
+            });
+
+            let totalAuditScoreSum = 0;
+            let countAuditsWithScore = 0;
+            let countConforme = 0;
+
+            auditDocs.forEach(dt => {
+                const sc = Number(dt.score ?? dt.notaFinal ?? dt.percentage);
+                if (!isNaN(sc) && sc > 0) {
+                    totalAuditScoreSum += sc;
+                    countAuditsWithScore++;
+                }
+                if (dt.status === 'Conforme' || dt.conforme === true) {
+                    countConforme++;
+                }
+            });
+
+            let percentualAuditorias = '--%';
+            if (countAuditsWithScore > 0) {
+                percentualAuditorias = `${Math.round(totalAuditScoreSum / countAuditsWithScore)}%`;
+            } else if (auditDocs.length > 0) {
+                percentualAuditorias = `${((countConforme / auditDocs.length) * 100).toFixed(1)}%`;
             }
-        };
 
-        fetchMetrics();
+            setRealMetrics(prev => ({
+                ...prev,
+                loading: false,
+                percentualAuditorias,
+                totalAuditorias: auditDocs.length
+            }));
+        }, (err) => {
+            console.warn('Aviso no listener de qa_audits:', err);
+            setRealMetrics(prev => ({ ...prev, loading: false }));
+        });
+
+        // Garante persistência das configurações de turnos e terceirizada no sistema
+        saveSystemShiftsInfo();
+
+        return () => {
+            isMounted = false;
+            unsubEvals();
+            unsubAudits();
+        };
     }, [user, currentUserId]);
 
     // Role formatada
@@ -184,23 +311,16 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         return ROLES.find(r => r.id === key) || ROLES[3];
     }, [user?.role]);
 
-    // Turno e horários
-    const shiftData = useMemo(() => {
-        const s = user?.shift || 'Manhã';
-        return SHIFT_INFO[s] || SHIFT_INFO['Manhã'];
-    }, [user?.shift]);
+    // Turno atual normalizado
+    const currentShift = useMemo(() => {
+        const norm = normalizeShiftName(formData.shift);
+        return SYSTEM_SHIFTS_MAP[norm] || SYSTEM_SHIFTS[0];
+    }, [formData.shift]);
 
-    const ShiftIcon = shiftData.icon;
-
-    // Conquistas desbloqueadas (badges)
-    const unlockedBadges = useMemo(() => {
-        const list = new Set(formData.badges || []);
-        // Adiciona badges por mérito de dados
-        if (metrics.totalFinalizados >= 100) list.add('top_finalizacoes');
-        if (formData.networkKnowledge === 'Avançado') list.add('mestre_redes');
-        if (metrics.qaScore >= 90) list.add('destaque_qa');
-        return Array.from(list);
-    }, [formData.badges, metrics, formData.networkKnowledge]);
+    // Nível calculado com base nos emblemas ativos (de 1 a 8)
+    const userLevel = useMemo(() => {
+        return calculateUserLevel(formData.badges);
+    }, [formData.badges]);
 
     // Manipulação de tags de conhecimento em redes
     const handleAddSkillTag = (tagToAdd) => {
@@ -278,8 +398,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }));
     };
 
-    // Toggle de emblema ativo/destaque
+    // Controle de Emblemas (REGRA: Apenas Gestor pode alterar)
     const handleToggleBadge = (badgeId) => {
+        if (!isGestor) {
+            showToast('Permissão restrita: Apenas o Gestor pode conceder ou alterar os emblemas da equipe.', 'warning');
+            return;
+        }
         setFormData(prev => {
             const exists = prev.badges.includes(badgeId);
             const nextBadges = exists 
@@ -287,6 +411,16 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 : [...prev.badges, badgeId];
             return { ...prev, badges: nextBadges };
         });
+    };
+
+    // Alteração de Turno
+    const handleChangeShift = (shiftId) => {
+        const shiftObj = SYSTEM_SHIFTS_MAP[shiftId];
+        setFormData(prev => ({
+            ...prev,
+            shift: shiftId,
+            workHours: shiftObj ? shiftObj.hours : prev.workHours
+        }));
     };
 
     // Manipulação do Modal de Foto
@@ -333,7 +467,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             photoURL: photoPreview.trim()
         }));
         setIsPhotoModalOpen(false);
-        showToast('Foto selecionada! Lembre-se de clicar em "Salvar Alterações".', 'info');
+        showToast('Foto selecionada! Clique em "Salvar Alterações" para confirmar.', 'info');
     };
 
     const handleRemovePhoto = () => {
@@ -361,7 +495,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         if (e) e.preventDefault();
         setSaving(true);
         try {
-            await saveUserProfileData(user, formData);
+            await saveUserProfileData(user, formData, isGestor);
             showToast('Perfil atualizado com sucesso no Firebase!', 'success');
         } catch (error) {
             console.error('Erro ao salvar perfil:', error);
@@ -458,8 +592,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
                             </div>
 
-                            {/* Badges de Destaque no Topo Direito */}
+                            {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 8) */}
                             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-xs">
+                                
+                                {/* Badge de Nível (1 a 8) */}
+                                <div 
+                                    className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-amber-500/40 text-amber-900 shadow-2xs"
+                                    title={`Nível do Colaborador: ${userLevel} de 8 (${formData.badges.length} emblema(s) ativo(s))`}
+                                >
+                                    <Sparkles className="w-4 h-4 text-amber-600 animate-spin-slow" />
+                                    <span className="font-black text-amber-800">Nível {userLevel}</span>
+                                    <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.2 rounded-md">
+                                        {formData.badges.length}/8
+                                    </span>
+                                </div>
+
                                 {/* Role RBAC */}
                                 <div className={`px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 shadow-2xs ${roleInfo.badgeColor}`}>
                                     <ShieldCheck className="w-4 h-4" />
@@ -467,10 +614,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
 
                                 {/* Turno & Horário Atual */}
-                                <div className={`px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 shadow-2xs ${shiftData.color}`}>
-                                    <ShiftIcon className="w-4 h-4" />
-                                    <span>Turno: {shiftData.label}</span>
-                                    <span className="text-[10px] opacity-75 font-mono">({formData.workHours || shiftData.hours})</span>
+                                <div className={`px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 shadow-2xs ${currentShift.color}`}>
+                                    <Clock className="w-4 h-4" />
+                                    <span>{currentShift.label}</span>
+                                    <span className="text-[10px] opacity-80 font-mono">({currentShift.hours})</span>
                                 </div>
 
                                 {/* Nível de Redes Atual */}
@@ -533,7 +680,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     </div>
                 </div>
 
-                {/* 2. GRID PRINCIPAL: CONHECIMENTOS DE REDE, EMBLEMAS, CONTATOS E MÉTRICAS */}
+                {/* 2. GRID PRINCIPAL: CONHECIMENTOS DE REDE, EMBLEMAS, CONTATOS E MÉTRICAS REAIS */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     {/* COLUNA ESQUERDA (2 SPANS): HABILIDADES, REDES E EMBLEMAS */}
@@ -670,9 +817,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* CARD 2.2: EMBLEMAS & INSÍGNIAS DE FEITOS (GAMIFICAÇÃO) */}
+                        {/* CARD 2.2: EMBLEMAS & INSÍGNIAS DE FEITOS (REQUISITO: APENAS GESTOR ALTERA) */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
                                 <div>
                                     <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
                                         <Trophy className="w-4 h-4 text-amber-500" />
@@ -682,26 +829,51 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         Reconhecimento por agilidade (Top TMA), alta produtividade (Top Finalizações) e qualidade exemplar.
                                     </p>
                                 </div>
-                                <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full">
-                                    {unlockedBadges.length} de {BADGES_CATALOG.length} Desbloqueados
-                                </span>
+
+                                <div className="flex items-center gap-2">
+                                    {isGestor ? (
+                                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                            <Edit3 className="w-3 h-3 text-emerald-600" /> Gestor: Edição Liberada
+                                        </span>
+                                    ) : (
+                                        <span className="text-[11px] font-bold text-zinc-600 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                            <Lock className="w-3 h-3 text-zinc-500" /> Concedido pela Gestão
+                                        </span>
+                                    )}
+                                    <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full">
+                                        {formData.badges.length} de {BADGES_CATALOG.length} Ativos
+                                    </span>
+                                </div>
                             </div>
+
+                            {/* Aviso de Permissão para Não-Gestores */}
+                            {!isGestor && (
+                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2.5 text-xs text-amber-900">
+                                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                                    <span>
+                                        Os emblemas são homologados e alterados exclusivamente pela <strong>Gestão</strong> com base nas métricas e conquistas da operação.
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Grade de Emblemas */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                 {BADGES_CATALOG.map(badge => {
                                     const IconComponent = BADGE_ICONS[badge.iconName] || Trophy;
-                                    const isUnlocked = unlockedBadges.includes(badge.id);
+                                    const isUnlocked = formData.badges.includes(badge.id);
 
                                     return (
                                         <div
                                             key={badge.id}
-                                            onClick={() => handleToggleBadge(badge.id)}
-                                            className={`p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden flex items-start gap-3 ${
+                                            onClick={isGestor ? () => handleToggleBadge(badge.id) : undefined}
+                                            className={`p-3.5 rounded-xl border transition-all relative overflow-hidden flex items-start gap-3 ${
+                                                isGestor ? 'cursor-pointer hover:border-amber-400 active:scale-[0.99]' : 'cursor-default select-none'
+                                            } ${
                                                 isUnlocked
-                                                    ? 'border-amber-300/80 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 shadow-xs hover:border-amber-400'
-                                                    : 'border-gray-200 bg-gray-50/50 opacity-60 hover:opacity-80'
+                                                    ? 'border-amber-300/80 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 shadow-xs'
+                                                    : 'border-gray-200 bg-gray-50/50 opacity-60'
                                             }`}
+                                            title={isGestor ? 'Clique para conceder ou revogar este emblema (Exclusivo Gestor)' : 'Emblema concedido exclusivamente pela Gestão'}
                                         >
                                             {/* Ícone do Emblema */}
                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${
@@ -716,8 +888,8 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                         {badge.title}
                                                     </h3>
                                                     {isUnlocked ? (
-                                                        <span className="text-[10px] font-bold text-amber-700 bg-amber-100 border border-amber-200 px-1.5 py-0.2 rounded shrink-0">
-                                                            Ativo
+                                                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
+                                                            <Check className="w-2.5 h-2.5 text-amber-700" /> Ativo
                                                         </span>
                                                     ) : (
                                                         <span className="text-[10px] text-gray-400 font-mono shrink-0">
@@ -810,60 +982,148 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                     </div>
 
-                    {/* COLUNA DIREITA (1 SPAN): HORÁRIO DE OPERAÇÃO, CONTATOS E MÉTRICAS */}
+                    {/* COLUNA DIREITA (1 SPAN): HORÁRIO DE OPERAÇÃO, CONTATOS E MÉTRICAS REAIS */}
                     <div className="space-y-6">
 
-                        {/* CARD 2.4: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA */}
+                        {/* CARD 2.4: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
                             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
                                 <Clock className="w-4 h-4 text-red-600" />
-                                Horário de Operação Atual
+                                Horário de Expediente Oficial
                             </h2>
 
-                            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500 font-medium">Turno Oficial:</span>
-                                    <span className={`px-2.5 py-0.5 rounded-md text-xs font-bold border ${shiftData.color}`}>
-                                        {shiftData.label}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500 font-medium">Jornada / Expediente:</span>
-                                    <span className="text-xs font-mono font-bold text-gray-800">
-                                        {formData.workHours || shiftData.hours}
-                                    </span>
-                                </div>
-
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs text-gray-500 font-medium">Regime:</span>
-                                    <span className="text-xs font-bold text-gray-800">Presencial / Operação</span>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-2 border-t border-gray-200/80">
-                                    <span className="text-xs text-gray-500 font-medium">Cargo no Sistema:</span>
-                                    <span className="text-xs font-bold text-red-600">
-                                        {roleInfo.label}
-                                    </span>
+                            {/* Seletor dos 4 Turnos Oficiais */}
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-600 block mb-1.5">
+                                    Turno de Atuação:
+                                </label>
+                                <div className="space-y-2">
+                                    {SYSTEM_SHIFTS.map(shiftItem => {
+                                        const isSelected = formData.shift === shiftItem.id;
+                                        return (
+                                            <button
+                                                key={shiftItem.id}
+                                                type="button"
+                                                onClick={() => handleChangeShift(shiftItem.id)}
+                                                className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-red-50/70 border-red-500 ring-1 ring-red-300 text-red-950 font-bold'
+                                                        : 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200 text-gray-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-red-600' : 'text-gray-400'}`} />
+                                                    <span className="text-xs">{shiftItem.label}</span>
+                                                </div>
+                                                <span className="text-xs font-mono font-bold text-gray-600">
+                                                    {shiftItem.hours}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            {/* Campo para ajustar horário customizado se desejado */}
-                            <div>
-                                <label className="text-[11px] font-bold text-gray-600 block mb-1">
-                                    Ajustar Horário de Expediente:
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.workHours}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, workHours: e.target.value }))}
-                                    placeholder="Ex: 06h às 14h / 08h às 17h"
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-800"
-                                />
+                            {/* Caixa Informativa sobre a Operação Terceirizada (20:00 até 08:00) */}
+                            <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white space-y-1.5 shadow-2xs">
+                                <div className="flex items-center gap-2">
+                                    <Headphones className="w-4 h-4 text-amber-400" />
+                                    <span className="text-xs font-bold text-white tracking-wide">
+                                        {THIRD_PARTY_SCHEDULE_INFO.title}
+                                    </span>
+                                </div>
+                                <div className="text-[11px] font-mono font-bold text-amber-300">
+                                    Horário: {THIRD_PARTY_SCHEDULE_INFO.hours}
+                                </div>
+                                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                                    {THIRD_PARTY_SCHEDULE_INFO.description}
+                                </p>
                             </div>
                         </div>
 
-                        {/* CARD 2.5: CANAIS DE CONTATO & E-MAILS ADICIONAIS */}
+                        {/* CARD 2.5: MÉTRICAS OPERACIONAIS 100% REAIS (SEM DADOS MOCKADOS) */}
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
+                            <div className="border-b border-gray-100 pb-2.5 flex items-center justify-between">
+                                <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                    <BarChart3 className="w-4 h-4 text-red-600" />
+                                    Métricas Operacionais Reais
+                                </h2>
+                                <span className="text-[10px] text-gray-400 font-mono font-semibold">
+                                    {realMetrics.totalAvaliacoes} avaliações
+                                </span>
+                            </div>
+
+                            {realMetrics.loading ? (
+                                <div className="py-8 flex flex-col items-center justify-center text-center">
+                                    <Loader2 className="w-6 h-6 text-red-600 animate-spin mb-2" />
+                                    <span className="text-xs text-gray-500">Calculando métricas reais...</span>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        {/* 1. Média de TMA Telefonia */}
+                                        <div className="p-3 bg-red-50/50 rounded-xl border border-red-100">
+                                            <span className="text-[10px] font-bold text-red-700 uppercase block tracking-wider">
+                                                Média TMA Telefonia
+                                            </span>
+                                            <span className="text-base sm:text-lg font-black font-mono text-gray-900 mt-0.5 block">
+                                                {realMetrics.mediaTmaTelefonia}
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 block mt-0.5">
+                                                Chamadas de voz
+                                            </span>
+                                        </div>
+
+                                        {/* 2. Média de TMA Chat */}
+                                        <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
+                                            <span className="text-[10px] font-bold text-blue-700 uppercase block tracking-wider">
+                                                Média TMA Chat
+                                            </span>
+                                            <span className="text-base sm:text-lg font-black font-mono text-gray-900 mt-0.5 block">
+                                                {realMetrics.mediaTmaChat}
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 block mt-0.5">
+                                                Atendimentos Huggy
+                                            </span>
+                                        </div>
+
+                                        {/* 3. Média de Pontos */}
+                                        <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
+                                            <span className="text-[10px] font-bold text-emerald-700 uppercase block tracking-wider">
+                                                Média de Pontos
+                                            </span>
+                                            <span className="text-base sm:text-lg font-black text-gray-900 mt-0.5 block">
+                                                {realMetrics.mediaPontos}
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 block mt-0.5">
+                                                Produtividade semanal
+                                            </span>
+                                        </div>
+
+                                        {/* 4. % nas Auditorias QA */}
+                                        <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100">
+                                            <span className="text-[10px] font-bold text-purple-700 uppercase block tracking-wider">
+                                                % nas Auditorias
+                                            </span>
+                                            <span className="text-base sm:text-lg font-black text-gray-900 mt-0.5 block">
+                                                {realMetrics.percentualAuditorias}
+                                            </span>
+                                            <span className="text-[10px] text-gray-400 block mt-0.5">
+                                                {realMetrics.totalAuditorias} checklist(s) QA
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {realMetrics.totalAvaliacoes === 0 && (
+                                        <p className="text-[11px] text-gray-400 text-center italic pt-1">
+                                            Nenhum lançamento semanal registrado ainda para este analista.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* CARD 2.6: CANAIS DE CONTATO & E-MAILS ADICIONAIS */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
                             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
                                 <Phone className="w-4 h-4 text-red-600" />
@@ -974,40 +1234,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* CARD 2.6: MINHAS MÉTRICAS DE PERFORMANCE */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
-                            <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
-                                <BarChart3 className="w-4 h-4 text-red-600" />
-                                Minhas Métricas Operacionais
-                            </h2>
-
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="p-3 bg-red-50/50 rounded-xl border border-red-100">
-                                    <span className="text-[10px] font-bold text-red-700 uppercase block">TMA Médio</span>
-                                    <span className="text-lg font-black text-gray-900">{metrics.tmaMedio}</span>
-                                    <span className="text-[10px] text-gray-500 block mt-0.5">Meta: 00:20:00</span>
-                                </div>
-
-                                <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                                    <span className="text-[10px] font-bold text-emerald-700 uppercase block">Finalizações</span>
-                                    <span className="text-lg font-black text-gray-900">{metrics.totalFinalizados}</span>
-                                    <span className="text-[10px] text-gray-500 block mt-0.5">Chamados e chats</span>
-                                </div>
-
-                                <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100">
-                                    <span className="text-[10px] font-bold text-purple-700 uppercase block">Auditorias QA</span>
-                                    <span className="text-lg font-black text-gray-900">{metrics.qaScore}%</span>
-                                    <span className="text-[10px] text-gray-500 block mt-0.5">Conformidade média</span>
-                                </div>
-
-                                <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                                    <span className="text-[10px] font-bold text-blue-700 uppercase block">Ligações</span>
-                                    <span className="text-lg font-black text-gray-900">{metrics.totalLigacoes}</span>
-                                    <span className="text-[10px] text-gray-500 block mt-0.5">Atendidas</span>
-                                </div>
-                            </div>
-                        </div>
-
                     </div>
                 </div>
 
@@ -1084,7 +1310,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             }}
                                         />
                                     ) : (
-                                        <User className="w-12 h-12 text-zinc-400" />
+                                        <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-2xl bg-zinc-100">
+                                            {formData.name?.charAt(0) || 'U'}
+                                        </div>
                                     )}
                                 </div>
                                 <span className="text-xs text-gray-500 font-medium">Pré-visualização do Avatar</span>

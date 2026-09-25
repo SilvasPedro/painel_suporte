@@ -5,8 +5,9 @@ import { auth, db } from './firebase';
 /**
  * Atualiza o perfil completo do usuário atual tanto no Firebase Auth (photoURL, displayName)
  * quanto na coleção 'collaborators' do Firestore.
+ * Proteção: Apenas Gestores podem conceder ou modificar emblemas (badges).
  */
-export const saveUserProfileData = async (user, profileData) => {
+export const saveUserProfileData = async (user, profileData, isGestor = false) => {
     if (!user) throw new Error("Usuário não autenticado");
 
     const currentAuthUser = auth.currentUser;
@@ -32,7 +33,6 @@ export const saveUserProfileData = async (user, profileData) => {
         bio: profileData.bio || '',
         networkKnowledge: profileData.networkKnowledge || 'Básico',
         networkSkills: Array.isArray(profileData.networkSkills) ? profileData.networkSkills : [],
-        badges: Array.isArray(profileData.badges) ? profileData.badges : [],
         interests: Array.isArray(profileData.interests) ? profileData.interests : [],
         phone: profileData.phone || '',
         additionalEmails: Array.isArray(profileData.additionalEmails) ? profileData.additionalEmails : [],
@@ -41,11 +41,20 @@ export const saveUserProfileData = async (user, profileData) => {
         updatedAt: new Date().toISOString()
     };
 
+    // Apenas Gestor pode alterar emblemas; caso contrário, preserva os emblemas existentes do usuário
+    if (isGestor && Array.isArray(profileData.badges)) {
+        payload.badges = profileData.badges;
+    }
+
     // 3. Grava no Firestore na coleção collaborators
     if (firestoreId) {
         const colabRef = doc(db, 'collaborators', firestoreId);
         const snap = await getDoc(colabRef);
         if (snap.exists()) {
+            // Se não for gestor e o payload não tiver badges, preserva o que já está no banco
+            if (!isGestor && !payload.badges && snap.data().badges) {
+                // mantém badges existentes sem sobrescrever
+            }
             await updateDoc(colabRef, payload);
         } else {
             // Se for usuário master não registrado na equipe ainda
@@ -53,8 +62,9 @@ export const saveUserProfileData = async (user, profileData) => {
                 uid: firestoreId,
                 email: user.email || currentAuthUser?.email || '',
                 role: user.role || 'Gestor',
-                shift: user.shift || 'Manhã',
+                shift: user.shift || 'Manhã I',
                 status: 'Ativo',
+                badges: Array.isArray(profileData.badges) ? profileData.badges : ['top_tma', 'destaque_qa'],
                 createdAt: new Date().toISOString(),
                 ...payload
             }, { merge: true });
@@ -62,6 +72,131 @@ export const saveUserProfileData = async (user, profileData) => {
     }
 
     return payload;
+};
+
+/**
+ * Atualização exclusiva de Emblemas por um Gestor para qualquer colaborador
+ */
+export const updateCollaboratorBadges = async (colabId, badges) => {
+    if (!colabId) throw new Error("ID do colaborador é obrigatório");
+    const safeBadges = Array.isArray(badges) ? badges : [];
+    const colabRef = doc(db, 'collaborators', colabId);
+    await updateDoc(colabRef, {
+        badges: safeBadges,
+        updatedAt: new Date().toISOString()
+    });
+    return safeBadges;
+};
+
+/**
+ * Definição Oficial de Turnos e Expedientes da Operação
+ * Manhã I: 08:00 até 14:15
+ * Manhã II: 09:00 até 15:15
+ * Tarde: 11:00 até 17:15
+ * Noturno: 13:45 até 20:00
+ * Terceirizada: 20:00 até 08:00
+ */
+export const SYSTEM_SHIFTS = [
+    {
+        id: 'Manhã I',
+        label: 'Manhã I',
+        hours: '08:00 até 14:15',
+        start: '08:00',
+        end: '14:15',
+        color: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        badge: 'bg-amber-50 text-amber-800 border-amber-200'
+    },
+    {
+        id: 'Manhã II',
+        label: 'Manhã II',
+        hours: '09:00 até 15:15',
+        start: '09:00',
+        end: '15:15',
+        color: 'text-yellow-600 bg-yellow-500/10 border-yellow-500/20',
+        badge: 'bg-yellow-50 text-yellow-800 border-yellow-200'
+    },
+    {
+        id: 'Tarde',
+        label: 'Tarde',
+        hours: '11:00 até 17:15',
+        start: '11:00',
+        end: '17:15',
+        color: 'text-orange-500 bg-orange-500/10 border-orange-500/20',
+        badge: 'bg-orange-50 text-orange-800 border-orange-200'
+    },
+    {
+        id: 'Noturno',
+        label: 'Noturno',
+        hours: '13:45 até 20:00',
+        start: '13:45',
+        end: '20:00',
+        color: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        badge: 'bg-indigo-50 text-indigo-800 border-indigo-200'
+    }
+];
+
+export const SYSTEM_SHIFTS_MAP = SYSTEM_SHIFTS.reduce((acc, s) => {
+    acc[s.id] = s;
+    return acc;
+}, {});
+
+/**
+ * Informação do sistema sobre o período das 20:00 até 08:00 assumido por terceirizada
+ */
+export const THIRD_PARTY_SCHEDULE_INFO = {
+    title: 'Operação Terceirizada Noturna',
+    hours: '20:00 até 08:00',
+    description: 'Das 20:00 até às 08:00 quem assume o atendimento é uma equipe terceirizada homologada.',
+    note: 'Plantão externo com SLA de monitoria e triagem de chamados críticos durante a madrugada.',
+    coverage: 'Noturno / Madrugada (20:00 às 08:00)',
+    active: true,
+    savedInSystem: true
+};
+
+/**
+ * Salva e persiste os horários de expediente e a informação da terceirizada
+ * nas configurações do sistema no Firestore (system_settings/operation_shifts).
+ */
+export const saveSystemShiftsInfo = async () => {
+    try {
+        const shiftsDocRef = doc(db, 'system_settings', 'operation_shifts');
+        await setDoc(shiftsDocRef, {
+            shifts: SYSTEM_SHIFTS,
+            thirdParty: THIRD_PARTY_SCHEDULE_INFO,
+            notes: 'Das 20:00 até às 08:00 quem assume é uma terceirizada.',
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+
+        const infoDocRef = doc(db, 'system_settings', 'system_info');
+        await setDoc(infoDocRef, {
+            officialShifts: SYSTEM_SHIFTS.map(s => `${s.label}: ${s.hours}`),
+            thirdPartyOperation: THIRD_PARTY_SCHEDULE_INFO,
+            systemVersion: 'v3.6',
+            updatedAt: new Date().toISOString()
+        }, { merge: true });
+        return true;
+    } catch (err) {
+        console.warn('Aviso ao persistir configurações de turnos e terceirizada:', err);
+        return false;
+    }
+};
+
+export const normalizeShiftName = (shiftStr) => {
+    if (!shiftStr) return 'Manhã I';
+    const s = String(shiftStr).trim();
+    if (s === 'Manhã') return 'Manhã I';
+    if (s === 'Noite') return 'Noturno';
+    if (SYSTEM_SHIFTS_MAP[s]) return s;
+    return s;
+};
+
+/**
+ * Calcula o nível do usuário com base nos emblemas ativos (de 1 a 8)
+ */
+export const calculateUserLevel = (badges) => {
+    const count = Array.isArray(badges) ? badges.length : 0;
+    if (count <= 0) return 1;
+    return Math.max(1, Math.min(8, count));
 };
 
 /**

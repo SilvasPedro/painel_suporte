@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import { 
     X, Loader2, User, Mail, Sun, Sunset, Moon, 
-    KeyRound, Check, Shield, ShieldCheck, Users, Edit3
+    KeyRound, Check, Shield, ShieldCheck, Users, Edit3,
+    Trophy, Sparkles, Headphones, Award, Star, Zap, Rocket, CalendarCheck, Network
 } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { updateCollaboratorProfile } from '../../services/adminAuth';
 import { useNotification } from '../../context/NotificationContext';
+import { BADGES_CATALOG, calculateUserLevel, THIRD_PARTY_SCHEDULE_INFO } from '../../services/userProfile';
+
+const BADGE_ICONS = {
+    Trophy,
+    Zap,
+    Star,
+    ShieldCheck,
+    Rocket,
+    CalendarCheck,
+    Network,
+    Award
+};
 
 const ROLE_CARDS = [
     { id: 'Colaborador', title: 'Colaborador', icon: User, badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
@@ -16,21 +29,36 @@ const ROLE_CARDS = [
 ];
 
 const SHIFT_OPTIONS = [
-    { id: 'Manhã', label: 'Manhã', hours: '06h - 14h', icon: Sun },
-    { id: 'Tarde', label: 'Tarde', hours: '14h - 22h', icon: Sunset },
-    { id: 'Noite', label: 'Noite', hours: '22h - 06h', icon: Moon }
+    { id: 'Manhã I', label: 'Manhã I', hours: '08:00 até 14:15', icon: Sun },
+    { id: 'Manhã II', label: 'Manhã II', hours: '09:00 até 15:15', icon: Sun },
+    { id: 'Tarde', label: 'Tarde', hours: '11:00 até 17:15', icon: Sunset },
+    { id: 'Noturno', label: 'Noturno', hours: '13:45 até 20:00', icon: Moon }
 ];
 
 export const EditCollaboratorModal = ({ colab, onClose }) => {
     const { showToast } = useNotification();
+    const initialShift = colab.shift === 'Manhã' ? 'Manhã I' : (colab.shift === 'Noite' ? 'Noturno' : (colab.shift || 'Manhã I'));
     const [formData, setFormData] = useState({
         name: colab.name || '',
         role: colab.role || 'Colaborador',
-        shift: colab.shift || 'Manhã',
-        active: colab.active !== false
+        shift: initialShift,
+        active: colab.active !== false,
+        badges: Array.isArray(colab.badges) ? colab.badges : ['top_tma', 'destaque_qa']
     });
     const [loading, setLoading] = useState(false);
     const [resetting, setResetting] = useState(false);
+
+    const userLevel = calculateUserLevel(formData.badges);
+
+    const handleToggleBadge = (badgeId) => {
+        setFormData(prev => {
+            const exists = prev.badges.includes(badgeId);
+            const nextBadges = exists 
+                ? prev.badges.filter(id => id !== badgeId)
+                : [...prev.badges, badgeId];
+            return { ...prev, badges: nextBadges };
+        });
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -41,9 +69,10 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
                 role: formData.role,
                 shift: formData.shift,
                 active: formData.active,
+                badges: formData.badges,
                 status: formData.active ? 'Ativo' : 'Inativo'
             });
-            showToast("Dados do colaborador atualizados com sucesso!", "success");
+            showToast("Dados do colaborador e insígnias atualizados com sucesso!", "success");
             onClose();
         } catch (error) {
             showToast("Erro ao atualizar: " + error.message, "error");
@@ -152,8 +181,8 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
 
                     {/* Turno */}
                     <div>
-                        <label className="block text-xs font-bold text-gray-700 mb-2">Turno de Trabalho</label>
-                        <div className="grid grid-cols-3 gap-2.5">
+                        <label className="block text-xs font-bold text-gray-700 mb-2">Turno de Trabalho Oficial</label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {SHIFT_OPTIONS.map(s => {
                                 const Icon = s.icon;
                                 const isSelected = formData.shift === s.id;
@@ -171,6 +200,55 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
                                         <Icon className="w-4 h-4 mb-1" />
                                         <span className="text-xs">{s.label}</span>
                                         <span className={`text-[10px] ${isSelected ? 'text-zinc-300' : 'text-gray-400'}`}>{s.hours}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                        {/* Nota de expediente da terceirizada */}
+                        <div className="mt-2 p-2 bg-amber-50/70 border border-amber-200/80 rounded-lg flex items-center gap-2 text-[11px] text-amber-900">
+                            <Headphones className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                            <span>
+                                <strong>Operação Noturna:</strong> Das 20:00 até às 08:00 quem assume é uma terceirizada homologada.
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Emblemas & Insígnias de Feitos (Apenas Gestor altera) */}
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                                <Trophy className="w-3.5 h-3.5 text-amber-500" />
+                                <span>Emblemas & Insígnias (Gestão)</span>
+                            </label>
+                            <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
+                                <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                                Nível {userLevel} de 8 ({formData.badges.length} ativos)
+                            </span>
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 p-2.5 bg-gray-50 rounded-xl border border-gray-200 max-h-48 overflow-y-auto">
+                            {BADGES_CATALOG.map(badge => {
+                                const IconComponent = BADGE_ICONS[badge.iconName] || Trophy;
+                                const isUnlocked = formData.badges.includes(badge.id);
+                                return (
+                                    <button
+                                        type="button"
+                                        key={badge.id}
+                                        onClick={() => handleToggleBadge(badge.id)}
+                                        className={`p-2 rounded-lg border text-left flex items-center gap-2 transition-all cursor-pointer ${
+                                            isUnlocked
+                                                ? 'border-amber-400 bg-amber-50/80 text-gray-900 shadow-2xs font-semibold'
+                                                : 'border-gray-200 bg-white text-gray-400 hover:border-gray-300'
+                                        }`}
+                                    >
+                                        <div className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 border ${
+                                            isUnlocked ? badge.bgColor : 'bg-gray-100 border-gray-200 text-gray-300'
+                                        }`}>
+                                            <IconComponent className={`w-3.5 h-3.5 ${isUnlocked ? badge.textColor : 'text-gray-300'}`} />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-[11px] block truncate">{badge.title}</span>
+                                        </div>
+                                        {isUnlocked && <Check className="w-3.5 h-3.5 text-amber-600 shrink-0" />}
                                     </button>
                                 );
                             })}

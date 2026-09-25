@@ -4,7 +4,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles
 } from 'lucide-react';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
@@ -33,6 +33,7 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
 import { CURRENT_VERSION } from '../data/changelogData';
+import { calculateUserLevel } from '../services/userProfile';
 
 // Importação do ícone da barra de navegação (mesmo ícone do favicon)
 import faviconLogo from '../assets/favicon_red.png';
@@ -42,6 +43,10 @@ const AdminDashboard = () => {
     const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
     const { currentUser } = useAuth();
     const { showToast } = useNotification();
+
+    const userLevel = useMemo(() => {
+        return calculateUserLevel(currentUser?.badges);
+    }, [currentUser?.badges]);
 
     const [activeTab, setActiveTab] = useState('dashboard');
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
@@ -73,7 +78,6 @@ const AdminDashboard = () => {
             title: 'Meu Espaço',
             icon: User,
             items: [
-                { id: 'my_profile', label: 'Meu Perfil', icon: User },
                 { id: 'my_dashboard', label: 'Meu Desempenho', icon: Activity },
                 { id: 'my_history', label: 'Meu Histórico', icon: History },
             ]
@@ -240,15 +244,15 @@ const AdminDashboard = () => {
                     </button>
                 </div>
 
-                {/* Badge do Usuário e Cargo RBAC com Acesso Rápido ao Perfil */}
+                {/* Badge do Usuário, Cargo RBAC e Nível com Acesso Rápido ao Perfil */}
                 {!isSidebarCollapsed ? (
                     <button 
                         type="button"
                         onClick={() => setActiveTab('my_profile')}
                         className="mx-3 mt-3 p-3 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800/80 flex items-center gap-3 transition-colors text-left cursor-pointer group"
-                        title="Ver e Editar Meu Perfil (v3.6)"
+                        title={`Ver e Editar Meu Perfil (v3.6) • Nível ${userLevel}`}
                     >
-                        <div className="w-9 h-9 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative">
+                        <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs">
                             {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                 <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -259,25 +263,42 @@ const AdminDashboard = () => {
                             <p className="text-xs font-bold text-white group-hover:text-red-400 truncate transition-colors">
                                 {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
                             </p>
-                            <span className={`inline-block mt-0.5 text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
-                                {activeRoleInfo?.label || normalizedRole}
-                            </span>
+                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
+                                    {activeRoleInfo?.label || normalizedRole}
+                                </span>
+                                <span 
+                                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-2xs"
+                                    title={`Nível ${userLevel} de 8 com base nos emblemas ativos`}
+                                >
+                                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                                    Nível {userLevel}
+                                </span>
+                            </div>
                         </div>
                     </button>
                 ) : (
                     <div className="flex justify-center mt-3">
-                        <button 
-                            type="button"
-                            onClick={() => setActiveTab('my_profile')}
-                            className="w-9 h-9 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs overflow-hidden cursor-pointer"
-                            title={`Meu Perfil: ${currentUser?.name || 'Usuário'}`}
-                        >
-                            {(currentUser?.photoURL || currentUser?.photoUrl) ? (
-                                <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                                activeRoleInfo?.label?.charAt(0) || 'U'
-                            )}
-                        </button>
+                        <div className="relative">
+                            <button 
+                                type="button"
+                                onClick={() => setActiveTab('my_profile')}
+                                className="w-10 h-10 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs overflow-hidden cursor-pointer"
+                                title={`Meu Perfil: ${currentUser?.name || 'Usuário'} • Nível ${userLevel} (${activeRoleInfo?.label || normalizedRole})`}
+                            >
+                                {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                    <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    activeRoleInfo?.label?.charAt(0) || 'U'
+                                )}
+                            </button>
+                            <span 
+                                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-mono font-black flex items-center justify-center border border-zinc-950 shadow-xs"
+                                title={`Nível ${userLevel}`}
+                            >
+                                {userLevel}
+                            </span>
+                        </div>
                     </div>
                 )}
 
@@ -400,7 +421,7 @@ const AdminDashboard = () => {
                             </button>
                         </div>
 
-                        {/* Informações do usuário logado com clique para Perfil */}
+                        {/* Informações do usuário logado com clique para Perfil e Nível */}
                         <button 
                             type="button"
                             onClick={() => {
@@ -408,9 +429,9 @@ const AdminDashboard = () => {
                                 setIsMobileMenuOpen(false);
                             }}
                             className="p-3 mx-3 mt-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 flex items-center gap-3 shrink-0 text-left cursor-pointer transition-colors"
-                            title="Ir para Meu Perfil"
+                            title={`Ir para Meu Perfil • Nível ${userLevel}`}
                         >
-                            <div className="w-9 h-9 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden">
+                            <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs">
                                 {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                     <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -421,9 +442,15 @@ const AdminDashboard = () => {
                                 <p className="text-xs font-bold text-white truncate">
                                     {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
                                 </p>
-                                <span className={`inline-block mt-0.5 text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
-                                    {activeRoleInfo?.label || normalizedRole}
-                                </span>
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
+                                        {activeRoleInfo?.label || normalizedRole}
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                        <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                                        Nível {userLevel}
+                                    </span>
+                                </div>
                             </div>
                         </button>
 
@@ -530,6 +557,13 @@ const AdminDashboard = () => {
                             </div>
                             <span className="hidden sm:inline truncate max-w-[100px]">
                                 {currentUser?.name?.split(' ')[0] || 'Meu Perfil'}
+                            </span>
+                            <span 
+                                className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300"
+                                title={`Nível ${userLevel} de 8`}
+                            >
+                                <Sparkles className="w-2.5 h-2.5 text-amber-600" />
+                                Nv.{userLevel}
                             </span>
                         </button>
 

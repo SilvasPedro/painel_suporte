@@ -8,35 +8,42 @@ export const CHANGELOG_VERSIONS = [
     date: 'Setembro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
-    summary: 'Nova grande atualização v3.6: Tela de Perfil 360° para todos os usuários com suporte a PhotoUrl do Firebase, Tags Personalizadas de Conhecimento em Redes (Básico, Médio e Avançado), Sistema de Insígnias de Feitos (Top TMA, Top Finalizações, QA e mais), Bio, Interesses, E-mails adicionais e Canais de Contato.',
+    summary: 'Nova grande atualização v3.6: Tela de Perfil 360° para todos os usuários com Foto via PhotoUrl do Firebase, Nível de 1 a 8 no Card de Role & Foto, Emblemas de Feitos exclusivos da Gestão, Métricas Operacionais 100% Reais (TMA Telefonia/Chat, Pontuação e Auditorias), Tags de Redes (Básico, Médio e Avançado) e Atualização Oficial dos Expedientes da Operação e Plantão Terceirizado Noturno.',
     items: [
       {
         icon: User,
         iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
-        title: 'Nova Tela de Perfil do Usuário & Recurso PhotoUrl',
+        title: 'Tela de Perfil & Acesso Centralizado no Card de Role e Foto com Nível (1 a 8)',
         category: 'Perfil & Identidade',
-        description: 'Módulo dedicado "Meu Perfil" liberado para todos os colaboradores e gestores. Permite alterar a foto de perfil usando o recurso oficial PhotoUrl do Firebase Auth e Firestore, seja por upload local do computador, link direto de imagem ou escolha de avatares modernos em 1 clique, refletindo instantaneamente na barra lateral e cabeçalhos.'
+        description: 'Acesso à tela de Perfil agora centralizado exclusivamente no Card do Usuário (onde detém sua Role, Foto oficial via PhotoUrl do Firebase e Nível calculado dinamicamente de 1 a 8 com base nos emblemas conquistados), otimizando a barra lateral.'
       },
       {
-        icon: Network,
-        iconColor: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20',
-        title: 'Tags de Conhecimento Técnico em Redes (Básico, Médio e Avançado)',
-        category: 'Habilidades & Competências',
-        description: 'Seletor visual de proficiência técnica em redes (Básico, Médio e Avançado) acompanhado de sistema interativo de tags de habilidades (GPON, Mikrotik RouterOS, Wi-Fi 6 Mesh, IPv6, BGP/OSPF, VoIP/SIP, Troubleshooting N2) com adição rápida e sugestões em 1 clique.'
+        icon: BarChart3,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Métricas Operacionais 100% Reais (Sem Mocks)',
+        category: 'Desempenho & Métricas',
+        description: 'Cálculo real de dados direto do Firestore: Média de TMA Telefonia (chamadas de voz), Média de TMA Chat (atendimentos Huggy), Média de Pontos de produtividade e % de Conformidade nas Auditorias de QA com atualização em tempo real.'
       },
       {
         icon: Trophy,
         iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
-        title: 'Sistema de Emblemas & Insígnias de Feitos (Gamificação)',
+        title: 'Emblemas de Feitos Concedidos Exclusivamente pela Gestão',
         category: 'Gamificação & Mérito',
-        description: 'Reconhecimento visual das conquistas da operação: insígnias de destaque como Top TMA, Top Finalizações, Destaque QA, Guardião da Qualidade, Resolução no 1º Contato (FCR), Plantão de Ferro e Mestre em Redes, calculadas dinamicamente a partir dos resultados reais do analista.'
+        description: 'Os emblemas (Top TMA, Top Finalizações, Destaque QA, Guardião da Qualidade, FCR, Plantão de Ferro, Mestre em Redes, Veterano HubDesk) agora são homologados e concedidos exclusivamente pelo Gestor. Os demais membros podem visualizar suas conquistas e seu nível correspondente.'
       },
       {
-        icon: Mail,
-        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
-        title: 'Contatos, E-mails Adicionais e Horário de Operação Atual',
-        category: 'Comunicação & Expediente',
-        description: 'Gerenciamento completo de canais de contato: telefone/WhatsApp com link direto, ramal VoIP interno, múltiplos e-mails secundários/adicionais com adição/exclusão dinâmica, e visualização em tempo real do turno e horário de operação cadastrado.'
+        icon: Sun,
+        iconColor: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
+        title: 'Expedientes Oficiais Corrigidos & Operação Terceirizada (20:00 às 08:00)',
+        category: 'Expediente & Escalas',
+        description: 'Ajuste oficial dos horários: Manhã I (08:00 até 14:15), Manhã II (09:00 até 15:15), Tarde (11:00 até 17:15) e Noturno (13:45 até 20:00). A operação noturna externa (20:00 até às 08:00 por terceirizada) fica devidamente registrada nas configurações do sistema no Firestore para controle de plantões e futuras integrações.'
+      },
+      {
+        icon: Network,
+        iconColor: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20',
+        title: 'Tags de Conhecimento em Redes & Canais de Comunicação',
+        category: 'Competências & Contatos',
+        description: 'Definição de proficiência em redes (Básico, Médio e Avançado), chips de habilidades técnicas (GPON, Mikrotik, OSPF, Wi-Fi 6), múltiplos e-mails secundários e link direto para WhatsApp e telefone de contato.'
       }
     ]
   },

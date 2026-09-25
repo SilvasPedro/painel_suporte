@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
     UserPlus, X, Loader2, User, Mail, Lock, Eye, EyeOff, 
     Shield, ShieldCheck, CheckCircle, Users, Sun, Sunset, Moon, 
-    AlertCircle, Check
+    AlertCircle, Check, Headphones
 } from 'lucide-react';
 import { registerCollaborator } from '../../services/adminAuth';
 import { useNotification } from '../../context/NotificationContext';
@@ -58,25 +58,32 @@ const ROLE_CARDS = [
 
 const SHIFT_OPTIONS = [
     {
-        id: 'Manhã',
-        label: 'Manhã',
-        hours: '06:00 às 14:00',
+        id: 'Manhã I',
+        label: 'Manhã I',
+        hours: '08:00 até 14:15',
         icon: Sun,
         activeClass: 'border-amber-500 bg-amber-50/70 text-amber-950 ring-2 ring-amber-400'
     },
     {
+        id: 'Manhã II',
+        label: 'Manhã II',
+        hours: '09:00 até 15:15',
+        icon: Sun,
+        activeClass: 'border-yellow-500 bg-yellow-50/70 text-yellow-950 ring-2 ring-yellow-400'
+    },
+    {
         id: 'Tarde',
         label: 'Tarde',
-        hours: '14:00 às 22:00',
+        hours: '11:00 até 17:15',
         icon: Sunset,
         activeClass: 'border-orange-500 bg-orange-50/70 text-orange-950 ring-2 ring-orange-400'
     },
     {
-        id: 'Noite',
-        label: 'Noite',
-        hours: '22:00 às 06:00',
+        id: 'Noturno',
+        label: 'Noturno',
+        hours: '13:45 até 20:00',
         icon: Moon,
-        activeClass: 'border-zinc-900 bg-zinc-100 text-zinc-950 ring-2 ring-zinc-800'
+        activeClass: 'border-indigo-600 bg-indigo-50/70 text-indigo-950 ring-2 ring-indigo-400'
     }
 ];
 
@@ -87,7 +94,7 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
         email: '',
         password: '',
         role: 'Colaborador',
-        shift: 'Manhã',
+        shift: 'Manhã I',
         active: true
     });
     const [showPassword, setShowPassword] = useState(false);
@@ -332,6 +339,14 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
                                     </button>
                                 );
                             })}
+                        </div>
+
+                        {/* Informação sobre operação noturna terceirizada */}
+                        <div className="mt-2.5 p-2.5 bg-amber-50/80 border border-amber-200/90 rounded-xl flex items-center gap-2.5 text-xs text-amber-900">
+                            <Headphones className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>
+                                <strong>Operação Terceirizada (20:00 às 08:00):</strong> Das 20:00 até às 08:00 o atendimento é assumido por uma equipe terceirizada homologada.
+                            </span>
                         </div>
                     </div>
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye } from 'lucide-react';
+import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles } from 'lucide-react';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
 import RbacSettingsTab from '../components/RbacSettingsTab';
 import QaProcessesTab from '../components/settings/QaProcessesTab';
+import { SYSTEM_SHIFTS, THIRD_PARTY_SCHEDULE_INFO, saveSystemShiftsInfo } from '../services/userProfile';
 
 const Settings = () => {
     const { showToast } = useNotification();
@@ -81,10 +82,118 @@ const Settings = () => {
                 <button onClick={() => setActiveTab('roles')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'roles' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                     <Shield className="w-4 h-4"/> Cargos e Permissões (RBAC)
                 </button>
+                <button onClick={() => setActiveTab('shifts')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'shifts' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    <Clock className="w-4 h-4"/> Expedientes & Turnos
+                </button>
             </div>
 
             {activeTab === 'roles' && (
                 <RbacSettingsTab />
+            )}
+
+            {activeTab === 'shifts' && (
+                <div className="space-y-6 max-w-4xl">
+                    {/* Card dos Turnos Oficiais */}
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-red-600" />
+                                    Expedientes Oficiais da Operação (v3.6)
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Jornadas de trabalho homologadas para analistas e equipes de suporte.
+                                </p>
+                            </div>
+                            <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1 self-start sm:self-auto">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Ativos no Sistema
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                            {SYSTEM_SHIFTS.map(shift => (
+                                <div key={shift.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50/60 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-2">
+                                            <span className="text-xs font-black uppercase text-gray-900">{shift.label}</span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${shift.badge}`}>
+                                                {shift.id}
+                                            </span>
+                                        </div>
+                                        <div className="text-lg font-mono font-black text-gray-900 mt-1">
+                                            {shift.hours}
+                                        </div>
+                                    </div>
+                                    <div className="mt-3 pt-2 border-t border-gray-200/80 text-[11px] text-gray-500">
+                                        Início: <strong>{shift.start}</strong> • Término: <strong>{shift.end}</strong>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Card Oficial da Operação Terceirizada Noturna */}
+                    <div className="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-xl p-6 text-white space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
+                                    <Headphones className="w-5 h-5 text-amber-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                                        {THIRD_PARTY_SCHEDULE_INFO.title}
+                                    </h3>
+                                    <p className="text-xs text-zinc-400 mt-0.5">
+                                        Período assumido por terceirizada homologada para atendimento noturno contínuo.
+                                    </p>
+                                </div>
+                            </div>
+                            <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full self-start sm:self-auto flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                                Salvo nas Configurações do Sistema
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                            <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800">
+                                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+                                    Horário de Cobertura
+                                </span>
+                                <span className="text-2xl font-mono font-black text-amber-400 mt-1 block">
+                                    {THIRD_PARTY_SCHEDULE_INFO.hours}
+                                </span>
+                                <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
+                                    {THIRD_PARTY_SCHEDULE_INFO.description}
+                                </p>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col justify-between">
+                                <div>
+                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+                                        Finalidade no Sistema
+                                    </span>
+                                    <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
+                                        {THIRD_PARTY_SCHEDULE_INFO.note} Essa informação está registrada na base do sistema para planejamento de transição de turnos e futuras escalas.
+                                    </p>
+                                </div>
+                                {isEditable && (
+                                    <div className="mt-3 pt-3 border-t border-zinc-800 flex justify-end">
+                                        <button
+                                            type="button"
+                                            onClick={async () => {
+                                                const ok = await saveSystemShiftsInfo();
+                                                if (ok) showToast('Informações de turnos e terceirizada sincronizadas no Firestore!', 'success');
+                                            }}
+                                            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                            <Save className="w-3.5 h-3.5" /> Re-sincronizar no Firestore
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {activeTab === 'goals' && (
