@@ -41,6 +41,12 @@ export const ROLES = [
 export const SYSTEM_MODULES = [
     // Grupo: Principal
     {
+        id: 'my_profile',
+        label: 'Meu Perfil',
+        group: 'Principal',
+        description: 'Tela de perfil oficial do usuário com foto via PhotoUrl do Firebase, bio, tags de conhecimento em redes, emblemas, horários e canais de contato.'
+    },
+    {
         id: 'my_dashboard',
         label: 'Meu Desempenho',
         group: 'Principal',
@@ -149,6 +155,7 @@ export const SYSTEM_MODULES = [
 // -------------------------------------------------------------
 export const DEFAULT_ROLE_PERMISSIONS = {
     gestor: {
+        my_profile: { view: true, edit: true },
         my_dashboard: { view: true, edit: true },
         my_history: { view: true, edit: true },
         dashboard: { view: true, edit: true },
@@ -167,6 +174,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         settings: { view: true, edit: true }
     },
     supervisor: {
+        my_profile: { view: true, edit: true },
         my_dashboard: { view: true, edit: false },
         my_history: { view: true, edit: false },
         dashboard: { view: true, edit: false },
@@ -185,6 +193,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         settings: { view: false, edit: false }
     },
     apoio: {
+        my_profile: { view: true, edit: true },
         my_dashboard: { view: true, edit: false },
         my_history: { view: true, edit: false },
         dashboard: { view: true, edit: false },
@@ -203,6 +212,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         settings: { view: false, edit: false }
     },
     colaborador: {
+        my_profile: { view: true, edit: true },
         my_dashboard: { view: true, edit: false },
         my_history: { view: true, edit: false },
         dashboard: { view: false, edit: false },

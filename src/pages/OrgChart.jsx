@@ -757,9 +757,13 @@ const OrgChart = ({ readOnly }) => {
                                                 <div className="flex items-center gap-2.5 min-w-0">
                                                     <GripVertical className="w-4 h-4 text-zinc-300 group-hover:text-zinc-600 shrink-0" />
                                                     
-                                                    {/* Avatar com iniciais */}
-                                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-[11px] font-black text-zinc-700 shrink-0">
-                                                        {getInitials(colab.name)}
+                                                    {/* Avatar com foto ou iniciais */}
+                                                    <div className="w-8 h-8 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-[11px] font-black text-zinc-700 shrink-0 overflow-hidden">
+                                                        {(colab.photoUrl || colab.photoURL) ? (
+                                                            <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
+                                                        ) : (
+                                                            getInitials(colab.name)
+                                                        )}
                                                     </div>
 
                                                     <div className="min-w-0">
@@ -980,8 +984,12 @@ const OrgChart = ({ readOnly }) => {
 
                                                                 {/* Centro do Card: Avatar e Nome */}
                                                                 <div className="flex items-center gap-2.5 my-1">
-                                                                    <div className="w-9 h-9 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-black text-zinc-700 shrink-0">
-                                                                        {getInitials(colab.name)}
+                                                                    <div className="w-9 h-9 rounded-xl bg-zinc-100 border border-zinc-200 flex items-center justify-center text-xs font-black text-zinc-700 shrink-0 overflow-hidden">
+                                                                        {(colab.photoUrl || colab.photoURL) ? (
+                                                                            <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
+                                                                        ) : (
+                                                                            getInitials(colab.name)
+                                                                        )}
                                                                     </div>
                                                                     <div className="min-w-0 flex-1">
                                                                         <p className="font-bold text-xs text-zinc-900 truncate" title={colab.name}>

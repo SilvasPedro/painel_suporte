@@ -22,6 +22,7 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
 import MyHistory from './MyHistory';
+import MyProfile from './MyProfile';
 import { CURRENT_VERSION } from '../data/changelogData';
 
 // Importação do ícone da barra de navegação (mesmo ícone do favicon)
@@ -111,6 +112,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
     const currentTabLabel = useMemo(() => {
         const labels = {
+            profile: 'Meu Perfil',
             dashboard: 'Meu Desempenho',
             history: 'Meu Histórico',
             reports: 'Relatórios Individuais',
@@ -124,6 +126,8 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
     const renderContent = () => {
         switch (activeTab) {
+            case 'profile':
+                return <MyProfile currentUserId={currentUserId} currentUser={currentUser} />;
             case 'dashboard':
                 return <MyDashboardOverview currentUserId={currentUserId} currentUser={currentUser} />;
             case 'history':
@@ -158,6 +162,11 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 </div>
 
                 <nav className="flex-1 p-4 space-y-2 overflow-y-auto scrollbar-hide">
+                    <button onClick={() => setActiveTab('profile')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'profile' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
+                        <User className="w-5 h-5" />
+                        <span className="font-medium">Meu Perfil</span>
+                    </button>
+
                     <button onClick={() => setActiveTab('dashboard')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <BarChart2 className="w-5 h-5" />
                         <span className="font-medium">Dashboard</span>

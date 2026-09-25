@@ -27,6 +27,7 @@ import OrgChart from './OrgChart';
 import MonthlyEvaluations from './MonthlyEvaluations';
 import MyDashboard from './MyDashboard';
 import MyHistory from './MyHistory';
+import MyProfile from './MyProfile';
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
@@ -72,6 +73,7 @@ const AdminDashboard = () => {
             title: 'Meu Espaço',
             icon: User,
             items: [
+                { id: 'my_profile', label: 'Meu Perfil', icon: User },
                 { id: 'my_dashboard', label: 'Meu Desempenho', icon: Activity },
                 { id: 'my_history', label: 'Meu Histórico', icon: History },
             ]
@@ -174,6 +176,8 @@ const AdminDashboard = () => {
         }
 
         switch (effectiveActiveTab) {
+            case 'my_profile':
+                return <MyProfile currentUserId={currentUser?.firestoreId || currentUser?.uid} currentUser={currentUser} />;
             case 'my_dashboard':
                 return <MyDashboard currentUserId={currentUser?.firestoreId || currentUser?.uid} currentUser={currentUser} />;
             case 'my_history':
@@ -236,26 +240,44 @@ const AdminDashboard = () => {
                     </button>
                 </div>
 
-                {/* Badge do Usuário e Cargo RBAC */}
+                {/* Badge do Usuário e Cargo RBAC com Acesso Rápido ao Perfil */}
                 {!isSidebarCollapsed ? (
-                    <div className="mx-3 mt-3 p-3 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0">
-                            {activeRoleInfo?.label?.charAt(0) || 'U'}
+                    <button 
+                        type="button"
+                        onClick={() => setActiveTab('my_profile')}
+                        className="mx-3 mt-3 p-3 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800/80 flex items-center gap-3 transition-colors text-left cursor-pointer group"
+                        title="Ver e Editar Meu Perfil (v3.6)"
+                    >
+                        <div className="w-9 h-9 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative">
+                            {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                activeRoleInfo?.label?.charAt(0) || 'U'
+                            )}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-white truncate">
+                            <p className="text-xs font-bold text-white group-hover:text-red-400 truncate transition-colors">
                                 {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
                             </p>
                             <span className={`inline-block mt-0.5 text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
                                 {activeRoleInfo?.label || normalizedRole}
                             </span>
                         </div>
-                    </div>
+                    </button>
                 ) : (
                     <div className="flex justify-center mt-3">
-                        <div className="w-9 h-9 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs" title={`Cargo: ${activeRoleInfo?.label || normalizedRole}`}>
-                            {activeRoleInfo?.label?.charAt(0) || 'U'}
-                        </div>
+                        <button 
+                            type="button"
+                            onClick={() => setActiveTab('my_profile')}
+                            className="w-9 h-9 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs overflow-hidden cursor-pointer"
+                            title={`Meu Perfil: ${currentUser?.name || 'Usuário'}`}
+                        >
+                            {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                                activeRoleInfo?.label?.charAt(0) || 'U'
+                            )}
+                        </button>
                     </div>
                 )}
 
@@ -378,10 +400,22 @@ const AdminDashboard = () => {
                             </button>
                         </div>
 
-                        {/* Informações do usuário logado */}
-                        <div className="p-3 mx-3 mt-3 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center gap-3 shrink-0">
-                            <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0">
-                                {activeRoleInfo?.label?.charAt(0) || 'U'}
+                        {/* Informações do usuário logado com clique para Perfil */}
+                        <button 
+                            type="button"
+                            onClick={() => {
+                                setActiveTab('my_profile');
+                                setIsMobileMenuOpen(false);
+                            }}
+                            className="p-3 mx-3 mt-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 flex items-center gap-3 shrink-0 text-left cursor-pointer transition-colors"
+                            title="Ir para Meu Perfil"
+                        >
+                            <div className="w-9 h-9 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden">
+                                {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                    <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    activeRoleInfo?.label?.charAt(0) || 'U'
+                                )}
                             </div>
                             <div className="min-w-0 flex-1">
                                 <p className="text-xs font-bold text-white truncate">
@@ -391,7 +425,7 @@ const AdminDashboard = () => {
                                     {activeRoleInfo?.label || normalizedRole}
                                 </span>
                             </div>
-                        </div>
+                        </button>
 
                         {/* Itens de navegação mobile */}
                         <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
@@ -476,6 +510,29 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        {/* Botão de Perfil Rápido com Avatar PhotoUrl */}
+                        <button
+                            type="button"
+                            onClick={() => setActiveTab('my_profile')}
+                            className={`flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                                effectiveActiveTab === 'my_profile'
+                                    ? 'bg-red-50 border-red-300 text-red-600 shadow-2xs'
+                                    : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-700'
+                            }`}
+                            title="Abrir Meu Perfil (v3.6)"
+                        >
+                            <div className="w-6 h-6 rounded-lg bg-zinc-900 text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
+                                {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                    <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    currentUser?.name?.charAt(0)?.toUpperCase() || 'U'
+                                )}
+                            </div>
+                            <span className="hidden sm:inline truncate max-w-[100px]">
+                                {currentUser?.name?.split(' ')[0] || 'Meu Perfil'}
+                            </span>
+                        </button>
+
                         <ThemeSelector variant="compact" />
                     </div>
                 </header>

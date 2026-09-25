@@ -669,10 +669,14 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
             <div className="p-4">
                 <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="relative">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-base select-none ${
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-base select-none overflow-hidden shrink-0 ${
                             isActive ? 'bg-zinc-950 text-white shadow-xs' : 'bg-gray-400 text-white'
                         }`}>
-                            {colab.name?.charAt(0)?.toUpperCase() || '?'}
+                            {(colab.photoUrl || colab.photoURL) ? (
+                                <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
+                            ) : (
+                                colab.name?.charAt(0)?.toUpperCase() || '?'
+                            )}
                         </div>
                         <span 
                             className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
@@ -829,10 +833,14 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                                     {/* Nome + Avatar + Email */}
                                     <td className="py-3 px-4">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 ${
+                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 overflow-hidden ${
                                                 isActive ? 'bg-zinc-900' : 'bg-gray-400'
                                             }`}>
-                                                {colab.name?.charAt(0)?.toUpperCase() || '?'}
+                                                {(colab.photoUrl || colab.photoURL) ? (
+                                                    <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    colab.name?.charAt(0)?.toUpperCase() || '?'
+                                                )}
                                             </div>
                                             <div className="min-w-0">
                                                 <div className="font-bold text-gray-900 truncate max-w-[200px]" title={colab.name}>
@@ -954,10 +962,14 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
         }`}>
             {/* Informações básicas */}
             <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 ${
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 overflow-hidden ${
                     isActive ? 'bg-zinc-950' : 'bg-gray-400'
                 }`}>
-                    {colab.name?.charAt(0)?.toUpperCase() || '?'}
+                    {(colab.photoUrl || colab.photoURL) ? (
+                        <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
+                    ) : (
+                        colab.name?.charAt(0)?.toUpperCase() || '?'
+                    )}
                 </div>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

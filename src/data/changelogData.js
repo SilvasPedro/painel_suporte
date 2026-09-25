@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.5';
+export const CURRENT_VERSION = 'v3.6';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.5',
+    version: 'v3.6',
     date: 'Setembro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
+    summary: 'Nova grande atualização v3.6: Tela de Perfil 360° para todos os usuários com suporte a PhotoUrl do Firebase, Tags Personalizadas de Conhecimento em Redes (Básico, Médio e Avançado), Sistema de Insígnias de Feitos (Top TMA, Top Finalizações, QA e mais), Bio, Interesses, E-mails adicionais e Canais de Contato.',
+    items: [
+      {
+        icon: User,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Nova Tela de Perfil do Usuário & Recurso PhotoUrl',
+        category: 'Perfil & Identidade',
+        description: 'Módulo dedicado "Meu Perfil" liberado para todos os colaboradores e gestores. Permite alterar a foto de perfil usando o recurso oficial PhotoUrl do Firebase Auth e Firestore, seja por upload local do computador, link direto de imagem ou escolha de avatares modernos em 1 clique, refletindo instantaneamente na barra lateral e cabeçalhos.'
+      },
+      {
+        icon: Network,
+        iconColor: 'text-cyan-500 bg-cyan-500/10 border-cyan-500/20',
+        title: 'Tags de Conhecimento Técnico em Redes (Básico, Médio e Avançado)',
+        category: 'Habilidades & Competências',
+        description: 'Seletor visual de proficiência técnica em redes (Básico, Médio e Avançado) acompanhado de sistema interativo de tags de habilidades (GPON, Mikrotik RouterOS, Wi-Fi 6 Mesh, IPv6, BGP/OSPF, VoIP/SIP, Troubleshooting N2) com adição rápida e sugestões em 1 clique.'
+      },
+      {
+        icon: Trophy,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Sistema de Emblemas & Insígnias de Feitos (Gamificação)',
+        category: 'Gamificação & Mérito',
+        description: 'Reconhecimento visual das conquistas da operação: insígnias de destaque como Top TMA, Top Finalizações, Destaque QA, Guardião da Qualidade, Resolução no 1º Contato (FCR), Plantão de Ferro e Mestre em Redes, calculadas dinamicamente a partir dos resultados reais do analista.'
+      },
+      {
+        icon: Mail,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Contatos, E-mails Adicionais e Horário de Operação Atual',
+        category: 'Comunicação & Expediente',
+        description: 'Gerenciamento completo de canais de contato: telefone/WhatsApp com link direto, ramal VoIP interno, múltiplos e-mails secundários/adicionais com adição/exclusão dinâmica, e visualização em tempo real do turno e horário de operação cadastrado.'
+      }
+    ]
+  },
+  {
+    version: 'v3.5',
+    date: 'Setembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Novos modos globais de visualização: Modo Escuro de alto contraste e Modo Morno para conforto visual sem extremos, disponíveis em todas as telas.',
     items: [
       {
