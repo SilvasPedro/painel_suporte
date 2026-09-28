@@ -43,6 +43,76 @@ const calcularPontuacao = (metrics) => {
     return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
 };
 
+// Helper visual e de turnos oficiais (Manhã I, Manhã II, Tarde, Noturno)
+const getShiftBadgeStyle = (shift) => {
+    const s = String(shift || '').trim();
+    const sLower = s.toLowerCase();
+
+    if (s === 'Manhã I' || (sLower.includes('manh') && (sLower.includes('i') || sLower.includes('1')) && !sLower.includes('ii') && !sLower.includes('2')) || s === 'Manhã') {
+        return {
+            id: 'Manhã I',
+            label: s === 'Manhã' ? 'Manhã I' : (s || 'Manhã I'),
+            icon: Sun,
+            iconClass: 'text-amber-500',
+            badgeClass: 'bg-amber-50 text-amber-900 border-amber-300 shadow-2xs',
+            dotClass: 'bg-amber-400',
+            activeClass: 'border-amber-400 bg-amber-50/80 ring-1 ring-amber-400',
+            barClass: 'bg-amber-400',
+            hours: '08:00 às 14:15'
+        };
+    }
+    if (s === 'Manhã II' || (sLower.includes('manh') && (sLower.includes('ii') || sLower.includes('2')))) {
+        return {
+            id: 'Manhã II',
+            label: s || 'Manhã II',
+            icon: Sun,
+            iconClass: 'text-yellow-600',
+            badgeClass: 'bg-yellow-50 text-yellow-900 border-yellow-300 shadow-2xs',
+            dotClass: 'bg-yellow-400',
+            activeClass: 'border-yellow-400 bg-yellow-50/80 ring-1 ring-yellow-400',
+            barClass: 'bg-yellow-400',
+            hours: '09:00 às 15:15'
+        };
+    }
+    if (s === 'Tarde' || sLower.includes('tard')) {
+        return {
+            id: 'Tarde',
+            label: 'Tarde',
+            icon: Sunset,
+            iconClass: 'text-orange-500',
+            badgeClass: 'bg-orange-50 text-orange-900 border-orange-300 shadow-2xs',
+            dotClass: 'bg-orange-500',
+            activeClass: 'border-orange-400 bg-orange-50/80 ring-1 ring-orange-400',
+            barClass: 'bg-orange-500',
+            hours: '11:00 às 17:15'
+        };
+    }
+    if (s === 'Noturno' || s === 'Noite' || sLower.includes('noturn') || sLower.includes('noit')) {
+        return {
+            id: 'Noturno',
+            label: s === 'Noite' ? 'Noturno' : (s || 'Noturno'),
+            icon: Moon,
+            iconClass: 'text-indigo-600',
+            badgeClass: 'bg-indigo-50 text-indigo-900 border-indigo-300 shadow-2xs',
+            dotClass: 'bg-indigo-600',
+            activeClass: 'border-indigo-500 bg-indigo-50/80 ring-1 ring-indigo-400',
+            barClass: 'bg-indigo-600',
+            hours: '13:45 às 20:00'
+        };
+    }
+    return {
+        id: 'Outros',
+        label: s || 'Sem Turno',
+        icon: Clock,
+        iconClass: 'text-gray-400',
+        badgeClass: 'bg-gray-100 text-gray-700 border-gray-200',
+        dotClass: 'bg-gray-400',
+        activeClass: 'border-gray-400 bg-gray-100',
+        barClass: 'bg-gray-300',
+        hours: '--'
+    };
+};
+
 const getRoleMeta = (roleString) => {
     const key = normalizeRole(roleString);
     const found = ROLES.find(r => r.id === key);
@@ -136,21 +206,43 @@ const CollaboratorsHub = () => {
         }
     };
 
-    // Estatísticas gerais
-    const { totalCount, activeCount, inactiveCount, manhaCount, tardeCount, noiteCount } = useMemo(() => {
+    // Estatísticas gerais dos turnos oficiais
+    const { totalCount, activeCount, inactiveCount, manha1Count, manha2Count, tardeCount, noturnoCount, outrosCount } = useMemo(() => {
         const total = collaborators.length;
         const active = collaborators.filter(c => c.active !== false);
         const inactive = total - active.length;
-        const manha = active.filter(c => c.shift === 'Manhã').length;
-        const tarde = active.filter(c => c.shift === 'Tarde').length;
-        const noite = active.filter(c => c.shift === 'Noite').length;
+        
+        let m1 = 0;
+        let m2 = 0;
+        let tar = 0;
+        let not = 0;
+        let out = 0;
+
+        active.forEach(c => {
+            const s = String(c.shift || '').trim();
+            const sLower = s.toLowerCase();
+            if (s === 'Manhã I' || (sLower.includes('manh') && (sLower.includes('i') || sLower.includes('1')) && !sLower.includes('ii') && !sLower.includes('2')) || s === 'Manhã') {
+                m1++;
+            } else if (s === 'Manhã II' || (sLower.includes('manh') && (sLower.includes('ii') || sLower.includes('2')))) {
+                m2++;
+            } else if (s === 'Tarde' || sLower.includes('tard')) {
+                tar++;
+            } else if (s === 'Noturno' || s === 'Noite' || sLower.includes('noturn') || sLower.includes('noit')) {
+                not++;
+            } else {
+                out++;
+            }
+        });
+
         return {
             totalCount: total,
             activeCount: active.length,
             inactiveCount: inactive,
-            manhaCount: manha,
-            tardeCount: tarde,
-            noiteCount: noite
+            manha1Count: m1,
+            manha2Count: m2,
+            tardeCount: tar,
+            noturnoCount: not,
+            outrosCount: out
         };
     }, [collaborators]);
 
@@ -190,7 +282,25 @@ const CollaboratorsHub = () => {
                 statusFilter === 'all' ? true :
                 statusFilter === 'active' ? isActive : !isActive;
 
-            const matchesShift = shiftFilter ? colab.shift === shiftFilter : true;
+            const matchesShift = (() => {
+                if (!shiftFilter) return true;
+                const s = String(colab.shift || '').trim();
+                const sLower = s.toLowerCase();
+                if (shiftFilter === 'Manhã I') {
+                    return s === 'Manhã I' || (sLower.includes('manh') && (sLower.includes('i') || sLower.includes('1')) && !sLower.includes('ii') && !sLower.includes('2')) || s === 'Manhã';
+                }
+                if (shiftFilter === 'Manhã II') {
+                    return s === 'Manhã II' || (sLower.includes('manh') && (sLower.includes('ii') || sLower.includes('2')));
+                }
+                if (shiftFilter === 'Tarde') {
+                    return s === 'Tarde' || sLower.includes('tard');
+                }
+                if (shiftFilter === 'Noturno') {
+                    return s === 'Noturno' || s === 'Noite' || sLower.includes('noturn') || sLower.includes('noit');
+                }
+                return s === shiftFilter;
+            })();
+
             const matchesRole = roleFilter ? normalizeRole(colab.role) === normalizeRole(roleFilter) : true;
 
             return matchesSearch && matchesStatus && matchesShift && matchesRole;
@@ -303,9 +413,14 @@ const CollaboratorsHub = () => {
                     {/* Barra de progresso multi-cor */}
                     <div className="w-full h-3.5 bg-gray-100 rounded-full overflow-hidden flex my-2 border border-gray-100">
                         <div 
-                            style={{ width: `${getPercent(manhaCount)}%` }} 
+                            style={{ width: `${getPercent(manha1Count)}%` }} 
                             className="bg-amber-400 transition-all duration-500 hover:brightness-105" 
-                            title={`Manhã: ${manhaCount} (${getPercent(manhaCount).toFixed(0)}%)`}
+                            title={`Manhã I: ${manha1Count} (${getPercent(manha1Count).toFixed(0)}%)`}
+                        />
+                        <div 
+                            style={{ width: `${getPercent(manha2Count)}%` }} 
+                            className="bg-yellow-400 transition-all duration-500 hover:brightness-105" 
+                            title={`Manhã II: ${manha2Count} (${getPercent(manha2Count).toFixed(0)}%)`}
                         />
                         <div 
                             style={{ width: `${getPercent(tardeCount)}%` }} 
@@ -313,54 +428,87 @@ const CollaboratorsHub = () => {
                             title={`Tarde: ${tardeCount} (${getPercent(tardeCount).toFixed(0)}%)`}
                         />
                         <div 
-                            style={{ width: `${getPercent(noiteCount)}%` }} 
-                            className="bg-zinc-900 transition-all duration-500 hover:brightness-125" 
-                            title={`Noite: ${noiteCount} (${getPercent(noiteCount).toFixed(0)}%)`}
+                            style={{ width: `${getPercent(noturnoCount)}%` }} 
+                            className="bg-indigo-600 transition-all duration-500 hover:brightness-125" 
+                            title={`Noturno: ${noturnoCount} (${getPercent(noturnoCount).toFixed(0)}%)`}
                         />
+                        {outrosCount > 0 && (
+                            <div 
+                                style={{ width: `${getPercent(outrosCount)}%` }} 
+                                className="bg-gray-300 transition-all duration-500 hover:brightness-105" 
+                                title={`Outros: ${outrosCount} (${getPercent(outrosCount).toFixed(0)}%)`}
+                            />
+                        )}
                     </div>
 
-                    {/* Legenda clicável para filtrar */}
-                    <div className="grid grid-cols-3 gap-2 pt-1 text-xs">
+                    {/* Legenda clicável para filtrar os 4 horários oficiais */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
                         <button
                             type="button"
-                            onClick={() => setShiftFilter(shiftFilter === 'Manhã' ? '' : 'Manhã')}
+                            onClick={() => setShiftFilter(shiftFilter === 'Manhã I' ? '' : 'Manhã I')}
                             className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Manhã' ? 'border-amber-400 bg-amber-50/70' : 'border-gray-100 hover:bg-gray-50'
+                                shiftFilter === 'Manhã I' ? 'border-amber-400 bg-amber-50/80 ring-1 ring-amber-400' : 'border-gray-200 hover:bg-amber-50/40'
                             }`}
                         >
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                                <span className="font-semibold text-gray-700">Manhã</span>
+                                <div className="truncate">
+                                    <span className="font-bold text-gray-800 block truncate">Manhã I</span>
+                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">08h às 14h15</span>
+                                </div>
                             </div>
-                            <span className="font-bold text-gray-900">{manhaCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(manhaCount).toFixed(0)}%)</span></span>
+                            <span className="font-bold text-gray-900 shrink-0 ml-1">{manha1Count} <span className="text-gray-400 font-normal text-[10px]">({getPercent(manha1Count).toFixed(0)}%)</span></span>
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setShiftFilter(shiftFilter === 'Manhã II' ? '' : 'Manhã II')}
+                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
+                                shiftFilter === 'Manhã II' ? 'border-yellow-400 bg-yellow-50/80 ring-1 ring-yellow-400' : 'border-gray-200 hover:bg-yellow-50/40'
+                            }`}
+                        >
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 shrink-0" />
+                                <div className="truncate">
+                                    <span className="font-bold text-gray-800 block truncate">Manhã II</span>
+                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">09h às 15h15</span>
+                                </div>
+                            </div>
+                            <span className="font-bold text-gray-900 shrink-0 ml-1">{manha2Count} <span className="text-gray-400 font-normal text-[10px]">({getPercent(manha2Count).toFixed(0)}%)</span></span>
                         </button>
 
                         <button
                             type="button"
                             onClick={() => setShiftFilter(shiftFilter === 'Tarde' ? '' : 'Tarde')}
                             className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Tarde' ? 'border-orange-400 bg-orange-50/70' : 'border-gray-100 hover:bg-gray-50'
+                                shiftFilter === 'Tarde' ? 'border-orange-400 bg-orange-50/80 ring-1 ring-orange-400' : 'border-gray-200 hover:bg-orange-50/40'
                             }`}
                         >
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
                                 <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
-                                <span className="font-semibold text-gray-700">Tarde</span>
+                                <div className="truncate">
+                                    <span className="font-bold text-gray-800 block truncate">Tarde</span>
+                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">11h às 17h15</span>
+                                </div>
                             </div>
-                            <span className="font-bold text-gray-900">{tardeCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(tardeCount).toFixed(0)}%)</span></span>
+                            <span className="font-bold text-gray-900 shrink-0 ml-1">{tardeCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(tardeCount).toFixed(0)}%)</span></span>
                         </button>
 
                         <button
                             type="button"
-                            onClick={() => setShiftFilter(shiftFilter === 'Noite' ? '' : 'Noite')}
+                            onClick={() => setShiftFilter(shiftFilter === 'Noturno' ? '' : 'Noturno')}
                             className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Noite' ? 'border-zinc-800 bg-zinc-100' : 'border-gray-100 hover:bg-gray-50'
+                                shiftFilter === 'Noturno' ? 'border-indigo-400 bg-indigo-50/80 ring-1 ring-indigo-400' : 'border-gray-200 hover:bg-indigo-50/40'
                             }`}
                         >
-                            <div className="flex items-center gap-1.5">
-                                <span className="w-2.5 h-2.5 rounded-full bg-zinc-900 shrink-0" />
-                                <span className="font-semibold text-gray-700">Noite</span>
+                            <div className="flex items-center gap-1.5 min-w-0">
+                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0" />
+                                <div className="truncate">
+                                    <span className="font-bold text-gray-800 block truncate">Noturno</span>
+                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">13h45 às 20h</span>
+                                </div>
                             </div>
-                            <span className="font-bold text-gray-900">{noiteCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(noiteCount).toFixed(0)}%)</span></span>
+                            <span className="font-bold text-gray-900 shrink-0 ml-1">{noturnoCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(noturnoCount).toFixed(0)}%)</span></span>
                         </button>
                     </div>
                 </div>
@@ -398,9 +546,10 @@ const CollaboratorsHub = () => {
                             className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
                         >
                             <option value="">Todos os Turnos</option>
-                            <option value="Manhã">Manhã</option>
-                            <option value="Tarde">Tarde</option>
-                            <option value="Noite">Noite</option>
+                            <option value="Manhã I">Manhã I (08:00 às 14:15)</option>
+                            <option value="Manhã II">Manhã II (09:00 às 15:15)</option>
+                            <option value="Tarde">Tarde (11:00 às 17:15)</option>
+                            <option value="Noturno">Noturno (13:45 às 20:00)</option>
                         </select>
 
                         {/* Filtro Cargo */}
@@ -680,16 +829,16 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleMeta.badgeColor}`}>
                             {roleMeta.label || colab.role || 'Colaborador'}
                         </span>
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                            colab.shift === 'Manhã' ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                            colab.shift === 'Tarde' ? 'bg-orange-50 text-orange-800 border-orange-200' :
-                            'bg-zinc-100 text-zinc-800 border-zinc-200'
-                        }`}>
-                            {colab.shift === 'Manhã' ? <Sun className="w-2.5 h-2.5 text-amber-500" /> :
-                             colab.shift === 'Tarde' ? <Sunset className="w-2.5 h-2.5 text-orange-500" /> :
-                             <Moon className="w-2.5 h-2.5 text-zinc-700" />}
-                            {colab.shift || 'Sem Turno'}
-                        </span>
+                        {(() => {
+                            const shiftStyle = getShiftBadgeStyle(colab.shift);
+                            const ShiftIcon = shiftStyle.icon;
+                            return (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${shiftStyle.badgeClass}`}>
+                                    <ShiftIcon className={`w-3 h-3 ${shiftStyle.iconClass}`} />
+                                    <span>{shiftStyle.label}</span>
+                                </span>
+                            );
+                        })()}
                     </div>
                 </div>
 
@@ -852,12 +1001,16 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
 
                                     {/* Turno */}
                                     <td className="py-3 px-4">
-                                        <span className="inline-flex items-center gap-1 text-gray-700 font-semibold text-xs">
-                                            {colab.shift === 'Manhã' && <Sun className="w-3 h-3 text-amber-500" />}
-                                            {colab.shift === 'Tarde' && <Sunset className="w-3 h-3 text-orange-500" />}
-                                            {colab.shift === 'Noite' && <Moon className="w-3 h-3 text-zinc-700" />}
-                                            {colab.shift || '—'}
-                                        </span>
+                                        {(() => {
+                                            const shiftStyle = getShiftBadgeStyle(colab.shift);
+                                            const ShiftIcon = shiftStyle.icon;
+                                            return (
+                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${shiftStyle.badgeClass}`}>
+                                                    <ShiftIcon className={`w-3.5 h-3.5 ${shiftStyle.iconClass}`} />
+                                                    <span>{shiftStyle.label}</span>
+                                                </span>
+                                            );
+                                        })()}
                                     </td>
 
                                     {/* Status */}
@@ -967,12 +1120,16 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                         <span className={`text-[10px] font-bold px-2 py-0.2 rounded border ${roleMeta.badgeColor}`}>
                             {roleMeta.label}
                         </span>
-                        <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-1.5 py-0.2 rounded flex items-center gap-1">
-                            {colab.shift === 'Manhã' ? <Sun className="w-2.5 h-2.5 text-amber-500" /> :
-                             colab.shift === 'Tarde' ? <Sunset className="w-2.5 h-2.5 text-orange-500" /> :
-                             <Moon className="w-2.5 h-2.5 text-zinc-700" />}
-                            {colab.shift || 'Sem Turno'}
-                        </span>
+                        {(() => {
+                            const shiftStyle = getShiftBadgeStyle(colab.shift);
+                            const ShiftIcon = shiftStyle.icon;
+                            return (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${shiftStyle.badgeClass}`}>
+                                    <ShiftIcon className={`w-3 h-3 ${shiftStyle.iconClass}`} />
+                                    <span>{shiftStyle.label}</span>
+                                </span>
+                            );
+                        })()}
                         {!isActive && (
                             <span className="text-[9px] font-bold px-1.5 py-0.2 bg-red-100 text-red-700 rounded">
                                 Inativo
@@ -1048,10 +1205,21 @@ const CollaboratorGroupedView = ({ collaborators, groupBy, latestEvalMap, isEdit
     const groups = useMemo(() => {
         const map = {};
         if (groupBy === 'shift') {
-            ['Manhã', 'Tarde', 'Noite', 'Outros'].forEach(k => { map[k] = []; });
+            ['Manhã I', 'Manhã II', 'Tarde', 'Noturno', 'Outros'].forEach(k => { map[k] = []; });
             collaborators.forEach(c => {
-                const s = c.shift === 'Manhã' || c.shift === 'Tarde' || c.shift === 'Noite' ? c.shift : 'Outros';
-                map[s].push(c);
+                const s = String(c.shift || '').trim();
+                const sLower = s.toLowerCase();
+                let groupKey = 'Outros';
+                if (s === 'Manhã I' || (sLower.includes('manh') && (sLower.includes('i') || sLower.includes('1')) && !sLower.includes('ii') && !sLower.includes('2')) || s === 'Manhã') {
+                    groupKey = 'Manhã I';
+                } else if (s === 'Manhã II' || (sLower.includes('manh') && (sLower.includes('ii') || sLower.includes('2')))) {
+                    groupKey = 'Manhã II';
+                } else if (s === 'Tarde' || sLower.includes('tard')) {
+                    groupKey = 'Tarde';
+                } else if (s === 'Noturno' || s === 'Noite' || sLower.includes('noturn') || sLower.includes('noit')) {
+                    groupKey = 'Noturno';
+                }
+                map[groupKey].push(c);
             });
         } else {
             // por role
@@ -1071,6 +1239,7 @@ const CollaboratorGroupedView = ({ collaborators, groupBy, latestEvalMap, isEdit
                 if (groupColabs.length === 0) return null;
 
                 const roleMeta = groupBy === 'role' ? ROLES.find(r => r.id === groupKey) : null;
+                const shiftStyle = groupBy === 'shift' ? getShiftBadgeStyle(groupKey) : null;
                 const groupTitle = groupBy === 'shift' ? `Turno ${groupKey}` : (roleMeta?.label || groupKey);
                 const activeInGroup = groupColabs.filter(c => c.active !== false).length;
 
@@ -1079,21 +1248,27 @@ const CollaboratorGroupedView = ({ collaborators, groupBy, latestEvalMap, isEdit
                         {/* Header do Grupo */}
                         <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
                             <div className="flex items-center gap-2.5">
-                                {groupBy === 'shift' ? (
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                                        groupKey === 'Manhã' ? 'bg-amber-100 text-amber-800' :
-                                        groupKey === 'Tarde' ? 'bg-orange-100 text-orange-800' : 'bg-zinc-900 text-white'
-                                    }`}>
-                                        {groupKey === 'Manhã' ? <Sun className="w-4 h-4" /> :
-                                         groupKey === 'Tarde' ? <Sunset className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                                    </div>
-                                ) : (
+                                {groupBy === 'shift' ? (() => {
+                                    const ShiftIcon = shiftStyle.icon;
+                                    return (
+                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${shiftStyle.badgeClass}`}>
+                                            <ShiftIcon className={`w-4 h-4 ${shiftStyle.iconClass}`} />
+                                        </div>
+                                    );
+                                })() : (
                                     <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${roleMeta?.badgeColor || 'bg-gray-100'}`}>
                                         <Shield className="w-4 h-4" />
                                     </div>
                                 )}
                                 <div>
-                                    <h3 className="font-bold text-base text-gray-900">{groupTitle}</h3>
+                                    <div className="flex items-center gap-2">
+                                        <h3 className="font-bold text-base text-gray-900">{groupTitle}</h3>
+                                        {groupBy === 'shift' && shiftStyle && shiftStyle.hours !== '--' && (
+                                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
+                                                {shiftStyle.hours}
+                                            </span>
+                                        )}
+                                    </div>
                                     <span className="text-[11px] text-gray-500">
                                         {activeInGroup} ativos de {groupColabs.length} membros
                                     </span>

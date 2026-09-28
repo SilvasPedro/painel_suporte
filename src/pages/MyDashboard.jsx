@@ -23,6 +23,19 @@ const formatTime = (decimalMinutes) => {
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 };
 
+const parseDateObj = (dateStr) => {
+    if (!dateStr || dateStr === 'Semana Atual' || dateStr === 'Sem data') return 0;
+    if (dateStr.includes('/')) {
+        const parts = dateStr.split('/');
+        if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+    }
+    if (dateStr.includes('-')) {
+        const parts = dateStr.split('-');
+        if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+    }
+    return 0;
+};
+
 const formatDateBR = (dateStr) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -160,7 +173,12 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
         const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const map = {}; 
-            items.forEach(d => { map[d.id] = d; }); 
+            items.forEach(d => { 
+                map[d.id] = d;
+                if (d.firestoreId) map[d.firestoreId] = d;
+                if (d.uid) map[d.uid] = d;
+                if (d.name) map[d.name.trim().toLowerCase()] = d;
+            }); 
             setColabsFull(map);
         });
 
@@ -239,17 +257,29 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
         });
 
         const count = myEvals.length || 1;
-        const latestDate = allEvals.reduce((max, e) => (e.date > max ? e.date : max), '');
+        const latestDate = allEvals.reduce((max, e) => {
+            if (!max) return e.date || '';
+            const tE = parseDateObj(e.date);
+            const tMax = parseDateObj(max);
+            return tE > tMax ? e.date : max;
+        }, '');
         const currentWeekAll = allEvals.filter(e => e.date === latestDate);
-        const myShift = currentUser?.shift || colabsFull[currentUserId]?.shift || 'Manhã';
-        const isDayShift = myShift === 'Manhã' || myShift === 'Tarde';
+        const myShift = currentUser?.shift || colabsFull[currentUserId]?.shift || 'Manhã I';
+        const isMyNight = String(myShift).toLowerCase().includes('noturn') || String(myShift).toLowerCase().includes('noit');
 
         let shiftSum = 0; 
         let shiftCount = 0;
         currentWeekAll.forEach(e => {
             const cId = e.colabId || e.collaboratorId;
-            const cShift = colabsFull[cId]?.shift || 'Manhã';
-            if (isDayShift === (cShift === 'Manhã' || cShift === 'Tarde')) {
+            let cColab = colabsFull[cId];
+            if (!cColab && e.colabName) cColab = colabsFull[e.colabName.trim().toLowerCase()];
+            if (!cColab && e.name) cColab = colabsFull[e.name.trim().toLowerCase()];
+            const cShift = cColab?.shift || 'Manhã I';
+            const isPeerNight = String(cShift).toLowerCase().includes('noturn') || String(cShift).toLowerCase().includes('noit');
+
+            // Manhã I, Manhã II e Tarde disputam a mesma média (horário de pico).
+            // Noturno disputa sua própria média isolada.
+            if (isMyNight === isPeerNight) {
                 shiftSum += e.pontuacao ?? 0; 
                 shiftCount++;
             }

@@ -207,7 +207,24 @@ const OrgChart = ({ readOnly }) => {
                 (c.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                 (c.role || '').toLowerCase().includes(searchTerm.toLowerCase());
             
-            const matchesShift = shiftFilter === 'all' || c.shift === shiftFilter;
+            const matchesShift = (() => {
+                if (shiftFilter === 'all') return true;
+                const s = String(c.shift || '').trim();
+                const sLower = s.toLowerCase();
+                if (shiftFilter === 'Manhã I') {
+                    return s === 'Manhã I' || (sLower.includes('manh') && (sLower.includes('i') || sLower.includes('1')) && !sLower.includes('ii') && !sLower.includes('2')) || s === 'Manhã';
+                }
+                if (shiftFilter === 'Manhã II') {
+                    return s === 'Manhã II' || (sLower.includes('manh') && (sLower.includes('ii') || sLower.includes('2')));
+                }
+                if (shiftFilter === 'Tarde') {
+                    return s === 'Tarde' || sLower.includes('tard');
+                }
+                if (shiftFilter === 'Noturno') {
+                    return s === 'Noturno' || s === 'Noite' || sLower.includes('noturn') || sLower.includes('noit');
+                }
+                return s === shiftFilter;
+            })();
             return matchesSearch && matchesShift;
         });
     }, [unassignedCollaborators, searchTerm, shiftFilter]);
@@ -421,25 +438,33 @@ const OrgChart = ({ readOnly }) => {
 
     // Helper de Ícone de Turno
     const renderShiftBadge = (shift) => {
-        const s = String(shift || '').toLowerCase();
-        if (s.includes('manh')) {
+        const s = String(shift || '').trim();
+        const sLower = s.toLowerCase();
+        if (s === 'Manhã I' || (sLower.includes('manh') && (sLower.includes('i') || sLower.includes('1')) && !sLower.includes('ii') && !sLower.includes('2')) || s === 'Manhã') {
             return (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
-                    <Sun className="w-2.5 h-2.5 text-amber-500" /> Manhã
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-300">
+                    <Sun className="w-2.5 h-2.5 text-amber-500" /> Manhã I
                 </span>
             );
         }
-        if (s.includes('tard')) {
+        if (s === 'Manhã II' || (sLower.includes('manh') && (sLower.includes('ii') || sLower.includes('2')))) {
             return (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-50 text-orange-700 border border-orange-200">
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-yellow-50 text-yellow-900 border border-yellow-300">
+                    <Sun className="w-2.5 h-2.5 text-yellow-600" /> Manhã II
+                </span>
+            );
+        }
+        if (s === 'Tarde' || sLower.includes('tard')) {
+            return (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-50 text-orange-800 border border-orange-300">
                     <Sunset className="w-2.5 h-2.5 text-orange-500" /> Tarde
                 </span>
             );
         }
-        if (s.includes('noit')) {
+        if (s === 'Noturno' || s === 'Noite' || sLower.includes('noturn') || sLower.includes('noit')) {
             return (
-                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    <Moon className="w-2.5 h-2.5 text-indigo-500" /> Noite
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-900 border border-indigo-300">
+                    <Moon className="w-2.5 h-2.5 text-indigo-600" /> Noturno
                 </span>
             );
         }
@@ -703,13 +728,13 @@ const OrgChart = ({ readOnly }) => {
                                 </div>
 
                                 {/* Filtro Rápido de Turno */}
-                                <div className="flex items-center gap-1">
-                                    {['all', 'Manhã', 'Tarde', 'Noite'].map((shift) => (
+                                <div className="flex items-center gap-1 flex-wrap">
+                                    {['all', 'Manhã I', 'Manhã II', 'Tarde', 'Noturno'].map((shift) => (
                                         <button
                                             key={shift}
                                             type="button"
                                             onClick={() => setShiftFilter(shift)}
-                                            className={`flex-1 py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer text-center ${
+                                            className={`flex-1 min-w-[50px] py-1 text-[10px] font-bold rounded-md transition-colors cursor-pointer text-center ${
                                                 shiftFilter === shift 
                                                     ? 'bg-zinc-900 text-white' 
                                                     : 'bg-white text-zinc-600 hover:bg-zinc-200/60 border border-zinc-200/80'

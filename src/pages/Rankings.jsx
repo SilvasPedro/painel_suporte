@@ -127,8 +127,17 @@ const Rankings = () => {
             // Filtro de Turno
             if (shiftFilter !== 'all') {
                 const shiftLower = String(colabInfo.shift || '').toLowerCase();
-                const targetLower = shiftFilter.toLowerCase();
-                if (!shiftLower.includes(targetLower)) return;
+                if (shiftFilter === 'Manhã I') {
+                    if (!shiftLower.includes('manhã i') && !shiftLower.includes('manha i') && shiftLower !== 'manhã' && shiftLower !== 'manha') return;
+                } else if (shiftFilter === 'Manhã II') {
+                    if (!shiftLower.includes('manhã ii') && !shiftLower.includes('manha ii')) return;
+                } else if (shiftFilter === 'Tarde') {
+                    if (!shiftLower.includes('tard')) return;
+                } else if (shiftFilter === 'Noturno') {
+                    if (!shiftLower.includes('noturn') && !shiftLower.includes('noit')) return;
+                } else if (!shiftLower.includes(shiftFilter.toLowerCase())) {
+                    return;
+                }
             }
 
             if (!colabStats[colabId]) {
@@ -531,9 +540,10 @@ const Rankings = () => {
                             className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
                         >
                             <option value="all">Todos os Turnos</option>
-                            <option value="Manhã">Manhã</option>
-                            <option value="Tarde">Tarde</option>
-                            <option value="Noite">Noite</option>
+                            <option value="Manhã I">Manhã I (08:00 às 14:15)</option>
+                            <option value="Manhã II">Manhã II (09:00 às 15:15)</option>
+                            <option value="Tarde">Tarde (11:00 às 17:15)</option>
+                            <option value="Noturno">Noturno (13:45 às 20:00)</option>
                         </select>
                     </div>
 

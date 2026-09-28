@@ -550,7 +550,14 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
         });
 
         const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
-            const map = {}; items.forEach(d => { map[d.id] = d; }); setColabsFull(map);
+            const map = {}; 
+            items.forEach(d => { 
+                map[d.id] = d;
+                if (d.firestoreId) map[d.firestoreId] = d;
+                if (d.uid) map[d.uid] = d;
+                if (d.name) map[d.name.trim().toLowerCase()] = d;
+            }); 
+            setColabsFull(map);
         });
 
         const unsubEvals = subscribeSharedCollection("weekly_evaluations", (items) => {
@@ -618,14 +625,21 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
         const count = myEvals.length || 1;
         const latestDate = allEvals.reduce((max, e) => (e.date > max ? e.date : max), '');
         const currentWeekAll = allEvals.filter(e => e.date === latestDate);
-        const myShift = currentUser?.shift || colabsFull[currentUserId]?.shift || 'Manhã';
-        const isDayShift = myShift === 'Manhã' || myShift === 'Tarde';
+        const myShift = currentUser?.shift || colabsFull[currentUserId]?.shift || 'Manhã I';
+        const isMyNight = String(myShift).toLowerCase().includes('noturn') || String(myShift).toLowerCase().includes('noit');
 
         let shiftSum = 0; let shiftCount = 0;
         currentWeekAll.forEach(e => {
             const cId = e.colabId || e.collaboratorId;
-            const cShift = colabsFull[cId]?.shift || 'Manhã';
-            if (isDayShift === (cShift === 'Manhã' || cShift === 'Tarde')) {
+            let cColab = colabsFull[cId];
+            if (!cColab && e.colabName) cColab = colabsFull[e.colabName.trim().toLowerCase()];
+            if (!cColab && e.name) cColab = colabsFull[e.name.trim().toLowerCase()];
+            const cShift = cColab?.shift || 'Manhã I';
+            const isPeerNight = String(cShift).toLowerCase().includes('noturn') || String(cShift).toLowerCase().includes('noit');
+
+            // Manhã I, Manhã II e Tarde disputam a mesma média (horário de pico).
+            // Noturno disputa sua própria média isolada.
+            if (isMyNight === isPeerNight) {
                 shiftSum += e.pontuacao ?? 0; shiftCount++;
             }
         });
