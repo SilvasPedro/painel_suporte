@@ -4,7 +4,8 @@ import {
     Trophy, Zap, Star, Rocket, CalendarCheck, Network, Award, Mail,
     Phone, Clock, Sun, Sunset, Moon, ExternalLink, Copy, CheckCircle2,
     Sparkles, Plus, Trash2, Heart, Edit3, BarChart3, Loader2, Save,
-    Lock, Info, AlertCircle, Headphones
+    Lock, Info, AlertCircle, Headphones, Users, UserCheck, Search,
+    ChevronDown, ArrowLeft, Eye
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
@@ -120,7 +121,31 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const { currentUser: authContextUser } = useAuth();
     const { isMasterAdmin, normalizedRole } = usePermissions();
     const { showToast } = useNotification();
-    const user = propUser || authContextUser;
+    const myAuthUser = propUser || authContextUser;
+
+    const [collaboratorsList, setCollaboratorsList] = useState([]);
+    const [selectedColabId, setSelectedColabId] = useState(null);
+    const [colabSearchQuery, setColabSearchQuery] = useState('');
+    const [isColabPickerOpen, setIsColabPickerOpen] = useState(false);
+
+    // Carrega a lista completa de colaboradores para alternar perfis e ver status
+    useEffect(() => {
+        const unsub = subscribeSharedCollection('collaborators', (items) => {
+            const list = [...items];
+            list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+            setCollaboratorsList(list);
+        });
+        return () => unsub();
+    }, []);
+
+    // Determina o colaborador que está sendo visualizado (Meu perfil ou de outro colega)
+    const activeSelectedColab = useMemo(() => {
+        if (!selectedColabId) return null;
+        return collaboratorsList.find(c => (c.id === selectedColabId || c.firestoreId === selectedColabId || c.uid === selectedColabId)) || null;
+    }, [selectedColabId, collaboratorsList]);
+
+    const isViewingOther = Boolean(activeSelectedColab && (activeSelectedColab.id !== (myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId)));
+    const user = activeSelectedColab || myAuthUser;
 
     const isGestor = isMasterAdmin || normalizedRole === 'gestor';
 
@@ -140,18 +165,19 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const [photoUrlInput, setPhotoUrlInput] = useState(() => user?.photoURL || user?.photoUrl || '');
     const [photoPreview, setPhotoPreview] = useState(() => user?.photoURL || user?.photoUrl || '');
 
-    // Sincroniza se o usuário mudar de ID
-    const prevUserIdRef = useRef(user?.firestoreId || user?.uid);
+    // Sincroniza se o usuário selecionado mudar
+    const prevUserIdRef = useRef(user?.firestoreId || user?.uid || user?.id);
     useEffect(() => {
-        const currentId = user?.firestoreId || user?.uid;
-        if (currentId && currentId !== prevUserIdRef.current) {
+        const currentTarget = activeSelectedColab || myAuthUser;
+        const currentId = currentTarget?.firestoreId || currentTarget?.uid || currentTarget?.id;
+        if (currentId !== prevUserIdRef.current) {
             prevUserIdRef.current = currentId;
-            const updated = getInitialFormData(user);
+            const updated = getInitialFormData(currentTarget);
             setFormData(updated);
             setPhotoUrlInput(updated.photoURL);
             setPhotoPreview(updated.photoURL);
         }
-    }, [user]);
+    }, [activeSelectedColab, myAuthUser]);
 
     // Métricas reais do colaborador (SEM MOCK)
     const hasTargetUser = Boolean((user?.firestoreId || user?.uid || currentUserId) || user?.name || user?.email);
@@ -417,6 +443,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     // Manipulação do Modal de Foto
     const handleOpenPhotoModal = () => {
+        if (isViewingOther && !isGestor) {
+            showToast('Você está em modo de visualização. Apenas o próprio colaborador ou a Gestão podem alterar a foto.', 'info');
+            return;
+        }
         setPhotoPreview(formData.photoURL || '');
         setPhotoUrlInput(formData.photoURL || '');
         setIsPhotoModalOpen(true);
@@ -485,6 +515,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     // Salvar todas as alterações no Firebase Auth & Firestore
     const handleSaveProfile = async (e) => {
         if (e) e.preventDefault();
+        if (isViewingOther && !isGestor) {
+            showToast('Você está no modo de visualização. Apenas o próprio colaborador ou a Gestão podem alterar os dados deste perfil.', 'warning');
+            return;
+        }
         setSaving(true);
         try {
             await saveUserProfileData(user, formData, isGestor);
@@ -497,9 +531,229 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     };
 
+    // Lista filtrada para o dropdown de busca de colaboradores
+    const filteredColabsForPicker = useMemo(() => {
+        if (!colabSearchQuery.trim()) return collaboratorsList;
+        const q = colabSearchQuery.toLowerCase().trim();
+        return collaboratorsList.filter(c => 
+            (c.name || '').toLowerCase().includes(q) ||
+            (c.email || '').toLowerCase().includes(q) ||
+            (c.role || '').toLowerCase().includes(q) ||
+            (c.shift || '').toLowerCase().includes(q) ||
+            (c.status || '').toLowerCase().includes(q)
+        );
+    }, [collaboratorsList, colabSearchQuery]);
+
+    // Status operacional formatado
+    const userOperationalStatus = user?.status || (user?.active !== false ? 'Ativo' : 'Inativo');
+    const getStatusStyle = (st) => {
+        switch (st) {
+            case 'Ativo':
+                return { badge: 'bg-emerald-50 text-emerald-800 border-emerald-300', dot: 'bg-emerald-500', ping: true };
+            case 'Férias':
+                return { badge: 'bg-amber-50 text-amber-800 border-amber-300', dot: 'bg-amber-500', ping: false };
+            case 'Afastado':
+                return { badge: 'bg-purple-50 text-purple-800 border-purple-300', dot: 'bg-purple-500', ping: false };
+            case 'Inativo':
+            default:
+                return { badge: 'bg-rose-50 text-rose-800 border-rose-300', dot: 'bg-rose-500', ping: false };
+        }
+    };
+    const currentStatusStyle = getStatusStyle(userOperationalStatus);
+
     return (
         <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 h-full overflow-y-auto font-sans">
             <div className="max-w-6xl mx-auto space-y-6">
+
+                {/* 0. BARRA DE SELEÇÃO E VISUALIZAÇÃO DE PERFIS DA EQUIPE */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 shadow-2xs space-y-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            {/* Botão Meu Perfil */}
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedColabId(null);
+                                    setIsColabPickerOpen(false);
+                                }}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                                    !isViewingOther
+                                        ? 'bg-zinc-950 text-white shadow-xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                <UserCheck className="w-4 h-4 text-emerald-400" />
+                                <span>Meu Perfil</span>
+                            </button>
+
+                            {/* Botão Alternar/Ver Outro Colaborador */}
+                            <button
+                                type="button"
+                                onClick={() => setIsColabPickerOpen(!isColabPickerOpen)}
+                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
+                                    isViewingOther
+                                        ? 'bg-red-50 border-red-300 text-red-700 shadow-2xs'
+                                        : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
+                                }`}
+                            >
+                                <Users className="w-4 h-4 text-red-600" />
+                                <span className="truncate max-w-[140px] sm:max-w-[200px]">
+                                    {isViewingOther ? `Perfil: ${user?.name || 'Colaborador'}` : 'Ver Perfis da Equipe'}
+                                </span>
+                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isColabPickerOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                        </div>
+
+                        {/* Indicador de Status Operacional Atual */}
+                        <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500 font-medium hidden md:inline">Status do Colaborador:</span>
+                            <div className={`px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 shadow-2xs ${currentStatusStyle.badge}`}>
+                                <span className="relative flex h-2 w-2">
+                                    {currentStatusStyle.ping && (
+                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${currentStatusStyle.dot}`}></span>
+                                    )}
+                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${currentStatusStyle.dot}`}></span>
+                                </span>
+                                <span>{userOperationalStatus}</span>
+                            </div>
+
+                            {isViewingOther && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedColabId(null)}
+                                    className="text-xs text-red-600 hover:text-red-700 font-bold ml-1.5 inline-flex items-center gap-1 cursor-pointer hover:underline"
+                                    title="Voltar ao meu próprio perfil"
+                                >
+                                    <ArrowLeft className="w-3.5 h-3.5" />
+                                    <span className="hidden sm:inline">Voltar ao Meu Perfil</span>
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Dropdown Expansível com Busca de Colaboradores */}
+                    {isColabPickerOpen && (
+                        <div className="pt-3 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
+                                    <Users className="w-3.5 h-3.5 text-zinc-500" />
+                                    Selecione um colaborador para visualizar o status e perfil:
+                                </span>
+                                <span className="text-[11px] text-gray-400 font-mono">
+                                    {filteredColabsForPicker.length} colaboradores
+                                </span>
+                            </div>
+
+                            <div className="relative">
+                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                                <input
+                                    type="text"
+                                    value={colabSearchQuery}
+                                    onChange={(e) => setColabSearchQuery(e.target.value)}
+                                    placeholder="Buscar colaborador por nome, cargo, turno ou status..."
+                                    className="w-full pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
+                                {filteredColabsForPicker.map((c) => {
+                                    const cId = c.id || c.firestoreId || c.uid;
+                                    const isSelected = (selectedColabId === cId) || (!selectedColabId && cId === (myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId));
+                                    const cStatus = c.status || (c.active !== false ? 'Ativo' : 'Inativo');
+                                    const cStatusStyle = getStatusStyle(cStatus);
+                                    const cLevel = calculateUserLevel(c.badges);
+
+                                    return (
+                                        <button
+                                            type="button"
+                                            key={cId}
+                                            onClick={() => {
+                                                setSelectedColabId(cId);
+                                                setIsColabPickerOpen(false);
+                                                showToast(`Visualizando perfil de ${c.name || 'Colaborador'}`, 'info');
+                                            }}
+                                            className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
+                                                isSelected
+                                                    ? 'bg-red-50/80 border-red-400 ring-1 ring-red-400 font-bold shadow-2xs'
+                                                    : 'bg-white hover:bg-gray-50 border-gray-200'
+                                            }`}
+                                        >
+                                            {/* Avatar */}
+                                            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
+                                                {(c.photoURL || c.photoUrl) ? (
+                                                    <img src={c.photoURL || c.photoUrl} alt={c.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    c.name?.charAt(0)?.toUpperCase() || 'U'
+                                                )}
+                                            </div>
+
+                                            {/* Detalhes */}
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex items-center justify-between gap-1">
+                                                    <span className="text-xs font-bold text-gray-900 truncate">{c.name}</span>
+                                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold border ${cStatusStyle.badge}`}>
+                                                        {cStatus}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mt-0.5">
+                                                    <span className="truncate">{c.role || 'Colaborador'}</span>
+                                                    <span>•</span>
+                                                    <span className="truncate text-zinc-700 font-semibold">{c.shift || 'Geral'}</span>
+                                                    <span>•</span>
+                                                    <span className="text-amber-700 font-mono">Nv.{cLevel}</span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Banner de Aviso quando em modo de visualização de outro colega */}
+                {isViewingOther && (
+                    <div className="p-3.5 bg-gradient-to-r from-red-950 via-zinc-900 to-zinc-950 rounded-2xl text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm border border-red-900/40">
+                        <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-xl bg-red-600/30 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
+                                <Eye className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                                    <span>Modo de Visualização do Perfil da Equipe</span>
+                                    <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-white/10 text-white border border-white/20">
+                                        Público
+                                    </span>
+                                </h4>
+                                <p className="text-[11px] text-zinc-300">
+                                    Você está consultando o status, horários, histórico de métricas e informações de <strong>{user?.name}</strong>.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                            {formData.phone && (
+                                <button
+                                    type="button"
+                                    onClick={handleCopyPhone}
+                                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer border border-white/20"
+                                >
+                                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                                    <span>Copiar Contato</span>
+                                </button>
+                            )}
+                            <button
+                                type="button"
+                                onClick={() => setSelectedColabId(null)}
+                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            >
+                                <ArrowLeft className="w-3.5 h-3.5" />
+                                <span>Voltar ao Meu Perfil</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO) */}
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-xs overflow-hidden relative">
@@ -516,24 +770,31 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                         {/* Botão de Salvar Rápido no Topo */}
                         <div className="relative z-10">
-                            <button
-                                type="button"
-                                onClick={handleSaveProfile}
-                                disabled={saving}
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-red-950/40 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                            >
-                                {saving ? (
-                                    <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Salvando...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="w-4 h-4" />
-                                        <span>Salvar Alterações</span>
-                                    </>
-                                )}
-                            </button>
+                            {isViewingOther && !isGestor ? (
+                                <div className="px-3.5 py-1.5 bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm">
+                                    <Eye className="w-3.5 h-3.5 text-zinc-300" />
+                                    <span>Modo Consulta</span>
+                                </div>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={handleSaveProfile}
+                                    disabled={saving}
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-red-950/40 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                                >
+                                    {saving ? (
+                                        <>
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                            <span>Salvando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="w-4 h-4" />
+                                            <span>Salvar Alterações</span>
+                                        </>
+                                    )}
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -564,29 +825,37 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     )}
 
                                     {/* Botão Hover para Alterar Foto */}
-                                    <button
-                                        type="button"
-                                        onClick={handleOpenPhotoModal}
-                                        title="Alterar Foto de Perfil"
-                                        className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer backdrop-blur-2xs"
-                                    >
-                                        <Camera className="w-6 h-6 mb-1 text-white" />
-                                        <span className="text-[11px] font-bold">Alterar Foto</span>
-                                    </button>
+                                    {(!isViewingOther || isGestor) && (
+                                        <button
+                                            type="button"
+                                            onClick={handleOpenPhotoModal}
+                                            title="Alterar Foto de Perfil"
+                                            className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white cursor-pointer backdrop-blur-2xs"
+                                        >
+                                            <Camera className="w-6 h-6 mb-1 text-white" />
+                                            <span className="text-[11px] font-bold">Alterar Foto</span>
+                                        </button>
+                                    )}
                                 </div>
 
                                 {/* Status Pulsante Online/Ativo */}
                                 <div 
-                                    className="absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-white bg-emerald-500 shadow-md flex items-center justify-center"
-                                    title="Colaborador Ativo no Sistema"
+                                    className="absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-white bg-zinc-900 shadow-md flex items-center justify-center"
+                                    title={`Status: ${userOperationalStatus}`}
                                 >
-                                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                                    <span className={`w-2.5 h-2.5 rounded-full ${currentStatusStyle.dot}`}></span>
                                 </div>
                             </div>
 
                             {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 8) */}
                             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-xs">
                                 
+                                {/* Badge de Status Operacional */}
+                                <div className={`px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 shadow-2xs ${currentStatusStyle.badge}`}>
+                                    <span className={`w-2 h-2 rounded-full ${currentStatusStyle.dot}`}></span>
+                                    <span>Status: {userOperationalStatus}</span>
+                                </div>
+
                                 {/* Badge de Nível (1 a 8) */}
                                 <div 
                                     className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-amber-500/40 text-amber-900 shadow-2xs"
@@ -626,13 +895,15 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 <div>
                                     <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
                                         <span>{formData.name || 'Seu Nome'}</span>
-                                        <button
-                                            type="button"
-                                            onClick={handleOpenPhotoModal}
-                                            className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md border border-red-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
-                                        >
-                                            <Camera className="w-3 h-3" /> Trocar foto
-                                        </button>
+                                        {(!isViewingOther || isGestor) && (
+                                            <button
+                                                type="button"
+                                                onClick={handleOpenPhotoModal}
+                                                className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md border border-red-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                            >
+                                                <Camera className="w-3 h-3" /> Trocar foto
+                                            </button>
+                                        )}
                                     </h1>
                                     <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5 font-medium">
                                         <Mail className="w-3.5 h-3.5 text-gray-400" />
@@ -1231,24 +1502,31 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                 {/* BOTÃO FIXO/FINAL DE SALVAR */}
                 <div className="pt-4 flex items-center justify-end">
-                    <button
-                        type="button"
-                        onClick={handleSaveProfile}
-                        disabled={saving}
-                        className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-950/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                        {saving ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                <span>Gravando no Firebase...</span>
-                            </>
-                        ) : (
-                            <>
-                                <Save className="w-5 h-5" />
-                                <span>Salvar Todas as Informações</span>
-                            </>
-                        )}
-                    </button>
+                    {isViewingOther && !isGestor ? (
+                        <div className="p-3 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl text-xs font-semibold flex items-center gap-2">
+                            <Eye className="w-4 h-4 text-gray-400" />
+                            <span>Modo de visualização pública ativo. Para editar, acesse seu próprio perfil.</span>
+                        </div>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleSaveProfile}
+                            disabled={saving}
+                            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-950/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                        >
+                            {saving ? (
+                                <>
+                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <span>Gravando no Firebase...</span>
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-5 h-5" />
+                                    <span>Salvar Todas as Informações</span>
+                                </>
+                            )}
+                        </button>
+                    )}
                 </div>
 
             </div>

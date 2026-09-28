@@ -11,6 +11,7 @@ import {
     ReferenceLine, PieChart, Pie, Cell
 } from 'recharts';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
+import { useTheme } from '../context/ThemeContext';
 
 // --- CONVERSÕES E UTILITÁRIOS DE TEMPO ---
 const timeToDecimal = (timeStr) => {
@@ -92,6 +93,9 @@ const TrendBadge = ({ type, val, goal }) => {
 };
 
 const DashboardOverview = () => {
+    const { theme } = useTheme();
+    const isDarkMode = theme === 'dark';
+
     // Modo de Visualização Principal
     const [viewMode, setViewMode] = useState('cockpit'); // 'cockpit', 'evolution', 'compliance', 'shifts'
     
@@ -704,13 +708,17 @@ const DashboardOverview = () => {
                     </div>
                 </div>
 
-                <div className="p-4 rounded-xl border bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-white border-purple-200 shadow-2xs flex items-center justify-between">
+                <div className={`p-4 rounded-xl border flex items-center justify-between shadow-2xs transition-colors ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-purple-950/40 via-zinc-900 to-zinc-950 border-purple-900/40 text-white' 
+                        : (theme === 'warm' ? 'bg-[#ede6dc] border-[#cdbfae] text-[#261f1c]' : 'bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-white border-purple-200 text-gray-900')
+                }`}>
                     <div>
-                        <span className="text-xs font-bold uppercase tracking-wider block text-purple-700">Índice QA Operação</span>
-                        <span className="text-2xl font-black text-gray-900 leading-tight mt-0.5 block">{qaStats.taxa}%</span>
-                        <span className="text-[11px] text-purple-600 font-bold">{qaStats.conformes} de {qaStats.total} conformes</span>
+                        <span className={`text-xs font-bold uppercase tracking-wider block ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>Índice QA Operação</span>
+                        <span className={`text-2xl font-black leading-tight mt-0.5 block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{qaStats.taxa}%</span>
+                        <span className={`text-[11px] font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>{qaStats.conformes} de {qaStats.total} conformes</span>
                     </div>
-                    <div className="p-3 bg-purple-50 text-purple-600 rounded-xl border border-purple-200">
+                    <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-purple-950/50 text-purple-400 border-purple-800/40' : 'bg-purple-50 text-purple-600 border-purple-200'}`}>
                         <ShieldCheck className="w-5 h-5" />
                     </div>
                 </div>
@@ -800,13 +808,19 @@ const DashboardOverview = () => {
                             </div>
 
                             {/* GAUGE DE QUALIDADE QA */}
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs hover:shadow-md transition-all flex flex-col items-center justify-between relative">
+                            <div className={`p-5 rounded-xl border shadow-2xs hover:shadow-md transition-all flex flex-col items-center justify-between relative ${
+                                isDarkMode 
+                                    ? 'bg-[#181a20] border-zinc-800/80 shadow-[0_0_15px_rgba(16,185,129,0.06)]' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc] border-[#cdbfae]' : 'bg-white border-gray-200')
+                            }`}>
                                 <div className="w-full flex justify-between items-start mb-1">
-                                    <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                    <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isDarkMode ? 'text-zinc-400' : 'text-gray-400'}`}>
                                         <Star className="w-4 h-4 text-amber-500" /> % QA Conforme
                                     </span>
                                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                        qaStats.taxa >= (goals.qa || 85) ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                                        qaStats.taxa >= (goals.qa || 85) 
+                                            ? (isDarkMode ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/50' : 'bg-emerald-100 text-emerald-800') 
+                                            : (isDarkMode ? 'bg-amber-950/80 text-amber-300 border border-amber-800/50' : 'bg-amber-100 text-amber-800')
                                     }`}>
                                         {qaStats.taxa >= (goals.qa || 85) ? 'Excelente' : 'Atenção'}
                                     </span>
@@ -830,20 +844,26 @@ const DashboardOverview = () => {
                                                 stroke="none"
                                             >
                                                 <Cell fill={qaStats.taxa >= (goals.qa || 85) ? "#10b981" : "#f59e0b"} />
-                                                <Cell fill="#f3f4f6" />
+                                                <Cell fill={isDarkMode ? "#272a33" : (theme === 'warm' ? "#ded5c8" : "#f3f4f6")} />
                                             </Pie>
                                         </PieChart>
                                     </ResponsiveContainer>
                                     <div className="absolute bottom-2 flex flex-col items-center">
-                                        <span className={`text-2xl font-black ${qaStats.taxa >= (goals.qa || 85) ? "text-emerald-600" : "text-amber-600"}`}>
+                                        <span className={`text-2xl font-black ${
+                                            qaStats.taxa >= (goals.qa || 85) 
+                                                ? (isDarkMode ? "text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.35)]" : "text-emerald-600") 
+                                                : (isDarkMode ? "text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.35)]" : "text-amber-600")
+                                        }`}>
                                             {qaStats.taxa}%
                                         </span>
                                     </div>
                                 </div>
 
-                                <div className="w-full pt-2 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+                                <div className={`w-full pt-2 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-gray-100 text-gray-500'
+                                }`}>
                                     <span>Meta QA: ≥ {goals.qa || 85}%</span>
-                                    <span className="text-[11px] text-gray-400">{qaStats.total} auditorias</span>
+                                    <span className={`text-[11px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}>{qaStats.total} auditorias</span>
                                 </div>
                             </div>
 
@@ -1199,22 +1219,24 @@ const DashboardOverview = () => {
                             onClick={() => setSelectedKpi('qa_rate')}
                             className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
                                 selectedKpi === 'qa_rate' 
-                                    ? 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-500/20 shadow-xs' 
-                                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-2xs'
+                                    ? (isDarkMode ? 'bg-amber-950/40 border-amber-500/70 ring-2 ring-amber-500/20 shadow-xs' : 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-500/20 shadow-xs') 
+                                    : (isDarkMode ? 'bg-[#181a20] border-zinc-800 hover:border-zinc-700 hover:shadow-2xs' : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-2xs')
                             }`}
                         >
                             <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-700'}`}>
                                     <Star className="w-3.5 h-3.5" /> % QA Monitoria
                                 </span>
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                    qaStats.taxa >= (goals.qa || 85) ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                                    qaStats.taxa >= (goals.qa || 85) 
+                                        ? (isDarkMode ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/50' : 'bg-emerald-100 text-emerald-800 border border-emerald-200') 
+                                        : (isDarkMode ? 'bg-amber-950/80 text-amber-300 border border-amber-800/50' : 'bg-amber-100 text-amber-800 border border-amber-200')
                                 }`}>
                                     {qaStats.taxa >= (goals.qa || 85) ? 'Na Meta' : 'Abaixo'}
                                 </span>
                             </div>
-                            <span className="text-2xl font-black text-gray-900 block mt-1">{qaStats.taxa}%</span>
-                            <span className="text-xs text-gray-400 mt-1 block">Meta: ≥ {goals.qa || 85}% ({qaStats.total} aud.)</span>
+                            <span className={`text-2xl font-black block mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{qaStats.taxa}%</span>
+                            <span className={`text-xs mt-1 block ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}>Meta: ≥ {goals.qa || 85}% ({qaStats.total} aud.)</span>
                         </button>
                     </div>
 
@@ -1512,27 +1534,31 @@ const DashboardOverview = () => {
                         </div>
 
                         {/* QA Monitoria Semáforo */}
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4">
+                        <div className={`p-5 rounded-xl border shadow-2xs space-y-4 ${
+                            isDarkMode ? 'bg-[#181a20] border-zinc-800' : 'bg-white border-gray-200'
+                        }`}>
                             <div className="flex justify-between items-start">
                                 <div>
                                     <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Conformidade Monitoria QA</span>
-                                    <h4 className="text-2xl font-black text-gray-900 mt-1">{qaStats.taxa}%</h4>
+                                    <h4 className={`text-2xl font-black mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{qaStats.taxa}%</h4>
                                 </div>
                                 <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                                    qaStats.taxa >= (goals.qa || 85) ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-amber-500 ring-4 ring-amber-100'
+                                    qaStats.taxa >= (goals.qa || 85) 
+                                        ? `bg-emerald-500 ring-4 ${isDarkMode ? 'ring-emerald-950/80' : 'ring-emerald-100'}` 
+                                        : `bg-amber-500 ring-4 ${isDarkMode ? 'ring-amber-950/80' : 'ring-amber-100'}`
                                 }`}>
                                     {qaStats.taxa >= (goals.qa || 85) ? 'OK' : '!'}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex justify-between text-xs text-gray-600">
+                                <div className={`flex justify-between text-xs ${isDarkMode ? 'text-zinc-400' : 'text-gray-600'}`}>
                                     <span>Meta Estipulada: ≥ {goals.qa || 85}%</span>
                                     <span className="font-bold">
                                         {qaStats.taxa >= (goals.qa || 85) ? 'Conformidade Plena' : 'Necessita Treinamento'}
                                     </span>
                                 </div>
-                                <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                                <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'}`}>
                                     <div 
                                         className={`h-full rounded-full ${
                                             qaStats.taxa >= (goals.qa || 85) ? 'bg-emerald-500' : 'bg-amber-500'

@@ -616,3 +616,12 @@ html[data-theme="warm"] body {
 [data-theme="warm"] ::-webkit-scrollbar-thumb:hover {
   background: #a3927f;
 }
+
+/* Card de % QA no Modo Escuro - visualização limpa e nítida sem brilho branco excessivo */
+[data-theme="dark"] .recharts-pie-sector path[fill="#f3f4f6"] {
+  fill: #272a33 !important;
+}
+[data-theme="dark"] .recharts-pie-sector path {
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.15));
+}
+

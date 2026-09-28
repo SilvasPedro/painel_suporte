@@ -537,36 +537,6 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-                        {/* Botão de Perfil Rápido com Avatar PhotoUrl */}
-                        <button
-                            type="button"
-                            onClick={() => setActiveTab('my_profile')}
-                            className={`flex items-center gap-2 p-1.5 sm:px-2.5 sm:py-1 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                                effectiveActiveTab === 'my_profile'
-                                    ? 'bg-red-50 border-red-300 text-red-600 shadow-2xs'
-                                    : 'bg-white hover:bg-gray-100 border-gray-200 text-gray-700'
-                            }`}
-                            title="Abrir Meu Perfil (v3.6)"
-                        >
-                            <div className="w-6 h-6 rounded-lg bg-zinc-900 text-white flex items-center justify-center text-[10px] font-bold overflow-hidden shrink-0">
-                                {(currentUser?.photoURL || currentUser?.photoUrl) ? (
-                                    <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
-                                ) : (
-                                    currentUser?.name?.charAt(0)?.toUpperCase() || 'U'
-                                )}
-                            </div>
-                            <span className="hidden sm:inline truncate max-w-[100px]">
-                                {currentUser?.name?.split(' ')[0] || 'Meu Perfil'}
-                            </span>
-                            <span 
-                                className="inline-flex items-center gap-0.5 text-[10px] font-mono font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300"
-                                title={`Nível ${userLevel} de 8`}
-                            >
-                                <Sparkles className="w-2.5 h-2.5 text-amber-600" />
-                                Nv.{userLevel}
-                            </span>
-                        </button>
-
                         <ThemeSelector variant="compact" />
                     </div>
                 </header>
