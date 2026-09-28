@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { 
     CalendarDays, Save, Loader2, Users, GripVertical, X, Phone, MessageCircle, LifeBuoy
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 
 // Dias da semana fixos
@@ -36,44 +37,34 @@ const DailySchedule = ({ readOnly = false }) => {
     // ID Fixo para a escala padrão
     const documentId = "fixed_schedule";
 
-    // 1. Busca os colaboradores (para montar a barra lateral)
+    // 1. Busca os colaboradores via cache compartilhado
     useEffect(() => {
         if (!readOnly) {
-            const qColabs = query(collection(db, "collaborators"));
-            const unsubColabs = onSnapshot(qColabs, (snap) => {
+            const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
                 const colabs = [];
-                snap.forEach(d => {
-                    if (d.data().active !== false) colabs.push({ id: d.id, ...d.data() });
+                items.forEach(d => {
+                    if (d.active !== false) colabs.push(d);
                 });
-                colabs.sort((a, b) => a.name.localeCompare(b.name));
+                colabs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 setCollaborators(colabs);
             });
             return () => unsubColabs();
         }
     }, [readOnly]);
 
-    // 2. Busca a escala fixa
+    // 2. Busca a escala fixa via cache compartilhado
     useEffect(() => {
-        const fetchSchedule = async () => {
-            setLoading(true);
-            try {
-                const docRef = doc(db, "daily_schedules", documentId);
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    setSchedule(docSnap.data().assignments || {});
-                } else {
-                    setSchedule({});
-                }
-            } catch {
-                showToast("Erro ao carregar a escala.", "error");
-            } finally {
-                setLoading(false);
+        const unsub = subscribeSharedDocument("daily_schedules", documentId, (docData) => {
+            if (docData && docData.assignments) {
+                setSchedule(docData.assignments);
+            } else {
+                setSchedule({});
             }
-        };
+            setLoading(false);
+        });
 
-        fetchSchedule();
-    }, [documentId, showToast]);
+        return () => unsub();
+    }, [documentId]);
 
     // --- SALVAR NO FIREBASE ---
     const handleSave = async () => {

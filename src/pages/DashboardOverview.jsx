@@ -10,8 +10,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     ReferenceLine, PieChart, Pie, Cell
 } from 'recharts';
-import { collection, onSnapshot, doc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 
 // --- CONVERSÕES E UTILITÁRIOS DE TEMPO ---
 const timeToDecimal = (timeStr) => {
@@ -107,16 +106,15 @@ const DashboardOverview = () => {
 
     useEffect(() => {
         // Metas do Setor
-        const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
-            if (docSnap.exists()) {
-                setGoals(prev => ({ ...prev, ...docSnap.data() }));
+        const unsubGoals = subscribeSharedDocument("system_settings", "sector_goals", (docData) => {
+            if (docData) {
+                setGoals(prev => ({ ...prev, ...docData }));
             }
         });
 
         // Histórico de KPIs do Setor
-        const unsubKpi = onSnapshot(collection(db, "sector_kpis"), (snap) => {
-            const kpis = [];
-            snap.forEach(d => kpis.push({ id: d.id, ...d.data() }));
+        const unsubKpi = subscribeSharedCollection("sector_kpis", (items) => {
+            const kpis = [...items];
             kpis.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
             setSectorKpisList(kpis);
 
@@ -128,25 +126,23 @@ const DashboardOverview = () => {
         });
 
         // Colaboradores
-        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const map = {};
-            snap.forEach(d => map[d.id] = { id: d.id, ...d.data() });
+            items.forEach(d => { map[d.id] = d; });
             setColabsFull(map);
         });
 
         // Avaliações Semanais
-        const unsubEvals = onSnapshot(collection(db, "weekly_evaluations"), (snap) => {
-            const evals = [];
-            snap.forEach(d => evals.push({ id: d.id, ...d.data() }));
+        const unsubEvals = subscribeSharedCollection("weekly_evaluations", (items) => {
+            const evals = [...items];
             evals.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
             setEvalsList(evals);
         });
 
         // Relatórios Críticos / Solicitações
-        const unsubReports = onSnapshot(collection(db, "critical_reports"), (snap) => {
+        const unsubReports = subscribeSharedCollection("critical_reports", (items) => {
             let pending = 0; let inProgress = 0; let resolved = 0;
-            snap.forEach(docSnap => {
-                const data = docSnap.data();
+            items.forEach(data => {
                 if (data.status === 'Pendente') pending++;
                 else if (data.status === 'Em Andamento') inProgress++;
                 else if (data.status === 'Resolvido') resolved++;
@@ -155,9 +151,8 @@ const DashboardOverview = () => {
         });
 
         // Auditorias de Qualidade (QA)
-        const unsubAudits = onSnapshot(collection(db, "qa_audits"), (snap) => {
-            const fetched = [];
-            snap.forEach(docSnap => fetched.push({ id: docSnap.id, ...docSnap.data() }));
+        const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
+            const fetched = [...items];
             fetched.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
             setAuditsList(fetched);
         });

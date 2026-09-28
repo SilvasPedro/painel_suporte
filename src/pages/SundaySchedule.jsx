@@ -3,8 +3,9 @@ import {
     Calendar, ChevronLeft, ChevronRight, Save, 
     Loader2, Users, GripVertical, X
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 
 const getSundaysInMonth = (year, month) => {
@@ -40,18 +41,16 @@ const SundaySchedule = ({ readOnly = false }) => {
     const documentId = `${year}-${String(month + 1).padStart(2, '0')}`;
 
     useEffect(() => {
-        // A busca de colaboradores só é estritamente necessária se for edição, 
-        // mas mantemos para garantir que a lista de disponíveis esteja atualizada.
+        // A busca de colaboradores via cache compartilhado
         if (!readOnly) {
-            const qColabs = query(collection(db, "collaborators"));
-            const unsubColabs = onSnapshot(qColabs, (snap) => {
+            const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
                 const colabs = [];
-                snap.forEach(d => {
-                    if (d.data().active !== false) {
-                        colabs.push({ id: d.id, ...d.data() });
+                items.forEach(d => {
+                    if (d.active !== false) {
+                        colabs.push(d);
                     }
                 });
-                colabs.sort((a, b) => a.name.localeCompare(b.name));
+                colabs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 setCollaborators(colabs);
             });
             return () => unsubColabs();
@@ -59,26 +58,17 @@ const SundaySchedule = ({ readOnly = false }) => {
     }, [readOnly]);
 
     useEffect(() => {
-        const fetchSchedule = async () => {
-            setLoading(true);
-            try {
-                const docRef = doc(db, "sunday_schedules", documentId);
-                const docSnap = await getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    setSchedule(docSnap.data().assignments || {});
-                } else {
-                    setSchedule({});
-                }
-            } catch {
-                showToast("Erro ao carregar a escala.", "error");
-            } finally {
-                setLoading(false);
+        const unsub = subscribeSharedDocument("sunday_schedules", documentId, (docData) => {
+            if (docData && docData.assignments) {
+                setSchedule(docData.assignments);
+            } else {
+                setSchedule({});
             }
-        };
+            setLoading(false);
+        });
 
-        fetchSchedule();
-    }, [documentId, showToast]);
+        return () => unsub();
+    }, [documentId]);
 
     const handlePrevMonth = () => setCurrentDate(new Date(year, month - 1, 1));
     const handleNextMonth = () => setCurrentDate(new Date(year, month + 1, 1));

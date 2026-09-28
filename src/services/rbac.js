@@ -1,5 +1,6 @@
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from './firebase';
+import { subscribeSharedDocument, getCachedDocument } from './dataCache';
 
 // -------------------------------------------------------------
 // DEFINIÇÃO DOS 4 CARGOS OFICIAIS (ROLES)
@@ -257,6 +258,8 @@ export const normalizeRole = (roleString) => {
 const ROLES_PERMISSIONS_DOC = doc(db, 'system_settings', 'roles_permissions');
 
 export const getRolesPermissions = async () => {
+    const cached = getCachedDocument('system_settings', 'roles_permissions');
+    if (cached) return cached;
     try {
         const snap = await getDoc(ROLES_PERMISSIONS_DOC);
         if (snap.exists()) {
@@ -273,14 +276,11 @@ export const saveRolesPermissions = async (permissions) => {
 };
 
 export const subscribeRolesPermissions = (callback) => {
-    return onSnapshot(ROLES_PERMISSIONS_DOC, (snap) => {
-        if (snap.exists()) {
-            callback(snap.data());
+    return subscribeSharedDocument('system_settings', 'roles_permissions', (data) => {
+        if (data) {
+            callback(data);
         } else {
             callback(DEFAULT_ROLE_PERMISSIONS);
         }
-    }, (error) => {
-        console.warn('Erro no listener de permissões:', error);
-        callback(DEFAULT_ROLE_PERMISSIONS);
     });
 };

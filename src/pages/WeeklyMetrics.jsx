@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Save, Loader2, Calendar, Upload, Download } from 'lucide-react';
-import { collection, onSnapshot, addDoc, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 
 const WeeklyMetrics = () => {
@@ -17,21 +18,18 @@ const WeeklyMetrics = () => {
     const [referenceDate, setReferenceDate] = useState(new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
-        const q = query(collection(db, "collaborators"), orderBy("name"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribe = subscribeSharedCollection("collaborators", (items) => {
             const colabs = [];
             const initialMetrics = {};
             
-            snapshot.forEach((doc) => {
-                const data = doc.data();
-                
+            items.forEach((data) => {
                 // FILTRO: Ignora colaboradores inativos ou sem turno registrado
                 if (data.active === false || !data.shift || data.shift.trim() === '') {
                     return;
                 }
 
-                colabs.push({ id: doc.id, ...data });
-                initialMetrics[doc.id] = {
+                colabs.push(data);
+                initialMetrics[data.id] = {
                     Ligacoes_Atendidas: '',
                     Ligacoes_Perdidas: '',
                     TMA_Telefonia: '',
@@ -41,6 +39,8 @@ const WeeklyMetrics = () => {
                     Atendimentos_Finalizados: ''
                 };
             });
+
+            colabs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             
             setCollaborators(colabs);
             // Só seta o initialMetrics se estiver vazio para não apagar o que o usuário já digitou se a tela recarregar

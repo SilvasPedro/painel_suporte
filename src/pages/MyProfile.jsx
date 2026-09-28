@@ -6,8 +6,7 @@ import {
     Sparkles, Plus, Trash2, Heart, Edit3, BarChart3, Loader2, Save,
     Lock, Info, AlertCircle, Headphones
 } from 'lucide-react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
@@ -178,12 +177,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
         let isMounted = true;
 
-        // 1. Listener em tempo real para avaliações semanais reais
-        const unsubEvals = onSnapshot(collection(db, 'weekly_evaluations'), (snap) => {
+        // 1. Assinatura em cache compartilhado para avaliações semanais
+        const unsubEvals = subscribeSharedCollection('weekly_evaluations', (items) => {
             if (!isMounted) return;
             const evalDocs = [];
-            snap.forEach(d => {
-                const dt = d.data();
+            items.forEach(dt => {
                 const matchesId = (targetId && (dt.colabId === targetId || dt.collaboratorId === targetId || dt.uid === targetId));
                 const matchesName = targetName && (
                     (dt.colabName && dt.colabName.trim().toLowerCase() === targetName) ||
@@ -195,7 +193,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     (dt.colabEmail && dt.colabEmail.trim().toLowerCase() === targetEmail)
                 );
                 if (matchesId || matchesName || matchesEmail) {
-                    evalDocs.push({ id: d.id, ...dt });
+                    evalDocs.push(dt);
                 }
             });
 
@@ -241,16 +239,13 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 mediaPontos: mediaPts,
                 totalAvaliacoes: countEvals
             }));
-        }, (err) => {
-            console.warn('Aviso no listener de weekly_evaluations:', err);
         });
 
-        // 2. Listener em tempo real para auditorias QA reais
-        const unsubAudits = onSnapshot(collection(db, 'qa_audits'), (snap) => {
+        // 2. Assinatura em cache compartilhado para auditorias QA
+        const unsubAudits = subscribeSharedCollection('qa_audits', (items) => {
             if (!isMounted) return;
             const auditDocs = [];
-            snap.forEach(d => {
-                const dt = d.data();
+            items.forEach(dt => {
                 const matchesId = (targetId && (dt.colabId === targetId || dt.collaboratorId === targetId || dt.uid === targetId));
                 const matchesName = targetName && (
                     (dt.colabName && dt.colabName.trim().toLowerCase() === targetName) ||
@@ -258,7 +253,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     (dt.name && dt.name.trim().toLowerCase() === targetName)
                 );
                 if (matchesId || matchesName) {
-                    auditDocs.push({ id: d.id, ...dt });
+                    auditDocs.push(dt);
                 }
             });
 
@@ -290,9 +285,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 percentualAuditorias,
                 totalAuditorias: auditDocs.length
             }));
-        }, (err) => {
-            console.warn('Aviso no listener de qa_audits:', err);
-            setRealMetrics(prev => ({ ...prev, loading: false }));
         });
 
         // Garante persistência das configurações de turnos e terceirizada no sistema

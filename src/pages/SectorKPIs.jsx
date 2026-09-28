@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Rocket, Target, TrendingUp, RefreshCw, Save, Edit3, Calendar, Loader2 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { collection, onSnapshot, query, orderBy, addDoc } from 'firebase/firestore';
+import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 
 const SectorKPIs = () => {
@@ -51,24 +52,18 @@ const SectorKPIs = () => {
         return dateString;
     };
 
-    // --- PUXANDO DADOS DO FIREBASE ---
+    // --- PUXANDO DADOS DO FIREBASE VIA CACHE COMPARTILHADO ---
     useEffect(() => {
-        // Puxa o histórico de KPIs do setor
-        const q = query(collection(db, "sector_kpis"), orderBy("date", "asc"));
-        
-        const unsubscribeKpis = onSnapshot(q, (snapshot) => {
-            const fetchedData = [];
-            snapshot.forEach((doc) => {
-                const dbData = doc.data();
-                fetchedData.push({
-                    id: doc.id,
-                    fullDate: dbData.date, // "YYYY-MM-DD"
-                    date: formatChartDate(dbData.date),
-                    fcr: Number(dbData.fcr) || 0,
-                    reincidencia: Number(dbData.recurrence) || 0,
-                    tmrDecimal: timeToDecimal(dbData.tmr) // Converte p/ número p/ o gráfico
-                });
-            });
+        const unsubscribeKpis = subscribeSharedCollection("sector_kpis", (items) => {
+            const fetchedData = items.map((dbData) => ({
+                id: dbData.id,
+                fullDate: dbData.date, // "YYYY-MM-DD"
+                date: formatChartDate(dbData.date),
+                fcr: Number(dbData.fcr) || 0,
+                reincidencia: Number(dbData.recurrence) || 0,
+                tmrDecimal: timeToDecimal(dbData.tmr)
+            }));
+            fetchedData.sort((a, b) => (a.fullDate || '').localeCompare(b.fullDate || ''));
             setChartData(fetchedData);
             setLoading(false);
         });

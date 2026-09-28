@@ -1,5 +1,10 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { 
+  getFirestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager 
+} from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getMessaging } from "firebase/messaging";
 
@@ -17,8 +22,22 @@ export const firebaseConfig = {
 // Inicializa o Firebase
 const app = initializeApp(firebaseConfig);
 
+// Inicializa Firestore com Cache Persistente Local em IndexedDB (Multi-Aba)
+// Reduz drasticamente as leituras no Firebase servindo dados do cache local
+let firestoreDb;
+try {
+  firestoreDb = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
+} catch (e) {
+  console.warn("Aviso ao inicializar cache persistente do Firestore, usando fallback padrão:", e);
+  firestoreDb = getFirestore(app);
+}
+
 // Exporta as instâncias para usar nos componentes
-export const db = getFirestore(app);
+export const db = firestoreDb;
 export const auth = getAuth(app);
 
 let messagingInstance = null;

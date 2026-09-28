@@ -5,8 +5,7 @@ import {
     Download, Printer, Sparkles, BarChart2, ShieldCheck, ChevronRight,
     Users, ThumbsUp, HelpCircle, Layers, RefreshCw, AlertCircle
 } from 'lucide-react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { db } from '../../services/firebase';
+import { subscribeSharedCollection } from '../../services/dataCache';
 import { 
     BarChart, Bar, LineChart, Line, AreaChart, Area, 
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
@@ -99,38 +98,34 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
     const [feedbacks, setFeedbacks] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Assinatura em tempo real dos dados do colaborador
+    // Assinatura em cache compartilhado dos dados do colaborador
     useEffect(() => {
         if (!colab?.id) return;
 
-        // 1. Avaliações Semanais (weekly_evaluations)
-        const qWeekly = query(
-            collection(db, "weekly_evaluations"),
-            where("colabId", "==", colab.id)
-        );
-
-        const unsubWeekly = onSnapshot(qWeekly, (snapshot) => {
+        // 1. Avaliações Semanais via cache compartilhado
+        const unsubWeekly = subscribeSharedCollection("weekly_evaluations", (items) => {
             const list = [];
-            snapshot.forEach((docSnap) => {
-                const d = docSnap.data();
-                const safeDate = d.date || 'Semana Atual';
-                list.push({
-                    id: docSnap.id,
-                    date: safeDate,
-                    month: extractMonthFromDate(safeDate) || (d.createdAt?.toDate ? extractMonthFromDate(d.createdAt.toDate().toLocaleDateString('pt-BR')) : null),
-                    finalizados: Number(d.Atendimentos_Finalizados) || 0,
-                    ligAtendidas: Number(d.Ligacoes_Atendidas) || 0,
-                    ligPerdidas: Number(d.Ligacoes_Perdidas) || 0,
-                    huggyVol: Number(d.Atendimentos_Huggy) || 0,
-                    tmaTel: timeToDecimal(d.TMA_Telefonia),
-                    tmaHuggy: timeToDecimal(d.TMA_Huggy),
-                    tme: timeToDecimal(d.TME_Telefonia),
-                    tmaTelRaw: d.TMA_Telefonia || "00:00:00",
-                    tmaHuggyRaw: d.TMA_Huggy || "00:00:00",
-                    tmeRaw: d.TME_Telefonia || "00:00:00",
-                    pontuacao: d.pontuacao !== undefined ? Number(d.pontuacao) : calcularPontuacao(d),
-                    createdAt: d.createdAt
-                });
+            items.forEach((d) => {
+                if (d.colabId === colab.id || d.collaboratorId === colab.id) {
+                    const safeDate = d.date || 'Semana Atual';
+                    list.push({
+                        id: d.id,
+                        date: safeDate,
+                        month: extractMonthFromDate(safeDate) || (d.createdAt?.toDate ? extractMonthFromDate(d.createdAt.toDate().toLocaleDateString('pt-BR')) : null),
+                        finalizados: Number(d.Atendimentos_Finalizados) || 0,
+                        ligAtendidas: Number(d.Ligacoes_Atendidas) || 0,
+                        ligPerdidas: Number(d.Ligacoes_Perdidas) || 0,
+                        huggyVol: Number(d.Atendimentos_Huggy) || 0,
+                        tmaTel: timeToDecimal(d.TMA_Telefonia),
+                        tmaHuggy: timeToDecimal(d.TMA_Huggy),
+                        tme: timeToDecimal(d.TME_Telefonia),
+                        tmaTelRaw: d.TMA_Telefonia || "00:00:00",
+                        tmaHuggyRaw: d.TMA_Huggy || "00:00:00",
+                        tmeRaw: d.TME_Telefonia || "00:00:00",
+                        pontuacao: d.pontuacao !== undefined ? Number(d.pontuacao) : calcularPontuacao(d),
+                        createdAt: d.createdAt
+                    });
+                }
             });
 
             // Ordena cronologicamente crescente para evolução em gráficos
@@ -144,27 +139,23 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
             setLoading(false);
         });
 
-        // 2. Auditorias QA (qa_audits)
-        const qAudits = query(collection(db, "qa_audits"));
-        const unsubAudits = onSnapshot(qAudits, (snap) => {
+        // 2. Auditorias QA via cache compartilhado
+        const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
             const list = [];
-            snap.forEach((d) => {
-                const dt = d.data();
+            items.forEach((dt) => {
                 if (dt.colabId === colab.id || dt.collaboratorId === colab.id) {
-                    list.push({ id: d.id, ...dt });
+                    list.push(dt);
                 }
             });
             setAudits(list);
         });
 
-        // 3. Feedbacks (feedbacks)
-        const qFeedbacks = query(collection(db, "feedbacks"));
-        const unsubFeedbacks = onSnapshot(qFeedbacks, (snap) => {
+        // 3. Feedbacks via cache compartilhado
+        const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
             const list = [];
-            snap.forEach((d) => {
-                const dt = d.data();
+            items.forEach((dt) => {
                 if (dt.colabId === colab.id || dt.collaboratorId === colab.id) {
-                    list.push({ id: d.id, ...dt });
+                    list.push(dt);
                 }
             });
             setFeedbacks(list);

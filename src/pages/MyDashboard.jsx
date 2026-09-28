@@ -4,8 +4,7 @@ import {
     ShieldCheck, Rocket, User, Hourglass, Users, CheckCircle,
     TrendingUp, CalendarDays
 } from 'lucide-react';
-import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const timeToDecimal = (timeStr) => {
@@ -106,9 +105,9 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             return;
         }
 
-        const unsubSchedule = onSnapshot(doc(db, "daily_schedules", "fixed_schedule"), (docSnap) => {
-            if (docSnap.exists()) {
-                const assignments = docSnap.data().assignments || {};
+        const unsubSchedule = subscribeSharedDocument("daily_schedules", "fixed_schedule", (docData) => {
+            if (docData) {
+                const assignments = docData.assignments || {};
                 const dayMap = { 0: 'domingo', 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' };
                 const todayId = dayMap[new Date().getDay()];
 
@@ -125,14 +124,13 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             }
         });
 
-        const qSunday = query(collection(db, "sunday_schedules"));
-        const unsubSunday = onSnapshot(qSunday, (querySnapshot) => {
+        const unsubSunday = subscribeSharedCollection("sunday_schedules", (items) => {
             let next = null;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            querySnapshot.forEach((docItem) => {
-                const assignments = docItem.data().assignments || {};
+            items.forEach((docItem) => {
+                const assignments = docItem.assignments || {};
                 for (const [dateStr, colabs] of Object.entries(assignments)) {
                     if (colabs.some(c => c.id === currentUserId)) {
                         const shiftDate = new Date(dateStr + 'T00:00:00');
@@ -147,41 +145,37 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             setNextSundayShift(next);
         });
 
-        const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
-            if (docSnap.exists()) setGoals(docSnap.data());
+        const unsubGoals = subscribeSharedDocument("system_settings", "sector_goals", (docData) => {
+            if (docData) setGoals(docData);
         });
 
-        const unsubKpi = onSnapshot(collection(db, "sector_kpis"), (snap) => {
-            const kpis = [];
-            snap.forEach(d => kpis.push(d.data()));
-            kpis.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        const unsubKpi = subscribeSharedCollection("sector_kpis", (items) => {
+            const kpis = [...items];
+            kpis.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()));
             if (kpis.length > 0) { 
                 setGlobalKpi(kpis[0]); 
                 if (kpis.length > 1) setPrevGlobalKpi(kpis[1]); 
             }
         });
 
-        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const map = {}; 
-            snap.forEach(d => { map[d.id] = d.data(); }); 
+            items.forEach(d => { map[d.id] = d; }); 
             setColabsFull(map);
         });
 
-        const unsubEvals = onSnapshot(collection(db, "weekly_evaluations"), (snap) => {
-            const evals = []; 
-            snap.forEach(d => evals.push({ id: d.id, ...d.data() }));
-            evals.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+        const unsubEvals = subscribeSharedCollection("weekly_evaluations", (items) => {
+            const evals = [...items]; 
+            evals.sort((a, b) => (a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()) - (b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()));
             setAllEvals(evals); 
             setLoading(false);
         });
 
-        const qReports = query(collection(db, "critical_reports"), where("creatorId", "==", currentUserId));
-        const unsubReports = onSnapshot(qReports, (snap) => {
+        const unsubReports = subscribeSharedCollection("critical_reports", (items) => {
             let pending = 0; 
             let inProgress = 0; 
             let resolved = 0;
-            snap.forEach(docItem => {
-                const data = docItem.data();
+            items.filter(d => d.creatorId === currentUserId).forEach(data => {
                 if (data.status === 'Pendente') pending++;
                 if (data.status === 'Em Andamento') inProgress++;
                 if (data.status === 'Resolvido') resolved++;
@@ -189,10 +183,9 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             setReportCounts({ pending, inProgress, resolved });
         });
 
-        const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
+        const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
             let unreadCount = 0;
-            snap.forEach(docItem => {
-                const data = docItem.data();
+            items.forEach(data => {
                 if ((data.colabId === currentUserId || data.collaboratorId === currentUserId) && !data.read) {
                     unreadCount++;
                 }
@@ -200,10 +193,8 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             setUnreadFeedbacks(unreadCount);
         });
 
-        const qAudits = query(collection(db, "qa_audits"), where("colabId", "==", currentUserId));
-        const unsubAudits = onSnapshot(qAudits, (snap) => {
-            const fetched = [];
-            snap.forEach(d => fetched.push(d.data()));
+        const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
+            const fetched = items.filter(d => d.colabId === currentUserId || d.collaboratorId === currentUserId);
             setMyAudits(fetched);
         });
 

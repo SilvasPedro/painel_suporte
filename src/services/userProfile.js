@@ -158,6 +158,9 @@ export const THIRD_PARTY_SCHEDULE_INFO = {
  * nas configurações do sistema no Firestore (system_settings/operation_shifts).
  */
 export const saveSystemShiftsInfo = async () => {
+    if (typeof window !== 'undefined' && sessionStorage.getItem('hubdesk_shifts_synced')) {
+        return true;
+    }
     try {
         const shiftsDocRef = doc(db, 'system_settings', 'operation_shifts');
         await setDoc(shiftsDocRef, {
@@ -174,6 +177,9 @@ export const saveSystemShiftsInfo = async () => {
             systemVersion: 'v3.6',
             updatedAt: new Date().toISOString()
         }, { merge: true });
+        if (typeof window !== 'undefined') {
+            sessionStorage.setItem('hubdesk_shifts_synced', 'true');
+        }
         return true;
     } catch (err) {
         console.warn('Aviso ao persistir configurações de turnos e terceirizada:', err);

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles } from 'lucide-react';
-import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedDocument, subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
 import RbacSettingsTab from '../components/RbacSettingsTab';
@@ -24,15 +25,14 @@ const Settings = () => {
     const [loadingProcesses, setLoadingProcesses] = useState(true);
 
     useEffect(() => {
-        // Listener de Metas
-        const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
-            if (docSnap.exists()) setGoals(docSnap.data());
+        // Listener de Metas via cache compartilhado
+        const unsubGoals = subscribeSharedDocument("system_settings", "sector_goals", (docData) => {
+            if (docData) setGoals(docData);
         });
 
-        // Listener de Processos QA
-        const unsubProcesses = onSnapshot(collection(db, "qa_processes"), (snap) => {
-            const fetched = [];
-            snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
+        // Listener de Processos QA via cache compartilhado
+        const unsubProcesses = subscribeSharedCollection("qa_processes", (items) => {
+            const fetched = [...items];
             fetched.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setProcesses(fetched);
             setLoadingProcesses(false);

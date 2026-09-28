@@ -7,8 +7,9 @@ import {
     ChevronDown, ArrowDown, UserCheck, 
     MoveRight, Undo2, Shield
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
@@ -153,14 +154,13 @@ const OrgChart = ({ readOnly }) => {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // 1. Busca todos os colaboradores ativos no Firestore
+    // 1. Busca todos os colaboradores ativos no Firestore via cache compartilhado
     useEffect(() => {
-        const qColabs = query(collection(db, 'collaborators'));
-        const unsubColabs = onSnapshot(qColabs, (snap) => {
+        const unsubColabs = subscribeSharedCollection('collaborators', (items) => {
             const colabs = [];
-            snap.forEach(d => {
-                if (d.data().active !== false) {
-                    colabs.push({ id: d.id, ...d.data() });
+            items.forEach(d => {
+                if (d.active !== false) {
+                    colabs.push(d);
                 }
             });
             colabs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -169,12 +169,11 @@ const OrgChart = ({ readOnly }) => {
         return () => unsubColabs();
     }, []);
 
-    // 2. Ouvinte em tempo real da estrutura do organograma no Firestore
+    // 2. Ouvinte em tempo real da estrutura do organograma via cache compartilhado
     useEffect(() => {
-        const docRef = doc(db, 'system_settings', DOCUMENT_ID);
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists() && docSnap.data().structure) {
-                const loaded = { ...DEFAULT_STRUCTURE, ...docSnap.data().structure };
+        const unsubscribe = subscribeSharedDocument('system_settings', DOCUMENT_ID, (docData) => {
+            if (docData && docData.structure) {
+                const loaded = { ...DEFAULT_STRUCTURE, ...docData.structure };
                 setSavedChart(loaded);
                 // Atualiza o estado visual se o usuário não estiver no meio de alterações pendentes
                 setChart(prev => {
@@ -183,9 +182,6 @@ const OrgChart = ({ readOnly }) => {
             } else {
                 setSavedChart(DEFAULT_STRUCTURE);
             }
-            setLoading(false);
-        }, (error) => {
-            console.error('Erro no listener de organograma:', error);
             setLoading(false);
         });
 

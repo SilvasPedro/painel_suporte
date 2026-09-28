@@ -4,8 +4,9 @@ import {
     AlertTriangle, Star, CheckSquare, Clock, ShieldCheck, MessageSquare, Save, User,
     ThumbsUp, Minus, ThumbsDown, Filter
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, addDoc, updateDoc, deleteDoc, orderBy } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import ReactMarkdown from 'react-markdown';
@@ -49,21 +50,20 @@ const MonthlyEvaluations = () => {
 
     useEffect(() => {
         // Busca Colaboradores Ativos
-        const unsubColabs = onSnapshot(query(collection(db, "collaborators"), orderBy("name")), (snap) => {
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const colabs = [];
-            snap.forEach(d => {
-                if (d.data().active !== false) colabs.push({ id: d.id, ...d.data() });
+            items.forEach(d => {
+                if (d.active !== false) colabs.push(d);
             });
+            colabs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setCollaborators(colabs);
         });
 
-        // Busca Avaliações
-        const unsubEvals = onSnapshot(query(collection(db, "monthly_evaluations")), (snap) => {
-            const fetchedData = [];
-            snap.forEach(doc => fetchedData.push({ id: doc.id, ...doc.data() }));
-            
+        // Busca Avaliações Mensais
+        const unsubEvals = subscribeSharedCollection("monthly_evaluations", (items) => {
+            const fetchedData = [...items];
             // Ordena pelas mais recentes (Mês de referência decrescente)
-            fetchedData.sort((a, b) => b.referenceMonth.localeCompare(a.referenceMonth));
+            fetchedData.sort((a, b) => (b.referenceMonth || '').localeCompare(a.referenceMonth || ''));
             
             setEvaluations(fetchedData);
             setLoading(false);

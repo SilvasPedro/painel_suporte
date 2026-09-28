@@ -2,8 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, X, Send, Loader2, Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../context/AuthContext';
-import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { getCachedCollection } from '../services/dataCache';
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -25,21 +24,13 @@ export default function FloatingChat() {
     scrollToBottom();
   }, [messages, isOpen]);
 
-  // Carregar dados de contexto quando o chat for aberto
+  // Carregar dados de contexto quando o chat for aberto usando o cache do cliente
   useEffect(() => {
-    async function fetchContextData() {
+    function loadContextData() {
       try {
-        // Buscar colaboradores
-        const colabsSnap = await getDocs(collection(db, "collaborators"));
-        const colabs = colabsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Buscar avaliações semanais (limitando aos mais recentes ou pegando todos se forem poucos)
-        const evalsSnap = await getDocs(collection(db, "weekly_evaluations"));
-        const evals = evalsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        // Buscar KPIs
-        const kpiSnap = await getDocs(collection(db, "sector_kpis"));
-        const kpis = kpiSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const colabs = getCachedCollection("collaborators");
+        const evals = getCachedCollection("weekly_evaluations");
+        const kpis = getCachedCollection("sector_kpis");
 
         setContextData({
           appInfo: "Painel Hubdesk - Suporte Técnico",
@@ -53,7 +44,7 @@ export default function FloatingChat() {
     }
 
     if (isOpen && !contextData) {
-      fetchContextData();
+      loadContextData();
     }
   }, [isOpen, contextData]);
 

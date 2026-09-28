@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../services/firebase';
-import { collection, doc, setDoc, getDocs, query, orderBy, deleteDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { 
     Save, Calendar, MessageSquare, Ticket, Clock, 
     Activity, AlertCircle, Plus, FileText, Edit2, Trash2, X, Filter,
@@ -104,19 +105,14 @@ export default function DailyDemandLaunch() {
     const [viewMode, setViewMode] = useState('charts'); // charts | table | all
 
     useEffect(() => {
-        fetchHistoricalData();
-    }, []);
-
-    async function fetchHistoricalData() {
-        try {
-            const q = query(collection(db, 'dailyDemand'), orderBy('date', 'asc'));
-            const snapshot = await getDocs(q);
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const unsubscribe = subscribeSharedCollection('dailyDemand', (items) => {
+            const data = [...items];
+            data.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
             setHistoricalData(data);
-        } catch (error) {
-            console.error('Erro ao buscar dados históricos:', error);
-        }
-    }
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     // Abertura segura do modal de novo registro
     const handleOpenCreate = () => {
@@ -201,7 +197,6 @@ export default function DailyDemandLaunch() {
 
             await setDoc(docRef, payload, { merge: true });
             setMessage({ text: 'Registro diário salvo com sucesso!', type: 'success' });
-            await fetchHistoricalData();
 
             setTimeout(() => {
                 setMessage({ text: '', type: '' });
@@ -221,7 +216,6 @@ export default function DailyDemandLaunch() {
         try {
             await deleteDoc(doc(db, 'dailyDemand', deleteConfirmItem.id));
             setDeleteConfirmItem(null);
-            await fetchHistoricalData();
         } catch (error) {
             console.error("Erro ao excluir registro:", error);
             alert("Erro ao excluir registro. Tente novamente.");

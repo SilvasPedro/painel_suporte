@@ -7,8 +7,9 @@ import {
     Sun, Sunset, Moon, ArrowUpDown, ChevronDown, ChevronRight, 
     Award, TrendingUp, Sparkles, AlertCircle, Check, Mail, MoreVertical
 } from 'lucide-react';
-import { collection, onSnapshot, query, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { ROLES, normalizeRole } from '../services/rbac';
@@ -80,35 +81,24 @@ const CollaboratorsHub = () => {
     const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
     const [sortBy, setSortBy] = useState('name_asc'); // 'name_asc', 'name_desc', 'score_desc', 'score_asc'
 
-    // --- CONEXÃO COM FIRESTORE ---
+    // --- CONEXÃO COM FIRESTORE VIA CACHE COMPARTILHADO ---
     useEffect(() => {
-        const q = query(collection(db, "collaborators"), orderBy("name", "asc"));
-        const unsubscribe = onSnapshot(q, (querySnapshot) => {
-            const docs = [];
-            querySnapshot.forEach((d) => {
-                docs.push({ id: d.id, ...d.data() });
-            });
+        const unsubscribe = subscribeSharedCollection("collaborators", (items) => {
+            const docs = [...items];
+            docs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setCollaborators(docs);
-            setLoading(false);
-        }, (error) => {
-            showToast("Erro ao carregar colaboradores: " + error.message, "error");
             setLoading(false);
         });
 
-        const qEvals = query(collection(db, "weekly_evaluations"));
-        const unsubEvals = onSnapshot(qEvals, (snapshot) => {
-            const evals = [];
-            snapshot.forEach((d) => {
-                evals.push({ id: d.id, ...d.data() });
-            });
-            setEvaluations(evals);
+        const unsubEvals = subscribeSharedCollection("weekly_evaluations", (items) => {
+            setEvaluations(items);
         });
 
         return () => {
             unsubscribe();
             unsubEvals();
         };
-    }, [showToast]);
+    }, []);
 
     // Mapeamento da última avaliação por colaborador
     const latestEvalMap = useMemo(() => {

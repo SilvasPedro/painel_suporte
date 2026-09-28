@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
     Search, Filter, X, Download, SlidersHorizontal, 
-    User, Layers
+    User, Layers, Calendar
 } from 'lucide-react';
 
 export default function AuditFilters({
@@ -9,6 +9,8 @@ export default function AuditFilters({
     setSearchTerm,
     periodFilter,
     setPeriodFilter,
+    dateFilter = '',
+    setDateFilter,
     statusFilter,
     setStatusFilter,
     processFilter,
@@ -33,7 +35,7 @@ export default function AuditFilters({
                     <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                     <input 
                         type="text" 
-                        placeholder="Buscar por colaborador, protocolo, processo ou observações..." 
+                        placeholder="Buscar por colaborador, protocolo, processo, data ou observações..." 
                         value={searchTerm} 
                         onChange={(e) => setSearchTerm(e.target.value)} 
                         className="w-full pl-10 pr-9 py-2 text-xs bg-gray-50/80 hover:bg-white focus:bg-white border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all font-medium" 
@@ -60,9 +62,12 @@ export default function AuditFilters({
                         <button
                             key={tab.id}
                             type="button"
-                            onClick={() => setPeriodFilter(tab.id)}
+                            onClick={() => {
+                                setPeriodFilter(tab.id);
+                                if (setDateFilter) setDateFilter('');
+                            }}
                             className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                                periodFilter === tab.id
+                                periodFilter === tab.id && !dateFilter
                                     ? 'bg-zinc-900 text-white shadow-2xs'
                                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                             }`}
@@ -97,8 +102,32 @@ export default function AuditFilters({
             </div>
 
             {/* Linha Inferior: Dropdowns de Filtro Específico */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-2 border-t border-gray-100 text-xs">
-                {/* 1. Status */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-5 gap-2.5 pt-2 border-t border-gray-100 text-xs">
+                {/* 1. Data Específica */}
+                <div className="relative flex items-center bg-gray-50/70 border border-gray-200 rounded-xl px-2.5 py-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0 mr-1.5" />
+                    <input
+                        type="text"
+                        placeholder="Data (ex: 28/09)"
+                        value={dateFilter}
+                        onChange={(e) => {
+                            if (setDateFilter) setDateFilter(e.target.value);
+                            if (e.target.value) setPeriodFilter('all');
+                        }}
+                        className="w-full bg-transparent outline-none text-xs font-semibold text-gray-700 placeholder-gray-400 pr-5"
+                    />
+                    {dateFilter && setDateFilter && (
+                        <button
+                            type="button"
+                            onClick={() => setDateFilter('')}
+                            className="absolute right-2 text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
+
+                {/* 2. Status */}
                 <div className="flex items-center gap-1.5 bg-gray-50/70 border border-gray-200 rounded-xl px-2.5 py-1.5">
                     <Filter className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <select
@@ -112,7 +141,7 @@ export default function AuditFilters({
                     </select>
                 </div>
 
-                {/* 2. Colaborador */}
+                {/* 3. Colaborador */}
                 <div className="flex items-center gap-1.5 bg-gray-50/70 border border-gray-200 rounded-xl px-2.5 py-1.5">
                     <User className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <select
@@ -127,7 +156,7 @@ export default function AuditFilters({
                     </select>
                 </div>
 
-                {/* 3. Processo QA */}
+                {/* 4. Processo QA */}
                 <div className="flex items-center gap-1.5 bg-gray-50/70 border border-gray-200 rounded-xl px-2.5 py-1.5">
                     <Layers className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <select
@@ -142,7 +171,7 @@ export default function AuditFilters({
                     </select>
                 </div>
 
-                {/* 4. Ordenação */}
+                {/* 5. Ordenação */}
                 <div className="flex items-center gap-1.5 bg-gray-50/70 border border-gray-200 rounded-xl px-2.5 py-1.5">
                     <SlidersHorizontal className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <select

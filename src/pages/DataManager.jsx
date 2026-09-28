@@ -8,7 +8,7 @@ import {
     Users, ChevronLeft, ChevronRight, RotateCcw, CheckCircle, AlertCircle,
     CalendarRange, Layers, Flame, Tag, ThumbsUp, HelpCircle
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 const collectionMap = {
     "feedbacks": "feedbacks",
     "metrics": "weekly_evaluations",
@@ -16,6 +16,7 @@ const collectionMap = {
     "audits": "qa_audits"
 };
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
 
@@ -113,12 +114,29 @@ const DataManager = () => {
     };
 
     const getItemDateObj = (item) => {
-        if (item.date && typeof item.date === 'string' && item.date.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            const [y, m, d] = item.date.split('-').map(Number);
-            return new Date(y, m - 1, d);
+        if (!item) return null;
+        if (item.date) {
+            if (typeof item.date === 'string') {
+                if (/^\d{4}-\d{2}-\d{2}/.test(item.date)) {
+                    const [y, m, d] = item.date.substring(0, 10).split('-').map(Number);
+                    return new Date(y, m - 1, d);
+                }
+                if (/^\d{2}\/\d{2}\/\d{4}/.test(item.date)) {
+                    const [d, m, y] = item.date.substring(0, 10).split('/').map(Number);
+                    return new Date(y, m - 1, d);
+                }
+                const parsed = new Date(item.date);
+                if (!isNaN(parsed.getTime())) return parsed;
+            } else if (typeof item.date === 'object') {
+                if (typeof item.date.toDate === 'function') return item.date.toDate();
+                if (item.date instanceof Date) return item.date;
+            }
         }
         if (item.createdAt && typeof item.createdAt.toDate === 'function') {
             return item.createdAt.toDate();
+        }
+        if (item.createdAt instanceof Date) {
+            return item.createdAt;
         }
         if (item.createdAt) {
             const d = new Date(item.createdAt);
@@ -128,22 +146,21 @@ const DataManager = () => {
     };
 
     useEffect(() => {
-        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snapshot) => {
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const map = {};
             const infoMap = {};
-            snapshot.forEach((doc) => {
-                const d = doc.data();
-                map[doc.id] = d.name;
-                infoMap[doc.id] = { id: doc.id, ...d };
+            items.forEach((d) => {
+                map[d.id] = d.name;
+                infoMap[d.id] = d;
             });
             setCollaboratorsMap(map);
             setCollaboratorsInfo(infoMap);
         });
         
-        const unsubQA = onSnapshot(collection(db, "qa_processes"), (snapshot) => {
+        const unsubQA = subscribeSharedCollection("qa_processes", (items) => {
             const map = {};
-            snapshot.forEach((doc) => {
-                map[doc.id] = doc.data();
+            items.forEach((d) => {
+                map[d.id] = d;
             });
             setQaProcesses(map);
         });
@@ -158,13 +175,10 @@ const DataManager = () => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         const currentCollection = collectionMap[activeTab];
-        const q = query(collection(db, currentCollection)); 
+        if (!currentCollection) return;
         
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedData = [];
-            snapshot.forEach((doc) => {
-                fetchedData.push({ id: doc.id, ...doc.data() });
-            });
+        const unsubscribe = subscribeSharedCollection(currentCollection, (items) => {
+            const fetchedData = [...items];
             
             fetchedData.sort((a, b) => {
                 const getDateValue = (item) => {
@@ -186,13 +200,10 @@ const DataManager = () => {
             
             setData(fetchedData);
             setLoading(false);
-        }, (error) => {
-            showToast("Erro ao carregar dados: " + error.message, "error");
-            setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [activeTab, showToast]);
+    }, [activeTab]);
 
     // Reseta filtros secundários ao alternar de aba
     const handleTabChange = (newTab) => {
@@ -254,7 +265,6 @@ const DataManager = () => {
     // Aplicação dos filtros
     const filteredData = useMemo(() => {
         const now = new Date();
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
         return data.filter(item => {
             const mappedName = collaboratorsMap[item.colabId || item.collaboratorId] || item.colabName || '';
@@ -302,21 +312,30 @@ const DataManager = () => {
 
             // 4. Filtro de data textual
             if (dateFilter) {
-                const safeDate = getSafeDateString(item);
-                if (!safeDate.toLowerCase().includes(dateFilter.toLowerCase())) return false;
+                const safeDate = getSafeDateString(item).toLowerCase();
+                const q = dateFilter.trim().toLowerCase();
+                const d = getItemDateObj(item);
+                const isoStr = d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+                const rawDate = typeof item.date === 'string' ? item.date.toLowerCase() : '';
+                
+                const match = safeDate.includes(q) || rawDate.includes(q) || isoStr.includes(q);
+                if (!match) return false;
             }
 
             // 5. Filtro rápido de Período
             if (periodFilter !== 'all') {
                 const d = getItemDateObj(item);
                 if (!d) return false;
-                const t = d.getTime();
                 if (periodFilter === 'today') {
-                    if (t < todayStart || t >= todayStart + 86400000) return false;
+                    const isSameDay = 
+                        d.getFullYear() === now.getFullYear() &&
+                        d.getMonth() === now.getMonth() &&
+                        d.getDate() === now.getDate();
+                    if (!isSameDay) return false;
                 } else if (periodFilter === '7days') {
-                    if (t < now.getTime() - 7 * 86400000) return false;
+                    if (d.getTime() < now.getTime() - 7 * 86400000) return false;
                 } else if (periodFilter === '30days') {
-                    if (t < now.getTime() - 30 * 86400000) return false;
+                    if (d.getTime() < now.getTime() - 30 * 86400000) return false;
                 } else if (periodFilter === 'this_month') {
                     if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return false;
                 }
@@ -1757,18 +1776,39 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                         <ShieldCheck className="w-4 h-4 text-red-500" /> Checklist da Avaliação
                                     </h5>
                                     <div className="space-y-2.5">
-                                        {Object.entries(item.checklistResults).map(([idx, status]) => {
+                                        {Object.entries(item.checklistResults).map(([key, status], idx) => {
                                             const process = qaProcesses && item.processId ? qaProcesses[item.processId] : null;
-                                            const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
+                                            let question = key;
+                                            const numIdx = Number(key);
+                                            if (!isNaN(numIdx)) {
+                                                if (process?.checklist && Array.isArray(process.checklist) && process.checklist[numIdx]) {
+                                                    const itemVal = process.checklist[numIdx];
+                                                    question = typeof itemVal === 'string' ? itemVal : (itemVal?.title || itemVal?.text || itemVal?.name || `Item ${numIdx + 1}`);
+                                                } else if (process?.checklist && typeof process.checklist === 'object' && process.checklist[key]) {
+                                                    const itemVal = process.checklist[key];
+                                                    question = typeof itemVal === 'string' ? itemVal : (itemVal?.title || itemVal?.text || itemVal?.name || `Item ${numIdx + 1}`);
+                                                } else {
+                                                    question = `Item de verificação ${numIdx + 1}`;
+                                                }
+                                            }
+                                            const note = item.checklistNotes?.[key];
                                             let statusColor = "text-gray-600 bg-gray-100 border-gray-200";
                                             if (status === 'Passou') statusColor = "text-emerald-700 bg-emerald-50 border-emerald-200";
                                             if (status === 'Falhou') statusColor = "text-red-700 bg-red-50 border-red-200";
+                                            if (status === 'N/A') statusColor = "text-gray-600 bg-gray-100 border-gray-200";
                                             return (
-                                                <div key={idx} className="flex justify-between items-start gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200/80">
-                                                    <span className="text-sm text-gray-700 font-medium leading-snug">{question}</span>
-                                                    <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${statusColor}`}>
-                                                        {status}
-                                                    </span>
+                                                <div key={key || idx} className="p-3 bg-gray-50 rounded-xl border border-gray-200/80">
+                                                    <div className="flex justify-between items-start gap-4">
+                                                        <span className="text-sm text-gray-700 font-medium leading-snug">{question}</span>
+                                                        <span className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider shrink-0 border ${statusColor}`}>
+                                                            {status}
+                                                        </span>
+                                                    </div>
+                                                    {note && (
+                                                        <div className="mt-2 text-xs text-amber-900 bg-amber-50/80 p-2 rounded-lg border border-amber-200/60">
+                                                            <span className="font-semibold text-amber-800">Obs: </span>{note}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -2263,22 +2303,35 @@ const EditModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                             <ShieldCheck className="w-4 h-4 text-red-500" /> Checklist da Avaliação
                                         </h5>
                                         <div className="space-y-2.5">
-                                            {Object.entries(formData.checklistResults).map(([idx, status]) => {
+                                            {Object.entries(formData.checklistResults).map(([key, status], idx) => {
                                                 const process = qaProcesses && formData.processId ? qaProcesses[formData.processId] : null;
-                                                const question = process?.checklist?.[idx] || `Item de verificação ${Number(idx) + 1}`;
+                                                let question = key;
+                                                const numIdx = Number(key);
+                                                if (!isNaN(numIdx)) {
+                                                    if (process?.checklist && Array.isArray(process.checklist) && process.checklist[numIdx]) {
+                                                        const itemVal = process.checklist[numIdx];
+                                                        question = typeof itemVal === 'string' ? itemVal : (itemVal?.title || itemVal?.text || itemVal?.name || `Item ${numIdx + 1}`);
+                                                    } else if (process?.checklist && typeof process.checklist === 'object' && process.checklist[key]) {
+                                                        const itemVal = process.checklist[key];
+                                                        question = typeof itemVal === 'string' ? itemVal : (itemVal?.title || itemVal?.text || itemVal?.name || `Item ${numIdx + 1}`);
+                                                    } else {
+                                                        question = `Item de verificação ${numIdx + 1}`;
+                                                    }
+                                                }
                                                 return (
-                                                    <div key={idx} className="flex justify-between items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                                                    <div key={key || idx} className="flex justify-between items-center gap-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
                                                         <span className="text-xs text-gray-700 font-medium leading-snug">{question}</span>
                                                         <select
                                                             value={status}
                                                             onChange={(e) => {
-                                                                const updated = { ...formData.checklistResults, [idx]: e.target.value };
+                                                                const updated = { ...formData.checklistResults, [key]: e.target.value };
                                                                 handleChange('checklistResults', updated);
                                                             }}
                                                             className="p-1.5 text-xs font-bold rounded-lg border border-gray-300 bg-white focus:ring-2 focus:ring-red-600 outline-none"
                                                         >
                                                             <option value="Passou">Passou</option>
                                                             <option value="Falhou">Falhou</option>
+                                                            <option value="N/A">N/A</option>
                                                         </select>
                                                     </div>
                                                 );

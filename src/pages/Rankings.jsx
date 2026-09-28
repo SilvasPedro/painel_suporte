@@ -5,8 +5,7 @@ import {
     LayoutGrid, Table, BarChart3, Eye, Download, Sparkles,
     Flame, ChevronRight, ArrowUpRight, CheckCircle2, RotateCcw
 } from 'lucide-react';
-import { collection, onSnapshot, query } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 
 // --- FUNÇÕES DE CONVERSÃO DE TEMPO ---
 const timeToSeconds = (timeStr) => {
@@ -60,22 +59,19 @@ const Rankings = () => {
 
     useEffect(() => {
         // Busca Colaboradores (ativos)
-        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const map = {};
-            snap.forEach(d => {
-                const data = d.data();
+            items.forEach(data => {
                 if (data.active !== false) {
-                    map[d.id] = { id: d.id, ...data };
+                    map[data.id] = data;
                 }
             });
             setCollaboratorsMap(map);
         });
 
         // Busca todas as avaliações semanais
-        const unsubEvals = onSnapshot(query(collection(db, "weekly_evaluations")), (snap) => {
-            const fetched = [];
-            snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
-            setEvaluations(fetched);
+        const unsubEvals = subscribeSharedCollection("weekly_evaluations", (items) => {
+            setEvaluations(items);
             setLoading(false);
         });
 

@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     ShieldCheck, Plus, Loader2, AlertTriangle, PieChart as PieIcon 
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
@@ -28,10 +29,39 @@ export default function Audits() {
     // Estados de Filtros
     const [searchTerm, setSearchTerm] = useState('');
     const [periodFilter, setPeriodFilter] = useState('all'); // 'all' | 'today' | '7d' | 'month'
+    const [dateFilter, setDateFilter] = useState('');
     const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'Conforme' | 'Não Conforme'
     const [processFilter, setProcessFilter] = useState('all');
     const [colabFilter, setColabFilter] = useState('all');
     const [sortBy, setSortBy] = useState('recent'); // 'recent' | 'oldest' | 'score_desc' | 'score_asc'
+
+    const getAuditLocalDate = (audit) => {
+        if (!audit) return null;
+        if (audit.date) {
+            if (typeof audit.date === 'string') {
+                if (/^\d{4}-\d{2}-\d{2}/.test(audit.date)) {
+                    const [y, m, d] = audit.date.substring(0, 10).split('-').map(Number);
+                    return new Date(y, m - 1, d);
+                }
+                if (/^\d{2}\/\d{2}\/\d{4}/.test(audit.date)) {
+                    const [d, m, y] = audit.date.substring(0, 10).split('/').map(Number);
+                    return new Date(y, m - 1, d);
+                }
+                const parsed = new Date(audit.date);
+                if (!isNaN(parsed.getTime())) return parsed;
+            } else if (typeof audit.date === 'object') {
+                if (typeof audit.date.toDate === 'function') return audit.date.toDate();
+                if (audit.date instanceof Date) return audit.date;
+            }
+        }
+        if (audit.createdAt) {
+            if (typeof audit.createdAt.toDate === 'function') return audit.createdAt.toDate();
+            if (audit.createdAt instanceof Date) return audit.createdAt;
+            const parsed = new Date(audit.createdAt);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+        return null;
+    };
 
     // Modais
     const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -41,35 +71,31 @@ export default function Audits() {
     const [deletingId, setDeletingId] = useState(null);
     const [saving, setSaving] = useState(false);
 
-    // --- CARREGAMENTO DO FIRESTORE EM TEMPO REAL ---
+    // --- CARREGAMENTO DO FIRESTORE EM TEMPO REAL VIA CACHE ---
     useEffect(() => {
         // 1. Busca Colaboradores
-        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
             const map = {};
             const list = [];
-            snap.forEach(d => {
-                map[d.id] = d.data().name;
-                list.push({ id: d.id, name: d.data().name });
+            items.forEach(d => {
+                map[d.id] = d.name;
+                list.push({ id: d.id, name: d.name });
             });
-            list.sort((a, b) => a.name.localeCompare(b.name));
+            list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setCollaboratorsMap(map);
             setCollaboratorsList(list);
         });
 
         // 2. Busca Processos/Checklists de QA
-        const unsubProcesses = onSnapshot(collection(db, "qa_processes"), (snap) => {
-            const fetched = [];
-            snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
-            fetched.sort((a, b) => a.name.localeCompare(b.name));
+        const unsubProcesses = subscribeSharedCollection("qa_processes", (items) => {
+            const fetched = [...items];
+            fetched.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setQaProcesses(fetched);
         });
 
         // 3. Busca Auditorias
-        const qAudits = query(collection(db, "qa_audits"));
-        const unsubAudits = onSnapshot(qAudits, (snap) => {
-            const fetched = [];
-            snap.forEach(d => fetched.push({ id: d.id, ...d.data() }));
-            setAudits(fetched);
+        const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
+            setAudits(items);
             setLoading(false);
         });
 
@@ -85,9 +111,10 @@ export default function Audits() {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
         const sevenDaysAgo = startOfToday - (7 * 24 * 60 * 60 * 1000);
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
 
         return audits.filter(audit => {
+            const auditDate = getAuditLocalDate(audit);
+
             // 1. Filtro de Texto (busca)
             if (searchTerm.trim()) {
                 const query = searchTerm.toLowerCase();
@@ -95,11 +122,15 @@ export default function Audits() {
                 const protocol = (audit.protocol || '').toLowerCase();
                 const processName = (audit.processName || '').toLowerCase();
                 const notes = (audit.notes || '').toLowerCase();
+                const dateBr = auditDate ? auditDate.toLocaleDateString('pt-BR') : '';
+                const dateIso = typeof audit.date === 'string' ? audit.date : '';
 
                 const match = colabName.includes(query) || 
                               protocol.includes(query) || 
                               processName.includes(query) || 
-                              notes.includes(query);
+                              notes.includes(query) ||
+                              dateBr.includes(query) ||
+                              dateIso.includes(query);
                 if (!match) return false;
             }
 
@@ -119,15 +150,29 @@ export default function Audits() {
             }
 
             // 5. Filtro de Período
-            if (periodFilter !== 'all' && audit.date) {
-                const auditTime = new Date(audit.date).getTime();
-                if (periodFilter === 'today' && auditTime < startOfToday) {
-                    return false;
+            if (periodFilter !== 'all') {
+                if (!auditDate) return false;
+                if (periodFilter === 'today') {
+                    const isSameDay = 
+                        auditDate.getFullYear() === now.getFullYear() &&
+                        auditDate.getMonth() === now.getMonth() &&
+                        auditDate.getDate() === now.getDate();
+                    if (!isSameDay) return false;
+                } else if (periodFilter === '7d') {
+                    if (auditDate.getTime() < sevenDaysAgo) return false;
+                } else if (periodFilter === 'month') {
+                    if (auditDate.getFullYear() !== now.getFullYear() || auditDate.getMonth() !== now.getMonth()) return false;
                 }
-                if (periodFilter === '7d' && auditTime < sevenDaysAgo) {
-                    return false;
-                }
-                if (periodFilter === 'month' && auditTime < startOfMonth) {
+            }
+
+            // 6. Filtro de Data Específica
+            if (dateFilter.trim()) {
+                if (!auditDate) return false;
+                const q = dateFilter.trim().toLowerCase();
+                const dateBr = auditDate.toLocaleDateString('pt-BR');
+                const dateIso = `${auditDate.getFullYear()}-${String(auditDate.getMonth() + 1).padStart(2, '0')}-${String(auditDate.getDate()).padStart(2, '0')}`;
+                const rawDate = typeof audit.date === 'string' ? audit.date.toLowerCase() : '';
+                if (!dateBr.includes(q) && !dateIso.includes(q) && !rawDate.includes(q)) {
                     return false;
                 }
             }
@@ -135,14 +180,15 @@ export default function Audits() {
             return true;
         }).sort((a, b) => {
             // Ordenação
+            const dateA = getAuditLocalDate(a);
+            const dateB = getAuditLocalDate(b);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+
             if (sortBy === 'recent') {
-                const timeA = a.date ? new Date(a.date).getTime() : 0;
-                const timeB = b.date ? new Date(b.date).getTime() : 0;
                 return timeB - timeA;
             }
             if (sortBy === 'oldest') {
-                const timeA = a.date ? new Date(a.date).getTime() : 0;
-                const timeB = b.date ? new Date(b.date).getTime() : 0;
                 return timeA - timeB;
             }
             if (sortBy === 'score_desc') {
@@ -157,7 +203,7 @@ export default function Audits() {
             }
             return 0;
         });
-    }, [audits, searchTerm, statusFilter, processFilter, colabFilter, periodFilter, sortBy, collaboratorsMap]);
+    }, [audits, searchTerm, statusFilter, processFilter, colabFilter, periodFilter, dateFilter, sortBy, collaboratorsMap]);
 
     // --- CÁLCULO DE DASHBOARD STATS E RANKING ---
     const { dashboardStats, rankingData, pieData } = useMemo(() => {
@@ -209,11 +255,12 @@ export default function Audits() {
         return { dashboardStats: stats, rankingData: ranking, pieData: pData };
     }, [filteredAudits, collaboratorsMap, collaboratorsList]);
 
-    const hasActiveFilters = searchTerm !== '' || periodFilter !== 'all' || statusFilter !== 'all' || processFilter !== 'all' || colabFilter !== 'all' || sortBy !== 'recent';
+    const hasActiveFilters = searchTerm !== '' || periodFilter !== 'all' || dateFilter !== '' || statusFilter !== 'all' || processFilter !== 'all' || colabFilter !== 'all' || sortBy !== 'recent';
 
     const handleResetFilters = () => {
         setSearchTerm('');
         setPeriodFilter('all');
+        setDateFilter('');
         setStatusFilter('all');
         setProcessFilter('all');
         setColabFilter('all');
@@ -424,6 +471,8 @@ export default function Audits() {
                 setSearchTerm={setSearchTerm}
                 periodFilter={periodFilter}
                 setPeriodFilter={setPeriodFilter}
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
                 statusFilter={statusFilter}
                 setStatusFilter={setStatusFilter}
                 processFilter={processFilter}

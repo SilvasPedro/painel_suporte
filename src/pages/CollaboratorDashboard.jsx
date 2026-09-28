@@ -5,8 +5,7 @@ import {
     Search, Eye, X, Database, TrendingUp, Users, CheckCircle, Filter,
     KeyRound, Settings, Activity, Calendar, CalendarDays, Network, FileText, Menu, Sparkles
 } from 'lucide-react';
-import { collection, onSnapshot, query, where, doc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
@@ -493,9 +492,9 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
     useEffect(() => {
 
-        const unsubSchedule = onSnapshot(doc(db, "daily_schedules", "fixed_schedule"), (docSnap) => {
-            if (docSnap.exists()) {
-                const assignments = docSnap.data().assignments || {};
+        const unsubSchedule = subscribeSharedDocument("daily_schedules", "fixed_schedule", (docData) => {
+            if (docData) {
+                const assignments = docData.assignments || {};
                 const dayMap = { 0: 'domingo', 1: 'segunda', 2: 'terca', 3: 'quarta', 4: 'quinta', 5: 'sexta', 6: 'sabado' };
                 const todayId = dayMap[new Date().getDay()];
 
@@ -512,16 +511,15 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             }
         });
 
-        // LÓGICA CORRIGIDA: Buscar próximo domingo em toda a coleção (todos os meses)
-        const qSunday = query(collection(db, "sunday_schedules"));
-        const unsubSunday = onSnapshot(qSunday, (querySnapshot) => {
+        // LÓGICA: Próximo domingo usando coleção compartilhada em cache
+        const unsubSunday = subscribeSharedCollection("sunday_schedules", (items) => {
             let next = null;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
             // Percorre todos os documentos da coleção (cada documento é um mês)
-            querySnapshot.forEach((doc) => {
-                const assignments = doc.data().assignments || {};
+            items.forEach((docItem) => {
+                const assignments = docItem.assignments || {};
 
                 // Percorre todos os dias registrados nesse mês
                 for (const [dateStr, colabs] of Object.entries(assignments)) {
@@ -531,7 +529,6 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
 
                         // Se a data for igual ou futura a hoje
                         if (shiftDate >= today) {
-                            // Se ainda não temos um próximo, ou se esta data é mais próxima que a anterior salva
                             if (!next || shiftDate < new Date(next)) {
                                 next = dateStr;
                             }
@@ -542,32 +539,29 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setNextSundayShift(next);
         });
 
-        const unsubGoals = onSnapshot(doc(db, "system_settings", "sector_goals"), (docSnap) => {
-            if (docSnap.exists()) setGoals(docSnap.data());
+        const unsubGoals = subscribeSharedDocument("system_settings", "sector_goals", (docData) => {
+            if (docData) setGoals(docData);
         });
 
-        const unsubKpi = onSnapshot(collection(db, "sector_kpis"), (snap) => {
-            const kpis = [];
-            snap.forEach(d => kpis.push(d.data()));
-            kpis.sort((a, b) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+        const unsubKpi = subscribeSharedCollection("sector_kpis", (items) => {
+            const kpis = [...items];
+            kpis.sort((a, b) => (b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()) - (a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()));
             if (kpis.length > 0) { setGlobalKpi(kpis[0]); if (kpis.length > 1) setPrevGlobalKpi(kpis[1]); }
         });
 
-        const unsubColabs = onSnapshot(collection(db, "collaborators"), (snap) => {
-            const map = {}; snap.forEach(d => map[d.id] = d.data()); setColabsFull(map);
+        const unsubColabs = subscribeSharedCollection("collaborators", (items) => {
+            const map = {}; items.forEach(d => { map[d.id] = d; }); setColabsFull(map);
         });
 
-        const unsubEvals = onSnapshot(collection(db, "weekly_evaluations"), (snap) => {
-            const evals = []; snap.forEach(d => evals.push({ id: d.id, ...d.data() }));
-            evals.sort((a, b) => (a.createdAt?.toMillis() || 0) - (b.createdAt?.toMillis() || 0));
+        const unsubEvals = subscribeSharedCollection("weekly_evaluations", (items) => {
+            const evals = [...items];
+            evals.sort((a, b) => (a.createdAt?.toMillis ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime()) - (b.createdAt?.toMillis ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime()));
             setAllEvals(evals); setLoading(false);
         });
 
-        const qReports = query(collection(db, "critical_reports"), where("creatorId", "==", currentUserId));
-        const unsubReports = onSnapshot(qReports, (snap) => {
+        const unsubReports = subscribeSharedCollection("critical_reports", (items) => {
             let pending = 0; let inProgress = 0; let resolved = 0;
-            snap.forEach(doc => {
-                const data = doc.data();
+            items.filter(d => d.creatorId === currentUserId).forEach(data => {
                 if (data.status === 'Pendente') pending++;
                 if (data.status === 'Em Andamento') inProgress++;
                 if (data.status === 'Resolvido') resolved++;
@@ -575,10 +569,9 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setReportCounts({ pending, inProgress, resolved });
         });
 
-        const unsubFeedbacks = onSnapshot(collection(db, "feedbacks"), (snap) => {
+        const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
             let unreadCount = 0;
-            snap.forEach(doc => {
-                const data = doc.data();
+            items.forEach(data => {
                 if ((data.colabId === currentUserId || data.collaboratorId === currentUserId) && !data.read) {
                     unreadCount++;
                 }
@@ -586,14 +579,10 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
             setUnreadFeedbacks(unreadCount);
         });
 
-        const qAudits = query(collection(db, "qa_audits"), where("colabId", "==", currentUserId));
-        const unsubAudits = onSnapshot(qAudits, (snap) => {
-            const fetched = [];
-            snap.forEach(d => fetched.push(d.data()));
+        const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
+            const fetched = items.filter(d => d.colabId === currentUserId || d.collaboratorId === currentUserId);
             setMyAudits(fetched);
         });
-
-
 
         return () => { unsubKpi(); unsubEvals(); unsubGoals(); unsubColabs(); unsubReports(); unsubFeedbacks(); unsubAudits(); unsubSchedule(); unsubSunday(); };
     }, [currentUserId]);

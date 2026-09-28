@@ -6,8 +6,9 @@ import {
     Table, Columns3, LayoutGrid, List, Copy, Printer, ChevronLeft, ChevronRight,
     User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw
 } from 'lucide-react';
-import { collection, onSnapshot, query, doc, addDoc, updateDoc, deleteDoc, where } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -87,32 +88,21 @@ const Reports = () => {
     const [quickSaving, setQuickSaving] = useState(false);
 
     // ==========================================
-    // BUSCA DE DADOS EM TEMPO REAL
+    // BUSCA DE DADOS EM TEMPO REAL VIA CACHE COMPARTILHADO
     // ==========================================
     useEffect(() => {
         if (!currentUser) return;
 
-        let q;
         const userIdentifier = currentUser.firestoreId || currentUser.uid;
+        const userIds = new Set([currentUser.firestoreId, currentUser.uid].filter(Boolean));
 
-        // Se for Gestor ou Supervisor: carrega TODOS os relatórios da operação
-        if (canViewAllReports) {
-            q = query(collection(db, "critical_reports"));
-        } else {
-            // Se for Colaborador/Apoio: carrega apenas os seus próprios relatórios
-            const userIds = Array.from(new Set([currentUser.firestoreId, currentUser.uid].filter(Boolean)));
-            if (userIds.length > 0) {
-                q = query(collection(db, "critical_reports"), where("creatorId", "in", userIds));
-            } else {
-                q = query(collection(db, "critical_reports"), where("creatorId", "==", userIdentifier || "none"));
+        const unsubscribe = subscribeSharedCollection("critical_reports", (items) => {
+            let fetchedData = [...items];
+
+            // Se for Colaborador/Apoio (sem permissão geral): filtra apenas seus relatórios na memória
+            if (!canViewAllReports) {
+                fetchedData = fetchedData.filter(r => userIds.has(r.creatorId) || r.creatorId === userIdentifier);
             }
-        }
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const fetchedData = [];
-            snapshot.forEach((docSnap) => {
-                fetchedData.push({ id: docSnap.id, ...docSnap.data() });
-            });
 
             // Ordenação pelo mais recente
             fetchedData.sort((a, b) => {
@@ -122,9 +112,6 @@ const Reports = () => {
             });
 
             setReports(fetchedData);
-            setLoading(false);
-        }, (error) => {
-            console.error("Erro ao carregar solicitações:", error);
             setLoading(false);
         });
 
