@@ -3,9 +3,9 @@ import {
     Camera, Upload, Link as LinkIcon, Check, X, ShieldCheck,
     Trophy, Zap, Star, Rocket, CalendarCheck, Network, Award, Mail,
     Phone, Clock, Sun, Sunset, Moon, ExternalLink, Copy, CheckCircle2,
-    Sparkles, Plus, Trash2, Heart, Edit3, BarChart3, Loader2, Save,
+    Sparkles, Plus, Trash2, Edit3, Loader2, Save,
     Lock, Info, AlertCircle, Headphones, Users, UserCheck, Search,
-    ChevronDown, ArrowLeft, Eye
+    ArrowLeft, Eye, ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
@@ -22,8 +22,7 @@ import {
     THIRD_PARTY_SCHEDULE_INFO,
     normalizeShiftName,
     calculateUserLevel,
-    DEFAULT_NETWORK_TAG_SUGGESTIONS,
-    DEFAULT_INTEREST_SUGGESTIONS
+    DEFAULT_NETWORK_TAG_SUGGESTIONS
 } from '../services/userProfile';
 
 // Mapeamento de ícones dos emblemas
@@ -62,36 +61,6 @@ const NETWORK_LEVELS = [
     }
 ];
 
-// Funções de conversão matemática de tempos para cálculos reais
-const timeToSeconds = (timeStr) => {
-    if (!timeStr || timeStr === '--' || timeStr === '--:--:--' || timeStr === '00:00:00') return 0;
-    const parts = String(timeStr).trim().split(':');
-    if (parts.length === 3) {
-        return parseInt(parts[0], 10) * 3600 + parseInt(parts[1], 10) * 60 + parseInt(parts[2], 10);
-    }
-    if (parts.length === 2) {
-        return parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
-    }
-    return 0;
-};
-
-const secondsToTime = (totalSeconds) => {
-    if (!totalSeconds || isNaN(totalSeconds) || totalSeconds <= 0) return '--:--:--';
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = Math.floor(totalSeconds % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
-const calcularPontuacao = (metrics) => {
-    if (!metrics) return 0;
-    const ptsFinalizados = (Number(metrics.finalizados) || Number(metrics.Atendimentos_Finalizados) || 0) * 1;
-    const ptsLigacoes = (Number(metrics.ligAtendidas) || Number(metrics.Ligacoes_Atendidas) || 0) * 2;
-    const ptsHuggy = (Number(metrics.huggyVol) || Number(metrics.Atendimentos_Huggy) || 0) * 1;
-    const ptsPerdidas = (Number(metrics.ligPerdidas) || Number(metrics.Ligacoes_Perdidas) || 0) * -5;
-    return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
-};
-
 const getInitialFormData = (u) => {
     const rawShift = u?.shift || 'Manhã I';
     const normShift = normalizeShiftName(rawShift);
@@ -126,9 +95,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const [collaboratorsList, setCollaboratorsList] = useState([]);
     const [selectedColabId, setSelectedColabId] = useState(null);
     const [colabSearchQuery, setColabSearchQuery] = useState('');
-    const [isColabPickerOpen, setIsColabPickerOpen] = useState(false);
+    const carouselRef = useRef(null);
 
-    // Carrega a lista completa de colaboradores para alternar perfis e ver status
+    // Carrega a lista completa de colaboradores
     useEffect(() => {
         const unsub = subscribeSharedCollection('collaborators', (items) => {
             const list = [...items];
@@ -138,11 +107,22 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         return () => unsub();
     }, []);
 
-    // Determina o colaborador que está sendo visualizado (Meu perfil ou de outro colega)
+    // REGRA CRÍTICA: Filtra APENAS colaboradores ativos (ignora inativos e desligados)
+    const activeCollaboratorsList = useMemo(() => {
+        return collaboratorsList.filter(c => {
+            if (!c) return false;
+            if (c.active === false) return false;
+            const st = (c.status || '').toLowerCase().trim();
+            if (st === 'inativo' || st === 'desligado') return false;
+            return true;
+        });
+    }, [collaboratorsList]);
+
+    // Determina o colaborador que está sendo visualizado (Meu perfil ou de outro colega ativo)
     const activeSelectedColab = useMemo(() => {
         if (!selectedColabId) return null;
-        return collaboratorsList.find(c => (c.id === selectedColabId || c.firestoreId === selectedColabId || c.uid === selectedColabId)) || null;
-    }, [selectedColabId, collaboratorsList]);
+        return activeCollaboratorsList.find(c => (c.id === selectedColabId || c.firestoreId === selectedColabId || c.uid === selectedColabId)) || null;
+    }, [selectedColabId, activeCollaboratorsList]);
 
     const isViewingOther = Boolean(activeSelectedColab && (activeSelectedColab.id !== (myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId)));
     const user = activeSelectedColab || myAuthUser;
@@ -158,7 +138,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     // Inputs temporários para tags e novos e-mails
     const [newSkillInput, setNewSkillInput] = useState('');
-    const [newInterestInput, setNewInterestInput] = useState('');
     const [newEmailInput, setNewEmailInput] = useState('');
 
     // Input temporário no modal de foto
@@ -179,149 +158,20 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     }, [activeSelectedColab, myAuthUser]);
 
-    // Métricas reais do colaborador (SEM MOCK)
-    const hasTargetUser = Boolean((user?.firestoreId || user?.uid || currentUserId) || user?.name || user?.email);
-    const [realMetrics, setRealMetrics] = useState({
-        loading: hasTargetUser,
-        mediaTmaTelefonia: '--:--:--',
-        mediaTmaChat: '--:--:--',
-        mediaPontos: '--',
-        percentualAuditorias: '--%',
-        totalAvaliacoes: 0,
-        totalAuditorias: 0
-    });
-
-    // Carrega dados 100% reais do Firestore para o colaborador (SEM MOCK)
+    // Salva configurações padrão de turnos se necessário
     useEffect(() => {
-        const targetId = user?.firestoreId || user?.uid || currentUserId;
-        const targetName = (user?.name || user?.displayName || '').trim().toLowerCase();
-        const targetEmail = (user?.email || '').trim().toLowerCase();
-
-        if (!targetId && !targetName && !targetEmail) {
-            return;
-        }
-
-        let isMounted = true;
-
-        // 1. Assinatura em cache compartilhado para avaliações semanais
-        const unsubEvals = subscribeSharedCollection('weekly_evaluations', (items) => {
-            if (!isMounted) return;
-            const evalDocs = [];
-            items.forEach(dt => {
-                const matchesId = (targetId && (dt.colabId === targetId || dt.collaboratorId === targetId || dt.uid === targetId));
-                const matchesName = targetName && (
-                    (dt.colabName && dt.colabName.trim().toLowerCase() === targetName) ||
-                    (dt.collaboratorName && dt.collaboratorName.trim().toLowerCase() === targetName) ||
-                    (dt.name && dt.name.trim().toLowerCase() === targetName)
-                );
-                const matchesEmail = targetEmail && (
-                    (dt.email && dt.email.trim().toLowerCase() === targetEmail) ||
-                    (dt.colabEmail && dt.colabEmail.trim().toLowerCase() === targetEmail)
-                );
-                if (matchesId || matchesName || matchesEmail) {
-                    evalDocs.push(dt);
-                }
-            });
-
-            let totalTmaTelSec = 0;
-            let countTmaTel = 0;
-            let totalTmaChatSec = 0;
-            let countTmaChat = 0;
-            let totalScoreSum = 0;
-            let countEvals = 0;
-
-            evalDocs.forEach(dt => {
-                countEvals++;
-
-                // Média TMA Telefonia real
-                const tmaTelStr = dt.TMA_Telefonia || dt.tmaTelefonia || dt.tma_tel;
-                const telSec = timeToSeconds(tmaTelStr);
-                if (telSec > 0 && telSec < 86400) {
-                    totalTmaTelSec += telSec;
-                    countTmaTel++;
-                }
-
-                // Média TMA Chat (Huggy) real
-                const tmaChatStr = dt.TMA_Huggy || dt.tmaHuggy || dt.tma_chat || dt.tmaChat;
-                const chatSec = timeToSeconds(tmaChatStr);
-                if (chatSec > 0 && chatSec < 86400) {
-                    totalTmaChatSec += chatSec;
-                    countTmaChat++;
-                }
-
-                // Média de Pontos real
-                const pts = dt.pontuacao !== undefined ? Number(dt.pontuacao) : calcularPontuacao(dt);
-                totalScoreSum += pts;
-            });
-
-            const mediaTmaTel = countTmaTel > 0 ? secondsToTime(totalTmaTelSec / countTmaTel) : '--:--:--';
-            const mediaTmaChat = countTmaChat > 0 ? secondsToTime(totalTmaChatSec / countTmaChat) : '--:--:--';
-            const mediaPts = countEvals > 0 ? `${(totalScoreSum / countEvals).toFixed(1)} pts` : '--';
-
-            setRealMetrics(prev => ({
-                ...prev,
-                mediaTmaTelefonia: mediaTmaTel,
-                mediaTmaChat: mediaTmaChat,
-                mediaPontos: mediaPts,
-                totalAvaliacoes: countEvals
-            }));
-        });
-
-        // 2. Assinatura em cache compartilhado para auditorias QA
-        const unsubAudits = subscribeSharedCollection('qa_audits', (items) => {
-            if (!isMounted) return;
-            const auditDocs = [];
-            items.forEach(dt => {
-                const matchesId = (targetId && (dt.colabId === targetId || dt.collaboratorId === targetId || dt.uid === targetId));
-                const matchesName = targetName && (
-                    (dt.colabName && dt.colabName.trim().toLowerCase() === targetName) ||
-                    (dt.collaboratorName && dt.collaboratorName.trim().toLowerCase() === targetName) ||
-                    (dt.name && dt.name.trim().toLowerCase() === targetName)
-                );
-                if (matchesId || matchesName) {
-                    auditDocs.push(dt);
-                }
-            });
-
-            let totalAuditScoreSum = 0;
-            let countAuditsWithScore = 0;
-            let countConforme = 0;
-
-            auditDocs.forEach(dt => {
-                const sc = Number(dt.score ?? dt.notaFinal ?? dt.percentage);
-                if (!isNaN(sc) && sc > 0) {
-                    totalAuditScoreSum += sc;
-                    countAuditsWithScore++;
-                }
-                if (dt.status === 'Conforme' || dt.conforme === true) {
-                    countConforme++;
-                }
-            });
-
-            let percentualAuditorias = '--%';
-            if (countAuditsWithScore > 0) {
-                percentualAuditorias = `${Math.round(totalAuditScoreSum / countAuditsWithScore)}%`;
-            } else if (auditDocs.length > 0) {
-                percentualAuditorias = `${((countConforme / auditDocs.length) * 100).toFixed(1)}%`;
-            }
-
-            setRealMetrics(prev => ({
-                ...prev,
-                loading: false,
-                percentualAuditorias,
-                totalAuditorias: auditDocs.length
-            }));
-        });
-
-        // Garante persistência das configurações de turnos e terceirizada no sistema
         saveSystemShiftsInfo();
+    }, []);
 
-        return () => {
-            isMounted = false;
-            unsubEvals();
-            unsubAudits();
-        };
-    }, [user, currentUserId]);
+    // Scroll suave do carrossel estilo amigos do Facebook
+    const scrollCarousel = (direction) => {
+        if (carouselRef.current) {
+            carouselRef.current.scrollBy({
+                left: direction === 'left' ? -240 : 240,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     // Role formatada
     const roleInfo = useMemo(() => {
@@ -363,28 +213,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         setFormData(prev => ({
             ...prev,
             networkSkills: prev.networkSkills.filter(t => t !== tagToRemove)
-        }));
-    };
-
-    // Manipulação de interesses
-    const handleAddInterest = (interestToAdd) => {
-        const item = (interestToAdd || newInterestInput).trim();
-        if (!item) return;
-        if (formData.interests.includes(item)) {
-            showToast('Esse interesse já consta na lista.', 'info');
-            return;
-        }
-        setFormData(prev => ({
-            ...prev,
-            interests: [...prev.interests, item]
-        }));
-        setNewInterestInput('');
-    };
-
-    const handleRemoveInterest = (itemToRemove) => {
-        setFormData(prev => ({
-            ...prev,
-            interests: prev.interests.filter(i => i !== itemToRemove)
         }));
     };
 
@@ -531,18 +359,23 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     };
 
-    // Lista filtrada para o dropdown de busca de colaboradores
-    const filteredColabsForPicker = useMemo(() => {
-        if (!colabSearchQuery.trim()) return collaboratorsList;
+    // Lista filtrada para os minicards estilo amigos do Facebook (Apenas ativos)
+    const filteredColabsForMinicards = useMemo(() => {
+        const myId = myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId;
+        const others = activeCollaboratorsList.filter(c => {
+            const cId = c.id || c.firestoreId || c.uid;
+            return cId !== myId && c.email?.toLowerCase() !== myAuthUser?.email?.toLowerCase();
+        });
+
+        if (!colabSearchQuery.trim()) return others;
         const q = colabSearchQuery.toLowerCase().trim();
-        return collaboratorsList.filter(c => 
+        return others.filter(c => 
             (c.name || '').toLowerCase().includes(q) ||
             (c.email || '').toLowerCase().includes(q) ||
             (c.role || '').toLowerCase().includes(q) ||
-            (c.shift || '').toLowerCase().includes(q) ||
-            (c.status || '').toLowerCase().includes(q)
+            (c.shift || '').toLowerCase().includes(q)
         );
-    }, [collaboratorsList, colabSearchQuery]);
+    }, [activeCollaboratorsList, colabSearchQuery, myAuthUser, currentUserId]);
 
     // Status operacional formatado
     const userOperationalStatus = user?.status || (user?.active !== false ? 'Ativo' : 'Inativo');
@@ -565,195 +398,181 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 h-full overflow-y-auto font-sans">
             <div className="max-w-6xl mx-auto space-y-6">
 
-                {/* 0. BARRA DE SELEÇÃO E VISUALIZAÇÃO DE PERFIS DA EQUIPE */}
-                <div className="bg-white rounded-2xl border border-gray-200 p-3 sm:p-4 shadow-2xs space-y-3">
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
-                            {/* Botão Meu Perfil */}
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setSelectedColabId(null);
-                                    setIsColabPickerOpen(false);
-                                }}
-                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
-                                    !isViewingOther
-                                        ? 'bg-zinc-950 text-white shadow-xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                                }`}
-                            >
-                                <UserCheck className="w-4 h-4 text-emerald-400" />
-                                <span>Meu Perfil</span>
-                            </button>
-
-                            {/* Botão Alternar/Ver Outro Colaborador */}
-                            <button
-                                type="button"
-                                onClick={() => setIsColabPickerOpen(!isColabPickerOpen)}
-                                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 border cursor-pointer ${
-                                    isViewingOther
-                                        ? 'bg-red-50 border-red-300 text-red-700 shadow-2xs'
-                                        : 'bg-white border-gray-200 hover:bg-gray-50 text-gray-700'
-                                }`}
-                            >
-                                <Users className="w-4 h-4 text-red-600" />
-                                <span className="truncate max-w-[140px] sm:max-w-[200px]">
-                                    {isViewingOther ? `Perfil: ${user?.name || 'Colaborador'}` : 'Ver Perfis da Equipe'}
-                                </span>
-                                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isColabPickerOpen ? 'rotate-180' : ''}`} />
-                            </button>
-                        </div>
-
-                        {/* Indicador de Status Operacional Atual */}
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs text-gray-500 font-medium hidden md:inline">Status do Colaborador:</span>
-                            <div className={`px-2.5 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 shadow-2xs ${currentStatusStyle.badge}`}>
-                                <span className="relative flex h-2 w-2">
-                                    {currentStatusStyle.ping && (
-                                        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${currentStatusStyle.dot}`}></span>
-                                    )}
-                                    <span className={`relative inline-flex rounded-full h-2 w-2 ${currentStatusStyle.dot}`}></span>
-                                </span>
-                                <span>{userOperationalStatus}</span>
-                            </div>
-
-                            {isViewingOther && (
-                                <button
-                                    type="button"
-                                    onClick={() => setSelectedColabId(null)}
-                                    className="text-xs text-red-600 hover:text-red-700 font-bold ml-1.5 inline-flex items-center gap-1 cursor-pointer hover:underline"
-                                    title="Voltar ao meu próprio perfil"
-                                >
-                                    <ArrowLeft className="w-3.5 h-3.5" />
-                                    <span className="hidden sm:inline">Voltar ao Meu Perfil</span>
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Dropdown Expansível com Busca de Colaboradores */}
-                    {isColabPickerOpen && (
-                        <div className="pt-3 border-t border-gray-100 animate-in fade-in slide-in-from-top-2 duration-150 space-y-3">
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-gray-700 flex items-center gap-1.5">
-                                    <Users className="w-3.5 h-3.5 text-zinc-500" />
-                                    Selecione um colaborador para visualizar o status e perfil:
-                                </span>
-                                <span className="text-[11px] text-gray-400 font-mono">
-                                    {filteredColabsForPicker.length} colaboradores
-                                </span>
-                            </div>
-
-                            <div className="relative">
-                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
-                                <input
-                                    type="text"
-                                    value={colabSearchQuery}
-                                    onChange={(e) => setColabSearchQuery(e.target.value)}
-                                    placeholder="Buscar colaborador por nome, cargo, turno ou status..."
-                                    className="w-full pl-9 pr-4 py-2 text-xs bg-gray-50 border border-gray-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-500 outline-none transition-all"
-                                    autoFocus
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-60 overflow-y-auto pr-1">
-                                {filteredColabsForPicker.map((c) => {
-                                    const cId = c.id || c.firestoreId || c.uid;
-                                    const isSelected = (selectedColabId === cId) || (!selectedColabId && cId === (myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId));
-                                    const cStatus = c.status || (c.active !== false ? 'Ativo' : 'Inativo');
-                                    const cStatusStyle = getStatusStyle(cStatus);
-                                    const cLevel = calculateUserLevel(c.badges);
-
-                                    return (
-                                        <button
-                                            type="button"
-                                            key={cId}
-                                            onClick={() => {
-                                                setSelectedColabId(cId);
-                                                setIsColabPickerOpen(false);
-                                                showToast(`Visualizando perfil de ${c.name || 'Colaborador'}`, 'info');
-                                            }}
-                                            className={`p-2.5 rounded-xl border text-left flex items-center gap-2.5 transition-all cursor-pointer ${
-                                                isSelected
-                                                    ? 'bg-red-50/80 border-red-400 ring-1 ring-red-400 font-bold shadow-2xs'
-                                                    : 'bg-white hover:bg-gray-50 border-gray-200'
-                                            }`}
-                                        >
-                                            {/* Avatar */}
-                                            <div className="w-8 h-8 rounded-lg bg-zinc-900 text-white flex items-center justify-center text-xs font-bold overflow-hidden shrink-0">
-                                                {(c.photoURL || c.photoUrl) ? (
-                                                    <img src={c.photoURL || c.photoUrl} alt={c.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    c.name?.charAt(0)?.toUpperCase() || 'U'
-                                                )}
-                                            </div>
-
-                                            {/* Detalhes */}
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center justify-between gap-1">
-                                                    <span className="text-xs font-bold text-gray-900 truncate">{c.name}</span>
-                                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md font-bold border ${cStatusStyle.badge}`}>
-                                                        {cStatus}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5 text-[10px] text-gray-500 mt-0.5">
-                                                    <span className="truncate">{c.role || 'Colaborador'}</span>
-                                                    <span>•</span>
-                                                    <span className="truncate text-zinc-700 font-semibold">{c.shift || 'Geral'}</span>
-                                                    <span>•</span>
-                                                    <span className="text-amber-700 font-mono">Nv.{cLevel}</span>
-                                                </div>
-                                            </div>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    )}
-                </div>
-
-                {/* Banner de Aviso quando em modo de visualização de outro colega */}
-                {isViewingOther && (
-                    <div className="p-3.5 bg-gradient-to-r from-red-950 via-zinc-900 to-zinc-950 rounded-2xl text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm border border-red-900/40">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-red-600/30 border border-red-500/30 flex items-center justify-center text-red-400 shrink-0">
-                                <Eye className="w-4 h-4" />
+                {/* 0. CARROSSEL DE MINICARDS ESTILO FACEBOOK - COLEGAS DE EQUIPE (APENAS ATIVOS) */}
+                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-gray-100">
+                        <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
+                                <Users className="w-4 h-4" />
                             </div>
                             <div>
-                                <h4 className="text-xs font-bold text-white flex items-center gap-2">
-                                    <span>Modo de Visualização do Perfil da Equipe</span>
-                                    <span className="px-2 py-0.2 rounded-full text-[10px] font-mono bg-white/10 text-white border border-white/20">
-                                        Público
+                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                    <span>Colegas de Equipe</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        {activeCollaboratorsList.length} Ativos
                                     </span>
-                                </h4>
-                                <p className="text-[11px] text-zinc-300">
-                                    Você está consultando o status, horários, histórico de métricas e informações de <strong>{user?.name}</strong>.
+                                </h3>
+                                <p className="text-[11px] text-gray-500">
+                                    Selecione qualquer colega abaixo para visualizar o status operacional, ramal e turnos em tempo real.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex items-center gap-2 shrink-0">
-                            {formData.phone && (
+                        {/* Busca rápida e botões de navegação horizontal */}
+                        <div className="flex items-center gap-2 self-end sm:self-auto">
+                            <div className="relative">
+                                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" />
+                                <input
+                                    type="text"
+                                    value={colabSearchQuery}
+                                    onChange={(e) => setColabSearchQuery(e.target.value)}
+                                    placeholder="Buscar colega..."
+                                    className="pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-500 w-36 sm:w-44 transition-all"
+                                />
+                            </div>
+                            <div className="flex items-center gap-1">
                                 <button
                                     type="button"
-                                    onClick={handleCopyPhone}
-                                    className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer border border-white/20"
+                                    onClick={() => scrollCarousel('left')}
+                                    className="p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs transition-colors cursor-pointer"
+                                    title="Rolar para a esquerda"
                                 >
-                                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                                    <span>Copiar Contato</span>
+                                    <ChevronLeft className="w-4 h-4" />
                                 </button>
-                            )}
+                                <button
+                                    type="button"
+                                    onClick={() => scrollCarousel('right')}
+                                    className="p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs transition-colors cursor-pointer"
+                                    title="Rolar para a direita"
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Trilho de Minicards estilo Amigos do Facebook */}
+                    <div 
+                        ref={carouselRef}
+                        className="flex items-stretch gap-3 overflow-x-auto pb-2 pt-1 px-1 scroll-smooth select-none"
+                        style={{ scrollbarWidth: 'thin' }}
+                    >
+                        {/* 1. Minicard Fixo: Meu Perfil (Você) */}
+                        <button
+                            type="button"
+                            onClick={() => setSelectedColabId(null)}
+                            className={`w-28 sm:w-32 shrink-0 p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all cursor-pointer ${
+                                !isViewingOther
+                                    ? 'bg-zinc-950 text-white border-zinc-900 shadow-sm ring-2 ring-zinc-900/30'
+                                    : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-800 hover:shadow-2xs'
+                            }`}
+                        >
+                            <div className="relative mb-2">
+                                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 flex items-center justify-center font-bold text-sm shadow-xs ${
+                                    !isViewingOther ? 'border-emerald-400 bg-zinc-800 text-white' : 'border-gray-200 bg-zinc-900 text-white'
+                                }`}>
+                                    {(myAuthUser?.photoURL || myAuthUser?.photoUrl) ? (
+                                        <img 
+                                            src={myAuthUser.photoURL || myAuthUser.photoUrl} 
+                                            alt={myAuthUser?.name || 'Você'} 
+                                            className="w-full h-full object-cover" 
+                                        />
+                                    ) : (
+                                        <span>{(myAuthUser?.name || myAuthUser?.displayName || 'EU').slice(0, 2).toUpperCase()}</span>
+                                    )}
+                                </div>
+                                <span 
+                                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white bg-emerald-500 shadow-2xs" 
+                                    title="Online / Ativo" 
+                                />
+                            </div>
+
+                            <span className={`text-xs font-bold truncate max-w-full block leading-tight ${!isViewingOther ? 'text-white' : 'text-gray-900'}`}>
+                                Meu Perfil
+                            </span>
+                            <span className={`text-[10px] mt-0.5 truncate max-w-full block ${!isViewingOther ? 'text-emerald-300 font-bold' : 'text-gray-500 font-medium'}`}>
+                                {!isViewingOther ? '● Visualizando' : 'Você'}
+                            </span>
+                        </button>
+
+                        {/* 2. Minicards dos Outros Colaboradores Ativos */}
+                        {filteredColabsForMinicards.map((colab) => {
+                            const cId = colab.id || colab.firestoreId || colab.uid;
+                            const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
+                            const st = colab.status || 'Ativo';
+                            const dotColor = st === 'Ativo' ? 'bg-emerald-500' : st === 'Férias' ? 'bg-amber-500' : 'bg-purple-500';
+                            const photo = colab.photoURL || colab.photoUrl;
+                            const displayName = colab.name || colab.displayName || colab.email?.split('@')[0] || 'Colaborador';
+                            const shortName = displayName.split(' ').slice(0, 2).join(' ');
+
+                            return (
+                                <button
+                                    key={cId}
+                                    type="button"
+                                    onClick={() => setSelectedColabId(cId)}
+                                    className={`w-28 sm:w-32 shrink-0 p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-red-50 border-red-500 ring-2 ring-red-400/40 shadow-xs'
+                                            : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 text-gray-800 hover:shadow-2xs'
+                                    }`}
+                                >
+                                    <div className="relative mb-2">
+                                        <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 flex items-center justify-center font-bold text-sm shadow-xs ${
+                                            isSelected ? 'border-red-500 bg-red-100 text-red-700' : 'border-gray-200 bg-gray-100 text-gray-700'
+                                        }`}>
+                                            {photo ? (
+                                                <img 
+                                                    src={photo} 
+                                                    alt={displayName} 
+                                                    className="w-full h-full object-cover" 
+                                                />
+                                            ) : (
+                                                <span>{shortName.slice(0, 2).toUpperCase()}</span>
+                                            )}
+                                        </div>
+                                        <span 
+                                            className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white shadow-2xs ${dotColor}`} 
+                                            title={`Status: ${st}`} 
+                                        />
+                                    </div>
+
+                                    <span className="text-xs font-bold text-gray-900 truncate max-w-full block leading-tight" title={displayName}>
+                                        {shortName}
+                                    </span>
+                                    <span className={`text-[10px] mt-0.5 truncate max-w-full block ${isSelected ? 'text-red-700 font-bold' : 'text-gray-500'}`}>
+                                        {isSelected ? '● Visualizando' : (colab.shift || colab.role || st)}
+                                    </span>
+                                </button>
+                            );
+                        })}
+
+                        {filteredColabsForMinicards.length === 0 && colabSearchQuery && (
+                            <div className="py-4 px-6 flex items-center justify-center text-xs text-gray-400 italic">
+                                Nenhum colega ativo encontrado com "{colabSearchQuery}"
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Aviso de Modo de Visualização do Colega */}
+                    {isViewingOther && (
+                        <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-150">
+                            <div className="flex items-center gap-2 text-xs text-red-900 font-medium">
+                                <Eye className="w-4 h-4 text-red-600 shrink-0" />
+                                <span>
+                                    Você está visualizando o perfil público de <strong>{user?.name || user?.displayName}</strong>.
+                                </span>
+                            </div>
                             <button
                                 type="button"
                                 onClick={() => setSelectedColabId(null)}
-                                className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                                className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
                             >
                                 <ArrowLeft className="w-3.5 h-3.5" />
                                 <span>Voltar ao Meu Perfil</span>
                             </button>
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO) */}
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-xs overflow-hidden relative">
@@ -943,11 +762,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     </div>
                 </div>
 
-                {/* 2. GRID PRINCIPAL: CONHECIMENTOS DE REDE, EMBLEMAS, CONTATOS E MÉTRICAS REAIS */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 2. GRID PRINCIPAL: 2 COLUNAS HARMONIOSAS (HABILIDADES & EMBLEMAS | CONTATOS & EXPEDIENTE) */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                    {/* COLUNA ESQUERDA (2 SPANS): HABILIDADES, REDES E EMBLEMAS */}
-                    <div className="lg:col-span-2 space-y-6">
+                    {/* COLUNA ESQUERDA: HABILIDADES, REDES E EMBLEMAS */}
+                    <div className="space-y-6">
 
                         {/* CARD 2.1: CONHECIMENTOS SOBRE REDES & HABILIDADES */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-5">
@@ -1172,221 +991,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 })}
                             </div>
                         </div>
-
-                        {/* CARD 2.3: INTERESSES & DESENVOLVIMENTO */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                <div>
-                                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                        <Heart className="w-4 h-4 text-red-500" />
-                                        Interesses Profissionais & Objetivos
-                                    </h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                        Áreas de tecnologia, infraestrutura e suporte que você tem interesse em aprofundar.
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* Tags de Interesses Ativas */}
-                            <div className="flex flex-wrap gap-2">
-                                {formData.interests.map(item => (
-                                    <span
-                                        key={item}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold bg-red-50 text-red-800 border border-red-200"
-                                    >
-                                        <span>{item}</span>
-                                        <button
-                                            type="button"
-                                            onClick={() => handleRemoveInterest(item)}
-                                            className="text-red-400 hover:text-red-700 p-0.5 rounded cursor-pointer"
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </button>
-                                    </span>
-                                ))}
-                            </div>
-
-                            {/* Adicionar Interesse */}
-                            <div className="flex gap-2 pt-1">
-                                <input
-                                    type="text"
-                                    value={newInterestInput}
-                                    onChange={(e) => setNewInterestInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddInterest())}
-                                    placeholder="Adicionar interesse (ex: Segurança da Informação, Liderança)..."
-                                    className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => handleAddInterest()}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-                                >
-                                    <Plus className="w-3.5 h-3.5" /> Adicionar
-                                </button>
-                            </div>
-
-                            {/* Sugestões de Interesses */}
-                            <div className="flex flex-wrap gap-1.5 pt-1">
-                                {DEFAULT_INTEREST_SUGGESTIONS
-                                    .filter(s => !formData.interests.includes(s))
-                                    .slice(0, 5)
-                                    .map(s => (
-                                        <button
-                                            key={s}
-                                            type="button"
-                                            onClick={() => handleAddInterest(s)}
-                                            className="px-2 py-0.5 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded text-[11px] font-medium transition-colors cursor-pointer"
-                                        >
-                                            + {s}
-                                        </button>
-                                    ))}
-                            </div>
-                        </div>
-
                     </div>
 
-                    {/* COLUNA DIREITA (1 SPAN): HORÁRIO DE OPERAÇÃO, CONTATOS E MÉTRICAS REAIS */}
+                    {/* COLUNA DIREITA: CONTATOS (ACIMA) E HORÁRIO DE EXPEDIENTE (ABAIXO) */}
                     <div className="space-y-6">
 
-                        {/* CARD 2.4: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
-                            <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
-                                <Clock className="w-4 h-4 text-red-600" />
-                                Horário de Expediente Oficial
-                            </h2>
-
-                            {/* Seletor dos 4 Turnos Oficiais */}
-                            <div>
-                                <label className="text-[11px] font-bold text-gray-600 block mb-1.5">
-                                    Turno de Atuação:
-                                </label>
-                                <div className="space-y-2">
-                                    {SYSTEM_SHIFTS.map(shiftItem => {
-                                        const isSelected = formData.shift === shiftItem.id;
-                                        return (
-                                            <button
-                                                key={shiftItem.id}
-                                                type="button"
-                                                onClick={() => handleChangeShift(shiftItem.id)}
-                                                className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
-                                                    isSelected
-                                                        ? 'bg-red-50/70 border-red-500 ring-1 ring-red-300 text-red-950 font-bold'
-                                                        : 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200 text-gray-700'
-                                                }`}
-                                            >
-                                                <div className="flex items-center gap-2">
-                                                    <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-red-600' : 'text-gray-400'}`} />
-                                                    <span className="text-xs">{shiftItem.label}</span>
-                                                </div>
-                                                <span className="text-xs font-mono font-bold text-gray-600">
-                                                    {shiftItem.hours}
-                                                </span>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Caixa Informativa sobre a Operação Terceirizada (20:00 até 08:00) */}
-                            <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white space-y-1.5 shadow-2xs">
-                                <div className="flex items-center gap-2">
-                                    <Headphones className="w-4 h-4 text-amber-400" />
-                                    <span className="text-xs font-bold text-white tracking-wide">
-                                        {THIRD_PARTY_SCHEDULE_INFO.title}
-                                    </span>
-                                </div>
-                                <div className="text-[11px] font-mono font-bold text-amber-300">
-                                    Horário: {THIRD_PARTY_SCHEDULE_INFO.hours}
-                                </div>
-                                <p className="text-[11px] text-zinc-400 leading-relaxed">
-                                    {THIRD_PARTY_SCHEDULE_INFO.description}
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* CARD 2.5: MÉTRICAS OPERACIONAIS 100% REAIS (SEM DADOS MOCKADOS) */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
-                            <div className="border-b border-gray-100 pb-2.5 flex items-center justify-between">
-                                <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                    <BarChart3 className="w-4 h-4 text-red-600" />
-                                    Métricas Operacionais Reais
-                                </h2>
-                                <span className="text-[10px] text-gray-400 font-mono font-semibold">
-                                    {realMetrics.totalAvaliacoes} avaliações
-                                </span>
-                            </div>
-
-                            {realMetrics.loading ? (
-                                <div className="py-8 flex flex-col items-center justify-center text-center">
-                                    <Loader2 className="w-6 h-6 text-red-600 animate-spin mb-2" />
-                                    <span className="text-xs text-gray-500">Calculando métricas reais...</span>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    <div className="grid grid-cols-2 gap-3">
-                                        {/* 1. Média de TMA Telefonia */}
-                                        <div className="p-3 bg-red-50/50 rounded-xl border border-red-100">
-                                            <span className="text-[10px] font-bold text-red-700 uppercase block tracking-wider">
-                                                Média TMA Telefonia
-                                            </span>
-                                            <span className="text-base sm:text-lg font-black font-mono text-gray-900 mt-0.5 block">
-                                                {realMetrics.mediaTmaTelefonia}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 block mt-0.5">
-                                                Chamadas de voz
-                                            </span>
-                                        </div>
-
-                                        {/* 2. Média de TMA Chat */}
-                                        <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100">
-                                            <span className="text-[10px] font-bold text-blue-700 uppercase block tracking-wider">
-                                                Média TMA Chat
-                                            </span>
-                                            <span className="text-base sm:text-lg font-black font-mono text-gray-900 mt-0.5 block">
-                                                {realMetrics.mediaTmaChat}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 block mt-0.5">
-                                                Atendimentos Huggy
-                                            </span>
-                                        </div>
-
-                                        {/* 3. Média de Pontos */}
-                                        <div className="p-3 bg-emerald-50/50 rounded-xl border border-emerald-100">
-                                            <span className="text-[10px] font-bold text-emerald-700 uppercase block tracking-wider">
-                                                Média de Pontos
-                                            </span>
-                                            <span className="text-base sm:text-lg font-black text-gray-900 mt-0.5 block">
-                                                {realMetrics.mediaPontos}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 block mt-0.5">
-                                                Produtividade semanal
-                                            </span>
-                                        </div>
-
-                                        {/* 4. % nas Auditorias QA */}
-                                        <div className="p-3 bg-purple-50/50 rounded-xl border border-purple-100">
-                                            <span className="text-[10px] font-bold text-purple-700 uppercase block tracking-wider">
-                                                % nas Auditorias
-                                            </span>
-                                            <span className="text-base sm:text-lg font-black text-gray-900 mt-0.5 block">
-                                                {realMetrics.percentualAuditorias}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 block mt-0.5">
-                                                {realMetrics.totalAuditorias} checklist(s) QA
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {realMetrics.totalAvaliacoes === 0 && (
-                                        <p className="text-[11px] text-gray-400 text-center italic pt-1">
-                                            Nenhum lançamento semanal registrado ainda para este analista.
-                                        </p>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* CARD 2.6: CANAIS DE CONTATO & E-MAILS ADICIONAIS */}
+                        {/* CARD 2.3: CANAIS DE CONTATO & COMUNICAÇÃO */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
                             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
                                 <Phone className="w-4 h-4 text-red-600" />
@@ -1494,6 +1104,62 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         + Add
                                     </button>
                                 </div>
+                            </div>
+                        </div>
+
+                        {/* CARD 2.4: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
+                            <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
+                                <Clock className="w-4 h-4 text-red-600" />
+                                Horário de Expediente Oficial
+                            </h2>
+
+                            {/* Seletor dos 4 Turnos Oficiais */}
+                            <div>
+                                <label className="text-[11px] font-bold text-gray-600 block mb-1.5">
+                                    Turno de Atuação:
+                                </label>
+                                <div className="space-y-2">
+                                    {SYSTEM_SHIFTS.map(shiftItem => {
+                                        const isSelected = formData.shift === shiftItem.id;
+                                        return (
+                                            <button
+                                                key={shiftItem.id}
+                                                type="button"
+                                                onClick={() => handleChangeShift(shiftItem.id)}
+                                                className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                                                    isSelected
+                                                        ? 'bg-red-50/70 border-red-500 ring-1 ring-red-300 text-red-950 font-bold'
+                                                        : 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200 text-gray-700'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-2">
+                                                    <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-red-600' : 'text-gray-400'}`} />
+                                                    <span className="text-xs">{shiftItem.label}</span>
+                                                </div>
+                                                <span className="text-xs font-mono font-bold text-gray-600">
+                                                    {shiftItem.hours}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Caixa Informativa sobre a Operação Terceirizada (20:00 até 08:00) */}
+                            <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white space-y-1.5 shadow-2xs">
+                                <div className="flex items-center gap-2">
+                                    <Headphones className="w-4 h-4 text-amber-400" />
+                                    <span className="text-xs font-bold text-white tracking-wide">
+                                        {THIRD_PARTY_SCHEDULE_INFO.title}
+                                    </span>
+                                </div>
+                                <div className="text-[11px] font-mono font-bold text-amber-300">
+                                    Horário: {THIRD_PARTY_SCHEDULE_INFO.hours}
+                                </div>
+                                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                                    {THIRD_PARTY_SCHEDULE_INFO.description}
+                                </p>
                             </div>
                         </div>
 

@@ -355,7 +355,10 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
             case 'Em Andamento':
                 return (
                     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 inline-flex items-center gap-1.5 whitespace-nowrap shadow-2xs">
-                        <Loader2 className="w-3.5 h-3.5 text-blue-600 animate-spin"/> Em Andamento
+                        <span className="w-4 h-4 rounded-full bg-blue-200/90 border border-blue-400 flex items-center justify-center shrink-0">
+                            <Clock className="w-2.5 h-2.5 text-blue-700" />
+                        </span>
+                        Em Andamento
                     </span>
                 );
             case 'Recusado':
@@ -515,7 +518,7 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                     <span className="text-xs font-bold uppercase tracking-wider block opacity-85 text-blue-700">Em Andamento</span>
                     <div className="text-2xl font-black mt-1 flex items-baseline justify-between">
                         <span className={statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-700'}>{metricsSummary.inProgress}</span>
-                        <Loader2 className={`w-4 h-4 ${statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-500 animate-spin'}`} />
+                        <Clock className={`w-4 h-4 ${statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-500'}`} />
                     </div>
                 </button>
 
@@ -1340,7 +1343,7 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                 }`}>
                                     <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
                                         viewingReport.status === 'Em Andamento' 
-                                            ? 'bg-blue-600 text-white animate-pulse' 
+                                            ? 'bg-blue-600 text-white' 
                                             : (viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500')
                                     }`}>
                                         2
