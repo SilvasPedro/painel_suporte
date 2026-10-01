@@ -4,7 +4,7 @@ import {
     AlertTriangle, CheckCircle, Clock, Filter, 
     Lightbulb, Monitor, Building, Zap, Bug, MessageSquare, Send,
     Table, Columns3, LayoutGrid, List, Copy, Printer, ChevronLeft, ChevronRight,
-    User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass
+    User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock
 } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -230,7 +230,8 @@ const Reports = () => {
             howAffected: report.howAffected || '',
             protocol: report.protocol || '',
             description: report.description || '',
-            status: report.status || 'Pendente'
+            status: report.status || 'Pendente',
+            adminComment: report.adminComment || report.closingComment || report.solution || ''
         });
         setIsModalOpen(true);
     };
@@ -254,6 +255,18 @@ const Reports = () => {
             }
 
             if (editingId) {
+                const existingRep = reports.find(r => r.id === editingId);
+                
+                // REQUISITO: Usuários que NÃO têm role de supervisor ou gestor só podem editar o que escreveram.
+                // Os campos de solução e status NÃO podem ser alterados por eles, preservando o valor definido pela liderança!
+                if (!canManageTickets && existingRep) {
+                    reportPayload.status = existingRep.status || 'Pendente';
+                    if (existingRep.adminComment !== undefined) reportPayload.adminComment = existingRep.adminComment;
+                    if (existingRep.closingComment !== undefined) reportPayload.closingComment = existingRep.closingComment;
+                    if (existingRep.solution !== undefined) reportPayload.solution = existingRep.solution;
+                    if (existingRep.lastUpdatedBy !== undefined) reportPayload.lastUpdatedBy = existingRep.lastUpdatedBy;
+                }
+
                 await updateDoc(doc(db, "critical_reports", editingId), reportPayload);
                 showToast("Solicitação atualizada com sucesso!", "success");
             } else {
@@ -1232,6 +1245,93 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                         </div>
                                     </div>
                                 )}
+
+                                {/* 4. STATUS & SOLUÇÃO DA LIDERANÇA (RESTRIÇÃO DE PERMISSÕES) */}
+                                {editingId && !canManageTickets && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-200 pb-1.5 flex items-center justify-between">
+                                            <span className="flex items-center gap-1.5 text-gray-800">
+                                                <Lock className="w-3.5 h-3.5 text-amber-600" />
+                                                4. Status & Solução da Liderança
+                                            </span>
+                                            <span className="text-[10px] text-amber-800 font-bold bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300 inline-flex items-center gap-1">
+                                                <Lock className="w-3 h-3" /> Apenas Leitura (Gestores / Supervisores)
+                                            </span>
+                                        </h4>
+
+                                        <div className="bg-amber-50/60 p-4 rounded-xl border border-amber-200 space-y-3">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-amber-200/60">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                                                        Status Atual Definido pela Gestão
+                                                    </span>
+                                                    {getStatusBadge(formData.status)}
+                                                </div>
+                                                <div className="text-[11px] text-amber-900/80 max-w-sm leading-relaxed bg-white/70 p-2.5 rounded-lg border border-amber-200">
+                                                    <strong>Aviso de Permissão:</strong> Você pode editar os dados do seu relato acima (categoria, urgência, título, descrição e impacto). O status e a solução são definidos exclusivamente pela liderança.
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <span className="text-[10px] font-bold text-gray-600 uppercase tracking-wider block mb-1">
+                                                    Parecer Oficial / Solução Registrada pela Liderança:
+                                                </span>
+                                                <div className="bg-white p-3.5 rounded-xl border border-amber-200 text-xs text-gray-800 leading-relaxed font-normal whitespace-pre-wrap">
+                                                    {formData.adminComment || reports.find(r => r.id === editingId)?.solution || reports.find(r => r.id === editingId)?.closingComment || (
+                                                        <span className="text-gray-400 italic">
+                                                            Nenhuma solução ou parecer registrado pela liderança até o momento. Sua solicitação está na fila de atendimento.
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {editingId && canManageTickets && (
+                                    <div className="space-y-3">
+                                        <h4 className="text-xs font-bold text-blue-900 uppercase tracking-wider border-b border-blue-200 pb-1.5 flex items-center justify-between">
+                                            <span className="flex items-center gap-1.5">
+                                                <ShieldCheck className="w-4 h-4 text-blue-600" />
+                                                4. Status & Solução da Liderança (Modo Gestor/Supervisor)
+                                            </span>
+                                            <span className="text-[10px] text-blue-800 font-bold bg-blue-100 px-2 py-0.5 rounded border border-blue-300">
+                                                Edição Liberada
+                                            </span>
+                                        </h4>
+
+                                        <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-200 space-y-3">
+                                            <div>
+                                                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-1">
+                                                    Status do Chamado
+                                                </label>
+                                                <select 
+                                                    value={formData.status} 
+                                                    onChange={(e) => setFormData({...formData, status: e.target.value})} 
+                                                    className="w-full sm:w-72 p-2.5 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-white font-bold text-blue-950 text-sm cursor-pointer shadow-2xs"
+                                                >
+                                                    <option value="Pendente">Pendente</option>
+                                                    <option value="Em Andamento">Em Andamento</option>
+                                                    <option value="Resolvido">Resolvido</option>
+                                                    <option value="Cancelado">Cancelado</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="block text-xs font-bold text-blue-950 uppercase tracking-wider mb-1">
+                                                    Parecer Oficial / Solução Técnica
+                                                </label>
+                                                <textarea 
+                                                    rows="3" 
+                                                    placeholder="Descreva a solução aplicada, instruções ao colaborador ou motivo do encerramento..." 
+                                                    value={formData.adminComment || ''} 
+                                                    onChange={(e) => setFormData({...formData, adminComment: e.target.value})} 
+                                                    className="w-full p-2.5 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-white text-xs text-gray-800 resize-none leading-relaxed" 
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </form>
                         </div>
                         
@@ -1583,32 +1683,124 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                         </button>
                                     </div>
                                 ) : (
-                                    /* PAINEL DE FEEDBACK VISÍVEL AO COLABORADOR */
+                                    /* PAINEL DE FEEDBACK E RESOLUÇÃO VISÍVEL AO COLABORADOR */
                                     <div className="space-y-4">
-                                        {(viewingReport.adminComment || viewingReport.closingComment) ? (
-                                            <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-2xs space-y-3">
-                                                <div className="flex items-center gap-2 text-blue-900 font-bold text-xs uppercase tracking-wider border-b border-blue-100 pb-2">
-                                                    <MessageSquare className="w-4 h-4 text-blue-600"/>
-                                                    Parecer Oficial da Gestão
+                                        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+                                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                                        <ShieldCheck className="w-4 h-4" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                                                            Status & Resolução Oficial
+                                                        </h4>
+                                                        <p className="text-[10px] text-gray-400">
+                                                            Posicionamento da Supervisão e Gestão
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed bg-blue-50/50 p-4 rounded-xl border border-blue-100">
-                                                    {viewingReport.adminComment || viewingReport.closingComment}
-                                                </p>
-                                                {viewingReport.lastUpdatedBy && (
-                                                    <span className="text-[11px] text-gray-400 block text-right font-medium">
-                                                        Respondido por {viewingReport.lastUpdatedBy}
+
+                                                <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                                    <Lock className="w-3 h-3 text-amber-600" />
+                                                    Gestão Exclusiva
+                                                </div>
+                                            </div>
+
+                                            {/* Status em Destaque com Descrição Operacional */}
+                                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3">
+                                                <div>
+                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                                        Fase Atual do Ticket
                                                     </span>
-                                                )}
+                                                    <div className="mt-1">
+                                                        {getStatusBadge(viewingReport.status)}
+                                                    </div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <span className="text-[11px] font-medium text-gray-500 block">
+                                                        {viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? (
+                                                            'Demanda concluída'
+                                                        ) : viewingReport.status === 'Em Andamento' ? (
+                                                            'Análise técnica em curso'
+                                                        ) : (
+                                                            'Na fila de triagem'
+                                                        )}
+                                                    </span>
+                                                </div>
                                             </div>
-                                        ) : (
-                                            <div className="bg-white p-6 rounded-xl border border-dashed border-gray-300 text-center flex flex-col items-center justify-center space-y-2">
-                                                <Clock className="w-10 h-10 text-amber-500 mb-1" />
-                                                <h5 className="font-bold text-sm text-gray-900">Aguardando Avaliação</h5>
-                                                <p className="text-xs text-gray-500 max-w-xs leading-relaxed">
-                                                    Sua solicitação está na fila da liderança e será avaliada em breve. Você poderá acompanhar a resposta aqui.
+
+                                            {/* Solução Técnica ou Parecer da Liderança */}
+                                            {(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution) ? (
+                                                <div className="space-y-2 pt-1">
+                                                    <div className="flex items-center justify-between">
+                                                        <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                            <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                                                            Parecer / Solução da Gestão:
+                                                        </span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const solText = viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution || '';
+                                                                navigator.clipboard.writeText(solText);
+                                                                showToast("Parecer copiado com sucesso!", "success");
+                                                            }}
+                                                            className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                                                        >
+                                                            <Copy className="w-3 h-3" /> Copiar Solução
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-950 leading-relaxed font-normal whitespace-pre-wrap shadow-2xs">
+                                                        {viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution}
+                                                    </div>
+
+                                                    {viewingReport.lastUpdatedBy && (
+                                                        <div className="flex items-center justify-end gap-1 text-[10px] text-gray-400 font-medium pt-1">
+                                                            <span>Atendido por:</span>
+                                                            <strong className="text-gray-600">{viewingReport.lastUpdatedBy}</strong>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="p-4 rounded-xl border border-dashed border-gray-300 bg-amber-50/30 text-center space-y-1.5">
+                                                    <Clock className="w-6 h-6 text-amber-500 mx-auto" />
+                                                    <h5 className="font-bold text-xs text-gray-800">
+                                                        Aguardando Solução da Liderança
+                                                    </h5>
+                                                    <p className="text-[11px] text-gray-500 leading-relaxed">
+                                                        Sua solicitação está registrada e aguardando despacho de um supervisor ou gestor. Assim que houver um parecer, ele será exibido aqui.
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Bloco de Esclarecimento de Permissões */}
+                                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-[11px] text-gray-600 space-y-1.5">
+                                                <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[11px]">
+                                                    <Lock className="w-3.5 h-3.5 text-amber-600" />
+                                                    Regras de Acesso e Edição
+                                                </div>
+                                                <p className="leading-relaxed text-[10px] text-gray-500">
+                                                    Campos de <strong>Status</strong> e <strong>Solução/Parecer</strong> são de controle exclusivo da gestão. Como colaborador, você pode atualizar as informações que você redigiu no relato.
                                                 </p>
                                             </div>
-                                        )}
+
+                                            {/* Botão de Edição Rápida do Relato pelo Autor */}
+                                            {canEditOrDelete(viewingReport) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const rep = viewingReport;
+                                                        setViewingReport(null);
+                                                        openEditModal(rep);
+                                                    }}
+                                                    className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                                                >
+                                                    <Edit2 className="w-3.5 h-3.5 text-amber-700" />
+                                                    <span>Editar Meu Relato / Solicitação</span>
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 )}
                             </div>

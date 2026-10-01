@@ -49,16 +49,22 @@ export const updateCollaboratorProfile = async (uid, updatedData) => {
 export const registerFeedback = async (collaboratorId, feedbackData) => {
   // Pega o e-mail do Admin que está logado no momento
   const adminEmail = auth.currentUser?.email || "Admin Desconhecido";
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
 
   // Prepara o pacote de dados
   const payload = {
     collaboratorId,
+    colabId: collaboratorId,
     type: feedbackData.type,
     method: feedbackData.method,
     protocol: feedbackData.protocol || "N/A", // Se vazio, salva como N/A
     comment: feedbackData.comment,
     createdBy: adminEmail, // A mágica da auditoria acontece aqui!
-    createdAt: new Date().toISOString()
+    createdAt: now.toISOString(),
+    date: now.toLocaleDateString('pt-BR'),
+    month: `${mm}/${yyyy}`
   };
 
   // Salva em uma coleção separada chamada 'feedbacks'

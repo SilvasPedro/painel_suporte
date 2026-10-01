@@ -3,7 +3,8 @@ import {
     X, Loader2, Calendar, Phone, PhoneMissed, CheckCircle, Clock, 
     Filter, FileText, MessageSquare, Award, ArrowUpRight, TrendingUp,
     Download, Printer, Sparkles, BarChart2, ShieldCheck, ChevronRight,
-    Users, ThumbsUp, HelpCircle, Layers, RefreshCw, AlertCircle
+    Users, ThumbsUp, HelpCircle, Layers, RefreshCw, AlertCircle,
+    Search, AlertTriangle, Building2, Monitor, MessageCircle
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../../services/dataCache';
 import { 
@@ -11,29 +12,116 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 
-// --- UTILITÁRIOS DE CONVERSÃO E FORMATAÇÃO ---
+// --- UTILITÁRIOS DE CONVERSÃO E FORMATAÇÃO ROBUSTOS ---
 const parseDateObj = (dateStr) => {
     if (!dateStr || dateStr === 'Semana Atual' || dateStr === 'Sem data') return 0;
-    if (dateStr.includes('/')) {
-        const parts = dateStr.split('/');
-        if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
-    }
-    if (dateStr.includes('-')) {
-        const parts = dateStr.split('-');
-        if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+    if (typeof dateStr === 'number') return dateStr;
+    if (dateStr instanceof Date) return dateStr.getTime();
+    if (typeof dateStr === 'string') {
+        if (dateStr.includes('T')) {
+            const t = new Date(dateStr).getTime();
+            if (!isNaN(t)) return t;
+        }
+        if (dateStr.includes('/')) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                const yyyy = parts[2].length === 2 ? Number(`20${parts[2]}`) : Number(parts[2]);
+                return new Date(yyyy, Number(parts[1]) - 1, Number(parts[0])).getTime();
+            }
+        }
+        if (dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                if (parts[0].length === 4) {
+                    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2].substring(0, 2))).getTime();
+                } else {
+                    return new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0])).getTime();
+                }
+            }
+        }
+        const t = new Date(dateStr).getTime();
+        if (!isNaN(t)) return t;
     }
     return 0;
 };
 
+const getItemDateObj = (item) => {
+    if (!item) return null;
+    if (item.date) {
+        if (typeof item.date === 'string') {
+            if (/^\d{4}-\d{2}-\d{2}/.test(item.date)) {
+                const [y, m, d] = item.date.substring(0, 10).split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+            if (/^\d{2}\/\d{2}\/\d{4}/.test(item.date)) {
+                const [d, m, y] = item.date.substring(0, 10).split('/').map(Number);
+                return new Date(y, m - 1, d);
+            }
+        }
+        if (item.date instanceof Date) return item.date;
+        if (typeof item.date === 'number') return new Date(item.date);
+    }
+    if (item.createdAt) {
+        if (typeof item.createdAt.toDate === 'function') return item.createdAt.toDate();
+        if (typeof item.createdAt === 'string') {
+            const parsed = new Date(item.createdAt);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+        if (typeof item.createdAt === 'number') return new Date(item.createdAt);
+    }
+    if (item.timestamp) {
+        if (typeof item.timestamp.toDate === 'function') return item.timestamp.toDate();
+        if (typeof item.timestamp === 'string') {
+            const parsed = new Date(item.timestamp);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+    }
+    return null;
+};
+
+const getItemMonthKey = (item) => {
+    if (!item) return null;
+    if (item.month && typeof item.month === 'string' && item.month.includes('/')) {
+        return item.month;
+    }
+    const d = getItemDateObj(item);
+    if (!d) return null;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${yyyy}`;
+};
+
+const formatFeedbackDate = (f) => {
+    const d = getItemDateObj(f);
+    if (!d) return f?.date || '--';
+    const datePart = d.toLocaleDateString('pt-BR');
+    const hours = d.getHours();
+    const minutes = d.getMinutes();
+    if (hours !== 0 || minutes !== 0) {
+        return `${datePart} às ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
+    return datePart;
+};
+
 const extractMonthFromDate = (dateStr) => {
     if (!dateStr || dateStr === 'Semana Atual' || dateStr === 'Sem data') return null;
+    if (typeof dateStr === 'string' && dateStr.includes('T')) {
+        const d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            return `${mm}/${d.getFullYear()}`;
+        }
+    }
     if (dateStr.includes('/')) {
         const parts = dateStr.split('/');
-        if (parts.length === 3) return `${parts[1]}/${parts[2]}`;
+        if (parts.length === 3) return `${parts[1].padStart(2, '0')}/${parts[2].length === 2 ? `20${parts[2]}` : parts[2]}`;
     }
     if (dateStr.includes('-')) {
         const parts = dateStr.split('-');
-        if (parts.length === 3) return `${parts[1]}/${parts[0]}`;
+        if (parts.length === 3) {
+            if (parts[0].length === 4) return `${parts[1].padStart(2, '0')}/${parts[0]}`;
+            return `${parts[1].padStart(2, '0')}/${parts[2]}`;
+        }
     }
     return null;
 };
@@ -89,8 +177,13 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
     const [periodType, setPeriodType] = useState('current'); // 'current' | 'previous' | 'custom_month' | 'last_3' | 'all'
     const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
     const [selectedWeek, setSelectedWeek] = useState('all'); // 'all' ou data específica 'DD/MM/YYYY'
-    const [focusTab, setFocusTab] = useState('all'); // 'all' | 'telefonia' | 'huggy' | 'pontuacao' | 'qa'
+    const [focusTab, setFocusTab] = useState('all'); // 'all' | 'telefonia' | 'huggy' | 'pontuacao' | 'qa' | 'feedbacks'
     const [selectedWeekModal, setSelectedWeekModal] = useState(null);
+
+    // Filtros específicos para Feedbacks
+    const [feedbackScopeFilter, setFeedbackScopeFilter] = useState('all'); // 'all' (todo o período) | 'week' (semana selecionada)
+    const [feedbackTypeFilter, setFeedbackTypeFilter] = useState('all'); // 'all' | 'Elogio' | 'Ponto de Melhoria' | 'Orientação'
+    const [feedbackSearchTerm, setFeedbackSearchTerm] = useState('');
 
     // Estados de Dados do Firestore
     const [weeklyEvals, setWeeklyEvals] = useState([]);
@@ -142,8 +235,10 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
         // 2. Auditorias QA via cache compartilhado
         const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
             const list = [];
+            const colabIdentifiers = [colab.id, colab.firestoreId, colab.uid].filter(Boolean);
             items.forEach((dt) => {
-                if (dt.colabId === colab.id || dt.collaboratorId === colab.id) {
+                const targetId = dt.colabId || dt.collaboratorId;
+                if (colabIdentifiers.includes(targetId) || (colab.name && (dt.collaboratorName === colab.name || dt.colabName === colab.name))) {
                     list.push(dt);
                 }
             });
@@ -153,8 +248,17 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
         // 3. Feedbacks via cache compartilhado
         const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
             const list = [];
+            const colabIdentifiers = [colab.id, colab.firestoreId, colab.uid].filter(Boolean);
+            const colabEmail = colab.email?.toLowerCase();
+            const colabName = colab.name?.toLowerCase();
+
             items.forEach((dt) => {
-                if (dt.colabId === colab.id || dt.collaboratorId === colab.id) {
+                const targetId = dt.collaboratorId || dt.colabId;
+                const matchesId = targetId && colabIdentifiers.includes(targetId);
+                const matchesEmail = colabEmail && dt.collaboratorEmail?.toLowerCase() === colabEmail;
+                const matchesName = colabName && (dt.collaboratorName?.toLowerCase() === colabName || dt.colabName?.toLowerCase() === colabName);
+
+                if (matchesId || matchesEmail || matchesName) {
                     list.push(dt);
                 }
             });
@@ -166,7 +270,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
             unsubAudits();
             unsubFeedbacks();
         };
-    }, [colab?.id]);
+    }, [colab?.id, colab?.firestoreId, colab?.uid, colab?.email, colab?.name]);
 
     // Lista de todos os meses disponíveis com dados
     const availableMonths = useMemo(() => {
@@ -182,14 +286,6 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
             return new Date(y2, m2 - 1, 1).getTime() - new Date(y1, m1 - 1, 1).getTime();
         });
     }, [weeklyEvals, currentMonthKey]);
-
-    // Define o mês ativo baseado no periodType
-    const activeTargetMonth = useMemo(() => {
-        if (periodType === 'current') return currentMonthKey;
-        if (periodType === 'previous') return previousMonthKey;
-        if (periodType === 'custom_month') return selectedMonth;
-        return null; // para 'all' ou 'last_3'
-    }, [periodType, currentMonthKey, previousMonthKey, selectedMonth]);
 
     // Filtra os dados semanais conforme o período selecionado
     const periodFilteredEvals = useMemo(() => {
@@ -287,13 +383,30 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
 
     // Auditorias QA no período
     const periodAudits = useMemo(() => {
-        if (!activeTargetMonth && periodType === 'all') return audits;
-        const target = activeTargetMonth;
-        return audits.filter(a => {
-            const m = extractMonthFromDate(a.date) || (a.createdAt?.toDate ? extractMonthFromDate(a.createdAt.toDate().toLocaleDateString('pt-BR')) : null);
-            return m === target;
+        let list = [...audits];
+        if (periodType === 'current') {
+            list = list.filter(a => getItemMonthKey(a) === currentMonthKey);
+        } else if (periodType === 'previous') {
+            list = list.filter(a => getItemMonthKey(a) === previousMonthKey);
+        } else if (periodType === 'custom_month') {
+            list = list.filter(a => getItemMonthKey(a) === selectedMonth);
+        } else if (periodType === 'last_3') {
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            const minTime = threeMonthsAgo.getTime();
+            list = list.filter(a => {
+                const d = getItemDateObj(a);
+                return d ? d.getTime() >= minTime : false;
+            });
+        }
+        return list.sort((a, b) => {
+            const dateA = getItemDateObj(a);
+            const dateB = getItemDateObj(b);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+            return timeB - timeA;
         });
-    }, [audits, activeTargetMonth, periodType]);
+    }, [audits, periodType, currentMonthKey, previousMonthKey, selectedMonth]);
 
     // Métricas de QA no período
     const qaMetrics = useMemo(() => {
@@ -305,15 +418,68 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
         return { total, conformes, naoConformes, taxaConformidade };
     }, [periodAudits]);
 
-    // Feedbacks no período
+    // Feedbacks no período (com suporte a filtros de mês, semana, tipo e busca)
     const periodFeedbacks = useMemo(() => {
-        if (!activeTargetMonth && periodType === 'all') return feedbacks;
-        const target = activeTargetMonth;
-        return feedbacks.filter(f => {
-            const m = extractMonthFromDate(f.date) || (f.createdAt?.toDate ? extractMonthFromDate(f.createdAt.toDate().toLocaleDateString('pt-BR')) : null);
-            return m === target;
+        let list = [...feedbacks];
+
+        // 1. Filtro por período / mês
+        if (periodType === 'current') {
+            list = list.filter(f => getItemMonthKey(f) === currentMonthKey);
+        } else if (periodType === 'previous') {
+            list = list.filter(f => getItemMonthKey(f) === previousMonthKey);
+        } else if (periodType === 'custom_month') {
+            list = list.filter(f => getItemMonthKey(f) === selectedMonth);
+        } else if (periodType === 'last_3') {
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+            const minTime = threeMonthsAgo.getTime();
+            list = list.filter(f => {
+                const d = getItemDateObj(f);
+                return d ? d.getTime() >= minTime : false;
+            });
+        }
+        // 'all' mantém todos
+
+        // 2. Se o usuário restringiu para ver apenas os feedbacks da semana selecionada:
+        if (selectedWeek !== 'all' && feedbackScopeFilter === 'week') {
+            const weekStartTime = parseDateObj(selectedWeek);
+            if (weekStartTime) {
+                const weekEndTime = weekStartTime + (7 * 24 * 60 * 60 * 1000);
+                list = list.filter(f => {
+                    const d = getItemDateObj(f);
+                    if (!d) return false;
+                    const t = d.getTime();
+                    return t >= (weekStartTime - 86400000) && t <= (weekEndTime + 86400000);
+                });
+            }
+        }
+
+        // 3. Filtro por tipo de feedback (Elogio, Ponto de Melhoria, Orientação)
+        if (feedbackTypeFilter && feedbackTypeFilter !== 'all') {
+            list = list.filter(f => f.type === feedbackTypeFilter);
+        }
+
+        // 4. Busca por texto (comentário, tipo, meio, protocolo, autor)
+        if (feedbackSearchTerm.trim()) {
+            const term = feedbackSearchTerm.toLowerCase();
+            list = list.filter(f => 
+                (f.comment || '').toLowerCase().includes(term) ||
+                (f.type || '').toLowerCase().includes(term) ||
+                (f.method || '').toLowerCase().includes(term) ||
+                (f.protocol || '').toLowerCase().includes(term) ||
+                (f.createdBy || '').toLowerCase().includes(term)
+            );
+        }
+
+        // Ordena do mais recente para o mais antigo
+        return list.sort((a, b) => {
+            const dateA = getItemDateObj(a);
+            const dateB = getItemDateObj(b);
+            const timeA = dateA ? dateA.getTime() : 0;
+            const timeB = dateB ? dateB.getTime() : 0;
+            return timeB - timeA;
         });
-    }, [feedbacks, activeTargetMonth, periodType]);
+    }, [feedbacks, periodType, currentMonthKey, previousMonthKey, selectedMonth, selectedWeek, feedbackScopeFilter, feedbackTypeFilter, feedbackSearchTerm]);
 
     // Formatação dos dados para o Recharts
     const chartData = useMemo(() => {
@@ -649,6 +815,20 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                         >
                             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
                             Qualidade QA ({qaMetrics.total})
+                        </button>
+
+                        <button
+                            id="tab-focus-feedbacks"
+                            type="button"
+                            onClick={() => setFocusTab('feedbacks')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
+                                focusTab === 'feedbacks'
+                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                            }`}
+                        >
+                            <ThumbsUp className="w-3.5 h-3.5 text-blue-500" />
+                            Feedbacks da Liderança ({periodFeedbacks.length})
                         </button>
                     </div>
 
@@ -1153,7 +1333,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
 
                                 {/* Bloco Feedbacks */}
                                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
-                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 pb-2 border-b border-gray-100 gap-2">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                                                 <ThumbsUp className="w-4 h-4" />
@@ -1163,9 +1343,53 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                 <p className="text-[10px] text-gray-400">Orientações e reconhecimentos</p>
                                             </div>
                                         </div>
-                                        <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
-                                            {periodFeedbacks.length} registros
-                                        </span>
+
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {selectedWeek !== 'all' && (
+                                                <div className="flex items-center bg-gray-100 p-0.5 rounded-lg text-[10px]">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFeedbackScopeFilter('all')}
+                                                        className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                                                            feedbackScopeFilter === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500'
+                                                        }`}
+                                                    >
+                                                        Período
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFeedbackScopeFilter('week')}
+                                                        className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                                                            feedbackScopeFilter === 'week' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500'
+                                                        }`}
+                                                    >
+                                                        Semana
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                                                {periodFeedbacks.length} registros
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {/* Mini pills de filtro de tipo */}
+                                    <div className="flex items-center gap-1 mb-2.5 overflow-x-auto pb-1">
+                                        {['all', 'Elogio', 'Ponto de Melhoria', 'Orientação'].map(t => (
+                                            <button
+                                                key={t}
+                                                type="button"
+                                                onClick={() => setFeedbackTypeFilter(t)}
+                                                className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap ${
+                                                    feedbackTypeFilter === t
+                                                        ? 'bg-blue-600 text-white'
+                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                }`}
+                                            >
+                                                {t === 'all' ? 'Todos' : t}
+                                            </button>
+                                        ))}
                                     </div>
 
                                     {periodFeedbacks.length === 0 ? (
@@ -1173,26 +1397,178 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                             Nenhum feedback registrado neste período para este colaborador.
                                         </p>
                                     ) : (
-                                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                                            {periodFeedbacks.map((f, i) => (
-                                                <div key={f.id || i} className="p-2.5 rounded-xl border border-gray-100 bg-gray-50/50 text-xs space-y-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="font-bold text-gray-900">
-                                                            {f.type || 'Orientação'}
-                                                        </span>
-                                                        <span className="text-[10px] text-gray-400">
-                                                            {f.date || '--'}
-                                                        </span>
+                                        <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
+                                            {periodFeedbacks.map((f, i) => {
+                                                const typeColor = f.type === 'Elogio' 
+                                                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                                    : f.type === 'Ponto de Melhoria'
+                                                    ? 'bg-amber-100 text-amber-800 border-amber-200'
+                                                    : 'bg-blue-100 text-blue-800 border-blue-200';
+
+                                                return (
+                                                    <div key={f.id || i} className="p-3 rounded-xl border border-gray-100 bg-gray-50/60 text-xs space-y-1.5 hover:border-gray-200 transition-colors">
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${typeColor}`}>
+                                                                    {f.type || 'Orientação'}
+                                                                </span>
+                                                                {f.method && (
+                                                                    <span className="text-[10px] text-gray-500 font-medium bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                                        {f.method}
+                                                                    </span>
+                                                                )}
+                                                                {f.protocol && f.protocol !== 'N/A' && (
+                                                                    <span className="text-[10px] font-mono text-gray-500">
+                                                                        #{f.protocol}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[10px] text-gray-500 whitespace-nowrap font-medium">
+                                                                {formatFeedbackDate(f)}
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">
+                                                            {f.comment || 'Sem comentário adicional.'}
+                                                        </p>
+                                                        {f.createdBy && (
+                                                            <div className="text-[9px] text-gray-400 text-right pt-0.5">
+                                                                Por: {f.createdBy}
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <p className="text-gray-600 line-clamp-2 text-[11px]">
-                                                        {f.comment || 'Sem comentário adicional.'}
-                                                    </p>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>
                             </div>
+
+                            {/* SEÇÃO DEDICADA DE FEEDBACKS SE FOCUS TAB FOR FEEDBACKS */}
+                            {focusTab === 'feedbacks' && (
+                                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-5 pt-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
+                                                <ThumbsUp className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-sm font-bold text-gray-900">Histórico de Feedbacks da Liderança</h3>
+                                                <p className="text-xs text-gray-500">
+                                                    Registros de elogios, orientações e pontos de melhoria de {colab.name}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                            {['all', 'Elogio', 'Ponto de Melhoria', 'Orientação'].map(t => (
+                                                <button
+                                                    key={t}
+                                                    type="button"
+                                                    onClick={() => setFeedbackTypeFilter(t)}
+                                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                                        feedbackTypeFilter === t
+                                                            ? 'bg-blue-600 text-white shadow-2xs'
+                                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                    }`}
+                                                >
+                                                    {t === 'all' ? `Todos (${periodFeedbacks.length})` : t}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Barra de busca e escopo de semana */}
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                                        <div className="relative flex-1">
+                                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                                            <input
+                                                type="text"
+                                                value={feedbackSearchTerm}
+                                                onChange={(e) => setFeedbackSearchTerm(e.target.value)}
+                                                placeholder="Buscar por comentário, protocolo, líder..."
+                                                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+
+                                        {selectedWeek !== 'all' && (
+                                            <div className="flex items-center gap-1.5 self-start sm:self-auto bg-gray-100 p-1 rounded-xl">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFeedbackScopeFilter('all')}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                                                        feedbackScopeFilter === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600'
+                                                    }`}
+                                                >
+                                                    Todo o Mês/Período
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFeedbackScopeFilter('week')}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
+                                                        feedbackScopeFilter === 'week' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600'
+                                                    }`}
+                                                >
+                                                    Semana {selectedWeek}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Lista de cards detalhados */}
+                                    {periodFeedbacks.length === 0 ? (
+                                        <div className="py-12 text-center flex flex-col items-center justify-center space-y-2 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+                                            <ThumbsUp className="w-10 h-10 text-gray-300" />
+                                            <h4 className="text-sm font-bold text-gray-700">Nenhum feedback encontrado</h4>
+                                            <p className="text-xs text-gray-400 max-w-sm">
+                                                Não há feedbacks registrados com os filtros atuais para este período.
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            {periodFeedbacks.map((f, i) => {
+                                                const typeColor = f.type === 'Elogio' 
+                                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                                                    : f.type === 'Ponto de Melhoria'
+                                                    ? 'bg-amber-50 text-amber-800 border-amber-200'
+                                                    : 'bg-blue-50 text-blue-800 border-blue-200';
+                                                
+                                                return (
+                                                    <div key={f.id || i} className="p-4 rounded-xl border border-gray-200 bg-white shadow-2xs space-y-3">
+                                                        <div className="flex items-start justify-between gap-2">
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${typeColor}`}>
+                                                                    {f.type || 'Orientação'}
+                                                                </span>
+                                                                {f.method && (
+                                                                    <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[10px] font-medium border border-gray-200">
+                                                                        {f.method}
+                                                                    </span>
+                                                                )}
+                                                                {f.protocol && f.protocol !== 'N/A' && (
+                                                                    <span className="px-2 py-0.5 rounded-md bg-zinc-100 text-zinc-700 text-[10px] font-mono border border-zinc-200">
+                                                                        #{f.protocol}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                                                {formatFeedbackDate(f)}
+                                                            </span>
+                                                        </div>
+
+                                                        <p className="text-xs text-gray-800 leading-relaxed bg-gray-50/70 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap">
+                                                            {f.comment || 'Sem comentários adicionais.'}
+                                                        </p>
+
+                                                        <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-50">
+                                                            <span>Líder: <strong className="text-gray-700">{f.createdBy || 'Gestão'}</strong></span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </>
                     )}
                 </div>

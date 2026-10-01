@@ -95,7 +95,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const [collaboratorsList, setCollaboratorsList] = useState([]);
     const [selectedColabId, setSelectedColabId] = useState(null);
     const [colabSearchQuery, setColabSearchQuery] = useState('');
-    const carouselRef = useRef(null);
 
     // Carrega a lista completa de colaboradores
     useEffect(() => {
@@ -131,6 +130,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     const [saving, setSaving] = useState(false);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+    const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
     const [copiedPhone, setCopiedPhone] = useState(false);
 
     // Estado do formulário de Perfil
@@ -162,16 +162,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     useEffect(() => {
         saveSystemShiftsInfo();
     }, []);
-
-    // Scroll suave do carrossel estilo amigos do Facebook
-    const scrollCarousel = (direction) => {
-        if (carouselRef.current) {
-            carouselRef.current.scrollBy({
-                left: direction === 'left' ? -240 : 240,
-                behavior: 'smooth'
-            });
-        }
-    };
 
     // Role formatada
     const roleInfo = useMemo(() => {
@@ -359,23 +349,28 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     };
 
-    // Lista filtrada para os minicards estilo amigos do Facebook (Apenas ativos)
-    const filteredColabsForMinicards = useMemo(() => {
+    // Lista para exibição no quadrado estilo amigos do Facebook (até 9 colegas ativos)
+    const facebookFriendsPreview = useMemo(() => {
         const myId = myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId;
         const others = activeCollaboratorsList.filter(c => {
             const cId = c.id || c.firestoreId || c.uid;
             return cId !== myId && c.email?.toLowerCase() !== myAuthUser?.email?.toLowerCase();
         });
+        return others.slice(0, 9);
+    }, [activeCollaboratorsList, myAuthUser, currentUserId]);
 
-        if (!colabSearchQuery.trim()) return others;
+    // Lista filtrada para o modal de lista completa de colegas
+    const filteredColabsList = useMemo(() => {
+        if (!colabSearchQuery.trim()) return activeCollaboratorsList;
         const q = colabSearchQuery.toLowerCase().trim();
-        return others.filter(c => 
-            (c.name || '').toLowerCase().includes(q) ||
-            (c.email || '').toLowerCase().includes(q) ||
-            (c.role || '').toLowerCase().includes(q) ||
-            (c.shift || '').toLowerCase().includes(q)
-        );
-    }, [activeCollaboratorsList, colabSearchQuery, myAuthUser, currentUserId]);
+        return activeCollaboratorsList.filter(c => {
+            const name = (c.name || c.displayName || '').toLowerCase();
+            const role = (c.role || '').toLowerCase();
+            const shift = (c.shift || '').toLowerCase();
+            const email = (c.email || '').toLowerCase();
+            return name.includes(q) || role.includes(q) || shift.includes(q) || email.includes(q);
+        });
+    }, [activeCollaboratorsList, colabSearchQuery]);
 
     // Status operacional formatado
     const userOperationalStatus = user?.status || (user?.active !== false ? 'Ativo' : 'Inativo');
@@ -398,181 +393,33 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 h-full overflow-y-auto font-sans">
             <div className="max-w-6xl mx-auto space-y-6">
 
-                {/* 0. CARROSSEL DE MINICARDS ESTILO FACEBOOK - COLEGAS DE EQUIPE (APENAS ATIVOS) */}
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2.5 border-b border-gray-100">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
-                                <Users className="w-4 h-4" />
+                {/* AVISO DE VISUALIZAÇÃO DE OUTRO COLABORADOR */}
+                {isViewingOther && (
+                    <div className="bg-gradient-to-r from-red-950 via-zinc-950 to-zinc-900 border border-red-800/40 p-4 rounded-2xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-white animate-in fade-in duration-150">
+                        <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-red-600/30 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
+                                <Eye className="w-5 h-5" />
                             </div>
                             <div>
-                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                    <span>Colegas de Equipe</span>
-                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                        {activeCollaboratorsList.length} Ativos
-                                    </span>
+                                <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
+                                    <span>Visualizando Perfil Público:</span>
+                                    <span className="text-amber-400 font-extrabold">{user?.name || user?.displayName}</span>
                                 </h3>
-                                <p className="text-[11px] text-gray-500">
-                                    Selecione qualquer colega abaixo para visualizar o status operacional, ramal e turnos em tempo real.
+                                <p className="text-[11px] text-zinc-300">
+                                    Você está consultando os contatos, turnos e habilidades deste colega de equipe.
                                 </p>
                             </div>
                         </div>
-
-                        {/* Busca rápida e botões de navegação horizontal */}
-                        <div className="flex items-center gap-2 self-end sm:self-auto">
-                            <div className="relative">
-                                <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2" />
-                                <input
-                                    type="text"
-                                    value={colabSearchQuery}
-                                    onChange={(e) => setColabSearchQuery(e.target.value)}
-                                    placeholder="Buscar colega..."
-                                    className="pl-8 pr-3 py-1.5 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-500 w-36 sm:w-44 transition-all"
-                                />
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    type="button"
-                                    onClick={() => scrollCarousel('left')}
-                                    className="p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs transition-colors cursor-pointer"
-                                    title="Rolar para a esquerda"
-                                >
-                                    <ChevronLeft className="w-4 h-4" />
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => scrollCarousel('right')}
-                                    className="p-1.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-600 shadow-2xs transition-colors cursor-pointer"
-                                    title="Rolar para a direita"
-                                >
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Trilho de Minicards estilo Amigos do Facebook */}
-                    <div 
-                        ref={carouselRef}
-                        className="flex items-stretch gap-3 overflow-x-auto pb-2 pt-1 px-1 scroll-smooth select-none"
-                        style={{ scrollbarWidth: 'thin' }}
-                    >
-                        {/* 1. Minicard Fixo: Meu Perfil (Você) */}
                         <button
                             type="button"
                             onClick={() => setSelectedColabId(null)}
-                            className={`w-28 sm:w-32 shrink-0 p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all cursor-pointer ${
-                                !isViewingOther
-                                    ? 'bg-zinc-950 text-white border-zinc-900 shadow-sm ring-2 ring-zinc-900/30'
-                                    : 'bg-white hover:bg-gray-50 border-gray-200 text-gray-800 hover:shadow-2xs'
-                            }`}
+                            className="px-3.5 py-1.5 bg-white hover:bg-gray-100 text-zinc-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
                         >
-                            <div className="relative mb-2">
-                                <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 flex items-center justify-center font-bold text-sm shadow-xs ${
-                                    !isViewingOther ? 'border-emerald-400 bg-zinc-800 text-white' : 'border-gray-200 bg-zinc-900 text-white'
-                                }`}>
-                                    {(myAuthUser?.photoURL || myAuthUser?.photoUrl) ? (
-                                        <img 
-                                            src={myAuthUser.photoURL || myAuthUser.photoUrl} 
-                                            alt={myAuthUser?.name || 'Você'} 
-                                            className="w-full h-full object-cover" 
-                                        />
-                                    ) : (
-                                        <span>{(myAuthUser?.name || myAuthUser?.displayName || 'EU').slice(0, 2).toUpperCase()}</span>
-                                    )}
-                                </div>
-                                <span 
-                                    className="absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white bg-emerald-500 shadow-2xs" 
-                                    title="Online / Ativo" 
-                                />
-                            </div>
-
-                            <span className={`text-xs font-bold truncate max-w-full block leading-tight ${!isViewingOther ? 'text-white' : 'text-gray-900'}`}>
-                                Meu Perfil
-                            </span>
-                            <span className={`text-[10px] mt-0.5 truncate max-w-full block ${!isViewingOther ? 'text-emerald-300 font-bold' : 'text-gray-500 font-medium'}`}>
-                                {!isViewingOther ? '● Visualizando' : 'Você'}
-                            </span>
+                            <ArrowLeft className="w-3.5 h-3.5" />
+                            <span>Voltar ao Meu Perfil</span>
                         </button>
-
-                        {/* 2. Minicards dos Outros Colaboradores Ativos */}
-                        {filteredColabsForMinicards.map((colab) => {
-                            const cId = colab.id || colab.firestoreId || colab.uid;
-                            const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
-                            const st = colab.status || 'Ativo';
-                            const dotColor = st === 'Ativo' ? 'bg-emerald-500' : st === 'Férias' ? 'bg-amber-500' : 'bg-purple-500';
-                            const photo = colab.photoURL || colab.photoUrl;
-                            const displayName = colab.name || colab.displayName || colab.email?.split('@')[0] || 'Colaborador';
-                            const shortName = displayName.split(' ').slice(0, 2).join(' ');
-
-                            return (
-                                <button
-                                    key={cId}
-                                    type="button"
-                                    onClick={() => setSelectedColabId(cId)}
-                                    className={`w-28 sm:w-32 shrink-0 p-3 rounded-2xl border text-center flex flex-col items-center justify-between transition-all cursor-pointer ${
-                                        isSelected
-                                            ? 'bg-red-50 border-red-500 ring-2 ring-red-400/40 shadow-xs'
-                                            : 'bg-white hover:bg-gray-50 border-gray-200 hover:border-gray-300 text-gray-800 hover:shadow-2xs'
-                                    }`}
-                                >
-                                    <div className="relative mb-2">
-                                        <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 flex items-center justify-center font-bold text-sm shadow-xs ${
-                                            isSelected ? 'border-red-500 bg-red-100 text-red-700' : 'border-gray-200 bg-gray-100 text-gray-700'
-                                        }`}>
-                                            {photo ? (
-                                                <img 
-                                                    src={photo} 
-                                                    alt={displayName} 
-                                                    className="w-full h-full object-cover" 
-                                                />
-                                            ) : (
-                                                <span>{shortName.slice(0, 2).toUpperCase()}</span>
-                                            )}
-                                        </div>
-                                        <span 
-                                            className={`absolute bottom-0 right-0 w-4 h-4 rounded-full border-2 border-white shadow-2xs ${dotColor}`} 
-                                            title={`Status: ${st}`} 
-                                        />
-                                    </div>
-
-                                    <span className="text-xs font-bold text-gray-900 truncate max-w-full block leading-tight" title={displayName}>
-                                        {shortName}
-                                    </span>
-                                    <span className={`text-[10px] mt-0.5 truncate max-w-full block ${isSelected ? 'text-red-700 font-bold' : 'text-gray-500'}`}>
-                                        {isSelected ? '● Visualizando' : (colab.shift || colab.role || st)}
-                                    </span>
-                                </button>
-                            );
-                        })}
-
-                        {filteredColabsForMinicards.length === 0 && colabSearchQuery && (
-                            <div className="py-4 px-6 flex items-center justify-center text-xs text-gray-400 italic">
-                                Nenhum colega ativo encontrado com "{colabSearchQuery}"
-                            </div>
-                        )}
                     </div>
-
-                    {/* Aviso de Modo de Visualização do Colega */}
-                    {isViewingOther && (
-                        <div className="pt-2 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 animate-in fade-in duration-150">
-                            <div className="flex items-center gap-2 text-xs text-red-900 font-medium">
-                                <Eye className="w-4 h-4 text-red-600 shrink-0" />
-                                <span>
-                                    Você está visualizando o perfil público de <strong>{user?.name || user?.displayName}</strong>.
-                                </span>
-                            </div>
-                            <button
-                                type="button"
-                                onClick={() => setSelectedColabId(null)}
-                                className="px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto"
-                            >
-                                <ArrowLeft className="w-3.5 h-3.5" />
-                                <span>Voltar ao Meu Perfil</span>
-                            </button>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO) */}
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-xs overflow-hidden relative">
@@ -1107,7 +954,97 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* CARD 2.4: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
+                        {/* CARD 2.4: BOX DE AMIGOS / COLEGAS DE EQUIPE (ESTILO FACEBOOK) */}
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
+                            <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
+                                <div>
+                                    <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                        <Users className="w-4 h-4 text-red-600" />
+                                        Colegas de Equipe
+                                    </h2>
+                                    <p className="text-[11px] text-gray-500 mt-0.5">
+                                        {activeCollaboratorsList.length} colegas ativos no time
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setIsTeamModalOpen(true)}
+                                    className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer flex items-center gap-1"
+                                >
+                                    <span>Ver mais</span>
+                                    <ChevronRight className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+
+                            {/* Grade Quadrada 3x3 estilo Box de Amigos do Facebook */}
+                            <div className="grid grid-cols-3 gap-2.5">
+                                {facebookFriendsPreview.map((colab) => {
+                                    const cId = colab.id || colab.firestoreId || colab.uid;
+                                    const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
+                                    const st = colab.status || 'Ativo';
+                                    const dotColor = st === 'Ativo' ? 'bg-emerald-500' : st === 'Férias' ? 'bg-amber-500' : 'bg-purple-500';
+                                    const photo = colab.photoURL || colab.photoUrl;
+                                    const displayName = colab.name || colab.displayName || colab.email?.split('@')[0] || 'Colega';
+                                    const firstName = displayName.split(' ')[0];
+
+                                    return (
+                                        <button
+                                            key={cId}
+                                            type="button"
+                                            onClick={() => setSelectedColabId(cId)}
+                                            className="flex flex-col text-left group cursor-pointer transition-transform hover:scale-[1.02] focus:outline-none"
+                                            title={`${displayName} • ${colab.shift || colab.role || st}`}
+                                        >
+                                            {/* Foto Quadrada com proporção 1:1 */}
+                                            <div className={`w-full aspect-square rounded-xl overflow-hidden bg-zinc-900 border relative shadow-2xs group-hover:shadow-sm transition-all ${
+                                                isSelected 
+                                                    ? 'border-red-600 ring-2 ring-red-500/50' 
+                                                    : 'border-gray-200 group-hover:border-red-300'
+                                            }`}>
+                                                {photo ? (
+                                                    <img
+                                                        src={photo}
+                                                        alt={displayName}
+                                                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 text-white font-black text-sm select-none">
+                                                        {firstName.slice(0, 2).toUpperCase()}
+                                                    </div>
+                                                )}
+                                                {/* Ponto indicador de status operacional */}
+                                                <span 
+                                                    className={`absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full border-2 border-white shadow-2xs ${dotColor}`} 
+                                                    title={`Status: ${st}`}
+                                                />
+                                            </div>
+
+                                            {/* Nome abaixo do minicard quadrado */}
+                                            <span className={`text-[11px] font-bold mt-1.5 truncate w-full transition-colors leading-tight ${
+                                                isSelected ? 'text-red-700' : 'text-gray-900 group-hover:text-red-600'
+                                            }`}>
+                                                {firstName}
+                                            </span>
+                                            <span className="text-[9px] text-gray-400 truncate w-full leading-tight">
+                                                {colab.shift || colab.role || 'Suporte'}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Botão Ver Mais no rodapé da box */}
+                            <button
+                                type="button"
+                                onClick={() => setIsTeamModalOpen(true)}
+                                className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-xl border border-gray-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                                <Users className="w-3.5 h-3.5 text-gray-500" />
+                                <span>Ver mais ({activeCollaboratorsList.length} colegas)</span>
+                            </button>
+                        </div>
+
+                        {/* CARD 2.5: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
                             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
                                 <Clock className="w-4 h-4 text-red-600" />
@@ -1365,6 +1302,129 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL DE LISTA COMPLETA DE COLEGAS DE EQUIPE (VER MAIS)                   */}
+            {/* ========================================================================= */}
+            {isTeamModalOpen && (
+                <div 
+                    onClick={() => setIsTeamModalOpen(false)}
+                    className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-xs animate-in fade-in duration-150"
+                >
+                    <div 
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] border border-gray-200 animate-in zoom-in-95 duration-150"
+                    >
+                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <Users className="w-5 h-5 text-red-500" />
+                                <div>
+                                    <h3 className="text-sm font-bold text-white">Colegas de Equipe</h3>
+                                    <p className="text-[11px] text-zinc-400">
+                                        {activeCollaboratorsList.length} colaboradores ativos no time
+                                    </p>
+                                </div>
+                            </div>
+                            <button 
+                                type="button" 
+                                onClick={() => setIsTeamModalOpen(false)}
+                                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Barra de Busca no Modal */}
+                        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                            <div className="relative">
+                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                                <input
+                                    type="text"
+                                    value={colabSearchQuery}
+                                    onChange={(e) => setColabSearchQuery(e.target.value)}
+                                    placeholder="Buscar por nome, cargo ou turno..."
+                                    className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500"
+                                    autoFocus
+                                />
+                            </div>
+                        </div>
+
+                        {/* Grid Completo de Colegas */}
+                        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                            {filteredColabsList.length === 0 ? (
+                                <div className="py-12 text-center text-xs text-gray-400 italic">
+                                    Nenhum colega encontrado com o termo "{colabSearchQuery}".
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                    {filteredColabsList.map(c => {
+                                        const cId = c.id || c.firestoreId || c.uid;
+                                        const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
+                                        const photo = c.photoURL || c.photoUrl;
+                                        const name = c.name || c.displayName || c.email?.split('@')[0];
+                                        const st = c.status || 'Ativo';
+                                        const dotColor = st === 'Ativo' ? 'bg-emerald-500' : st === 'Férias' ? 'bg-amber-500' : 'bg-purple-500';
+
+                                        return (
+                                            <div
+                                                key={cId}
+                                                className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                                                    isSelected ? 'bg-red-50 border-red-300 ring-1 ring-red-200' : 'bg-white border-gray-200 hover:border-gray-300'
+                                                }`}
+                                            >
+                                                <div className="flex items-center gap-3 min-w-0">
+                                                    <div className="relative shrink-0">
+                                                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-zinc-900 border border-gray-200 flex items-center justify-center font-bold text-white text-xs">
+                                                            {photo ? (
+                                                                <img src={photo} alt={name} className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                <span>{name.slice(0, 2).toUpperCase()}</span>
+                                                            )}
+                                                        </div>
+                                                        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white shadow-2xs ${dotColor}`} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h4 className="text-xs font-bold text-gray-900 truncate" title={name}>
+                                                            {name}
+                                                        </h4>
+                                                        <p className="text-[10px] text-gray-500 truncate">
+                                                            {c.role || 'Colaborador'} &bull; <strong className="text-gray-700">{c.shift || 'Geral'}</strong>
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedColabId(cId);
+                                                        setIsTeamModalOpen(false);
+                                                    }}
+                                                    className="px-2.5 py-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-700 rounded-lg text-xs font-bold border border-red-200 transition-all cursor-pointer shrink-0"
+                                                >
+                                                    Ver Perfil
+                                                </button>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="p-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs">
+                            <span className="text-gray-400">
+                                Mostrando {filteredColabsList.length} de {activeCollaboratorsList.length} colegas
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setIsTeamModalOpen(false)}
+                                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-bold transition-colors cursor-pointer"
+                            >
+                                Fechar
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
