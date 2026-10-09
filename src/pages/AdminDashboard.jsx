@@ -4,7 +4,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones
 } from 'lucide-react';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
@@ -19,6 +19,7 @@ import DataManager from './DataManager';
 import Settings from './Settings';
 import Reports from './Reports';
 import Audits from './Audits';
+import ThirdPartyAudits from './ThirdPartyAudits';
 import Rankings from './Rankings';
 import DailyQueueTracker from './DailyDemandLaunch';
 import SundaySchedule from './SundaySchedule';
@@ -102,6 +103,7 @@ const AdminDashboard = () => {
                 { id: 'DailyQueueTracker', label: 'Demanda Diária', icon: Activity },
                 { id: 'reports', label: 'Relatórios Críticos', icon: ClipboardList },
                 { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
+                { id: 'third_party_audits', label: 'Auditoria Terceirizada', icon: Headphones },
                 { id: 'rankings', label: 'Rankings da Equipe', icon: Trophy },
             ]
         },
@@ -210,6 +212,8 @@ const AdminDashboard = () => {
                 return <Reports />;
             case 'audits':
                 return <Audits />;
+            case 'third_party_audits':
+                return <ThirdPartyAudits />;
             case 'settings':
                 return <Settings />;
             case 'DailyQueueTracker':

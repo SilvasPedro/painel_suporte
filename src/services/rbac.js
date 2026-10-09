@@ -110,6 +110,12 @@ export const SYSTEM_MODULES = [
         description: 'Auditorias de qualidade baseadas em checklists de conformidade e boas práticas.'
     },
     {
+        id: 'third_party_audits',
+        label: 'Auditoria Terceirizada',
+        group: 'Lançamentos & Análise',
+        description: 'Auditorias de qualidade das equipes de atendimento terceirizado (chamadas, FCR, reincidência e procedimentos).'
+    },
+    {
         id: 'rankings',
         label: 'Rankings da Equipe',
         group: 'Lançamentos & Análise',
@@ -167,6 +173,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         DailyQueueTracker: { view: true, edit: true },
         reports: { view: true, edit: true },
         audits: { view: true, edit: true },
+        third_party_audits: { view: true, edit: true },
         rankings: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
@@ -186,6 +193,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         DailyQueueTracker: { view: true, edit: true },
         reports: { view: true, edit: true },
         audits: { view: true, edit: true },
+        third_party_audits: { view: true, edit: true },
         rankings: { view: true, edit: false },
         daily_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
@@ -205,6 +213,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         DailyQueueTracker: { view: true, edit: true },
         reports: { view: true, edit: true },
         audits: { view: true, edit: false },
+        third_party_audits: { view: true, edit: true },
         rankings: { view: true, edit: false },
         daily_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
@@ -224,6 +233,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         DailyQueueTracker: { view: false, edit: false },
         reports: { view: true, edit: true },
         audits: { view: false, edit: false },
+        third_party_audits: { view: false, edit: false },
         rankings: { view: true, edit: false },
         daily_schedule: { view: true, edit: false },
         schedule: { view: true, edit: false },
