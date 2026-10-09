@@ -185,6 +185,30 @@ export default function ThirdPartyAudits() {
         return clientHistoryMap[name] || [];
     }, [formData.clientName, clientHistoryMap]);
 
+    // Verificação de protocolo já existente no sistema (evita duplicidade de auditorias)
+    const duplicateProtocolAudit = useMemo(() => {
+        const raw = (formData.protocol || '').trim().toLowerCase();
+        if (!raw) return null;
+        return audits.find(a => {
+            if (editingAudit && a.id === editingAudit.id) return false;
+            return (a.protocol || '').trim().toLowerCase() === raw;
+        }) || null;
+    }, [formData.protocol, audits, editingAudit]);
+
+    // Atalhos para preenchimento rápido do parecer do auditor
+    const handleApplyNoteShortcut = (shortcutText) => {
+        setFormData(prev => {
+            if (!prev.notes.trim()) {
+                return { ...prev, notes: shortcutText };
+            }
+            if (prev.notes.includes(shortcutText)) {
+                return prev;
+            }
+            return { ...prev, notes: `${prev.notes.trim()}\n${shortcutText}` };
+        });
+    };
+    const handleApplyCommentShortcut = handleApplyNoteShortcut;
+
     // Filtra as auditorias pelo período selecionado (Mês vigente, anterior, últimos dias, intervalo personalizado ou todas)
     const periodAudits = useMemo(() => {
         const now = new Date();
@@ -535,6 +559,19 @@ export default function ThirdPartyAudits() {
 
         if (!formData.protocol.trim()) {
             showToast('Informe o protocolo da chamada terceirizada.', 'error');
+            return;
+        }
+
+        // Validação de regra anti-duplicidade: protocolo já existente no sistema
+        const cleanProtocol = formData.protocol.trim();
+        const existingProtocol = audits.find(a => 
+            a.protocol && 
+            a.protocol.trim().toLowerCase() === cleanProtocol.toLowerCase() &&
+            (!editingAudit || a.id !== editingAudit.id)
+        );
+
+        if (existingProtocol) {
+            showToast('Erro: protocolo já existente no sistema! Não é permitido lançar auditorias duplicadas.', 'error');
             return;
         }
 
@@ -1689,19 +1726,43 @@ export default function ThirdPartyAudits() {
                                             )}
                                         </div>
 
-                                        {/* Protocolo da Terceirizada */}
+                                        {/* Protocolo da Terceirizada com Validação Anti-Duplicidade */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                                                Protocolo Chamada *
-                                            </label>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="block text-[11px] font-bold text-gray-700">
+                                                    Protocolo Chamada *
+                                                </label>
+                                                {duplicateProtocolAudit && (
+                                                    <span className="text-[10px] font-bold text-red-600 flex items-center gap-1 animate-pulse">
+                                                        <AlertCircle className="w-3 h-3 text-red-600" />
+                                                        protocolo já existente
+                                                    </span>
+                                                )}
+                                            </div>
                                             <input
                                                 type="text"
                                                 required
                                                 placeholder="Ex: #PBX-94821"
                                                 value={formData.protocol}
                                                 onChange={(e) => setFormData({ ...formData, protocol: e.target.value })}
-                                                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:bg-white focus:ring-2 focus:ring-red-600"
+                                                className={`w-full p-2 bg-gray-50 border rounded-xl text-xs font-mono outline-none focus:bg-white font-medium transition-all ${
+                                                    duplicateProtocolAudit
+                                                        ? 'border-red-500 bg-red-50/50 text-red-900 ring-2 ring-red-400 focus:ring-red-500'
+                                                        : 'border-gray-200 focus:ring-2 focus:ring-red-600'
+                                                }`}
                                             />
+                                            {duplicateProtocolAudit && (
+                                                <div className="mt-1.5 p-2 bg-red-50 border border-red-200 rounded-lg text-[10px] text-red-700 font-medium flex items-start gap-1.5 animate-fadeIn">
+                                                    <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <span className="font-bold">Protocolo já existente no sistema:</span> Este protocolo já foi registrado
+                                                        {duplicateProtocolAudit.date ? ` em ${duplicateProtocolAudit.date.split('-').reverse().join('/')}` : ''}
+                                                        {duplicateProtocolAudit.clientName ? ` para o cliente "${duplicateProtocolAudit.clientName}"` : ''}
+                                                        {duplicateProtocolAudit.operatorName ? ` (Operador: ${duplicateProtocolAudit.operatorName})` : ''}.
+                                                        Informe um protocolo único para evitar duplicidade de auditorias.
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Status da Chamada */}
@@ -1950,13 +2011,58 @@ export default function ThirdPartyAudits() {
 
                                     </div>
 
-                                    {/* Observações / Parecer */}
-                                    <div className="pt-1">
-                                        <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                                            Observações / Parecer do Auditor (Opcional)
-                                        </label>
+                                    {/* Observações / Parecer com Atalhos Rápidos */}
+                                    <div className="pt-1 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="block text-[11px] font-bold text-gray-700">
+                                                Observações / Parecer do Auditor (Opcional)
+                                            </label>
+                                            {formData.notes && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setFormData({ ...formData, notes: '' })}
+                                                    className="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                                                >
+                                                    Limpar texto
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Botões de atalho rápido */}
+                                        <div className="bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/90 space-y-1.5">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                                <Sparkles className="w-3 h-3 text-amber-500" />
+                                                Atalhos rápidos para o comentário:
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleApplyCommentShortcut('Problema foi resolvido remotamente pelo operador após procedimentos.')}
+                                                    className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-200/80 rounded-lg text-[11px] font-medium transition-all text-left flex items-start gap-2 cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 group"
+                                                    title="Clique para adicionar este parecer ao comentário"
+                                                >
+                                                    <span className="w-4 h-4 rounded-full bg-emerald-100 group-hover:bg-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
+                                                        <Check className="w-2.5 h-2.5 text-emerald-700" />
+                                                    </span>
+                                                    <span className="leading-snug">Problema foi resolvido remotamente pelo operador após procedimentos.</span>
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleApplyCommentShortcut('Atendimento encaminhado para equipe N2/N3.')}
+                                                    className="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-blue-800 hover:text-blue-900 border border-blue-200/80 rounded-lg text-[11px] font-medium transition-all text-left flex items-start gap-2 cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 group"
+                                                    title="Clique para adicionar este parecer ao comentário"
+                                                >
+                                                    <span className="w-4 h-4 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center shrink-0 mt-0.5">
+                                                        <ArrowRight className="w-2.5 h-2.5 text-blue-700" />
+                                                    </span>
+                                                    <span className="leading-snug">Atendimento encaminhado para equipe N2/N3.</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
                                         <textarea
-                                            rows="2"
+                                            rows="3"
                                             placeholder="Detalhes adicionais, anotações de falha ou elogio ao operador..."
                                             value={formData.notes}
                                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
@@ -1979,8 +2085,9 @@ export default function ThirdPartyAudits() {
                                 <button
                                     type="submit"
                                     form="auditThirdPartyForm"
-                                    disabled={saving}
-                                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors disabled:opacity-70 flex justify-center items-center gap-1.5 shadow-sm cursor-pointer"
+                                    disabled={saving || Boolean(duplicateProtocolAudit)}
+                                    title={duplicateProtocolAudit ? 'Protocolo já existente no sistema' : 'Salvar auditoria'}
+                                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5 shadow-sm cursor-pointer"
                                 >
                                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     Salvar Auditoria
