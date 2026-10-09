@@ -174,7 +174,7 @@ export const saveSystemShiftsInfo = async () => {
         await setDoc(infoDocRef, {
             officialShifts: SYSTEM_SHIFTS.map(s => `${s.label}: ${s.hours}`),
             thirdPartyOperation: THIRD_PARTY_SCHEDULE_INFO,
-            systemVersion: 'v3.6',
+            systemVersion: 'v3.7',
             updatedAt: new Date().toISOString()
         }, { merge: true });
         if (typeof window !== 'undefined') {

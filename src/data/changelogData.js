@@ -1,13 +1,57 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.6';
+export const CURRENT_VERSION = 'v3.7';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.6',
-    date: 'Setembro 2026',
+    version: 'v3.7',
+    date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Ativa',
+    summary: 'Nova grande atualização v3.7: Módulo Completo de Auditoria da Operação Terceirizada (Plantão Noturno / Equipes Externas) com validação anti-duplicidade de protocolos, atalhos rápidos para parecer do auditor, métricas de FCR, reincidência fora de horário, % de qualidade Positiva x Negativa e filtro por período com aproveitamento total do espaço em tela.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Nova Tela de Auditoria da Equipe Terceirizada',
+        category: 'Qualidade & Auditoria Externa',
+        description: 'Módulo dedicado para auditar chamadas da empresa terceirizada com registro de data obrigatória em branco para evitar erros, protocolo da chamada, status (Atendida/Abandonada), procedimentos (Conforme/Não conforme), qualidade (Positiva, Neutra, Negativa), processos (Sem acesso, Lentidão/Oscilação, Suporte TV, Informações, Assuntos Financeiros), operador com auto-complete em lista suspensa, protocolo ERP (MK) e nome do cliente.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Validação Anti-Duplicidade de Protocolo',
+        category: 'Integridade de Dados',
+        description: 'Bloqueio preventivo e alerta em tempo real caso o usuário tente cadastrar um protocolo que já existe no sistema, impedindo auditorias duplicadas e garantindo a fidedignidade dos registros.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Atalhos Rápidos no Parecer do Auditor',
+        category: 'Produtividade & Agilidade',
+        description: 'Botões de 1 clique para inserção imediata das conclusões mais recorrentes: "Problema foi resolvido remotamente pelo operador após procedimentos" e "Atendimento encaminhado para equipe N2/N3".'
+      },
+      {
+        icon: BarChart3,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'KPIs Dedicados: FCR, Reincidência e Qualidade Estrita',
+        category: 'Indicadores & Gestão',
+        description: 'Cálculo de taxa de resolução no primeiro contato (FCR) baseado no desfecho da saída (Resolvido vs Encaminhado), índice de reincidência de clientes fora de horário comercial, e qualidade calculada exclusivamente na proporção Positivos x Negativos (neutros não desviam a média).'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Visualização Otimizada & Filtro por Período Sem Scroll Horizontal',
+        category: 'Interface & Ergonomia',
+        description: 'Aproveitamento de 100% da largura útil da tela com grid responsivo e tabela compacta sem barras de rolagem lateral desnecessárias, além de filtros avançados por período, status, processo e operador.'
+      }
+    ]
+  },
+  {
+    version: 'v3.6',
+    date: 'Setembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Nova grande atualização v3.6: Tela de Perfil 360° para todos os usuários com Foto via PhotoUrl do Firebase, Nível de 1 a 8 no Card de Role & Foto, Emblemas de Feitos exclusivos da Gestão, Métricas Operacionais 100% Reais (TMA Telefonia/Chat, Pontuação e Auditorias), Tags de Redes (Básico, Médio e Avançado) e Atualização Oficial dos Expedientes da Operação e Plantão Terceirizado Noturno.',
     items: [
       {
