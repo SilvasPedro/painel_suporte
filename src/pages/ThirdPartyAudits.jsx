@@ -57,8 +57,19 @@ export default function ThirdPartyAudits() {
         return `${d.getFullYear()}-${m}`;
     }, []);
 
+    // Mês anterior (YYYY-MM)
+    const previousMonthKey = useMemo(() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 1);
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        return `${d.getFullYear()}-${m}`;
+    }, []);
+
     const [selectedMonth, setSelectedMonth] = useState(currentMonthKey);
-    const [periodFilterType, setPeriodFilterType] = useState('current'); // 'current' | 'all' | 'custom'
+    // Tipos de filtro por período: 'current' | 'previous' | 'last7' | 'last30' | 'custom' | 'month' | 'all'
+    const [periodType, setPeriodType] = useState('current');
+    const [customStartDate, setCustomStartDate] = useState('');
+    const [customEndDate, setCustomEndDate] = useState('');
 
     // Filtros de busca e listagem
     const [searchTerm, setSearchTerm] = useState('');
@@ -76,9 +87,9 @@ export default function ThirdPartyAudits() {
     const [viewingAudit, setViewingAudit] = useState(null);
     const [copiedField, setCopiedField] = useState(null);
 
-    // Estado do formulário
+    // Estado do formulário - O campo 'date' inicia SEMPRE em branco para obrigar o preenchimento manual
     const initialFormState = {
-        date: new Date().toISOString().split('T')[0],
+        date: '',               // SEMPRE em branco para nova auditoria (obrigatório informar)
         protocol: '',
         callStatus: 'Atendida', // 'Atendida' | 'Abandonada'
         procedures: 'Conforme', // 'Conforme' | 'Não conforme'
@@ -174,14 +185,67 @@ export default function ThirdPartyAudits() {
         return clientHistoryMap[name] || [];
     }, [formData.clientName, clientHistoryMap]);
 
-    // Filtra as auditorias pelo período selecionado (Mês selecionado ou Todas)
+    // Filtra as auditorias pelo período selecionado (Mês vigente, anterior, últimos dias, intervalo personalizado ou todas)
     const periodAudits = useMemo(() => {
-        if (periodFilterType === 'all') return audits;
+        const now = new Date();
+        const todayStr = now.toISOString().split('T')[0];
+
         return audits.filter(a => {
             if (!a.date) return false;
-            return a.date.startsWith(selectedMonth);
+
+            if (periodType === 'all') return true;
+
+            if (periodType === 'current') {
+                return a.date.startsWith(currentMonthKey);
+            }
+
+            if (periodType === 'previous') {
+                return a.date.startsWith(previousMonthKey);
+            }
+
+            if (periodType === 'month') {
+                return a.date.startsWith(selectedMonth);
+            }
+
+            if (periodType === 'last7') {
+                const d7 = new Date();
+                d7.setDate(d7.getDate() - 7);
+                const d7Str = d7.toISOString().split('T')[0];
+                return a.date >= d7Str && a.date <= todayStr;
+            }
+
+            if (periodType === 'last30') {
+                const d30 = new Date();
+                d30.setDate(d30.getDate() - 30);
+                const d30Str = d30.toISOString().split('T')[0];
+                return a.date >= d30Str && a.date <= todayStr;
+            }
+
+            if (periodType === 'custom') {
+                if (customStartDate && a.date < customStartDate) return false;
+                if (customEndDate && a.date > customEndDate) return false;
+                return true;
+            }
+
+            return true;
         });
-    }, [audits, periodFilterType, selectedMonth]);
+    }, [audits, periodType, currentMonthKey, previousMonthKey, selectedMonth, customStartDate, customEndDate]);
+
+    // Rótulo legível do período selecionado
+    const activePeriodLabel = useMemo(() => {
+        if (periodType === 'current') return `Mês Vigente (${currentMonthKey.split('-')[1]}/${currentMonthKey.split('-')[0]})`;
+        if (periodType === 'previous') return `Mês Anterior (${previousMonthKey.split('-')[1]}/${previousMonthKey.split('-')[0]})`;
+        if (periodType === 'last7') return 'Últimos 7 Dias';
+        if (periodType === 'last30') return 'Últimos 30 Dias';
+        if (periodType === 'month') return `Mês ${selectedMonth.split('-')[1]}/${selectedMonth.split('-')[0]}`;
+        if (periodType === 'custom') {
+            if (customStartDate && customEndDate) return `${customStartDate.split('-').reverse().join('/')} até ${customEndDate.split('-').reverse().join('/')}`;
+            if (customStartDate) return `A partir de ${customStartDate.split('-').reverse().join('/')}`;
+            if (customEndDate) return `Até ${customEndDate.split('-').reverse().join('/')}`;
+            return 'Intervalo Personalizado';
+        }
+        return 'Todo o Histórico';
+    }, [periodType, currentMonthKey, previousMonthKey, selectedMonth, customStartDate, customEndDate]);
 
     // Lista final após aplicação de todos os filtros de busca e categorias
     const filteredAudits = useMemo(() => {
@@ -266,6 +330,7 @@ export default function ThirdPartyAudits() {
                 qualityPositive: 0,
                 qualityNeutral: 0,
                 qualityNegative: 0,
+                totalQualityRated: 0,
                 qualityPositiveRate: 0,
                 callsAnswered: 0,
                 callsAbandoned: 0,
@@ -273,7 +338,7 @@ export default function ThirdPartyAudits() {
             };
         }
 
-        // 1. Progresso do Mês (% feita em relação à meta)
+        // 1. Progresso do Período / Mês (% feita em relação à meta)
         const progressPercent = Math.min(100, Math.round((total / monthlyGoal) * 100));
 
         // 2. FCR (First Call Resolution com base na Saída)
@@ -311,10 +376,18 @@ export default function ThirdPartyAudits() {
         const compliancePercent = Math.round((totalConforme / total) * 100);
 
         // 5. Qualidade (Positiva, Neutra, Negativa)
+        // REGRA OFICIAL SOLICITADA PELO USUÁRIO:
+        // O cálculo de qualidade deve ser SOMENTE Positivos x Negativos.
+        // Os neutros NÃO devem descontar ou somar no % total.
         const qualityPositive = periodAudits.filter(a => a.quality === 'Positiva').length;
         const qualityNeutral = periodAudits.filter(a => a.quality === 'Neutra').length;
         const qualityNegative = periodAudits.filter(a => a.quality === 'Negativa').length;
-        const qualityPositiveRate = Math.round((qualityPositive / total) * 100);
+        
+        // Base avaliada válida: Positivos + Negativos (Neutros são excluídos do divisor)
+        const totalQualityRated = qualityPositive + qualityNegative;
+        const qualityPositiveRate = totalQualityRated > 0 
+            ? Math.round((qualityPositive / totalQualityRated) * 100) 
+            : 0;
 
         // 6. Chamadas da Terceirizada (Atendida vs Abandonada)
         const callsAnswered = periodAudits.filter(a => a.callStatus === 'Atendida').length;
@@ -337,6 +410,7 @@ export default function ThirdPartyAudits() {
             qualityPositive,
             qualityNeutral,
             qualityNegative,
+            totalQualityRated,
             qualityPositiveRate,
             callsAnswered,
             callsAbandoned,
@@ -366,21 +440,28 @@ export default function ThirdPartyAudits() {
         periodAudits.forEach(a => {
             const op = (a.operatorName || 'Não informado').trim();
             if (!map[op]) {
-                map[op] = { name: op, total: 0, resolvidos: 0, conformes: 0 };
+                map[op] = { name: op, total: 0, resolvidos: 0, conformes: 0, qualPos: 0, qualNeg: 0, qualNeu: 0 };
             }
             map[op].total += 1;
             if (a.outcome === 'Resolvido') map[op].resolvidos += 1;
             if (a.procedures === 'Conforme') map[op].conformes += 1;
+            if (a.quality === 'Positiva') map[op].qualPos += 1;
+            if (a.quality === 'Negativa') map[op].qualNeg += 1;
+            if (a.quality === 'Neutra') map[op].qualNeu += 1;
         });
 
         return Object.values(map)
-            .map(o => ({
-                ...o,
-                fcr: Math.round((o.resolvidos / o.total) * 100),
-                conformidade: Math.round((o.conformes / o.total) * 100)
-            }))
+            .map(o => {
+                const ratedQual = o.qualPos + o.qualNeg;
+                return {
+                    ...o,
+                    fcr: Math.round((o.resolvidos / o.total) * 100),
+                    conformidade: Math.round((o.conformes / o.total) * 100),
+                    qualidade: ratedQual > 0 ? Math.round((o.qualPos / ratedQual) * 100) : 0
+                };
+            })
             .sort((a, b) => b.total - a.total)
-            .slice(0, 7);
+            .slice(0, 10);
     }, [periodAudits]);
 
     // Top clientes reincidentes para consulta rápida de reincidência fora de horário
@@ -413,21 +494,21 @@ export default function ThirdPartyAudits() {
         setTimeout(() => setCopiedField(null), 2000);
     };
 
-    // Abertura do modal de criação
+    // Abertura do modal de criação (garante data em branco para exigir preenchimento manual)
     const handleOpenCreateModal = () => {
         setEditingAudit(null);
         setFormData({
             ...initialFormState,
-            date: new Date().toISOString().split('T')[0]
+            date: '' // SEMPRE em branco na criação de nova auditoria
         });
         setIsFormModalOpen(true);
     };
 
-    // Abertura do modal de edição
+    // Abertura do modal de edição (mantém a data salva da auditoria)
     const handleOpenEditModal = (audit) => {
         setEditingAudit(audit);
         setFormData({
-            date: audit.date || new Date().toISOString().split('T')[0],
+            date: audit.date || '',
             protocol: audit.protocol || '',
             callStatus: audit.callStatus || 'Atendida',
             procedures: audit.procedures || 'Conforme',
@@ -445,6 +526,12 @@ export default function ThirdPartyAudits() {
     // Submissão do formulário (Criação ou Edição)
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        // Validação obrigatória da data para evitar lançamentos com datas erradas
+        if (!formData.date || !formData.date.trim()) {
+            showToast('A data da chamada é obrigatória. Por favor, informe a data.', 'error');
+            return;
+        }
 
         if (!formData.protocol.trim()) {
             showToast('Informe o protocolo da chamada terceirizada.', 'error');
@@ -559,7 +646,7 @@ export default function ThirdPartyAudits() {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `auditorias_terceirizadas_${selectedMonth}.csv`);
+        link.setAttribute('download', `auditorias_terceirizadas_${periodType}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -567,15 +654,15 @@ export default function ThirdPartyAudits() {
     };
 
     return (
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 h-full overflow-y-auto font-sans">
-            <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex-1 p-3 sm:p-5 lg:p-6 bg-gray-50 h-full overflow-y-auto font-sans">
+            <div className="w-full max-w-none space-y-4 sm:space-y-5">
 
                 {/* ======================================================== */}
                 {/* 1. CABEÇALHO EXECUTIVO E CONTROLES GERAIS                */}
                 {/* ======================================================== */}
-                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-5 sm:p-6 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-4 sm:p-5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
                     <div className="flex items-center gap-3.5">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-red-600 to-zinc-900 text-white flex items-center justify-center shrink-0 shadow-md">
+                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-zinc-900 text-white flex items-center justify-center shrink-0 shadow-md">
                             <Headphones className="w-6 h-6" />
                         </div>
                         <div>
@@ -593,61 +680,16 @@ export default function ThirdPartyAudits() {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2.5 w-full lg:w-auto justify-end">
-                        {/* Seletor de Período/Mês */}
-                        <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 text-xs">
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    setPeriodFilterType('current');
-                                    setSelectedMonth(currentMonthKey);
-                                }}
-                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                                    periodFilterType === 'current' 
-                                        ? 'bg-white text-gray-900 shadow-2xs' 
-                                        : 'text-gray-500 hover:text-gray-900'
-                                }`}
-                            >
-                                Mês Vigente
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPeriodFilterType('all')}
-                                className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
-                                    periodFilterType === 'all' 
-                                        ? 'bg-white text-gray-900 shadow-2xs' 
-                                        : 'text-gray-500 hover:text-gray-900'
-                                }`}
-                            >
-                                Todo o Histórico
-                            </button>
-                            {periodFilterType !== 'all' && (
-                                <select
-                                    value={selectedMonth}
-                                    onChange={(e) => {
-                                        setSelectedMonth(e.target.value);
-                                        setPeriodFilterType('custom');
-                                    }}
-                                    className="ml-1 bg-transparent font-bold text-gray-800 text-xs px-2 py-1 outline-none cursor-pointer border-l border-gray-200"
-                                >
-                                    {availableMonths.map(m => (
-                                        <option key={m} value={m}>
-                                            {m.split('-')[1]}/{m.split('-')[0]}
-                                        </option>
-                                    ))}
-                                </select>
-                            )}
-                        </div>
-
+                    <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-start xl:justify-end">
                         {/* Botão Exportar CSV */}
                         <button
                             type="button"
                             onClick={handleExportCSV}
-                            className="px-3.5 py-2 bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-xl border border-gray-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-xl border border-gray-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                             title="Exportar dados filtrados em CSV"
                         >
                             <Download className="w-3.5 h-3.5 text-gray-500" />
-                            <span className="hidden sm:inline">Exportar</span>
+                            <span>Exportar CSV</span>
                         </button>
 
                         {/* Botão Nova Auditoria */}
@@ -665,6 +707,167 @@ export default function ThirdPartyAudits() {
                 </div>
 
                 {/* ======================================================== */}
+                {/* 1.1 BARRA COMPLETA DE FILTRO POR PERÍODO                 */}
+                {/* ======================================================== */}
+                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-3.5 sm:p-4 space-y-3">
+                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-red-600 shrink-0" />
+                            <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                                Filtrar por Período:
+                            </span>
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-800 border border-zinc-200">
+                                {activePeriodLabel}
+                            </span>
+                            <span className="text-xs text-gray-400 font-medium">
+                                • {periodAudits.length} registro{periodAudits.length !== 1 ? 's' : ''} no período
+                            </span>
+                        </div>
+
+                        {/* Presets Rápidos de Período */}
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => setPeriodType('current')}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    periodType === 'current'
+                                        ? 'bg-red-600 text-white shadow-2xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                Mês Vigente
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setPeriodType('previous')}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    periodType === 'previous'
+                                        ? 'bg-red-600 text-white shadow-2xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                Mês Anterior
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setPeriodType('last7')}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    periodType === 'last7'
+                                        ? 'bg-red-600 text-white shadow-2xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                Últimos 7 Dias
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setPeriodType('last30')}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    periodType === 'last30'
+                                        ? 'bg-red-600 text-white shadow-2xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                Últimos 30 Dias
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setPeriodType('custom')}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    periodType === 'custom'
+                                        ? 'bg-red-600 text-white shadow-2xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                Intervalo (De - Até)
+                            </button>
+
+                            {/* Dropdown de Meses Anteriores */}
+                            <select
+                                value={periodType === 'month' ? selectedMonth : ''}
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        setSelectedMonth(e.target.value);
+                                        setPeriodType('month');
+                                    }
+                                }}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer outline-none border ${
+                                    periodType === 'month'
+                                        ? 'bg-red-600 text-white border-red-600'
+                                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                                }`}
+                            >
+                                <option value="" disabled>Outros Meses...</option>
+                                {availableMonths.map(m => (
+                                    <option key={m} value={m} className="bg-white text-gray-800">
+                                        Mês {m.split('-')[1]}/{m.split('-')[0]}
+                                    </option>
+                                ))}
+                            </select>
+
+                            <button
+                                type="button"
+                                onClick={() => setPeriodType('all')}
+                                className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    periodType === 'all'
+                                        ? 'bg-zinc-900 text-white shadow-2xs'
+                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                }`}
+                            >
+                                Todo o Histórico
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Inputs de Data Inicial e Final quando Período Personalizado está selecionado */}
+                    {periodType === 'custom' && (
+                        <div className="pt-2.5 border-t border-gray-100 flex flex-wrap items-center gap-3 bg-red-50/50 p-2.5 rounded-xl border border-red-100 text-xs animate-in fade-in">
+                            <span className="font-bold text-red-900 flex items-center gap-1">
+                                <Filter className="w-3.5 h-3.5 text-red-600" />
+                                Definir Intervalo de Datas:
+                            </span>
+
+                            <div className="flex items-center gap-1.5">
+                                <label className="text-gray-600 font-semibold text-[11px]">De:</label>
+                                <input
+                                    type="date"
+                                    value={customStartDate}
+                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-600 font-medium"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                                <label className="text-gray-600 font-semibold text-[11px]">Até:</label>
+                                <input
+                                    type="date"
+                                    value={customEndDate}
+                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-600 font-medium"
+                                />
+                            </div>
+
+                            {(customStartDate || customEndDate) && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setCustomStartDate('');
+                                        setCustomEndDate('');
+                                    }}
+                                    className="px-2 py-1 text-red-700 hover:bg-red-100 rounded-lg font-bold text-[11px] cursor-pointer"
+                                >
+                                    Limpar datas
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* ======================================================== */}
                 {/* 2. CARD PRINCIPAL: STATUS DE PROGRESSO MENSAL (% FEITO)  */}
                 {/* ======================================================== */}
                 <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-red-950 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-md border border-zinc-800/80 relative overflow-hidden">
@@ -675,7 +878,7 @@ export default function ThirdPartyAudits() {
                             <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-zinc-300 border border-white/20">
                                     <Clock className="w-3 h-3 text-amber-400" />
-                                    Progresso do Período ({periodFilterType === 'all' ? 'Geral' : selectedMonth})
+                                    Progresso do Período ({activePeriodLabel})
                                 </span>
                                 <span className="text-[11px] text-zinc-400 font-medium">
                                     Auditorias realizadas vs Meta estipulada
@@ -871,7 +1074,7 @@ export default function ThirdPartyAudits() {
                     <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2 hover:shadow-xs transition-shadow">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
-                                Qualidade Geral
+                                Qualidade (Positivos x Negativos)
                             </span>
                             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
                                 <ThumbsUp className="w-4 h-4" />
@@ -882,13 +1085,13 @@ export default function ThirdPartyAudits() {
                                 {metrics.qualityPositiveRate}%
                             </span>
                             <span className="text-xs text-gray-500 font-medium">
-                                Avaliação Positiva
+                                {metrics.totalQualityRated > 0 ? `${metrics.qualityPositive} de ${metrics.totalQualityRated} avaliados` : 'Sem avaliações'}
                             </span>
                         </div>
                         <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
-                            <span className="text-emerald-600 font-bold">👍 {metrics.qualityPositive}</span>
-                            <span className="text-gray-500 font-bold">😐 {metrics.qualityNeutral}</span>
-                            <span className="text-red-600 font-bold">👎 {metrics.qualityNegative}</span>
+                            <span className="text-emerald-600 font-bold" title="Positivos (somam a favor)">👍 {metrics.qualityPositive}</span>
+                            <span className="text-gray-400 font-medium" title="Neutros não descontam nem somam no % total">😐 {metrics.qualityNeutral} <span className="text-[9px] text-gray-400 font-normal">(Neutros)</span></span>
+                            <span className="text-red-600 font-bold" title="Negativos (descontam contra)">👎 {metrics.qualityNegative}</span>
                         </div>
                     </div>
 
@@ -984,8 +1187,11 @@ export default function ThirdPartyAudits() {
                                                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800" title="First Call Resolution">
                                                     FCR {op.fcr}%
                                                 </span>
-                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800" title="Conformidade">
-                                                    QA {op.conformidade}%
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-800" title="Conformidade de Procedimentos">
+                                                    Conf {op.conformidade}%
+                                                </span>
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-purple-100 text-purple-800" title="Qualidade (Positivos x Negativos, sem neutros)">
+                                                    QA {op.qualidade}%
                                                 </span>
                                             </div>
                                         </div>
@@ -1219,20 +1425,20 @@ export default function ThirdPartyAudits() {
                             </p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs text-gray-600">
+                        <div className="overflow-x-auto w-full">
+                            <table className="w-full text-left text-xs text-gray-600 table-auto">
                                 <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
                                     <tr>
-                                        <th className="px-4 py-3">Data</th>
-                                        <th className="px-4 py-3">Protocolos</th>
-                                        <th className="px-4 py-3">Cliente</th>
-                                        <th className="px-4 py-3">Operador</th>
-                                        <th className="px-4 py-3">Processo</th>
-                                        <th className="px-4 py-3">Procedimento</th>
-                                        <th className="px-4 py-3">Qualidade</th>
-                                        <th className="px-4 py-3">Status Chamada</th>
-                                        <th className="px-4 py-3">Saída (FCR)</th>
-                                        <th className="px-4 py-3 text-right">Ações</th>
+                                        <th className="px-3 py-2.5 whitespace-nowrap">Data</th>
+                                        <th className="px-3 py-2.5 whitespace-nowrap">Protocolos</th>
+                                        <th className="px-3 py-2.5 min-w-[130px]">Cliente</th>
+                                        <th className="px-3 py-2.5 whitespace-nowrap">Operador</th>
+                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Processo</th>
+                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Procedimento</th>
+                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Qualidade</th>
+                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Status Chamada</th>
+                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Saída (FCR)</th>
+                                        <th className="px-3 py-2.5 text-right whitespace-nowrap">Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-100">
@@ -1245,36 +1451,40 @@ export default function ThirdPartyAudits() {
                                             <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
                                                 
                                                 {/* Data */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap font-medium text-gray-900">
+                                                <td className="px-3 py-2.5 whitespace-nowrap font-medium text-gray-900">
                                                     {item.date ? item.date.split('-').reverse().join('/') : '--'}
                                                 </td>
 
                                                 {/* Protocolo Terceirizada & MK */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                <td className="px-3 py-2.5 whitespace-nowrap">
                                                     <div className="space-y-0.5">
                                                         <div className="flex items-center gap-1 font-mono text-[11px] font-bold text-gray-900">
                                                             <span>#{item.protocol}</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleCopy(item.protocol, `prot_${item.id}`)}
-                                                                className="text-gray-400 hover:text-gray-700 cursor-pointer"
+                                                                className="text-gray-400 hover:text-gray-700 cursor-pointer p-0.5"
                                                                 title="Copiar protocolo"
                                                             >
                                                                 {copiedField === `prot_${item.id}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                                                             </button>
                                                         </div>
-                                                        {item.erpProtocol && (
+                                                        {item.erpProtocol ? (
                                                             <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono">
                                                                 <span>MK: {item.erpProtocol}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-[10px] text-gray-300 font-mono">
+                                                                <span>Sem ERP</span>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </td>
 
                                                 {/* Nome do Cliente com Badge de Reincidência */}
-                                                <td className="px-4 py-3.5">
-                                                    <div className="space-y-0.5">
-                                                        <span className="font-bold text-gray-900 block truncate max-w-44">
+                                                <td className="px-3 py-2.5">
+                                                    <div className="space-y-0.5 min-w-[120px]">
+                                                        <span className="font-bold text-gray-900 block truncate" title={item.clientName}>
                                                             {item.clientName}
                                                         </span>
                                                         {isRepeat && (
@@ -1291,24 +1501,24 @@ export default function ThirdPartyAudits() {
                                                 </td>
 
                                                 {/* Operador Terceirizado */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap font-medium text-gray-800">
-                                                    <div className="flex items-center gap-1.5">
-                                                        <div className="w-5 h-5 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[10px] font-bold">
+                                                <td className="px-3 py-2.5 whitespace-nowrap font-medium text-gray-800">
+                                                    <div className="flex items-center gap-1.5 min-w-[110px]">
+                                                        <div className="w-5 h-5 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
                                                             {(item.operatorName || 'O').charAt(0).toUpperCase()}
                                                         </div>
-                                                        <span>{item.operatorName}</span>
+                                                        <span className="truncate" title={item.operatorName}>{item.operatorName}</span>
                                                     </div>
                                                 </td>
 
                                                 {/* Processo Realizado */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
                                                     <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
                                                         {item.process || 'Sem acesso'}
                                                     </span>
                                                 </td>
 
                                                 {/* Procedimentos */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
                                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
                                                         item.procedures === 'Conforme' 
                                                             ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
@@ -1324,7 +1534,7 @@ export default function ThirdPartyAudits() {
                                                 </td>
 
                                                 {/* Qualidade */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
                                                     <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
                                                         item.quality === 'Positiva'
                                                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
@@ -1337,7 +1547,7 @@ export default function ThirdPartyAudits() {
                                                 </td>
 
                                                 {/* Status Chamada (Terceirizada) */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
                                                     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
                                                         item.callStatus === 'Atendida'
                                                             ? 'bg-gray-100 text-gray-800 border border-gray-200'
@@ -1353,7 +1563,7 @@ export default function ThirdPartyAudits() {
                                                 </td>
 
                                                 {/* Saída (Resolvido vs Encaminhado = FCR) */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
                                                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-2xs ${
                                                         item.outcome === 'Resolvido'
                                                             ? 'bg-emerald-600 text-white'
@@ -1369,7 +1579,7 @@ export default function ThirdPartyAudits() {
                                                 </td>
 
                                                 {/* Ações */}
-                                                <td className="px-4 py-3.5 whitespace-nowrap text-right">
+                                                <td className="px-3 py-2.5 whitespace-nowrap text-right">
                                                     <div className="flex items-center justify-end gap-1">
                                                         <button
                                                             type="button"
@@ -1453,18 +1663,30 @@ export default function ThirdPartyAudits() {
                                     </h4>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                        {/* Data */}
+                                        {/* Data - Obrigatoriamente em branco na criação */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                                                Data da Chamada *
-                                            </label>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="text-[11px] font-bold text-gray-700">
+                                                    Data da Chamada *
+                                                </label>
+                                                <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
+                                                    Obrigatório
+                                                </span>
+                                            </div>
                                             <input
                                                 type="date"
                                                 required
                                                 value={formData.date}
                                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 font-medium"
+                                                className={`w-full p-2 bg-gray-50 border rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 font-medium ${
+                                                    !formData.date ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-gray-200'
+                                                }`}
                                             />
+                                            {!formData.date && (
+                                                <span className="text-[10px] text-amber-600 mt-1 block font-medium">
+                                                    Campo em branco obrigatório para evitar datas erradas.
+                                                </span>
+                                            )}
                                         </div>
 
                                         {/* Protocolo da Terceirizada */}
