@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     Headphones, PhoneIncoming, PhoneMissed, CheckCircle2, XCircle, 
     AlertCircle, ThumbsUp, ThumbsDown, Plus, Search, Filter, 
     Download, Edit2, Trash2, Eye, X, Save, Loader2, Calendar, 
     User, FileText, Database, TrendingUp, BarChart2, Check, 
     Copy, ArrowRight, ShieldCheck, Target, Clock, AlertTriangle, 
-    Users, RefreshCw, Sparkles, ChevronRight
+    Users, RefreshCw, Sparkles, ChevronRight, Upload, FileUp, FileSpreadsheet
 } from 'lucide-react';
 import { 
     collection, doc, addDoc, updateDoc, deleteDoc, setDoc 
@@ -35,20 +35,16 @@ export default function ThirdPartyAudits() {
     const { canEdit } = usePermissions();
     const hasEditPermission = canEdit('third_party_audits');
 
+    // Referência para input de importação de arquivo CSV
+    const fileInputRef = useRef(null);
+    const [isImporting, setIsImporting] = useState(false);
+
     // Estados de dados
     const [audits, setAudits] = useState([]);
     const [savedOperators, setSavedOperators] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
-
-    // Meta mensal de auditorias (padrão 100 ou customizada)
-    const [monthlyGoal, setMonthlyGoal] = useState(() => {
-        const saved = localStorage.getItem('hubdesk_third_party_goal');
-        return saved ? Number(saved) : 100;
-    });
-    const [isEditingGoal, setIsEditingGoal] = useState(false);
-    const [tempGoal, setTempGoal] = useState(monthlyGoal);
 
     // Mês selecionado para análise (padrão: mês corrente YYYY-MM)
     const currentMonthKey = useMemo(() => {
@@ -73,12 +69,12 @@ export default function ThirdPartyAudits() {
 
     // Filtros de busca e listagem
     const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all'); // 'all' | 'pending' | 'completed'
     const [operatorFilter, setOperatorFilter] = useState('all');
     const [processFilter, setProcessFilter] = useState('all');
     const [outcomeFilter, setOutcomeFilter] = useState('all'); // 'all' | 'Resolvido' | 'Encaminhado'
     const [proceduresFilter, setProceduresFilter] = useState('all'); // 'all' | 'Conforme' | 'Não conforme'
     const [qualityFilter, setQualityFilter] = useState('all'); // 'all' | 'Positiva' | 'Neutra' | 'Negativa'
-    const [callStatusFilter, setCallStatusFilter] = useState('all'); // 'all' | 'Atendida' | 'Abandonada'
     const [onlyRepeatsFilter, setOnlyRepeatsFilter] = useState(false);
 
     // Modais
@@ -87,13 +83,22 @@ export default function ThirdPartyAudits() {
     const [viewingAudit, setViewingAudit] = useState(null);
     const [copiedField, setCopiedField] = useState(null);
 
-    // Estado do formulário - O campo 'date' inicia SEMPRE em branco para obrigar o preenchimento manual
+    // Regra de validação: Verificação de auditoria concluída vs pendente de preenchimento
+    const isAuditCompleted = (a) => Boolean(
+        a.clientName && a.clientName.trim() && 
+        a.operatorName && a.operatorName.trim() && 
+        a.procedures && a.outcome
+    );
+    const isAuditPending = (a) => !isAuditCompleted(a);
+
+    // Estado do formulário - O campo 'date' inicia SEMPRE em branco para nova auditoria manual
     // Procedimentos e Saída iniciam desmarcados para o auditor selecionar obrigatoriamente
     // Qualidade inicia marcada como Neutra por padrão
+    // CallStatus fixado em 'Atendida' (apenas atendidas são registradas)
     const initialFormState = {
         date: '',               // SEMPRE em branco para nova auditoria (obrigatório informar)
         protocol: '',
-        callStatus: 'Atendida', // 'Atendida' | 'Abandonada'
+        callStatus: 'Atendida', // Apenas chamadas atendidas são registradas
         procedures: '',         // Desmarcado por padrão para seleção ativa do auditor
         quality: 'Neutra',      // Padrão marcada qualidade Neutra
         process: 'Sem acesso',
@@ -153,17 +158,6 @@ export default function ThirdPartyAudits() {
         });
         return Array.from(set).sort().reverse();
     }, [audits, currentMonthKey]);
-
-    // Salvar meta mensal no localStorage
-    const handleSaveGoal = () => {
-        const val = Number(tempGoal);
-        if (val > 0) {
-            setMonthlyGoal(val);
-            localStorage.setItem('hubdesk_third_party_goal', String(val));
-            showToast(`Meta mensal ajustada para ${val} auditorias.`, 'success');
-        }
-        setIsEditingGoal(false);
-    };
 
     // Histórico de repetições por cliente no universo global (para checagem de reincidência fora de horário)
     const clientHistoryMap = useMemo(() => {
@@ -289,6 +283,14 @@ export default function ThirdPartyAudits() {
                 }
             }
 
+            // Filtro de Status de Preenchimento da Auditoria (Pendentes vs Concluídas)
+            if (statusFilter === 'pending' && !isAuditPending(item)) {
+                return false;
+            }
+            if (statusFilter === 'completed' && !isAuditCompleted(item)) {
+                return false;
+            }
+
             // Filtro de Operador
             if (operatorFilter !== 'all' && (item.operatorName || '').trim() !== operatorFilter) {
                 return false;
@@ -314,11 +316,6 @@ export default function ThirdPartyAudits() {
                 return false;
             }
 
-            // Filtro de Status da chamada terceirizada
-            if (callStatusFilter !== 'all' && item.callStatus !== callStatusFilter) {
-                return false;
-            }
-
             // Filtro apenas reincidentes
             if (onlyRepeatsFilter) {
                 const cKey = item.clientName ? item.clientName.trim().toLowerCase() : '';
@@ -329,8 +326,8 @@ export default function ThirdPartyAudits() {
             return true;
         });
     }, [
-        periodAudits, searchTerm, operatorFilter, processFilter, 
-        outcomeFilter, proceduresFilter, qualityFilter, callStatusFilter, 
+        periodAudits, searchTerm, statusFilter, operatorFilter, processFilter, 
+        outcomeFilter, proceduresFilter, qualityFilter, 
         onlyRepeatsFilter, clientHistoryMap
     ]);
 
@@ -339,9 +336,16 @@ export default function ThirdPartyAudits() {
     // ========================================================
     const metrics = useMemo(() => {
         const total = periodAudits.length;
+        const completedAudits = periodAudits.filter(isAuditCompleted);
+        const pendingAudits = periodAudits.filter(isAuditPending);
+        const completedCount = completedAudits.length;
+        const pendingCount = pendingAudits.length;
+
         if (total === 0) {
             return {
                 total: 0,
+                completedCount: 0,
+                pendingCount: 0,
                 progressPercent: 0,
                 fcrPercent: 0,
                 totalResolved: 0,
@@ -357,26 +361,21 @@ export default function ThirdPartyAudits() {
                 qualityNeutral: 0,
                 qualityNegative: 0,
                 totalQualityRated: 0,
-                qualityPositiveRate: 0,
-                callsAnswered: 0,
-                callsAbandoned: 0,
-                answeredRate: 0
+                qualityPositiveRate: 0
             };
         }
 
-        // 1. Progresso do Período / Mês (% feita em relação à meta)
-        const progressPercent = Math.min(100, Math.round((total / monthlyGoal) * 100));
+        // 1. Progresso Atual: % de atendimentos concluídos e quantas pendentes
+        const progressPercent = total > 0 ? Math.round((completedCount / total) * 100) : 100;
 
-        // 2. FCR (First Call Resolution com base na Saída)
-        // Saída = 'Resolvido' (FCR Sucesso) vs 'Encaminhado'
-        const totalResolved = periodAudits.filter(a => a.outcome === 'Resolvido').length;
-        const totalForwarded = periodAudits.filter(a => a.outcome === 'Encaminhado').length;
-        const fcrPercent = Math.round((totalResolved / total) * 100);
+        // 2. FCR (First Call Resolution com base nas auditorias já preenchidas)
+        const totalResolved = completedAudits.filter(a => a.outcome === 'Resolvido').length;
+        const totalForwarded = completedAudits.filter(a => a.outcome === 'Encaminhado').length;
+        const fcrPercent = completedCount > 0 ? Math.round((totalResolved / completedCount) * 100) : 0;
 
         // 3. Taxa de Reincidência dos Clientes
-        // Analisa clientes que ligaram mais de 1 vez no universo do período
         const clientsSeen = {};
-        periodAudits.forEach(a => {
+        completedAudits.forEach(a => {
             const key = a.clientName ? a.clientName.trim().toLowerCase() : '';
             if (key) {
                 clientsSeen[key] = (clientsSeen[key] || 0) + 1;
@@ -387,41 +386,34 @@ export default function ThirdPartyAudits() {
         const repeatClients = clientKeys.filter(k => clientsSeen[k] > 1);
         const repeatClientsCount = repeatClients.length;
 
-        // Chamadas que pertencem a clientes reincidentes
-        const repeatCallsCount = periodAudits.filter(a => {
+        // Chamadas pertencentes a clientes reincidentes
+        const repeatCallsCount = completedAudits.filter(a => {
             const key = a.clientName ? a.clientName.trim().toLowerCase() : '';
             return key && clientsSeen[key] > 1;
         }).length;
 
-        // % de reincidência baseada em chamadas que foram reincidentes
-        const repeatRatePercent = Math.round((repeatCallsCount / total) * 100);
+        const repeatRatePercent = completedCount > 0 ? Math.round((repeatCallsCount / completedCount) * 100) : 0;
 
         // 4. Procedimentos (Conforme vs Não conforme)
-        const totalConforme = periodAudits.filter(a => a.procedures === 'Conforme').length;
-        const totalNaoConforme = total - totalConforme;
-        const compliancePercent = Math.round((totalConforme / total) * 100);
+        const totalConforme = completedAudits.filter(a => a.procedures === 'Conforme').length;
+        const totalNaoConforme = completedCount - totalConforme;
+        const compliancePercent = completedCount > 0 ? Math.round((totalConforme / completedCount) * 100) : 0;
 
         // 5. Qualidade (Positiva, Neutra, Negativa)
-        // REGRA OFICIAL SOLICITADA PELO USUÁRIO:
-        // O cálculo de qualidade deve ser SOMENTE Positivos x Negativos.
-        // Os neutros NÃO devem descontar ou somar no % total.
-        const qualityPositive = periodAudits.filter(a => a.quality === 'Positiva').length;
-        const qualityNeutral = periodAudits.filter(a => a.quality === 'Neutra').length;
-        const qualityNegative = periodAudits.filter(a => a.quality === 'Negativa').length;
+        // REGRA OFICIAL: Somente Positivos x Negativos (Neutros excluídos do divisor)
+        const qualityPositive = completedAudits.filter(a => a.quality === 'Positiva').length;
+        const qualityNeutral = completedAudits.filter(a => a.quality === 'Neutra').length;
+        const qualityNegative = completedAudits.filter(a => a.quality === 'Negativa').length;
         
-        // Base avaliada válida: Positivos + Negativos (Neutros são excluídos do divisor)
         const totalQualityRated = qualityPositive + qualityNegative;
         const qualityPositiveRate = totalQualityRated > 0 
             ? Math.round((qualityPositive / totalQualityRated) * 100) 
             : 0;
 
-        // 6. Chamadas da Terceirizada (Atendida vs Abandonada)
-        const callsAnswered = periodAudits.filter(a => a.callStatus === 'Atendida').length;
-        const callsAbandoned = periodAudits.filter(a => a.callStatus === 'Abandonada').length;
-        const answeredRate = Math.round((callsAnswered / total) * 100);
-
         return {
             total,
+            completedCount,
+            pendingCount,
             progressPercent,
             fcrPercent,
             totalResolved,
@@ -437,12 +429,9 @@ export default function ThirdPartyAudits() {
             qualityNeutral,
             qualityNegative,
             totalQualityRated,
-            qualityPositiveRate,
-            callsAnswered,
-            callsAbandoned,
-            answeredRate
+            qualityPositiveRate
         };
-    }, [periodAudits, monthlyGoal]);
+    }, [periodAudits]);
 
     // Dados para gráfico de Processos Realizados
     const processChartData = useMemo(() => {
@@ -609,21 +598,21 @@ export default function ThirdPartyAudits() {
             const payload = {
                 date: formData.date,
                 protocol: formData.protocol.trim(),
-                callStatus: formData.callStatus,
+                callStatus: 'Atendida', // Só estamos registrando as chamadas atendidas
                 procedures: formData.procedures,
-                quality: formData.quality,
-                process: formData.process,
+                quality: formData.quality || 'Neutra',
+                process: formData.process || 'Sem acesso',
                 operatorName: cleanOperator,
-                erpProtocol: formData.erpProtocol.trim(),
+                erpProtocol: (formData.erpProtocol || '').trim(),
                 clientName: cleanClient,
                 outcome: formData.outcome,
-                notes: formData.notes.trim(),
+                notes: (formData.notes || '').trim(),
                 updatedAt: new Date()
             };
 
             if (editingAudit) {
                 await updateDoc(doc(db, 'third_party_audits', editingAudit.id), payload);
-                showToast('Auditoria atualizada com sucesso!', 'success');
+                showToast('Auditoria preenchida/atualizada com sucesso!', 'success');
             } else {
                 payload.createdAt = new Date();
                 payload.auditorName = currentUser?.name || currentUser?.displayName || 'Auditor';
@@ -664,6 +653,243 @@ export default function ThirdPartyAudits() {
         }
     };
 
+    // Download do Modelo CSV Oficial para Importação
+    const handleDownloadTemplate = () => {
+        const headers = [
+            'Data',
+            'Protocolo',
+            'Protocolo MK',
+            'Cliente',
+            'Operador',
+            'Processo',
+            'Procedimento',
+            'Qualidade',
+            'Saida(FCR)',
+            'Comentario'
+        ];
+        const today = new Date().toISOString().split('T')[0];
+        const sampleRows = [
+            [today, '#PBX-94821', '', '', '', '', '', '', '', ''],
+            [today, '#PBX-94822', '', '', '', '', '', '', '', ''],
+            [today, '#PBX-94823', 'MK-44021', 'João da Silva', 'Carlos Alberto', 'Sem acesso', 'Conforme', 'Positiva', 'Resolvido', 'Problema resolvido remotamente após reinício de sinal']
+        ];
+        const csvContent = '\uFEFF' + [headers.join(';'), ...sampleRows.map(r => r.join(';'))].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', 'modelo_importacao_auditorias.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast('Modelo de CSV baixado com sucesso! Preencha a data e o protocolo.', 'success');
+    };
+
+    // Importação em Lote via Arquivo .CSV com descarte de protocolos duplicados
+    const handleImportCSV = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setIsImporting(true);
+        try {
+            const text = await file.text();
+            const cleanText = text.replace(/^\uFEFF/, '').trim();
+            if (!cleanText) {
+                showToast('O arquivo CSV selecionado está vazio.', 'warning');
+                return;
+            }
+
+            const lines = cleanText.split(/\r?\n/).filter(line => line.trim().length > 0);
+            if (lines.length < 2) {
+                showToast('O arquivo CSV deve conter pelo menos o cabeçalho e uma linha de dados.', 'warning');
+                return;
+            }
+
+            // Identifica delimitador (; ou , ou tab)
+            const firstLine = lines[0];
+            let delimiter = ';';
+            const semicolonCount = (firstLine.match(/;/g) || []).length;
+            const commaCount = (firstLine.match(/,/g) || []).length;
+            const tabCount = (firstLine.match(/\t/g) || []).length;
+            if (commaCount > semicolonCount && commaCount > tabCount) delimiter = ',';
+            else if (tabCount > semicolonCount && tabCount > commaCount) delimiter = '\t';
+
+            const splitLine = (line) => {
+                const result = [];
+                let cur = '';
+                let inQuotes = false;
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"' || char === "'") {
+                        if (inQuotes && line[i + 1] === char) {
+                            cur += char;
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === delimiter && !inQuotes) {
+                        result.push(cur.trim());
+                        cur = '';
+                    } else {
+                        cur += char;
+                    }
+                }
+                result.push(cur.trim());
+                return result;
+            };
+
+            const rawHeaders = splitLine(lines[0]).map(h => 
+                h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+            );
+
+            const dateIdx = rawHeaders.findIndex(h => h.includes('data') || h.includes('date'));
+            const protIdx = rawHeaders.findIndex(h => (h.includes('protocolo') && !h.includes('mk') && !h.includes('erp')) || h === 'protocolo' || h === 'chamada' || h.includes('atendimento'));
+            const mkIdx = rawHeaders.findIndex(h => h.includes('mk') || h.includes('erp'));
+            const clientIdx = rawHeaders.findIndex(h => h.includes('cliente') || h.includes('client'));
+            const opIdx = rawHeaders.findIndex(h => h.includes('operador') || h.includes('atendente') || h.includes('operator'));
+            const procIdx = rawHeaders.findIndex(h => h.includes('processo'));
+            const procedIdx = rawHeaders.findIndex(h => h.includes('procedimento'));
+            const qualIdx = rawHeaders.findIndex(h => h.includes('qualidade'));
+            const outcomeIdx = rawHeaders.findIndex(h => h.includes('saida') || h.includes('fcr') || h.includes('resolucao'));
+            const notesIdx = rawHeaders.findIndex(h => h.includes('comentario') || h.includes('observ') || h.includes('parecer') || h.includes('nota'));
+
+            const normalizeDate = (raw) => {
+                if (!raw) return '';
+                const clean = raw.trim();
+                if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+                const dmyMatch = clean.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+                if (dmyMatch) {
+                    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+                }
+                const ymdMatch = clean.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
+                if (ymdMatch) {
+                    return `${ymdMatch[1]}-${ymdMatch[2].padStart(2, '0')}-${ymdMatch[3].padStart(2, '0')}`;
+                }
+                return clean;
+            };
+
+            // Conjunto para descarte de duplicados existentes no sistema e no próprio arquivo
+            const existingProtocolsSet = new Set(
+                audits.map(a => (a.protocol || '').trim().toLowerCase()).filter(Boolean)
+            );
+            const batchProtocolsSet = new Set();
+
+            let discardedCount = 0;
+            const newAudits = [];
+
+            for (let i = 1; i < lines.length; i++) {
+                const cols = splitLine(lines[i]);
+                if (cols.length === 0 || (cols.length === 1 && !cols[0])) continue;
+
+                const rawDate = dateIdx >= 0 ? cols[dateIdx] : cols[0];
+                const rawProt = protIdx >= 0 ? cols[protIdx] : (cols[1] || cols[0]);
+
+                const cleanProtocol = (rawProt || '').replace(/^["']|["']$/g, '').trim();
+                if (!cleanProtocol) continue;
+
+                const lowerProt = cleanProtocol.toLowerCase();
+
+                // Regra oficial: Se o usuário tentar importar um protocolo já existente no sistema, esse protocolo deve ser descartado.
+                if (existingProtocolsSet.has(lowerProt) || batchProtocolsSet.has(lowerProt)) {
+                    discardedCount++;
+                    continue;
+                }
+
+                batchProtocolsSet.add(lowerProt);
+                existingProtocolsSet.add(lowerProt);
+
+                const formattedDate = normalizeDate(rawDate) || new Date().toISOString().split('T')[0];
+                const erpProtocol = mkIdx >= 0 && cols[mkIdx] ? cols[mkIdx].replace(/^["']|["']$/g, '').trim() : '';
+                const clientName = clientIdx >= 0 && cols[clientIdx] ? cols[clientIdx].replace(/^["']|["']$/g, '').trim() : '';
+                const operatorName = opIdx >= 0 && cols[opIdx] ? cols[opIdx].replace(/^["']|["']$/g, '').trim() : '';
+                
+                let process = 'Sem acesso';
+                if (procIdx >= 0 && cols[procIdx]) {
+                    const rawP = cols[procIdx].replace(/^["']|["']$/g, '').trim();
+                    const matchP = OFFICIAL_PROCESSES.find(p => p.toLowerCase() === rawP.toLowerCase());
+                    if (matchP) process = matchP;
+                    else if (rawP) process = rawP;
+                }
+
+                let procedures = '';
+                if (procedIdx >= 0 && cols[procedIdx]) {
+                    const rawProc = cols[procedIdx].toLowerCase();
+                    if (rawProc.includes('nao') || rawProc.includes('não')) procedures = 'Não conforme';
+                    else if (rawProc.includes('conforme')) procedures = 'Conforme';
+                }
+
+                let quality = 'Neutra';
+                if (qualIdx >= 0 && cols[qualIdx]) {
+                    const rawQ = cols[qualIdx].toLowerCase();
+                    if (rawQ.includes('pos')) quality = 'Positiva';
+                    else if (rawQ.includes('neg')) quality = 'Negativa';
+                    else if (rawQ.includes('neu')) quality = 'Neutra';
+                }
+
+                let outcome = '';
+                if (outcomeIdx >= 0 && cols[outcomeIdx]) {
+                    const rawO = cols[outcomeIdx].toLowerCase();
+                    if (rawO.includes('resolv')) outcome = 'Resolvido';
+                    else if (rawO.includes('encaminh')) outcome = 'Encaminhado';
+                }
+
+                const notes = notesIdx >= 0 && cols[notesIdx] ? cols[notesIdx].replace(/^["']|["']$/g, '').trim() : '';
+
+                newAudits.push({
+                    date: formattedDate,
+                    protocol: cleanProtocol,
+                    callStatus: 'Atendida', // Só estamos registrando chamadas atendidas
+                    erpProtocol,
+                    clientName,
+                    operatorName,
+                    process,
+                    procedures,
+                    quality,
+                    outcome,
+                    notes,
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    auditorName: currentUser?.name || currentUser?.displayName || 'Auditor',
+                    auditorId: currentUser?.firestoreId || currentUser?.uid || ''
+                });
+            }
+
+            if (newAudits.length === 0) {
+                if (discardedCount > 0) {
+                    showToast(`Nenhum atendimento novo: todos os ${discardedCount} protocolo(s) já existem no sistema e foram descartados.`, 'warning');
+                } else {
+                    showToast('Nenhum dado válido encontrado no arquivo CSV.', 'warning');
+                }
+                return;
+            }
+
+            // Persistência em lote no Firestore
+            for (const item of newAudits) {
+                await addDoc(collection(db, 'third_party_audits'), item);
+                if (item.operatorName) {
+                    const opId = item.operatorName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    await setDoc(doc(db, 'third_party_operators', opId), {
+                        name: item.operatorName,
+                        lastUsedAt: new Date()
+                    }, { merge: true });
+                }
+            }
+
+            if (discardedCount > 0) {
+                showToast(`Importação concluída: ${newAudits.length} atendimento(s) importado(s). ${discardedCount} protocolo(s) já existente(s) foram descartados.`, 'success');
+            } else {
+                showToast(`Importação concluída: ${newAudits.length} atendimento(s) importado(s) com sucesso para auditoria!`, 'success');
+            }
+        } catch (error) {
+            console.error('Erro ao importar CSV:', error);
+            showToast('Erro ao importar CSV: ' + error.message, 'error');
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
     // Exportação em formato CSV
     const handleExportCSV = () => {
         if (filteredAudits.length === 0) {
@@ -672,7 +898,7 @@ export default function ThirdPartyAudits() {
         }
 
         const headers = [
-            'Data', 'Protocolo Terceirizada', 'Status Chamada', 
+            'Data', 'Protocolo Terceirizada', 'Status Preenchimento', 
             'Procedimentos', 'Qualidade', 'Processo Realizado', 
             'Operador', 'Protocolo MK (ERP)', 'Cliente', 'Saída (FCR)', 
             'Auditor', 'Observações'
@@ -681,7 +907,7 @@ export default function ThirdPartyAudits() {
         const rows = filteredAudits.map(a => [
             a.date || '',
             `"${(a.protocol || '').replace(/"/g, '""')}"`,
-            a.callStatus || '',
+            isAuditCompleted(a) ? 'Concluída' : 'Pendente',
             a.procedures || '',
             a.quality || '',
             `"${(a.process || '').replace(/"/g, '""')}"`,
@@ -708,6 +934,15 @@ export default function ThirdPartyAudits() {
 
     return (
         <div className="flex-1 p-3 sm:p-5 lg:p-6 bg-gray-50 h-full overflow-y-auto font-sans">
+            {/* Input Oculto de Arquivo CSV */}
+            <input 
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImportCSV}
+                accept=".csv, .txt"
+                className="hidden"
+            />
+
             <div className="w-full max-w-none space-y-4 sm:space-y-5">
 
                 {/* ======================================================== */}
@@ -724,16 +959,41 @@ export default function ThirdPartyAudits() {
                                     Auditorias de Qualidade Terceirizada
                                 </h1>
                                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
-                                    Equipe Externa
+                                    Equipe Externa • v3.7.2
                                 </span>
                             </div>
                             <p className="text-xs text-gray-500 mt-0.5">
-                                Acompanhamento de conformidade, FCR na saída e reincidência de clientes fora de horário.
+                                Importação de atendimentos via CSV, auditoria de conformidade, FCR na saída e reincidência fora de horário.
                             </p>
                         </div>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 w-full xl:w-auto justify-start xl:justify-end">
+                        {/* Botão Baixar Modelo CSV */}
+                        <button
+                            type="button"
+                            onClick={handleDownloadTemplate}
+                            className="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            title="Baixar modelo de CSV com colunas pré-formatadas para importação"
+                        >
+                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Modelo CSV</span>
+                        </button>
+
+                        {/* Botão Importar CSV */}
+                        {hasEditPermission && (
+                            <button
+                                type="button"
+                                disabled={isImporting}
+                                onClick={() => fileInputRef.current?.click()}
+                                className="px-3.5 py-2 bg-white hover:bg-blue-50 text-blue-800 text-xs font-bold rounded-xl border border-blue-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                title="Importar atendimentos via arquivo .CSV (Data e Protocolo)"
+                            >
+                                {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" /> : <Upload className="w-3.5 h-3.5 text-blue-600" />}
+                                <span>Importar CSV</span>
+                            </button>
+                        )}
+
                         {/* Botão Exportar CSV */}
                         <button
                             type="button"
@@ -753,7 +1013,7 @@ export default function ThirdPartyAudits() {
                                 className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md shadow-red-950/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                             >
                                 <Plus className="w-4 h-4" />
-                                <span>Lançar Auditoria</span>
+                                <span>Lançar Manual</span>
                             </button>
                         )}
                     </div>
@@ -921,7 +1181,7 @@ export default function ThirdPartyAudits() {
                 </div>
 
                 {/* ======================================================== */}
-                {/* 2. CARD PRINCIPAL: STATUS DE PROGRESSO MENSAL (% FEITO)  */}
+                {/* 2. CARD PRINCIPAL: PROGRESSO ATUAL (% E PENDENTES)       */}
                 {/* ======================================================== */}
                 <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-red-950 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-md border border-zinc-800/80 relative overflow-hidden">
                     <div className="absolute right-0 top-0 bottom-0 w-96 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
@@ -934,73 +1194,51 @@ export default function ThirdPartyAudits() {
                                     Progresso do Período ({activePeriodLabel})
                                 </span>
                                 <span className="text-[11px] text-zinc-400 font-medium">
-                                    Auditorias realizadas vs Meta estipulada
+                                    Acompanhamento em tempo real de atendimentos preenchidos
                                 </span>
                             </div>
                             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-1 flex items-baseline gap-2">
-                                <span>{metrics.total} auditorias lançadas</span>
+                                <span>{metrics.completedCount} auditorias concluídas</span>
                                 <span className="text-xs font-normal text-zinc-400">
-                                    de {monthlyGoal} previstas
+                                    de {metrics.total} registradas no período
                                 </span>
                             </h2>
                         </div>
 
-                        {/* Indicador Numérico Grande e Ajuste de Meta */}
+                        {/* Indicador Numérico Grande e Resumo de Pendentes */}
                         <div className="flex items-center gap-4">
                             <div className="text-right">
-                                <span className="text-3xl sm:text-4xl font-black text-amber-400">
+                                <span className={`text-3xl sm:text-4xl font-black ${
+                                    metrics.progressPercent === 100 && metrics.total > 0
+                                        ? 'text-emerald-400'
+                                        : metrics.progressPercent >= 70
+                                        ? 'text-amber-400'
+                                        : 'text-red-400'
+                                }`}>
                                     {metrics.progressPercent}%
                                 </span>
                                 <span className="block text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
-                                    Meta do Mês
+                                    Progresso Atual
                                 </span>
                             </div>
 
-                            {/* Botão para editar meta */}
-                            {hasEditPermission && (
-                                <div className="border-l border-zinc-800 pl-3">
-                                    {!isEditingGoal ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setTempGoal(monthlyGoal);
-                                                setIsEditingGoal(true);
-                                            }}
-                                            className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors text-xs font-bold flex items-center gap-1 cursor-pointer"
-                                            title="Editar meta de auditorias"
-                                        >
-                                            <Target className="w-4 h-4 text-amber-400" />
-                                            <span className="text-[11px] hidden sm:inline">Ajustar Meta</span>
-                                        </button>
-                                    ) : (
-                                        <div className="flex items-center gap-1.5 bg-zinc-900 p-1 rounded-xl border border-zinc-700">
-                                            <input
-                                                type="number"
-                                                min="1"
-                                                value={tempGoal}
-                                                onChange={(e) => setTempGoal(e.target.value)}
-                                                className="w-16 px-2 py-1 bg-zinc-950 text-white rounded text-xs text-center font-bold outline-none"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={handleSaveGoal}
-                                                className="p-1 bg-red-600 hover:bg-red-700 text-white rounded cursor-pointer"
-                                                title="Salvar meta"
-                                            >
-                                                <Check className="w-3.5 h-3.5" />
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setIsEditingGoal(false)}
-                                                className="p-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded cursor-pointer"
-                                                title="Cancelar"
-                                            >
-                                                <X className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
-                                    )}
+                            <div className="border-l border-zinc-800 pl-4 space-y-1">
+                                <div className="flex items-center gap-1.5">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${metrics.pendingCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
+                                    <span className="text-xs font-bold text-zinc-200">
+                                        {metrics.pendingCount} pendente{metrics.pendingCount !== 1 ? 's' : ''}
+                                    </span>
                                 </div>
-                            )}
+                                {metrics.pendingCount > 0 && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
+                                        className="text-[11px] text-amber-400 hover:text-amber-300 underline font-bold cursor-pointer block"
+                                    >
+                                        {statusFilter === 'pending' ? 'Ver todas' : 'Filtrar pendentes'}
+                                    </button>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -1013,15 +1251,17 @@ export default function ThirdPartyAudits() {
                             />
                         </div>
                         <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                            <span>0 auditorias</span>
+                            <span>0%</span>
                             <span>
-                                {metrics.total >= monthlyGoal ? (
-                                    <strong className="text-emerald-400">🎉 Meta mensal alcançada!</strong>
+                                {metrics.total === 0 ? (
+                                    'Nenhum atendimento importado neste período'
+                                ) : metrics.pendingCount === 0 ? (
+                                    <strong className="text-emerald-400">🎉 Todos os atendimentos do período estão 100% auditados!</strong>
                                 ) : (
-                                    `Faltam ${monthlyGoal - metrics.total} auditorias para atingir 100% da meta`
+                                    `Faltam preencher ${metrics.pendingCount} atendimento(s) pendente(s)`
                                 )}
                             </span>
-                            <span>{monthlyGoal} auditorias</span>
+                            <span>100%</span>
                         </div>
                     </div>
                 </div>
@@ -1341,6 +1581,39 @@ export default function ThirdPartyAudits() {
                         {/* Filtros em Linha */}
                         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
                             
+                            {/* Filtro de Status de Preenchimento */}
+                            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('all')}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                        statusFilter === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                                    }`}
+                                >
+                                    Todos ({periodAudits.length})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('pending')}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                        statusFilter === 'pending' ? 'bg-amber-500 text-white shadow-2xs' : 'text-amber-700 hover:bg-amber-50'
+                                    }`}
+                                >
+                                    <AlertCircle className="w-3 h-3" />
+                                    Pendentes ({metrics.pendingCount})
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStatusFilter('completed')}
+                                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                        statusFilter === 'completed' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-emerald-700 hover:bg-emerald-50'
+                                    }`}
+                                >
+                                    <CheckCircle2 className="w-3 h-3" />
+                                    Concluídas ({metrics.completedCount})
+                                </button>
+                            </div>
+
                             {/* Operador */}
                             <select
                                 value={operatorFilter}
@@ -1399,17 +1672,6 @@ export default function ThirdPartyAudits() {
                                 <option value="Negativa">Negativa</option>
                             </select>
 
-                            {/* Status da Chamada */}
-                            <select
-                                value={callStatusFilter}
-                                onChange={(e) => setCallStatusFilter(e.target.value)}
-                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
-                            >
-                                <option value="all">Status Chamada</option>
-                                <option value="Atendida">Atendida</option>
-                                <option value="Abandonada">Abandonada</option>
-                            </select>
-
                             {/* Toggle Reincidentes */}
                             <button
                                 type="button"
@@ -1425,17 +1687,17 @@ export default function ThirdPartyAudits() {
                             </button>
 
                             {/* Limpar Filtros */}
-                            {(searchTerm || operatorFilter !== 'all' || processFilter !== 'all' || outcomeFilter !== 'all' || proceduresFilter !== 'all' || qualityFilter !== 'all' || callStatusFilter !== 'all' || onlyRepeatsFilter) && (
+                            {(searchTerm || statusFilter !== 'all' || operatorFilter !== 'all' || processFilter !== 'all' || outcomeFilter !== 'all' || proceduresFilter !== 'all' || qualityFilter !== 'all' || onlyRepeatsFilter) && (
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setSearchTerm('');
+                                        setStatusFilter('all');
                                         setOperatorFilter('all');
                                         setProcessFilter('all');
                                         setOutcomeFilter('all');
                                         setProceduresFilter('all');
                                         setQualityFilter('all');
-                                        setCallStatusFilter('all');
                                         setOnlyRepeatsFilter(false);
                                     }}
                                     className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
@@ -1474,7 +1736,7 @@ export default function ThirdPartyAudits() {
                             <Headphones className="w-10 h-10 text-gray-300 mb-1" />
                             <h4 className="text-sm font-bold text-gray-700">Nenhuma auditoria encontrada</h4>
                             <p className="text-xs text-gray-500 max-w-sm">
-                                Não há auditorias lançadas para este filtro ou período. Utilize o botão "Lançar Auditoria" para cadastrar uma nova avaliação.
+                                Não há auditorias lançadas para este filtro ou período. Utilize o botão "Importar CSV" ou "Lançar Manual" para cadastrar avaliações.
                             </p>
                         </div>
                     ) : (
@@ -1484,12 +1746,12 @@ export default function ThirdPartyAudits() {
                                     <tr>
                                         <th className="px-3 py-2.5 whitespace-nowrap">Data</th>
                                         <th className="px-3 py-2.5 whitespace-nowrap">Protocolos</th>
+                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Status</th>
                                         <th className="px-3 py-2.5 min-w-[130px]">Cliente</th>
                                         <th className="px-3 py-2.5 whitespace-nowrap">Operador</th>
                                         <th className="px-2.5 py-2.5 whitespace-nowrap">Processo</th>
                                         <th className="px-2.5 py-2.5 whitespace-nowrap">Procedimento</th>
                                         <th className="px-2.5 py-2.5 whitespace-nowrap">Qualidade</th>
-                                        <th className="px-2.5 py-2.5 whitespace-nowrap">Status Chamada</th>
                                         <th className="px-2.5 py-2.5 whitespace-nowrap">Saída (FCR)</th>
                                         <th className="px-3 py-2.5 text-right whitespace-nowrap">Ações</th>
                                     </tr>
@@ -1499,6 +1761,7 @@ export default function ThirdPartyAudits() {
                                         const cKey = item.clientName ? item.clientName.trim().toLowerCase() : '';
                                         const totalClientCalls = clientHistoryMap[cKey]?.length || 0;
                                         const isRepeat = totalClientCalls > 1;
+                                        const completed = isAuditCompleted(item);
 
                                         return (
                                             <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
@@ -1527,19 +1790,40 @@ export default function ThirdPartyAudits() {
                                                                 <span>MK: {item.erpProtocol}</span>
                                                             </div>
                                                         ) : (
-                                                            <div className="text-[10px] text-gray-300 font-mono">
-                                                                <span>Sem ERP</span>
+                                                            <div className="text-[10px] text-amber-500/70 font-mono italic">
+                                                                <span>Sem MK</span>
                                                             </div>
                                                         )}
                                                     </div>
                                                 </td>
 
+                                                {/* Status da Auditoria (Concluída vs Pendente) */}
+                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
+                                                    {completed ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                            Concluída
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                            <AlertCircle className="w-3 h-3 text-amber-600" />
+                                                            Pendente
+                                                        </span>
+                                                    )}
+                                                </td>
+
                                                 {/* Nome do Cliente com Badge de Reincidência */}
                                                 <td className="px-3 py-2.5">
                                                     <div className="space-y-0.5 min-w-[120px]">
-                                                        <span className="font-bold text-gray-900 block truncate" title={item.clientName}>
-                                                            {item.clientName}
-                                                        </span>
+                                                        {item.clientName ? (
+                                                            <span className="font-bold text-gray-900 block truncate" title={item.clientName}>
+                                                                {item.clientName}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-[11px] font-medium text-amber-600 italic">
+                                                                Aguardando cliente...
+                                                            </span>
+                                                        )}
                                                         {isRepeat && (
                                                             <span 
                                                                 onClick={() => setSearchTerm(item.clientName)}
@@ -1555,12 +1839,16 @@ export default function ThirdPartyAudits() {
 
                                                 {/* Operador Terceirizado */}
                                                 <td className="px-3 py-2.5 whitespace-nowrap font-medium text-gray-800">
-                                                    <div className="flex items-center gap-1.5 min-w-[110px]">
-                                                        <div className="w-5 h-5 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
-                                                            {(item.operatorName || 'O').charAt(0).toUpperCase()}
+                                                    {item.operatorName ? (
+                                                        <div className="flex items-center gap-1.5 min-w-[110px]">
+                                                            <div className="w-5 h-5 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                                {item.operatorName.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <span className="truncate" title={item.operatorName}>{item.operatorName}</span>
                                                         </div>
-                                                        <span className="truncate" title={item.operatorName}>{item.operatorName}</span>
-                                                    </div>
+                                                    ) : (
+                                                        <span className="text-[11px] text-gray-400 italic">Não informado</span>
+                                                    )}
                                                 </td>
 
                                                 {/* Processo Realizado */}
@@ -1572,86 +1860,98 @@ export default function ThirdPartyAudits() {
 
                                                 {/* Procedimentos */}
                                                 <td className="px-2.5 py-2.5 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                                                        item.procedures === 'Conforme' 
-                                                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
-                                                            : 'bg-red-100 text-red-800 border border-red-200'
-                                                    }`}>
-                                                        {item.procedures === 'Conforme' ? (
-                                                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                                                        ) : (
-                                                            <XCircle className="w-3 h-3 text-red-600" />
-                                                        )}
-                                                        {item.procedures || 'Conforme'}
-                                                    </span>
+                                                    {item.procedures ? (
+                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                                            item.procedures === 'Conforme' 
+                                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                                                                : 'bg-red-100 text-red-800 border border-red-200'
+                                                        }`}>
+                                                            {item.procedures === 'Conforme' ? (
+                                                                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                            ) : (
+                                                                <XCircle className="w-3 h-3 text-red-600" />
+                                                            )}
+                                                            {item.procedures}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                            Pendente
+                                                        </span>
+                                                    )}
                                                 </td>
 
                                                 {/* Qualidade */}
                                                 <td className="px-2.5 py-2.5 whitespace-nowrap">
-                                                    <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
-                                                        item.quality === 'Positiva'
-                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                            : item.quality === 'Neutra'
-                                                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                                            : 'bg-red-50 text-red-700 border border-red-200'
-                                                    }`}>
-                                                        {item.quality === 'Positiva' ? '👍 Positiva' : item.quality === 'Neutra' ? '😐 Neutra' : '👎 Negativa'}
-                                                    </span>
-                                                </td>
-
-                                                {/* Status Chamada (Terceirizada) */}
-                                                <td className="px-2.5 py-2.5 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
-                                                        item.callStatus === 'Atendida'
-                                                            ? 'bg-gray-100 text-gray-800 border border-gray-200'
-                                                            : 'bg-red-50 text-red-700 border border-red-200 font-bold'
-                                                    }`}>
-                                                        {item.callStatus === 'Atendida' ? (
-                                                            <PhoneIncoming className="w-3 h-3 text-emerald-600" />
-                                                        ) : (
-                                                            <PhoneMissed className="w-3 h-3 text-red-600" />
-                                                        )}
-                                                        {item.callStatus || 'Atendida'}
-                                                    </span>
+                                                    {item.quality ? (
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${
+                                                            item.quality === 'Positiva'
+                                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                : item.quality === 'Neutra'
+                                                                ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                                : 'bg-red-50 text-red-700 border border-red-200'
+                                                        }`}>
+                                                            {item.quality === 'Positiva' ? '👍 Positiva' : item.quality === 'Neutra' ? '😐 Neutra' : '👎 Negativa'}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-gray-400 italic">Neutra</span>
+                                                    )}
                                                 </td>
 
                                                 {/* Saída (Resolvido vs Encaminhado = FCR) */}
                                                 <td className="px-2.5 py-2.5 whitespace-nowrap">
-                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-2xs ${
-                                                        item.outcome === 'Resolvido'
-                                                            ? 'bg-emerald-600 text-white'
-                                                            : 'bg-blue-600 text-white'
-                                                    }`}>
-                                                        {item.outcome === 'Resolvido' ? (
-                                                            <Check className="w-3 h-3" />
-                                                        ) : (
-                                                            <ArrowRight className="w-3 h-3" />
-                                                        )}
-                                                        {item.outcome || 'Resolvido'}
-                                                    </span>
+                                                    {item.outcome ? (
+                                                        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold shadow-2xs ${
+                                                            item.outcome === 'Resolvido'
+                                                                ? 'bg-emerald-600 text-white'
+                                                                : 'bg-blue-600 text-white'
+                                                        }`}>
+                                                            {item.outcome === 'Resolvido' ? (
+                                                                <Check className="w-3 h-3" />
+                                                            ) : (
+                                                                <ArrowRight className="w-3 h-3" />
+                                                            )}
+                                                            {item.outcome}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-amber-600 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                                            Pendente
+                                                        </span>
+                                                    )}
                                                 </td>
 
                                                 {/* Ações */}
                                                 <td className="px-3 py-2.5 whitespace-nowrap text-right">
-                                                    <div className="flex items-center justify-end gap-1">
+                                                    <div className="flex items-center justify-end gap-1.5">
                                                         <button
                                                             type="button"
                                                             onClick={() => setViewingAudit(item)}
                                                             className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
-                                                            title="Ver detalhes da auditoria e histórico do cliente"
+                                                            title="Ver detalhes da auditoria"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
                                                         </button>
                                                         {hasEditPermission && (
                                                             <>
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleOpenEditModal(item)}
-                                                                    className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
-                                                                    title="Editar auditoria"
-                                                                >
-                                                                    <Edit2 className="w-3.5 h-3.5" />
-                                                                </button>
+                                                                {!completed ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenEditModal(item)}
+                                                                        className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold rounded-lg transition-all flex items-center gap-1 shadow-2xs cursor-pointer active:scale-95"
+                                                                        title="Pressione para preencher os dados pendentes desta auditoria"
+                                                                    >
+                                                                        <Edit2 className="w-3 h-3" />
+                                                                        <span>Preencher</span>
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleOpenEditModal(item)}
+                                                                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                                        title="Editar auditoria"
+                                                                    >
+                                                                        <Edit2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                )}
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setDeletingId(item.id)}
@@ -1715,7 +2015,7 @@ export default function ThirdPartyAudits() {
                                         1. Chamada Coletada no Admin Terceirizada
                                     </h4>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {/* Data - Obrigatoriamente em branco na criação */}
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
@@ -1779,39 +2079,6 @@ export default function ThirdPartyAudits() {
                                                     </div>
                                                 </div>
                                             )}
-                                        </div>
-
-                                        {/* Status da Chamada */}
-                                        <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                                                Status da Chamada *
-                                            </label>
-                                            <div className="grid grid-cols-2 gap-1.5">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData({ ...formData, callStatus: 'Atendida' })}
-                                                    className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                                                        formData.callStatus === 'Atendida'
-                                                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
-                                                    }`}
-                                                >
-                                                    <PhoneIncoming className="w-3 h-3" />
-                                                    Atendida
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setFormData({ ...formData, callStatus: 'Abandonada' })}
-                                                    className={`py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer flex items-center justify-center gap-1 ${
-                                                        formData.callStatus === 'Abandonada'
-                                                            ? 'bg-red-600 text-white border-red-600 shadow-2xs'
-                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
-                                                    }`}
-                                                >
-                                                    <PhoneMissed className="w-3 h-3" />
-                                                    Abandonada
-                                                </button>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

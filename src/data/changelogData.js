@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2 } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.7.1';
+export const CURRENT_VERSION = 'v3.7.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.7.1',
+    version: 'v3.7.2',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.7.2: Novo fluxo operacional da Auditoria Terceirizada com importação em lote via arquivo .CSV (Data e Protocolo), descarte automático de protocolos duplicados, indicador no topo com % de progresso e contador de pendentes de preenchimento, edição ágil para preencher todas as colunas pendentes (Protocolo MK, Cliente, Operador, Processo, Procedimento, Qualidade, Saída FCR e Parecer), modelo oficial de CSV para download e padronização exclusiva em chamadas Atendidas.',
+    items: [
+      {
+        icon: FileSpreadsheet,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Importação em Lote via .CSV',
+        category: 'Produtividade & Automação',
+        description: 'Permite importar arquivo .CSV contendo a data e o protocolo dos atendimentos a serem auditados, com botão de download de modelo padrão de CSV pré-formatado.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Descarte Automático de Protocolos Já Existentes',
+        category: 'Integridade de Dados',
+        description: 'Caso o arquivo CSV contenha protocolos que já existam no sistema, estes são descartados automaticamente na importação para evitar qualquer duplicidade de auditorias.'
+      },
+      {
+        icon: TrendingUp,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Progresso Atual e Contador de Pendentes no Topo',
+        category: 'Gestão Operacional',
+        description: 'O topo agora contabiliza o % real de progresso das auditorias concluídas e destaca exatamente quantas chamadas ainda estão pendentes de preenchimento.'
+      },
+      {
+        icon: Edit2,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Preenchimento Ágil pelo Botão Editar',
+        category: 'Qualidade QA',
+        description: 'Ao pressionar o botão editar, o auditor preenche com facilidade as informações pendentes: Protocolo MK, Cliente, Operador, Processo, Procedimento, Qualidade, Saída (FCR) e Parecer do auditor.'
+      }
+    ]
+  },
+  {
+    version: 'v3.7.1',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v3.7.1: Consolidação definitiva dos 3 Emblemas Oficiais de Feitos (Desempenho de Turno, Auditorias QA e TMA de Telefonia/Chat), layout minimalista e ultra-limpo nos cards de perfil sem textos redundantes ou tags auxiliares, e recalibração da progressão de níveis para a escala 1 a 3.',
     items: [
       {
