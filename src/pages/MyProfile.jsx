@@ -397,14 +397,14 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     };
 
-    // Lista para exibição no quadrado estilo amigos do Facebook (até 9 colegas ativos)
+    // Lista para exibição no quadrado estilo amigos do Facebook (até 12 colegas ativos)
     const facebookFriendsPreview = useMemo(() => {
         const myId = myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId;
         const others = activeCollaboratorsList.filter(c => {
             const cId = c.id || c.firestoreId || c.uid;
             return cId !== myId && c.email?.toLowerCase() !== myAuthUser?.email?.toLowerCase();
         });
-        return others.slice(0, 9);
+        return others.slice(0, 12);
     }, [activeCollaboratorsList, myAuthUser, currentUserId]);
 
     // Lista filtrada para o modal de lista completa de colegas
@@ -439,21 +439,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     return (
         <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 h-full overflow-y-auto font-sans">
-            <div className="max-w-6xl mx-auto space-y-6">
+            <div className="w-full space-y-6">
 
                 {/* AVISO DE VISUALIZAÇÃO DE OUTRO COLABORADOR */}
                 {isViewingOther && (
-                    <div className="bg-gradient-to-r from-red-950 via-zinc-950 to-zinc-900 border border-red-800/40 p-4 rounded-2xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-white animate-in fade-in duration-150">
+                    <div className="bg-gradient-to-r from-red-600 via-rose-700 to-red-800 border border-red-500/40 p-4 rounded-2xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-white animate-in fade-in duration-150">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-red-600/30 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0">
                                 <Eye className="w-5 h-5" />
                             </div>
                             <div>
                                 <h3 className="text-xs font-bold text-white flex items-center gap-1.5">
                                     <span>Visualizando Perfil Público:</span>
-                                    <span className="text-amber-400 font-extrabold">{user?.name || user?.displayName}</span>
+                                    <span className="text-amber-300 font-extrabold">{user?.name || user?.displayName}</span>
                                 </h3>
-                                <p className="text-[11px] text-zinc-300">
+                                <p className="text-[11px] text-red-100">
                                     Você está consultando os contatos, turnos e habilidades deste colega de equipe.
                                 </p>
                             </div>
@@ -461,7 +461,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <button
                             type="button"
                             onClick={() => setSelectedColabId(null)}
-                            className="px-3.5 py-1.5 bg-white hover:bg-gray-100 text-zinc-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
+                            className="px-3.5 py-1.5 bg-white hover:bg-gray-100 text-gray-900 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
                         >
                             <ArrowLeft className="w-3.5 h-3.5" />
                             <span>Voltar ao Meu Perfil</span>
@@ -472,13 +472,13 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO) */}
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-xs overflow-hidden relative">
                     {/* Fundo Gradiente Elegante com Textura Sutil */}
-                    <div className="h-44 sm:h-52 bg-gradient-to-r from-zinc-900 via-zinc-950 to-red-950 p-6 relative flex items-start justify-between">
+                    <div className="h-44 sm:h-52 bg-gradient-to-r from-red-600 via-red-700 to-rose-800 p-6 relative flex items-start justify-between">
                         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
                         
                         <div className="relative z-10 flex items-center gap-2">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-md border border-white/20 shadow-xs">
                                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                Perfil Oficial HubDesk • v3.6
+                                Perfil Oficial HubDesk • v3.7.1
                             </span>
                         </div>
 
@@ -486,7 +486,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <div className="relative z-10">
                             {isViewingOther && !isGestor ? (
                                 <div className="px-3.5 py-1.5 bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm">
-                                    <Eye className="w-3.5 h-3.5 text-zinc-300" />
+                                    <Eye className="w-3.5 h-3.5 text-red-200" />
                                     <span>Modo Consulta</span>
                                 </div>
                             ) : (
@@ -494,7 +494,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     type="button"
                                     onClick={handleSaveProfile}
                                     disabled={saving}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-red-950/40 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-red-900/30 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                                 >
                                     {saving ? (
                                         <>
@@ -518,7 +518,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             
                             {/* Avatar com Badge de Edição PhotoUrl */}
                             <div className="relative group">
-                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl border-4 border-white shadow-xl bg-zinc-900 overflow-hidden flex items-center justify-center shrink-0 relative transition-transform group-hover:scale-[1.02]">
+                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl border-4 border-white shadow-xl bg-gray-100 overflow-hidden flex items-center justify-center shrink-0 relative transition-transform group-hover:scale-[1.02]">
                                     {formData.photoURL ? (
                                         <img
                                             src={formData.photoURL}
@@ -530,11 +530,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             }}
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-red-600 to-zinc-900 text-white select-none">
+                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-red-600 via-rose-600 to-red-700 text-white select-none">
                                             <span className="text-3xl sm:text-4xl font-black">
                                                 {formData.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                                             </span>
-                                            <span className="text-[10px] font-mono text-zinc-300 mt-0.5">Sem Foto</span>
+                                            <span className="text-[10px] font-mono text-red-100 mt-0.5">Sem Foto</span>
                                         </div>
                                     )}
 
@@ -554,14 +554,14 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                                 {/* Status Pulsante Online/Ativo */}
                                 <div 
-                                    className="absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-white bg-zinc-900 shadow-md flex items-center justify-center"
+                                    className="absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-white bg-white shadow-md flex items-center justify-center"
                                     title={`Status: ${userOperationalStatus}`}
                                 >
                                     <span className={`w-2.5 h-2.5 rounded-full ${currentStatusStyle.dot}`}></span>
                                 </div>
                             </div>
 
-                            {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 8) */}
+                            {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 3) */}
                             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-xs">
                                 
                                 {/* Badge de Status Operacional */}
@@ -572,7 +572,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                                 {/* Badge de Nível (1 a 3) */}
                                 <div 
-                                    className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-amber-500/40 text-amber-900 shadow-2xs"
+                                    className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-amber-500/10 border-amber-500/40 text-amber-900 shadow-2xs"
                                     title={`Nível do Colaborador: ${userLevel} de 3 (${activeBadgeList.length} de 3 emblemas conquistados)`}
                                 >
                                     <Sparkles className="w-4 h-4 text-amber-600 animate-spin-slow" />
@@ -596,9 +596,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
 
                                 {/* Nível de Redes Atual */}
-                                <div className="px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-zinc-900 text-white border-zinc-800 shadow-2xs">
-                                    <Network className="w-4 h-4 text-red-400" />
-                                    <span>Redes: <strong className="text-red-400">{formData.networkKnowledge}</strong></span>
+                                <div className="px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-rose-50 text-rose-900 border-rose-200 shadow-2xs">
+                                    <Network className="w-4 h-4 text-rose-600" />
+                                    <span>Redes: <strong className="text-red-600">{formData.networkKnowledge}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -610,7 +610,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
                                         <span>{formData.name || 'Seu Nome'}</span>
                                         {(!isViewingOther || isGestor) && (
-                                            <button
+                                             <button
                                                 type="button"
                                                 onClick={handleOpenPhotoModal}
                                                 className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md border border-red-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
@@ -730,13 +730,13 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     {formData.networkSkills.map(tag => (
                                         <span
                                             key={tag}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-zinc-900 text-white border border-zinc-800 shadow-2xs group"
+                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-900 border border-rose-200 shadow-2xs group"
                                         >
                                             <span>{tag}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveSkillTag(tag)}
-                                                className="text-zinc-400 hover:text-red-400 p-0.5 rounded transition-colors cursor-pointer"
+                                                className="text-rose-400 hover:text-red-700 p-0.5 rounded transition-colors cursor-pointer"
                                                 title={`Remover tag ${tag}`}
                                             >
                                                 <X className="w-3 h-3" />
@@ -758,12 +758,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         onChange={(e) => setNewSkillInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkillTag())}
                                         placeholder="Digite uma competência (ex: Mikrotik, Wi-Fi 6, OSPF)..."
-                                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600"
+                                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600 text-gray-900 placeholder:text-gray-400"
                                     />
                                     <button
                                         type="button"
                                         onClick={() => handleAddSkillTag()}
-                                        className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
                                     >
                                         <Plus className="w-3.5 h-3.5" /> Adicionar
                                     </button>
@@ -824,7 +824,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
 
                             {/* Banner Informativo do Sistema Automatizado */}
-                            <div className="p-3 bg-gradient-to-r from-amber-50 via-rose-50/40 to-blue-50/30 border border-amber-200/80 rounded-xl flex items-start gap-3 text-xs text-zinc-800">
+                            <div className="p-3 bg-gradient-to-r from-amber-50 via-rose-50/40 to-blue-50/30 border border-amber-200/80 rounded-xl flex items-start gap-3 text-xs text-gray-800">
                                 <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                 <div className="space-y-0.5">
                                     <span className="font-bold text-gray-900 block">
@@ -853,14 +853,14 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 isGestor ? 'cursor-pointer hover:border-amber-400 active:scale-[0.99]' : 'cursor-default select-none'
                                             } ${
                                                 isUnlocked
-                                                    ? 'border-amber-300/90 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 shadow-xs'
+                                                    ? 'border-amber-300 bg-amber-50/70 shadow-2xs'
                                                     : 'border-gray-200 bg-gray-50/60 opacity-70'
                                             }`}
                                             title={isGestor ? `Clique para alternar concessão manual. Critério: ${badge.requirement}` : `Critério: ${badge.requirement}`}
                                         >
                                             {/* Ícone do Emblema */}
                                             <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-xs relative ${
-                                                isUnlocked ? badge.bgColor : 'bg-gray-200 border-gray-300 text-gray-400'
+                                                isUnlocked ? badge.bgColor : 'bg-gray-100 border-gray-200 text-gray-400'
                                             }`}>
                                                 <IconComponent className={`w-5 h-5 ${isUnlocked ? badge.textColor : 'text-gray-400'}`} />
                                                 {isUnlocked && (
@@ -875,15 +875,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                     <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-gray-900' : 'text-gray-600'}`}>
                                                         {badge.title}
                                                     </h3>
-                                                    {isUnlocked ? (
-                                                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 border border-amber-300 px-1.5 py-0.2 rounded shrink-0 flex items-center gap-0.5">
-                                                            <Check className="w-2.5 h-2.5 text-amber-700" /> Ativo
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[10px] text-gray-400 font-mono font-bold bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200 shrink-0">
-                                                            Bloqueado
-                                                        </span>
-                                                    )}
                                                 </div>
 
                                                 <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
@@ -927,7 +918,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             value={formData.phone}
                                             onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                                             placeholder="(11) 98765-4321"
-                                            className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600"
+                                            className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
                                         />
                                     </div>
                                     {formData.phone && (
@@ -964,7 +955,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     value={formData.slackOrTeams}
                                     onChange={(e) => setFormData(prev => ({ ...prev, slackOrTeams: e.target.value }))}
                                     placeholder="Ex: Ramal 2045 ou @pedro.suporte"
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600"
+                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
                                 />
                             </div>
 
@@ -978,9 +969,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     {formData.additionalEmails.map(email => (
                                         <div
                                             key={email}
-                                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-200 text-xs"
+                                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-700"
                                         >
-                                            <span className="text-gray-700 truncate" title={email}>{email}</span>
+                                            <span className="truncate" title={email}>{email}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveEmail(email)}
@@ -1005,12 +996,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         onChange={(e) => setNewEmailInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEmail())}
                                         placeholder="Adicionar e-mail secundário..."
-                                        className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600"
+                                        className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleAddEmail}
-                                        className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs"
                                     >
                                         + Add
                                     </button>
@@ -1018,8 +1009,8 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* CARD 2.4: BOX DE AMIGOS / COLEGAS DE EQUIPE (ESTILO FACEBOOK) */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
+                        {/* CARD 2.4: BOX DE AMIGOS / COLEGAS DE EQUIPE (ESTILO COMPACTO & ERGONÔMICO) */}
+                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 space-y-3.5">
                             <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
                                 <div>
                                     <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
@@ -1040,8 +1031,8 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </button>
                             </div>
 
-                            {/* Grade Quadrada 3x3 estilo Box de Amigos do Facebook */}
-                            <div className="grid grid-cols-3 gap-2.5">
+                            {/* Grade Compacta de 5 a 6 Colunas (Fotos Menores e Proporcionais) */}
+                            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
                                 {facebookFriendsPreview.map((colab) => {
                                     const cId = colab.id || colab.firestoreId || colab.uid;
                                     const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
@@ -1056,11 +1047,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             key={cId}
                                             type="button"
                                             onClick={() => setSelectedColabId(cId)}
-                                            className="flex flex-col text-left group cursor-pointer transition-transform hover:scale-[1.02] focus:outline-none"
+                                            className="flex flex-col items-center sm:items-start text-center sm:text-left group cursor-pointer transition-all hover:scale-[1.03] focus:outline-none p-1 rounded-xl hover:bg-gray-50/80"
                                             title={`${displayName} • ${colab.shift || colab.role || st}`}
                                         >
-                                            {/* Foto Quadrada com proporção 1:1 */}
-                                            <div className={`w-full aspect-square rounded-xl overflow-hidden bg-zinc-900 border relative shadow-2xs group-hover:shadow-sm transition-all ${
+                                            {/* Foto Quadrada Compacta */}
+                                            <div className={`w-full aspect-square rounded-xl overflow-hidden bg-gray-100 border relative shadow-2xs group-hover:shadow-xs transition-all ${
                                                 isSelected 
                                                     ? 'border-red-600 ring-2 ring-red-500/50' 
                                                     : 'border-gray-200 group-hover:border-red-300'
@@ -1072,24 +1063,24 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                                     />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-zinc-800 to-zinc-950 text-white font-black text-sm select-none">
+                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-100 to-rose-200 text-red-800 font-bold text-xs select-none">
                                                         {firstName.slice(0, 2).toUpperCase()}
                                                     </div>
                                                 )}
                                                 {/* Ponto indicador de status operacional */}
                                                 <span 
-                                                    className={`absolute bottom-1 right-1 w-2.5 h-2.5 rounded-full border-2 border-white shadow-2xs ${dotColor}`} 
+                                                    className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white shadow-2xs ${dotColor}`} 
                                                     title={`Status: ${st}`}
                                                 />
                                             </div>
 
                                             {/* Nome abaixo do minicard quadrado */}
-                                            <span className={`text-[11px] font-bold mt-1.5 truncate w-full transition-colors leading-tight ${
+                                            <span className={`text-[10px] font-bold mt-1 truncate w-full text-center sm:text-left transition-colors leading-tight ${
                                                 isSelected ? 'text-red-700' : 'text-gray-900 group-hover:text-red-600'
                                             }`}>
                                                 {firstName}
                                             </span>
-                                            <span className="text-[9px] text-gray-400 truncate w-full leading-tight">
+                                            <span className="text-[9px] text-gray-400 truncate w-full text-center sm:text-left leading-tight">
                                                 {colab.shift || colab.role || 'Suporte'}
                                             </span>
                                         </button>
@@ -1148,17 +1139,17 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
 
                             {/* Caixa Informativa sobre a Operação Terceirizada (20:00 até 08:00) */}
-                            <div className="p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-white space-y-1.5 shadow-2xs">
+                            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 space-y-1.5 shadow-2xs">
                                 <div className="flex items-center gap-2">
-                                    <Headphones className="w-4 h-4 text-amber-400" />
-                                    <span className="text-xs font-bold text-white tracking-wide">
+                                    <Headphones className="w-4 h-4 text-amber-600" />
+                                    <span className="text-xs font-bold text-gray-900 tracking-wide">
                                         {THIRD_PARTY_SCHEDULE_INFO.title}
                                     </span>
                                 </div>
-                                <div className="text-[11px] font-mono font-bold text-amber-300">
+                                <div className="text-[11px] font-mono font-bold text-amber-700">
                                     Horário: {THIRD_PARTY_SCHEDULE_INFO.hours}
                                 </div>
-                                <p className="text-[11px] text-zinc-400 leading-relaxed">
+                                <p className="text-[11px] text-gray-600 leading-relaxed">
                                     {THIRD_PARTY_SCHEDULE_INFO.description}
                                 </p>
                             </div>
@@ -1210,21 +1201,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Header Modal */}
-                        <div className="p-5 bg-zinc-950 text-white flex items-center justify-between border-b border-zinc-800">
+                        {/* Header Modal com Gradiente Oficial HubDesk */}
+                        <div className="p-5 bg-gradient-to-r from-red-600 to-rose-700 text-white flex items-center justify-between shadow-xs">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400">
+                                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
                                     <Camera className="w-5 h-5" />
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-bold text-white">Alterar Foto de Perfil</h3>
-                                    <p className="text-[11px] text-zinc-400">Recurso Oficial PhotoUrl do Firebase</p>
+                                    <p className="text-[11px] text-red-100">Recurso Oficial PhotoUrl do Firebase</p>
                                 </div>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setIsPhotoModalOpen(false)}
-                                className="p-1 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -1235,7 +1226,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                             {/* Preview Circular / Quadrado Arredondado */}
                             <div className="flex flex-col items-center justify-center">
-                                <div className="w-28 h-28 rounded-3xl border-4 border-red-500/20 shadow-md bg-zinc-100 overflow-hidden flex items-center justify-center mb-2 relative">
+                                <div className="w-28 h-28 rounded-3xl border-4 border-red-500/20 shadow-md bg-gray-100 overflow-hidden flex items-center justify-center mb-2 relative">
                                     {photoPreview ? (
                                         <img
                                             src={photoPreview}
@@ -1247,7 +1238,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             }}
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-zinc-400 font-bold text-2xl bg-zinc-100">
+                                        <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-2xl bg-gray-100">
                                             {formData.name?.charAt(0) || 'U'}
                                         </div>
                                     )}
@@ -1271,13 +1262,13 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 setPhotoPreview(e.target.value);
                                             }}
                                             placeholder="https://exemplo.com/minha-foto.jpg"
-                                            className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-800"
+                                            className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900 placeholder:text-gray-400"
                                         />
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setPhotoPreview(photoUrlInput)}
-                                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-gray-200"
                                     >
                                         Testar
                                     </button>
@@ -1376,18 +1367,20 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             {isTeamModalOpen && (
                 <div 
                     onClick={() => setIsTeamModalOpen(false)}
-                    className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-xs animate-in fade-in duration-150"
+                    className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[80] backdrop-blur-xs animate-in fade-in duration-150"
                 >
                     <div 
                         onClick={(e) => e.stopPropagation()}
                         className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] border border-gray-200 animate-in zoom-in-95 duration-150"
                     >
-                        <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0">
+                        <div className="p-4 bg-gradient-to-r from-red-600 to-rose-700 text-white flex justify-between items-center shrink-0 shadow-xs">
                             <div className="flex items-center gap-2.5">
-                                <Users className="w-5 h-5 text-red-500" />
+                                <div className="w-8 h-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
+                                    <Users className="w-4 h-4" />
+                                </div>
                                 <div>
                                     <h3 className="text-sm font-bold text-white">Colegas de Equipe</h3>
-                                    <p className="text-[11px] text-zinc-400">
+                                    <p className="text-[11px] text-red-100">
                                         {activeCollaboratorsList.length} colaboradores ativos no time
                                     </p>
                                 </div>
@@ -1395,7 +1388,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             <button 
                                 type="button" 
                                 onClick={() => setIsTeamModalOpen(false)}
-                                className="p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -1410,7 +1403,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     value={colabSearchQuery}
                                     onChange={(e) => setColabSearchQuery(e.target.value)}
                                     placeholder="Buscar por nome, cargo ou turno..."
-                                    className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500 text-gray-900 placeholder:text-gray-400"
                                     autoFocus
                                 />
                             </div>
@@ -1441,7 +1434,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <div className="relative shrink-0">
-                                                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-zinc-900 border border-gray-200 flex items-center justify-center font-bold text-white text-xs">
+                                                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-red-100 to-rose-200 border border-red-200 flex items-center justify-center font-bold text-red-800 text-xs">
                                                             {photo ? (
                                                                 <img src={photo} alt={name} className="w-full h-full object-cover" />
                                                             ) : (

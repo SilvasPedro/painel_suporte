@@ -8,7 +8,6 @@ import { messaging } from './services/firebase';
 import { getToken } from 'firebase/messaging';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './services/firebase';
-import FloatingChat from './components/FloatingChat';
 import FloatingExtensions from './components/FloatingExtensions';
 
 // Importação das páginas
@@ -200,7 +199,6 @@ function App() {
                         <BrowserRouter>
                             <NotificationManager />
                             <AppRoutes />
-                            <FloatingChat />
                             <FloatingExtensions />
                         </BrowserRouter>
                     </PermissionsProvider>

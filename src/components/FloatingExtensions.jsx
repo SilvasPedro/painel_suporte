@@ -93,33 +93,29 @@ export default function FloatingExtensions() {
   // Não renderiza se o usuário não estiver autenticado ou se estiver desativado
   if (!currentUser || currentUser.isInactive) return null;
 
-  // Se o usuário for Admin, posiciona ao lado do chat do sistema para não sobrepor
-  const isAdmin = currentUser.role === 'Admin';
-  const positionClass = isAdmin ? 'right-24' : 'right-4 sm:right-6';
-
   return (
     <>
-      {/* Botão Flutuante (Permanece sempre visível para permitir recolher pelo próprio ícone) */}
+      {/* Botão Flutuante (Posicionado perfeitamente no canto inferior direito) */}
       <button
         ref={buttonRef}
         id="toggle-extensions-floating-btn"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`fixed bottom-6 ${positionClass} p-3.5 sm:p-4 rounded-full text-white shadow-xl transition-all duration-300 z-50 flex items-center justify-center cursor-pointer ${
+        className={`fixed bottom-6 right-6 p-4 rounded-full text-white shadow-xl hover:shadow-2xl transition-all duration-300 z-50 flex items-center justify-center cursor-pointer ${
           isOpen
             ? 'bg-red-700 ring-4 ring-red-200 shadow-2xl scale-105'
-            : 'bg-red-600 hover:bg-red-700 hover:scale-105'
+            : 'bg-red-600 hover:bg-red-700 hover:scale-110 shadow-red-950/30'
         }`}
         title={isOpen ? 'Clique para recolher ramais' : 'Ver lista de ramais da empresa'}
         aria-label={isOpen ? 'Recolher janela de ramais' : 'Abrir janela de ramais'}
       >
-        <Phone className="w-5 h-5 sm:w-6 sm:h-6 transition-transform" />
+        <Phone className="w-6 h-6 transition-transform" />
       </button>
 
-      {/* Janela Modal de Ramais (Posicionada logo acima do botão flutuante) */}
+      {/* Janela Modal de Ramais (Posicionada logo acima do botão flutuante no canto) */}
       <div
         ref={modalRef}
         id="extensions-modal-window"
-        className={`fixed bottom-22 ${positionClass} w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/90 z-50 origin-bottom-right transition-all duration-200 ${
+        className={`fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/90 z-50 origin-bottom-right transition-all duration-200 ${
           isOpen
             ? 'scale-100 opacity-100 pointer-events-auto'
             : 'scale-90 opacity-0 pointer-events-none'
