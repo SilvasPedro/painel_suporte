@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.7';
+export const CURRENT_VERSION = 'v3.7.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.7',
+    version: 'v3.7.1',
     date: 'Outubro 2026',
     isCurrent: true,
-    tag: 'Versão Ativa',
+    tag: 'Versão Atual',
+    summary: 'Atualização v3.7.1: Consolidação definitiva dos 3 Emblemas Oficiais de Feitos (Desempenho de Turno, Auditorias QA e TMA de Telefonia/Chat), layout minimalista e ultra-limpo nos cards de perfil sem textos redundantes ou tags auxiliares, e recalibração da progressão de níveis para a escala 1 a 3.',
+    items: [
+      {
+        icon: Trophy,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Tríade Oficial de Emblemas de Feitos',
+        category: 'Gamificação & Reconhecimento',
+        description: 'Remoção do emblema de feedbacks e consolidação estrita dos 3 emblemas operacionais automatizados: Emblema de Desempenho (média de pontos no máx. 5% abaixo da média do turno ou superior), Emblema de Auditorias (% QA > 90%) e Emblema de TMA (Telefonia < 10m e Chat < 25m no mês vigente).'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Cards de Perfil Ultra-Limpos & Minimalistas',
+        category: 'Ergonomia Visual',
+        description: 'Remoção da tag de resultado atual e dos textos explicativos em verde no rodapé dos cards de conquistas, conferindo um design limpo, focado na regra oficial e no status de desbloqueio.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Calibração da Escala de Níveis (1 a 3)',
+        category: 'Progressão Operacional',
+        description: 'Ajuste matemático da escala de níveis do perfil para 1 a 3 ({conquistas}/3) perfeitamente alinhada com as 3 insígnias disponíveis na operação.'
+      }
+    ]
+  },
+  {
+    version: 'v3.7',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Nova grande atualização v3.7: Módulo Completo de Auditoria da Operação Terceirizada (Plantão Noturno / Equipes Externas) com validação anti-duplicidade de protocolos, atalhos rápidos para parecer do auditor, métricas de FCR, reincidência fora de horário, % de qualidade Positiva x Negativa e filtro por período com aproveitamento total do espaço em tela.',
     items: [
       {
@@ -44,6 +74,13 @@ export const CHANGELOG_VERSIONS = [
         title: 'Visualização Otimizada & Filtro por Período Sem Scroll Horizontal',
         category: 'Interface & Ergonomia',
         description: 'Aproveitamento de 100% da largura útil da tela com grid responsivo e tabela compacta sem barras de rolagem lateral desnecessárias, além de filtros avançados por período, status, processo e operador.'
+      },
+      {
+        icon: Trophy,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Sistema Automatizado dos 4 Emblemas Oficiais',
+        category: 'Gamificação & Reconhecimento Operacional',
+        description: 'Ativação 100% automatizada e parametrizada com os 4 emblemas oficiais da plataforma: Emblema de Feedbacks (relação positiva Positivos > Negativos), Emblema de Desempenho (média de pontos no máx. 5% abaixo da média do turno ou superior), Emblema de Auditorias (% QA > 90%) e Emblema de TMA (Telefonia < 10m e Chat < 25m no mês vigente).'
       }
     ]
   },

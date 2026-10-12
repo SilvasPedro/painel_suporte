@@ -5,7 +5,7 @@ import {
     Phone, Clock, Sun, Sunset, Moon, ExternalLink, Copy, CheckCircle2,
     Sparkles, Plus, Trash2, Edit3, Loader2, Save,
     Lock, Info, AlertCircle, Headphones, Users, UserCheck, Search,
-    ArrowLeft, Eye, ChevronLeft, ChevronRight
+    ArrowLeft, Eye, ChevronLeft, ChevronRight, ThumbsUp, TrendingUp
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
@@ -22,15 +22,18 @@ import {
     THIRD_PARTY_SCHEDULE_INFO,
     normalizeShiftName,
     calculateUserLevel,
-    DEFAULT_NETWORK_TAG_SUGGESTIONS
+    DEFAULT_NETWORK_TAG_SUGGESTIONS,
+    evaluateCollaboratorBadges
 } from '../services/userProfile';
 
-// Mapeamento de ícones dos emblemas
+// Mapeamento de ícones dos emblemas oficiais
 const BADGE_ICONS = {
+    ThumbsUp,
+    TrendingUp,
+    ShieldCheck,
     Trophy,
     Zap,
     Star,
-    ShieldCheck,
     Rocket,
     CalendarCheck,
     Network,
@@ -82,7 +85,7 @@ const getInitialFormData = (u) => {
         slackOrTeams: u?.slackOrTeams || '',
         shift: normShift,
         workHours: u?.workHours || shiftConfig.hours,
-        badges: Array.isArray(u?.badges) ? u.badges : ['top_tma', 'destaque_qa']
+        badges: Array.isArray(u?.badges) ? u.badges : ['emblema_tma', 'emblema_auditorias']
     };
 };
 
@@ -96,14 +99,37 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const [selectedColabId, setSelectedColabId] = useState(null);
     const [colabSearchQuery, setColabSearchQuery] = useState('');
 
-    // Carrega a lista completa de colaboradores
+    // Coleções necessárias para cálculo automático dos 3 emblemas oficiais
+    const [weeklyEvals, setWeeklyEvals] = useState([]);
+    const [qaAuditsList, setQaAuditsList] = useState([]);
+    const [thirdPartyAuditsList, setThirdPartyAuditsList] = useState([]);
+
+    // Carrega a lista completa de colaboradores e métricas da operação
     useEffect(() => {
-        const unsub = subscribeSharedCollection('collaborators', (items) => {
+        const unsubColabs = subscribeSharedCollection('collaborators', (items) => {
             const list = [...items];
             list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setCollaboratorsList(list);
         });
-        return () => unsub();
+
+        const unsubEvals = subscribeSharedCollection('weekly_evaluations', (items) => {
+            setWeeklyEvals(items || []);
+        });
+
+        const unsubAudits = subscribeSharedCollection('qa_audits', (items) => {
+            setQaAuditsList(items || []);
+        });
+
+        const unsubThirdParty = subscribeSharedCollection('third_party_audits', (items) => {
+            setThirdPartyAuditsList(items || []);
+        });
+
+        return () => {
+            unsubColabs();
+            unsubEvals();
+            unsubAudits();
+            unsubThirdParty();
+        };
     }, []);
 
     // REGRA CRÍTICA: Filtra APENAS colaboradores ativos (ignora inativos e desligados)
@@ -175,10 +201,32 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         return SYSTEM_SHIFTS_MAP[norm] || SYSTEM_SHIFTS[0];
     }, [formData.shift]);
 
-    // Nível calculado com base nos emblemas ativos (de 1 a 8)
+    // Avaliação 100% automatizada dos 3 emblemas oficiais com base nas métricas reais da operação
+    const badgeEvaluation = useMemo(() => {
+        return evaluateCollaboratorBadges({
+            collaborator: {
+                ...user,
+                shift: formData.shift || user?.shift,
+                networkKnowledge: formData.networkKnowledge,
+                networkSkills: formData.networkSkills
+            },
+            allCollaborators: collaboratorsList,
+            weeklyEvaluations: weeklyEvals,
+            qaAudits: qaAuditsList,
+            thirdPartyAudits: thirdPartyAuditsList,
+            manualBadges: isGestor ? formData.badges : (user?.badges || [])
+        });
+    }, [user, formData.shift, formData.networkKnowledge, formData.networkSkills, formData.badges, collaboratorsList, weeklyEvals, qaAuditsList, thirdPartyAuditsList, isGestor]);
+
+    // Insígnias ativas no momento (automatizadas + permissão da gestão)
+    const activeBadgeList = useMemo(() => {
+        return badgeEvaluation.activeBadges || [];
+    }, [badgeEvaluation.activeBadges]);
+
+    // Nível calculado com base nos emblemas ativos reais (de 1 a 8)
     const userLevel = useMemo(() => {
-        return calculateUserLevel(formData.badges);
-    }, [formData.badges]);
+        return calculateUserLevel(activeBadgeList);
+    }, [activeBadgeList]);
 
     // Manipulação de tags de conhecimento em redes
     const handleAddSkillTag = (tagToAdd) => {
@@ -522,15 +570,15 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     <span>Status: {userOperationalStatus}</span>
                                 </div>
 
-                                {/* Badge de Nível (1 a 8) */}
+                                {/* Badge de Nível (1 a 3) */}
                                 <div 
                                     className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-gradient-to-r from-amber-500/20 via-yellow-500/20 to-amber-500/20 border-amber-500/40 text-amber-900 shadow-2xs"
-                                    title={`Nível do Colaborador: ${userLevel} de 8 (${formData.badges.length} emblema(s) ativo(s))`}
+                                    title={`Nível do Colaborador: ${userLevel} de 3 (${activeBadgeList.length} de 3 emblemas conquistados)`}
                                 >
                                     <Sparkles className="w-4 h-4 text-amber-600 animate-spin-slow" />
                                     <span className="font-black text-amber-800">Nível {userLevel}</span>
                                     <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.2 rounded-md">
-                                        {formData.badges.length}/8
+                                        {activeBadgeList.length}/3
                                     </span>
                                 </div>
 
@@ -746,50 +794,56 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* CARD 2.2: EMBLEMAS & INSÍGNIAS DE FEITOS (REQUISITO: APENAS GESTOR ALTERA) */}
+                        {/* CARD 2.2: EMBLEMAS & INSÍGNIAS DE FEITOS (SISTEMA 100% AUTOMATIZADO) */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
                                 <div>
                                     <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
                                         <Trophy className="w-4 h-4 text-amber-500" />
                                         Insígnias & Emblemas de Feitos
+                                        <span className="text-[10px] bg-gradient-to-r from-amber-500 to-red-500 text-white font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                                            Automático
+                                        </span>
                                     </h2>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                        Reconhecimento por agilidade (Top TMA), alta produtividade (Top Finalizações) e qualidade exemplar.
+                                        Conquistas ativadas em tempo real com base no desempenho e métricas reais da operação.
                                     </p>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    {isGestor ? (
+                                    {isGestor && (
                                         <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                            <Edit3 className="w-3 h-3 text-emerald-600" /> Gestor: Edição Liberada
-                                        </span>
-                                    ) : (
-                                        <span className="text-[11px] font-bold text-zinc-600 bg-zinc-100 border border-zinc-200 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                            <Lock className="w-3 h-3 text-zinc-500" /> Concedido pela Gestão
+                                            <Edit3 className="w-3 h-3 text-emerald-600" /> Gestor: Ajuste Manual Disponível
                                         </span>
                                     )}
-                                    <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full">
-                                        {formData.badges.length} de {BADGES_CATALOG.length} Ativos
+                                    <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
+                                        <Sparkles className="w-3 h-3 text-amber-500" />
+                                        {activeBadgeList.length} de {BADGES_CATALOG.length} Conquistados
                                     </span>
                                 </div>
                             </div>
 
-                            {/* Aviso de Permissão para Não-Gestores */}
-                            {!isGestor && (
-                                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-center gap-2.5 text-xs text-amber-900">
-                                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                                    <span>
-                                        Os emblemas são homologados e alterados exclusivamente pela <strong>Gestão</strong> com base nas métricas e conquistas da operação.
+                            {/* Banner Informativo do Sistema Automatizado */}
+                            <div className="p-3 bg-gradient-to-r from-amber-50 via-rose-50/40 to-blue-50/30 border border-amber-200/80 rounded-xl flex items-start gap-3 text-xs text-zinc-800">
+                                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                                <div className="space-y-0.5">
+                                    <span className="font-bold text-gray-900 block">
+                                        3 Emblemas Oficiais com Ativação 100% Automatizada:
                                     </span>
+                                    <p className="text-[11px] text-gray-600 leading-relaxed">
+                                        As insígnias são desbloqueadas e atualizadas em tempo real conforme as métricas consolidadas da operação: 
+                                        <strong> Emblema de Desempenho</strong> (média de pontos &ge; 95% da média do seu turno), 
+                                        <strong> Emblema de Auditorias</strong> (% QA &gt; 90%) e 
+                                        <strong> Emblema de TMA</strong> (Telefonia &lt; 10m e Chat &lt; 25m no mês vigente).
+                                    </p>
                                 </div>
-                            )}
+                            </div>
 
-                            {/* Grade de Emblemas */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            {/* Grade de Emblemas com Métricas Reais e Feedback de Desbloqueio */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
                                 {BADGES_CATALOG.map(badge => {
                                     const IconComponent = BADGE_ICONS[badge.iconName] || Trophy;
-                                    const isUnlocked = formData.badges.includes(badge.id);
+                                    const isUnlocked = activeBadgeList.includes(badge.id);
 
                                     return (
                                         <div
@@ -799,21 +853,26 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 isGestor ? 'cursor-pointer hover:border-amber-400 active:scale-[0.99]' : 'cursor-default select-none'
                                             } ${
                                                 isUnlocked
-                                                    ? 'border-amber-300/80 bg-gradient-to-br from-amber-50/40 via-white to-amber-50/20 shadow-xs'
-                                                    : 'border-gray-200 bg-gray-50/50 opacity-60'
+                                                    ? 'border-amber-300/90 bg-gradient-to-br from-amber-50/50 via-white to-amber-50/30 shadow-xs'
+                                                    : 'border-gray-200 bg-gray-50/60 opacity-70'
                                             }`}
-                                            title={isGestor ? 'Clique para conceder ou revogar este emblema (Exclusivo Gestor)' : 'Emblema concedido exclusivamente pela Gestão'}
+                                            title={isGestor ? `Clique para alternar concessão manual. Critério: ${badge.requirement}` : `Critério: ${badge.requirement}`}
                                         >
                                             {/* Ícone do Emblema */}
-                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border shadow-xs ${
+                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-xs relative ${
                                                 isUnlocked ? badge.bgColor : 'bg-gray-200 border-gray-300 text-gray-400'
                                             }`}>
                                                 <IconComponent className={`w-5 h-5 ${isUnlocked ? badge.textColor : 'text-gray-400'}`} />
+                                                {isUnlocked && (
+                                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
+                                                        <Check className="w-2 h-2 text-white stroke-[3]" />
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="min-w-0 flex-1">
                                                 <div className="flex items-center justify-between gap-1">
-                                                    <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-gray-900' : 'text-gray-500'}`}>
+                                                    <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-gray-900' : 'text-gray-600'}`}>
                                                         {badge.title}
                                                     </h3>
                                                     {isUnlocked ? (
@@ -821,16 +880,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                             <Check className="w-2.5 h-2.5 text-amber-700" /> Ativo
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[10px] text-gray-400 font-mono shrink-0">
-                                                            Pendente
+                                                        <span className="text-[10px] text-gray-400 font-mono font-bold bg-gray-100 px-1.5 py-0.2 rounded border border-gray-200 shrink-0">
+                                                            Bloqueado
                                                         </span>
                                                     )}
                                                 </div>
+
                                                 <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
                                                     {badge.description}
                                                 </p>
-                                                <div className="mt-1 text-[10px] text-gray-400 font-medium">
-                                                    Requisito: {badge.requirement}
+
+                                                {/* Detalhe da Regra */}
+                                                <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px]">
+                                                    <span className="font-semibold text-gray-500 truncate">
+                                                        Regra: {badge.requirement}
+                                                    </span>
                                                 </div>
                                             </div>
                                         </div>

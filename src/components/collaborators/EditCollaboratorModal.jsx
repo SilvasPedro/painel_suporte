@@ -2,19 +2,22 @@ import React, { useState } from 'react';
 import { 
     X, Loader2, User, Mail, Sun, Sunset, Moon, 
     KeyRound, Check, Shield, ShieldCheck, Users, Edit3,
-    Trophy, Sparkles, Headphones, Award, Star, Zap, Rocket, CalendarCheck, Network
+    Trophy, Sparkles, Headphones, Award, Star, Zap, Rocket, CalendarCheck, Network,
+    ThumbsUp, TrendingUp
 } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { updateCollaboratorProfile } from '../../services/adminAuth';
 import { useNotification } from '../../context/NotificationContext';
-import { BADGES_CATALOG, calculateUserLevel, THIRD_PARTY_SCHEDULE_INFO } from '../../services/userProfile';
+import { BADGES_CATALOG, calculateUserLevel, THIRD_PARTY_SCHEDULE_INFO, LEGACY_BADGE_MAP } from '../../services/userProfile';
 
 const BADGE_ICONS = {
+    ThumbsUp,
+    TrendingUp,
+    ShieldCheck,
     Trophy,
     Zap,
     Star,
-    ShieldCheck,
     Rocket,
     CalendarCheck,
     Network,
@@ -43,7 +46,9 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
         role: colab.role || 'Colaborador',
         shift: initialShift,
         active: colab.active !== false,
-        badges: Array.isArray(colab.badges) ? colab.badges : ['top_tma', 'destaque_qa']
+        badges: Array.isArray(colab.badges) 
+            ? colab.badges.map(b => LEGACY_BADGE_MAP[b] || b).filter(b => BADGES_CATALOG.some(c => c.id === b))
+            : ['emblema_tma', 'emblema_auditorias']
     });
     const [loading, setLoading] = useState(false);
     const [resetting, setResetting] = useState(false);
@@ -248,7 +253,7 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
                                     </label>
                                     <span className="inline-flex items-center gap-1 text-[11px] font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2 py-0.5 rounded-full">
                                         <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                                        Nível {userLevel} de 8 ({formData.badges.length}/8)
+                                        Nível {userLevel} de 3 ({formData.badges.length}/3)
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-2 gap-2 p-2 bg-gray-50 rounded-xl border border-gray-200 max-h-48 overflow-y-auto">

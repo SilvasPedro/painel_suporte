@@ -64,7 +64,7 @@ export const saveUserProfileData = async (user, profileData, isGestor = false) =
                 role: user.role || 'Gestor',
                 shift: user.shift || 'Manhã I',
                 status: 'Ativo',
-                badges: Array.isArray(profileData.badges) ? profileData.badges : ['top_tma', 'destaque_qa'],
+                badges: Array.isArray(profileData.badges) ? profileData.badges : ['emblema_tma', 'emblema_auditorias'],
                 createdAt: new Date().toISOString(),
                 ...payload
             }, { merge: true });
@@ -174,7 +174,7 @@ export const saveSystemShiftsInfo = async () => {
         await setDoc(infoDocRef, {
             officialShifts: SYSTEM_SHIFTS.map(s => `${s.label}: ${s.hours}`),
             thirdPartyOperation: THIRD_PARTY_SCHEDULE_INFO,
-            systemVersion: 'v3.7',
+            systemVersion: 'v3.7.1',
             updatedAt: new Date().toISOString()
         }, { merge: true });
         if (typeof window !== 'undefined') {
@@ -197,12 +197,12 @@ export const normalizeShiftName = (shiftStr) => {
 };
 
 /**
- * Calcula o nível do usuário com base nos emblemas ativos (de 1 a 8)
+ * Calcula o nível do usuário com base nos emblemas ativos (de 1 a 3)
  */
 export const calculateUserLevel = (badges) => {
     const count = Array.isArray(badges) ? badges.length : 0;
     if (count <= 0) return 1;
-    return Math.max(1, Math.min(8, count));
+    return Math.max(1, Math.min(3, count));
 };
 
 /**
@@ -252,106 +252,415 @@ export const PRESET_AVATARS = [
 ];
 
 /**
- * Catálogo de Insígnias e Emblemas de Feitos do HubDesk
+ * Catálogo Oficial de Insígnias e Emblemas de Feitos do HubDesk
+ * Exclusivamente os 3 emblemas oficiais parametrizados com regras automatizadas
  */
 export const BADGES_CATALOG = [
     {
-        id: 'top_tma',
-        title: 'Top TMA',
+        id: 'emblema_desempenho',
+        title: 'Emblema de Desempenho',
+        iconName: 'TrendingUp',
+        color: 'from-blue-500 to-indigo-600',
+        textColor: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-blue-500/10 border-blue-500/30',
+        badgeBg: 'bg-blue-100 text-blue-800 border-blue-300',
+        description: 'A sua pontuação média está dentro ou acima da média do seu turno (no máximo 5% abaixo, igual ou superior).',
+        category: 'Performance Operacional',
+        requirement: 'Média de pontos do colaborador no máx. 5% abaixo da média do turno (>= 95% da média do turno)',
+        metricKey: 'desempenho',
+        metricCondition: 'Média >= 95% da Média do Turno'
+    },
+    {
+        id: 'emblema_auditorias',
+        title: 'Emblema de Auditorias',
+        iconName: 'ShieldCheck',
+        color: 'from-emerald-500 to-teal-600',
+        textColor: 'text-emerald-600 dark:text-emerald-400',
+        bgColor: 'bg-emerald-500/10 border-emerald-500/30',
+        badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        description: 'Conformidade de qualidade exemplar: percentual de aprovação em QA superior a 90%.',
+        category: 'Qualidade & Auditoria',
+        requirement: 'Taxa de conformidade de qualidade maior que 90% (% QA > 90%)',
+        metricKey: 'qaTaxa',
+        metricCondition: 'QA > 90%'
+    },
+    {
+        id: 'emblema_tma',
+        title: 'Emblema de TMA',
         iconName: 'Trophy',
         color: 'from-amber-500 to-yellow-600',
         textColor: 'text-amber-600 dark:text-amber-400',
         bgColor: 'bg-amber-500/10 border-amber-500/30',
         badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
-        description: 'Tempo Médio de Atendimento exemplar. Agilidade, precisão e eficiência nos chamados.',
+        description: 'Agilidade comprovada no mês vigente: TMA de Telefonia abaixo de 10 min e TMA de Chat abaixo de 25 min.',
         category: 'Velocidade & Eficiência',
-        requirement: 'Manter TMA consistente dentro ou abaixo da meta da operação'
-    },
-    {
-        id: 'top_finalizacoes',
-        title: 'Top Finalizações',
-        iconName: 'Zap',
-        color: 'from-emerald-500 to-teal-600',
-        textColor: 'text-emerald-600 dark:text-emerald-400',
-        bgColor: 'bg-emerald-500/10 border-emerald-500/30',
-        badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-        description: 'Alto volume de demandas resolvidas e fechamentos de chamados com sucesso.',
-        category: 'Produtividade',
-        requirement: 'Maior volume de finalizações de chamados e chats concluídos'
-    },
-    {
-        id: 'destaque_qa',
-        title: 'Destaque QA',
-        iconName: 'Star',
-        color: 'from-purple-500 to-indigo-600',
-        textColor: 'text-purple-600 dark:text-purple-400',
-        bgColor: 'bg-purple-500/10 border-purple-500/30',
-        badgeBg: 'bg-purple-100 text-purple-800 border-purple-300',
-        description: 'Nota máxima e conformidade impecável em auditorias de qualidade.',
-        category: 'Qualidade Técnica',
-        requirement: 'Auditorias QA com nota média superior a 90% de conformidade'
-    },
-    {
-        id: 'guardiao_qualidade',
-        title: 'Guardião da Qualidade',
-        iconName: 'ShieldCheck',
-        color: 'from-blue-500 to-cyan-600',
-        textColor: 'text-blue-600 dark:text-blue-400',
-        bgColor: 'bg-blue-500/10 border-blue-500/30',
-        badgeBg: 'bg-blue-100 text-blue-800 border-blue-300',
-        description: 'Zero incidentes críticos, postura consultiva e suporte de alta retenção.',
-        category: 'Confiabilidade',
-        requirement: 'Excelente histórico operacional sem incidentes críticos reportados'
-    },
-    {
-        id: 'fcr_champion',
-        title: 'Resolução no 1º Contato (FCR)',
-        iconName: 'Rocket',
-        color: 'from-rose-500 to-red-600',
-        textColor: 'text-red-600 dark:text-red-400',
-        bgColor: 'bg-red-500/10 border-red-500/30',
-        badgeBg: 'bg-red-100 text-red-800 border-red-300',
-        description: 'Capacidade de solucionar o problema do cliente no primeiro chamado sem reabertura.',
-        category: 'Eficiência',
-        requirement: 'Taxa de First Contact Resolution (FCR) acima da meta setorial'
-    },
-    {
-        id: 'plantao_ferro',
-        title: 'Plantão de Ferro',
-        iconName: 'CalendarCheck',
-        color: 'from-orange-500 to-amber-600',
-        textColor: 'text-orange-600 dark:text-orange-400',
-        bgColor: 'bg-orange-500/10 border-orange-500/30',
-        badgeBg: 'bg-orange-100 text-orange-800 border-orange-300',
-        description: 'Assiduidade exemplar, pontualidade e dedicação em escalas de domingo e feriados.',
-        category: 'Comprometimento',
-        requirement: 'Participação assídua e sem faltas nas escalas de plantão'
-    },
-    {
-        id: 'mestre_redes',
-        title: 'Mestre em Redes',
-        iconName: 'Network',
-        color: 'from-cyan-500 to-blue-600',
-        textColor: 'text-cyan-600 dark:text-cyan-400',
-        bgColor: 'bg-cyan-500/10 border-cyan-500/30',
-        badgeBg: 'bg-cyan-100 text-cyan-800 border-cyan-300',
-        description: 'Conhecimento técnico avançado em infraestrutura de rede, roteamento e topologias.',
-        category: 'Conhecimento Técnico',
-        requirement: 'Conhecimento nível Avançado em redes e troubleshooting de enlaces'
-    },
-    {
-        id: 'veterano_hubdesk',
-        title: 'Veterano HubDesk',
-        iconName: 'Award',
-        color: 'from-amber-600 to-orange-700',
-        textColor: 'text-amber-700 dark:text-amber-300',
-        bgColor: 'bg-amber-600/10 border-amber-600/30',
-        badgeBg: 'bg-amber-100 text-amber-900 border-amber-300',
-        description: 'Histórico consistente de dedicação e liderança exemplar no suporte técnico.',
-        category: 'Experiência & Honra',
-        requirement: 'Consistência de resultados e referência técnica para a equipe'
+        requirement: 'TMA de Telefonia < 10 min e TMA de Chat < 25 min no mês vigente (ambos dentro do padrão)',
+        metricKey: 'tma',
+        metricCondition: 'Voz < 10m e Chat < 25m no mês vigente'
     }
 ];
+
+// Mapeamento de compatibilidade para transição suave de IDs anteriores
+export const LEGACY_BADGE_MAP = {
+    top_tma: 'emblema_tma',
+    guardiao_qualidade: 'emblema_auditorias',
+    destaque_qa: 'emblema_auditorias',
+    top_finalizacoes: 'emblema_desempenho',
+    fcr_champion: 'emblema_desempenho',
+    plantao_ferro: 'emblema_desempenho',
+    mestre_redes: 'emblema_desempenho',
+    veterano_hubdesk: 'emblema_desempenho'
+};
+
+/**
+ * Converte string de tempo HH:MM:SS ou MM:SS em minutos decimais
+ */
+export const timeStringToDecimalMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return 0;
+    const parts = timeStr.trim().split(':');
+    if (parts.length === 3) {
+        return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10) + (parseInt(parts[2], 10) / 60);
+    }
+    if (parts.length === 2) {
+        return parseInt(parts[0], 10) + (parseInt(parts[1], 10) / 60);
+    }
+    const num = parseFloat(timeStr);
+    return isNaN(num) ? 0 : num;
+};
+
+/**
+ * Extrai objeto Date seguro de qualquer item do sistema
+ */
+export const getItemDateObj = (item) => {
+    if (!item) return null;
+    if (item.date) {
+        if (typeof item.date === 'string') {
+            if (/^\d{4}-\d{2}-\d{2}/.test(item.date)) {
+                const [y, m, d] = item.date.substring(0, 10).split('-').map(Number);
+                return new Date(y, m - 1, d);
+            }
+            if (/^\d{2}\/\d{2}\/\d{4}/.test(item.date)) {
+                const [d, m, y] = item.date.substring(0, 10).split('/').map(Number);
+                return new Date(y, m - 1, d);
+            }
+        }
+        if (item.date instanceof Date) return item.date;
+        if (typeof item.date === 'number') return new Date(item.date);
+    }
+    if (item.createdAt) {
+        if (typeof item.createdAt.toDate === 'function') return item.createdAt.toDate();
+        if (typeof item.createdAt === 'string') {
+            const parsed = new Date(item.createdAt);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+        if (typeof item.createdAt === 'number') return new Date(item.createdAt);
+    }
+    if (item.timestamp) {
+        if (typeof item.timestamp.toDate === 'function') return item.timestamp.toDate();
+        if (typeof item.timestamp === 'string') {
+            const parsed = new Date(item.timestamp);
+            if (!isNaN(parsed.getTime())) return parsed;
+        }
+    }
+    return null;
+};
+
+/**
+ * Obtém a chave do mês no formato MM/YYYY
+ */
+export const getItemMonthKey = (item) => {
+    if (!item) return null;
+    if (item.month && typeof item.month === 'string' && item.month.includes('/')) {
+        return item.month;
+    }
+    const d = getItemDateObj(item);
+    if (!d) return null;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}/${yyyy}`;
+};
+
+/**
+ * Avalia de forma totalmente automatizada quais dos 4 emblemas oficiais o colaborador conquistou
+ * com base nas métricas reais da operação disponíveis no sistema.
+ * 
+ * Regras Estritas:
+ * 1. Emblema de Feedbacks: Relação positiva (Positivos > Negativos)
+ * 2. Emblema de Desempenho: Média de pontos >= 95% da média do seu turno operacional
+ * 3. Emblema de Auditorias: % QA > 90%
+ * 4. Emblema de TMA: TMA Telefonia < 10 min e TMA Chat < 25 min naquele mês vigente
+ * 
+ * @param {Object} params
+ * @param {Object} params.collaborator - Dados cadastrais do colaborador
+ * @param {Array} params.allCollaborators - Lista completa de colaboradores para agrupamento de turnos
+ * @param {Array} params.weeklyEvaluations - Avaliações semanais
+ * @param {Array} params.qaAudits - Auditorias QA internas
+ * @param {Array} params.thirdPartyAudits - Auditorias da terceirizada (opcional)
+ * @param {Array} params.feedbacks - Feedbacks registrados
+ * @param {Array} params.manualBadges - Concessões manuais pela gestão (opcional)
+ * @returns {Object} { activeBadges: string[], automatedMap: Object, badgeDetails: Object, calculatedMetrics: Object }
+ */
+export const evaluateCollaboratorBadges = ({
+    collaborator = {},
+    allCollaborators = [],
+    weeklyEvaluations = [],
+    qaAudits = [],
+    thirdPartyAudits = [],
+    manualBadges = []
+}) => {
+    const colabIds = [
+        collaborator?.id,
+        collaborator?.firestoreId,
+        collaborator?.uid
+    ].filter(Boolean);
+    const colabName = (collaborator?.name || collaborator?.displayName || '').trim().toLowerCase();
+
+    // -------------------------------------------------------------
+    // FILTRAGEM DE AVALIAÇÕES SEMANAIS DO COLABORADOR
+    // -------------------------------------------------------------
+    const myEvals = (weeklyEvaluations || []).filter(e => {
+        if (!e) return false;
+        const eId = e.colabId || e.collaboratorId;
+        if (eId && colabIds.includes(eId)) return true;
+        if (colabName) {
+            const eName = (e.name || e.colabName || '').trim().toLowerCase();
+            if (eName && eName === colabName) return true;
+        }
+        return false;
+    });
+
+    const getEvalPoints = (ev) => {
+        if (ev.pontuacao !== undefined && ev.pontuacao !== null && ev.pontuacao !== '') {
+            return Number(ev.pontuacao) || 0;
+        }
+        const fin = Number(ev.Atendimentos_Finalizados || ev.finalizados || 0);
+        const lig = Number(ev.Ligacoes_Atendidas || ev.ligAtendidas || 0);
+        const per = Number(ev.Ligacoes_Perdidas || ev.ligPerdidas || 0);
+        const hug = Number(ev.Atendimentos_Huggy || ev.huggyVol || 0);
+        return (fin * 1) + (lig * 2) + (hug * 1) + (per * -5);
+    };
+
+    // -------------------------------------------------------------
+    // REGRA 2: EMBLEMA DE DESEMPENHO (Média >= 95% da média do turno)
+    // -------------------------------------------------------------
+    const colabShift = normalizeShiftName(collaborator?.shift || collaborator?.turno || 'Manhã I');
+
+    // Mapeamento de turnos dos colaboradores da equipe
+    const colabShiftMap = {};
+    (allCollaborators || []).forEach(c => {
+        const s = normalizeShiftName(c.shift || c.turno);
+        if (c.id) colabShiftMap[c.id] = s;
+        if (c.uid) colabShiftMap[c.uid] = s;
+        if (c.name) colabShiftMap[c.name.trim().toLowerCase()] = s;
+    });
+
+    let myTotalPoints = 0;
+    myEvals.forEach(ev => {
+        myTotalPoints += getEvalPoints(ev);
+    });
+    const myEvalsCount = myEvals.length;
+    const colabAvgPoints = myEvalsCount > 0 ? (myTotalPoints / myEvalsCount) : 0;
+
+    // Calcula a média de todos do mesmo turno
+    let shiftTotalPoints = 0;
+    let shiftEvalsCount = 0;
+
+    (weeklyEvaluations || []).forEach(ev => {
+        if (!ev) return;
+        let evShift = ev.shift ? normalizeShiftName(ev.shift) : null;
+        if (!evShift) {
+            const eId = ev.colabId || ev.collaboratorId;
+            const eName = (ev.name || ev.colabName || '').trim().toLowerCase();
+            evShift = colabShiftMap[eId] || colabShiftMap[eName] || null;
+        }
+        if (evShift === colabShift) {
+            shiftTotalPoints += getEvalPoints(ev);
+            shiftEvalsCount++;
+        }
+    });
+
+    const shiftAvgPoints = shiftEvalsCount > 0 ? (shiftTotalPoints / shiftEvalsCount) : colabAvgPoints;
+    // Tolerância oficial: no máximo 5% abaixo da média do turno, igual ou maior
+    const shiftThresholdPoints = shiftAvgPoints > 0 ? (shiftAvgPoints * 0.95) : 0;
+    const isDesempenhoUnlocked = myEvalsCount > 0 && colabAvgPoints >= shiftThresholdPoints;
+
+    // -------------------------------------------------------------
+    // REGRA 3: EMBLEMA DE AUDITORIAS (% QA > 90%)
+    // -------------------------------------------------------------
+    const combinedAudits = [
+        ...(qaAudits || []),
+        ...(thirdPartyAudits || [])
+    ];
+
+    const myAudits = combinedAudits.filter(a => {
+        if (!a) return false;
+        const aId = a.colabId || a.collaboratorId;
+        if (aId && colabIds.includes(aId)) return true;
+        if (colabName) {
+            const aName = (a.collaboratorName || a.colabName || a.operator || '').trim().toLowerCase();
+            if (aName && aName === colabName) return true;
+        }
+        return false;
+    });
+
+    const totalAudits = myAudits.length;
+    const conformesAudits = myAudits.filter(a => {
+        const st = String(a.status || '').toLowerCase().trim();
+        const ql = String(a.quality || '').toLowerCase().trim();
+        return st === 'conforme' || ql === 'positiva' || ql === 'positivo' || st === 'aprovado';
+    }).length;
+
+    const qaTaxa = totalAudits > 0 ? (conformesAudits / totalAudits) * 100 : 0;
+    const isAuditoriasUnlocked = totalAudits > 0 && qaTaxa > 90;
+
+    // -------------------------------------------------------------
+    // REGRA 4: EMBLEMA DE TMA (Telefonia < 10m e Chat < 25m no mês vigente)
+    // -------------------------------------------------------------
+    const now = new Date();
+    const currentMonthKey = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+    // Filtra avaliações daquele mês vigente
+    let monthEvals = myEvals.filter(ev => getItemMonthKey(ev) === currentMonthKey);
+    let effectiveMonthKey = currentMonthKey;
+
+    // Se o mês vigente ainda não tiver registros mas houver avaliações anteriores,
+    // utiliza o mês mais recente disponível para cálculo
+    if (monthEvals.length === 0 && myEvals.length > 0) {
+        const sortedEvals = [...myEvals].sort((a, b) => {
+            const da = getItemDateObj(a);
+            const db = getItemDateObj(b);
+            return (db?.getTime() || 0) - (da?.getTime() || 0);
+        });
+        const latestKey = getItemMonthKey(sortedEvals[0]);
+        if (latestKey) {
+            effectiveMonthKey = latestKey;
+            monthEvals = myEvals.filter(ev => getItemMonthKey(ev) === effectiveMonthKey);
+        }
+    }
+
+    let sumTmaTelMin = 0;
+    let countTmaTel = 0;
+    let sumTmaChatMin = 0;
+    let countTmaChat = 0;
+
+    monthEvals.forEach(ev => {
+        if (ev.TMA_Telefonia) {
+            const dec = timeStringToDecimalMinutes(ev.TMA_Telefonia);
+            if (dec > 0) {
+                sumTmaTelMin += dec;
+                countTmaTel++;
+            }
+        }
+        const chatVal = ev.TMA_Huggy || ev.TMA_Chat;
+        if (chatVal) {
+            const dec = timeStringToDecimalMinutes(chatVal);
+            if (dec > 0) {
+                sumTmaChatMin += dec;
+                countTmaChat++;
+            }
+        }
+    });
+
+    const avgTmaTelMin = countTmaTel > 0 ? (sumTmaTelMin / countTmaTel) : 0;
+    const avgTmaChatMin = countTmaChat > 0 ? (sumTmaChatMin / countTmaChat) : 0;
+    const hasTmaData = countTmaTel > 0 || countTmaChat > 0;
+
+    // Regra estrita: "TMA de Telefonia abaixo de 10 minutos e TMA de Chat abaixo de 25 minutos naquele mês vigente.
+    // Se um dos dois não estiver dentro do padrão, não recebe a insígnia."
+    const isTelWithinLimit = countTmaTel === 0 || avgTmaTelMin < 10;
+    const isChatWithinLimit = countTmaChat === 0 || avgTmaChatMin < 25;
+    const isTmaUnlocked = hasTmaData && isTelWithinLimit && isChatWithinLimit &&
+        !(countTmaTel > 0 && avgTmaTelMin >= 10) &&
+        !(countTmaChat > 0 && avgTmaChatMin >= 25);
+
+    // Mapeamento dos 3 emblemas oficiais
+    const automatedMap = {
+        emblema_desempenho: isDesempenhoUnlocked,
+        emblema_auditorias: isAuditoriasUnlocked,
+        emblema_tma: isTmaUnlocked
+    };
+
+    // Detalhamento e feedback para exibição na UI
+    const badgeDetails = {
+        emblema_desempenho: {
+            unlocked: isDesempenhoUnlocked,
+            currentValue: myEvalsCount > 0 
+                ? `${Math.round(colabAvgPoints)} pts (Turno: ${Math.round(shiftAvgPoints)} pts)`
+                : 'Sem avaliações',
+            targetValue: `>= ${Math.round(shiftThresholdPoints)} pts (95% do Turno)`,
+            progressPercent: shiftThresholdPoints > 0
+                ? Math.min(100, Math.round((colabAvgPoints / shiftThresholdPoints) * 100))
+                : (myEvalsCount > 0 ? 100 : 0),
+            feedback: myEvalsCount === 0
+                ? 'Sem avaliações semanais registradas para cálculo de média.'
+                : isDesempenhoUnlocked
+                    ? `Desempenho excelente! Média de ${Math.round(colabAvgPoints)} pts está dentro/acima do piso de 95% do turno ${colabShift} (${Math.round(shiftThresholdPoints)} pts).`
+                    : `Sua média é de ${Math.round(colabAvgPoints)} pts. O piso de 95% do seu turno (${colabShift}) é de ${Math.round(shiftThresholdPoints)} pts.`
+        },
+        emblema_auditorias: {
+            unlocked: isAuditoriasUnlocked,
+            currentValue: totalAudits > 0 
+                ? `${qaTaxa.toFixed(1)}% (${conformesAudits}/${totalAudits} conformes)`
+                : 'Sem auditorias',
+            targetValue: '> 90% QA',
+            progressPercent: totalAudits > 0 ? Math.min(100, Math.round((qaTaxa / 90) * 100)) : 0,
+            feedback: totalAudits === 0
+                ? 'Nenhuma auditoria realizada ainda.'
+                : isAuditoriasUnlocked
+                    ? `Qualidade comprovada! Taxa de conformidade de ${qaTaxa.toFixed(1)}% supera os 90% exigidos.`
+                    : `Taxa atual é de ${qaTaxa.toFixed(1)}% em ${totalAudits} auditorias (necessário superior a 90%).`
+        },
+        emblema_tma: {
+            unlocked: isTmaUnlocked,
+            currentValue: hasTmaData 
+                ? `Voz: ${countTmaTel > 0 ? avgTmaTelMin.toFixed(1) + 'm' : 'N/A'} | Chat: ${countTmaChat > 0 ? avgTmaChatMin.toFixed(1) + 'm' : 'N/A'}`
+                : 'Sem dados no mês',
+            targetValue: 'Voz < 10m & Chat < 25m',
+            progressPercent: isTmaUnlocked ? 100 : (hasTmaData ? 50 : 0),
+            feedback: !hasTmaData
+                ? `Sem registros de TMA no mês de referência (${effectiveMonthKey}).`
+                : isTmaUnlocked
+                    ? `Agilidade exemplar no mês (${effectiveMonthKey})! TMA Telefonia (${avgTmaTelMin.toFixed(1)}m < 10m) e Chat (${avgTmaChatMin.toFixed(1)}m < 25m) dentro da meta.`
+                    : `TMA no mês (${effectiveMonthKey}): Voz ${avgTmaTelMin.toFixed(1)}m (meta < 10m), Chat ${avgTmaChatMin.toFixed(1)}m (meta < 25m). Ambos precisam estar dentro do padrão.`
+        }
+    };
+
+    // Monta a lista oficial de emblemas ativos
+    const activeBadgeSet = new Set();
+    Object.entries(automatedMap).forEach(([id, isActive]) => {
+        if (isActive) activeBadgeSet.add(id);
+    });
+
+    // Mapeia e incorpora eventuais concessões manuais
+    if (Array.isArray(manualBadges)) {
+        manualBadges.forEach(bId => {
+            const mappedId = LEGACY_BADGE_MAP[bId] || bId;
+            if (automatedMap[mappedId] !== undefined) {
+                activeBadgeSet.add(mappedId);
+            }
+        });
+    }
+
+    const activeBadges = Array.from(activeBadgeSet);
+
+    return {
+        activeBadges,
+        automatedMap,
+        badgeDetails,
+        calculatedMetrics: {
+            colabAvgPoints,
+            shiftAvgPoints,
+            shiftThresholdPoints,
+            colabShift,
+            qaTaxa,
+            totalAudits,
+            conformesAudits,
+            avgTmaTelMin,
+            avgTmaChatMin,
+            effectiveMonthKey
+        }
+    };
+};
 
 /**
  * Sugestões rápidas de tags de conhecimento em redes

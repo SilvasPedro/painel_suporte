@@ -88,17 +88,19 @@ export default function ThirdPartyAudits() {
     const [copiedField, setCopiedField] = useState(null);
 
     // Estado do formulário - O campo 'date' inicia SEMPRE em branco para obrigar o preenchimento manual
+    // Procedimentos e Saída iniciam desmarcados para o auditor selecionar obrigatoriamente
+    // Qualidade inicia marcada como Neutra por padrão
     const initialFormState = {
         date: '',               // SEMPRE em branco para nova auditoria (obrigatório informar)
         protocol: '',
         callStatus: 'Atendida', // 'Atendida' | 'Abandonada'
-        procedures: 'Conforme', // 'Conforme' | 'Não conforme'
-        quality: 'Positiva',    // 'Positiva' | 'Neutra' | 'Negativa'
+        procedures: '',         // Desmarcado por padrão para seleção ativa do auditor
+        quality: 'Neutra',      // Padrão marcada qualidade Neutra
         process: 'Sem acesso',
         operatorName: '',
         erpProtocol: '',
         clientName: '',
-        outcome: 'Resolvido',   // 'Resolvido' | 'Encaminhado'
+        outcome: '',            // Desmarcado por padrão para seleção ativa do auditor
         notes: ''
     };
     const [formData, setFormData] = useState(initialFormState);
@@ -523,7 +525,10 @@ export default function ThirdPartyAudits() {
         setEditingAudit(null);
         setFormData({
             ...initialFormState,
-            date: '' // SEMPRE em branco na criação de nova auditoria
+            date: '', // SEMPRE em branco na criação de nova auditoria
+            procedures: '', // Desmarcado por padrão para o auditor selecionar
+            outcome: '', // Desmarcado por padrão para o auditor selecionar
+            quality: 'Neutra' // Padrão marcada qualidade Neutra
         });
         setIsFormModalOpen(true);
     };
@@ -535,13 +540,13 @@ export default function ThirdPartyAudits() {
             date: audit.date || '',
             protocol: audit.protocol || '',
             callStatus: audit.callStatus || 'Atendida',
-            procedures: audit.procedures || 'Conforme',
-            quality: audit.quality || 'Positiva',
+            procedures: audit.procedures || '',
+            quality: audit.quality || 'Neutra',
             process: audit.process || 'Sem acesso',
             operatorName: audit.operatorName || '',
             erpProtocol: audit.erpProtocol || '',
             clientName: audit.clientName || '',
-            outcome: audit.outcome || 'Resolvido',
+            outcome: audit.outcome || '',
             notes: audit.notes || ''
         });
         setIsFormModalOpen(true);
@@ -582,6 +587,17 @@ export default function ThirdPartyAudits() {
 
         if (!formData.clientName.trim()) {
             showToast('Informe o nome do cliente.', 'error');
+            return;
+        }
+
+        // Validação dos campos desmarcados por padrão
+        if (!formData.procedures) {
+            showToast('Selecione se o procedimento foi Conforme ou Não conforme.', 'error');
+            return;
+        }
+
+        if (!formData.outcome) {
+            showToast('Selecione a saída da chamada (Resolvido ou Encaminhado).', 'error');
             return;
         }
 
@@ -1897,9 +1913,24 @@ export default function ThirdPartyAudits() {
                                         
                                         {/* Procedimentos */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                                                Procedimentos *
-                                            </label>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="text-[11px] font-bold text-gray-700">
+                                                    Procedimentos *
+                                                </label>
+                                                {!formData.procedures ? (
+                                                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                                        Selecione uma opção
+                                                    </span>
+                                                ) : (
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                                        formData.procedures === 'Conforme'
+                                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                            : 'text-red-700 bg-red-50 border-red-200'
+                                                    }`}>
+                                                        {formData.procedures}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <button
                                                     type="button"
@@ -1978,9 +2009,24 @@ export default function ThirdPartyAudits() {
 
                                         {/* Saída (Encaminhado / Resolvido = FCR) */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
-                                                Saída da Chamada (Cálculo FCR) *
-                                            </label>
+                                            <div className="flex items-center justify-between mb-1">
+                                                <label className="text-[11px] font-bold text-gray-700">
+                                                    Saída da Chamada (Cálculo FCR) *
+                                                </label>
+                                                {!formData.outcome ? (
+                                                    <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                                        Selecione uma opção
+                                                    </span>
+                                                ) : (
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                                                        formData.outcome === 'Resolvido'
+                                                            ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                                            : 'text-blue-700 bg-blue-50 border-blue-200'
+                                                    }`}>
+                                                        {formData.outcome}
+                                                    </span>
+                                                )}
+                                            </div>
                                             <div className="grid grid-cols-2 gap-1.5">
                                                 <button
                                                     type="button"
