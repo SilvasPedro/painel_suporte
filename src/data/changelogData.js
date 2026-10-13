@@ -1,13 +1,43 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2 } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.7.2';
+export const CURRENT_VERSION = 'v3.7.3';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.7.2',
+    version: 'v3.7.3',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.7.3: Redesenho e modernização da tela de Visão Geral KPIs. Remoção do card de % QA dos Indicadores Estratégicos Globais, nova sessão dedicada aos Indicadores da Terceirizada (FCR, Conformidade e % de Qualidade), novo design visual moderno com efeito de vidro (glassmorphism), ícones transparecidos em segundo plano com gradientes temáticos, padronização tipográfica universal (sem fontes blocadas) e navegação interativa direta para Relatórios Críticos ao clicar no cartão de Demandas Pendentes com animação suave de hover.',
+    items: [
+      {
+        icon: Headphones,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Nova Sessão de Indicadores da Terceirizada',
+        category: 'Auditorias & Terceirizada',
+        description: 'Métricas consolidadas de FCR (First Call Resolution), Índice de Conformidade de Procedimentos e % de Qualidade Positiva dos atendimentos terceirizados em tempo real.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Novo Design Glassmorphism & Ícones de Fundo',
+        category: 'Design & Interface',
+        description: 'Efeito de vidro elegante, degradês contemporâneos e ícones transparecidos integrados ao fundo dos cartões substituindo os ícones antigos do canto superior.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Navegação Direta para Relatórios Críticos',
+        category: 'Experiência & Interatividade',
+        description: 'Ao clicar no cartão de Demandas Pendentes, o usuário é direcionado instantaneamente para a tela de Relatórios Críticos com animação sutil e suave de hover.'
+      }
+    ]
+  },
+  {
+    version: 'v3.7.2',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.7.2: Novo fluxo operacional da Auditoria Terceirizada com importação em lote via arquivo .CSV (Data e Protocolo), descarte automático de protocolos duplicados, indicador no topo com % de progresso e contador de pendentes de preenchimento, edição ágil para preencher todas as colunas pendentes (Protocolo MK, Cliente, Operador, Processo, Procedimento, Qualidade, Saída FCR e Parecer), modelo oficial de CSV para download e padronização exclusiva em chamadas Atendidas.',
     items: [
       {

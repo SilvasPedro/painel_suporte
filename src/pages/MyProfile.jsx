@@ -478,7 +478,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <div className="relative z-10 flex items-center gap-2">
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-md border border-white/20 shadow-xs">
                                 <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                Perfil Oficial HubDesk • v3.7.2
+                                Perfil Oficial HubDesk • v3.7.3
                             </span>
                         </div>
 

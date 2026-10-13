@@ -3,7 +3,7 @@ import {
     Rocket, Target, Activity, Star, Clock, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, CheckCircle, Loader2, Users, ChevronRight,
     TrendingUp, TrendingDown, ArrowUpRight, BarChart3, LineChart as LineChartIcon,
-    Info, X, ShieldCheck, CheckCircle2, AlertCircle
+    Info, X, ShieldCheck, CheckCircle2, AlertCircle, Headphones, FileCheck
 } from 'lucide-react';
 import {
     AreaChart, Area, LineChart, Line, BarChart, Bar,
@@ -92,9 +92,18 @@ const TrendBadge = ({ type, val, goal }) => {
     );
 };
 
-const DashboardOverview = () => {
+const DashboardOverview = ({ onNavigate }) => {
     const { theme } = useTheme();
     const isDarkMode = theme === 'dark';
+
+    // Navegação segura para abas (ex: relatórios críticos)
+    const handleNavigate = (tabId) => {
+        if (typeof onNavigate === 'function') {
+            onNavigate(tabId);
+        } else if (typeof window !== 'undefined' && window.__hubdeskNavigate) {
+            window.__hubdeskNavigate(tabId);
+        }
+    };
 
     // Modo de Visualização Principal
     const [viewMode, setViewMode] = useState('cockpit'); // 'cockpit', 'evolution', 'compliance', 'shifts'
@@ -112,6 +121,7 @@ const DashboardOverview = () => {
     const [evalsList, setEvalsList] = useState([]);
     const [colabsFull, setColabsFull] = useState({});
     const [auditsList, setAuditsList] = useState([]);
+    const [thirdPartyAudits, setThirdPartyAudits] = useState([]);
     const [reportStats, setReportStats] = useState({ pending: 0, inProgress: 0, resolved: 0 });
 
     // Modal de Informações Detalhadas
@@ -169,11 +179,18 @@ const DashboardOverview = () => {
             setReportStats({ pending, inProgress, resolved });
         });
 
-        // Auditorias de Qualidade (QA)
+        // Auditorias de Qualidade (QA Interno)
         const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
             const fetched = [...items];
             fetched.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
             setAuditsList(fetched);
+        });
+
+        // Auditorias da Terceirizada (FCR, Conformidade e Qualidade)
+        const unsubThirdParty = subscribeSharedCollection("third_party_audits", (items) => {
+            const fetched = [...items];
+            fetched.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
+            setThirdPartyAudits(fetched);
         });
 
         return () => {
@@ -183,10 +200,11 @@ const DashboardOverview = () => {
             unsubEvals();
             unsubReports();
             unsubAudits();
+            unsubThirdParty();
         };
     }, []);
 
-    // --- ESTATÍSTICAS DE QA / QUALIDADE ---
+    // --- ESTATÍSTICAS DE QA / QUALIDADE INTERNO ---
     const qaStats = useMemo(() => {
         let total = 0;
         let conformes = 0;
@@ -202,6 +220,68 @@ const DashboardOverview = () => {
         const taxaResult = total > 0 ? Number(((conformes / total) * 100).toFixed(1)) : 0;
         return { taxa: taxaResult, total, conformes, naoConformes: total - conformes };
     }, [auditsList, colabsFull]);
+
+    // --- ESTATÍSTICAS DA TERCEIRIZADA (FCR, Conformidade e % de Qualidade) ---
+    const thirdPartyStats = useMemo(() => {
+        const total = thirdPartyAudits.length;
+        if (total === 0) {
+            return {
+                total: 0,
+                completedCount: 0,
+                pendingCount: 0,
+                fcr: 0,
+                resolvedCount: 0,
+                forwardedCount: 0,
+                compliance: 0,
+                conformeCount: 0,
+                naoConformeCount: 0,
+                qualityRate: 0,
+                positiveCount: 0,
+                neutralCount: 0,
+                negativeCount: 0
+            };
+        }
+
+        // Considerar atendimentos que possuem dados auditados
+        const completed = thirdPartyAudits.filter(a => 
+            a.procedures || a.outcome || a.clientName || a.operatorName
+        );
+        const completedCount = completed.length;
+        const pendingCount = total - completedCount;
+
+        // FCR: Resolvido vs Encaminhado
+        const resolvedCount = completed.filter(a => a.outcome === 'Resolvido').length;
+        const forwardedCount = completed.filter(a => a.outcome === 'Encaminhado').length;
+        const fcr = completedCount > 0 ? Math.round((resolvedCount / completedCount) * 100) : 0;
+
+        // Conformidade: Conforme vs Não conforme
+        const conformeCount = completed.filter(a => a.procedures === 'Conforme').length;
+        const naoConformeCount = completedCount - conformeCount;
+        const compliance = completedCount > 0 ? Math.round((conformeCount / completedCount) * 100) : 0;
+
+        // % de Qualidade: Positiva vs Negativa (Neutro neutro)
+        const positiveCount = completed.filter(a => a.quality === 'Positiva').length;
+        const neutralCount = completed.filter(a => a.quality === 'Neutra').length;
+        const negativeCount = completed.filter(a => a.quality === 'Negativa').length;
+        const totalRated = positiveCount + negativeCount;
+        const qualityRate = totalRated > 0 ? Math.round((positiveCount / totalRated) * 100) : (completedCount > 0 ? 100 : 0);
+
+        return {
+            total,
+            completedCount,
+            pendingCount,
+            fcr,
+            resolvedCount,
+            forwardedCount,
+            compliance,
+            conformeCount,
+            naoConformeCount,
+            qualityRate,
+            positiveCount,
+            neutralCount,
+            negativeCount
+        };
+    }, [thirdPartyAudits]);
 
     // --- ESTATÍSTICAS CONSOLIDADAS DA EQUIPE ---
     const teamStats = useMemo(() => {
@@ -675,51 +755,122 @@ const DashboardOverview = () => {
             {/* RIBBON DE SAÚDE OPERACIONAL / TICKETS CRÍTICOS            */}
             {/* ========================================================= */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
-                <div className="p-4 rounded-xl border bg-white border-gray-200 shadow-2xs flex items-center justify-between">
-                    <div>
-                        <span className="text-xs font-bold uppercase tracking-wider block text-amber-600">Demandas Pendentes</span>
-                        <span className="text-2xl font-black text-gray-900 leading-tight mt-0.5 block">{reportStats.pending}</span>
-                        <span className="text-[11px] text-gray-400">Aguardando triagem</span>
+                {/* Demandas Pendentes - Clicável direcionando para Relatórios Críticos */}
+                <div 
+                    onClick={() => handleNavigate('reports')}
+                    className={`relative overflow-hidden p-4 rounded-xl border backdrop-blur-md shadow-2xs transition-all duration-300 ease-out cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-amber-400 group active:scale-[0.98] ${
+                        isDarkMode 
+                            ? 'bg-gradient-to-br from-amber-950/25 via-zinc-900/80 to-zinc-950/90 border-amber-900/30 text-white' 
+                            : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-amber-500/10 via-white/80 to-amber-50/40 border-amber-200/80 text-gray-900')
+                    }`}
+                    title="Clique para acessar a tela de Relatórios Críticos"
+                >
+                    {/* Ícone de fundo com gradiente e transparência suave */}
+                    <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-3">
+                        <Clock className={`w-20 h-20 ${
+                            isDarkMode ? 'text-amber-500/10' : 'text-amber-500/15'
+                        }`} />
                     </div>
-                    <div className="p-3 bg-amber-50 text-amber-600 rounded-xl border border-amber-200">
-                        <Clock className="w-5 h-5" />
+
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider block text-amber-600 dark:text-amber-400">
+                                Demandas Pendentes
+                            </span>
+                            <ArrowUpRight className="w-3.5 h-3.5 text-amber-500 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                        </div>
+                        <div className="my-1">
+                            <span className={`text-2xl font-black leading-tight block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {reportStats.pending}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-zinc-400">
+                                Aguardando triagem
+                            </span>
+                        </div>
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-1 group-hover:underline">
+                            Acessar relatórios <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                        </span>
                     </div>
                 </div>
 
-                <div className="p-4 rounded-xl border bg-white border-gray-200 shadow-2xs flex items-center justify-between">
-                    <div>
-                        <span className="text-xs font-bold uppercase tracking-wider block text-blue-600">Em Andamento</span>
-                        <span className="text-2xl font-black text-gray-900 leading-tight mt-0.5 block">{reportStats.inProgress}</span>
-                        <span className="text-[11px] text-gray-400">Em análise técnica</span>
-                    </div>
-                    <div className="p-3 bg-blue-50 text-blue-600 rounded-xl border border-blue-200">
-                        <Activity className="w-5 h-5" />
-                    </div>
-                </div>
-
-                <div className="p-4 rounded-xl border bg-white border-gray-200 shadow-2xs flex items-center justify-between">
-                    <div>
-                        <span className="text-xs font-bold uppercase tracking-wider block text-emerald-600">Demandas Resolvidas</span>
-                        <span className="text-2xl font-black text-gray-900 leading-tight mt-0.5 block">{reportStats.resolved}</span>
-                        <span className="text-[11px] text-gray-400">Chamados concluídos</span>
-                    </div>
-                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-200">
-                        <CheckCircle className="w-5 h-5" />
-                    </div>
-                </div>
-
-                <div className={`p-4 rounded-xl border flex items-center justify-between shadow-2xs transition-colors ${
+                {/* Em Andamento */}
+                <div className={`relative overflow-hidden p-4 rounded-xl border backdrop-blur-md shadow-2xs transition-all duration-300 ease-out ${
                     isDarkMode 
-                        ? 'bg-gradient-to-br from-purple-950/40 via-zinc-900 to-zinc-950 border-purple-900/40 text-white' 
-                        : (theme === 'warm' ? 'bg-[#ede6dc] border-[#cdbfae] text-[#261f1c]' : 'bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-white border-purple-200 text-gray-900')
+                        ? 'bg-gradient-to-br from-blue-950/25 via-zinc-900/80 to-zinc-950/90 border-blue-900/30 text-white' 
+                        : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-blue-500/10 via-white/80 to-blue-50/40 border-blue-200/80 text-gray-900')
                 }`}>
-                    <div>
-                        <span className={`text-xs font-bold uppercase tracking-wider block ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>Índice QA Operação</span>
-                        <span className={`text-2xl font-black leading-tight mt-0.5 block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{qaStats.taxa}%</span>
-                        <span className={`text-[11px] font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>{qaStats.conformes} de {qaStats.total} conformes</span>
+                    <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out">
+                        <Activity className={`w-20 h-20 ${
+                            isDarkMode ? 'text-blue-500/10' : 'text-blue-500/15'
+                        }`} />
                     </div>
-                    <div className={`p-3 rounded-xl border ${isDarkMode ? 'bg-purple-950/50 text-purple-400 border-purple-800/40' : 'bg-purple-50 text-purple-600 border-purple-200'}`}>
-                        <ShieldCheck className="w-5 h-5" />
+
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <span className="text-xs font-bold uppercase tracking-wider block text-blue-600 dark:text-blue-400">
+                            Em Andamento
+                        </span>
+                        <div className="my-1">
+                            <span className={`text-2xl font-black leading-tight block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {reportStats.inProgress}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-zinc-400">
+                                Em análise técnica
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Demandas Resolvidas */}
+                <div className={`relative overflow-hidden p-4 rounded-xl border backdrop-blur-md shadow-2xs transition-all duration-300 ease-out ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-emerald-950/25 via-zinc-900/80 to-zinc-950/90 border-emerald-900/30 text-white' 
+                        : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-emerald-500/10 via-white/80 to-emerald-50/40 border-emerald-200/80 text-gray-900')
+                }`}>
+                    <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out">
+                        <CheckCircle className={`w-20 h-20 ${
+                            isDarkMode ? 'text-emerald-500/10' : 'text-emerald-500/15'
+                        }`} />
+                    </div>
+
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <span className="text-xs font-bold uppercase tracking-wider block text-emerald-600 dark:text-emerald-400">
+                            Demandas Resolvidas
+                        </span>
+                        <div className="my-1">
+                            <span className={`text-2xl font-black leading-tight block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {reportStats.resolved}
+                            </span>
+                            <span className="text-[11px] text-gray-500 dark:text-zinc-400">
+                                Chamados concluídos
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Índice QA Operação */}
+                <div className={`relative overflow-hidden p-4 rounded-xl border backdrop-blur-md shadow-2xs transition-all duration-300 ease-out ${
+                    isDarkMode 
+                        ? 'bg-gradient-to-br from-purple-950/30 via-zinc-900/80 to-zinc-950/90 border-purple-900/40 text-white' 
+                        : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-purple-500/10 via-white/80 to-purple-50/40 border-purple-200/80 text-gray-900')
+                }`}>
+                    <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out">
+                        <ShieldCheck className={`w-20 h-20 ${
+                            isDarkMode ? 'text-purple-500/10' : 'text-purple-500/15'
+                        }`} />
+                    </div>
+
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <span className={`text-xs font-bold uppercase tracking-wider block ${isDarkMode ? 'text-purple-400' : 'text-purple-700'}`}>
+                            Índice QA Operação
+                        </span>
+                        <div className="my-1">
+                            <span className={`text-2xl font-black leading-tight block ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {qaStats.taxa}%
+                            </span>
+                            <span className={`text-[11px] font-bold ${isDarkMode ? 'text-purple-300' : 'text-purple-600'}`}>
+                                {qaStats.conformes} de {qaStats.total} conformes
+                            </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -742,128 +893,264 @@ const DashboardOverview = () => {
                             </h2>
                             <button 
                                 onClick={() => setViewMode('evolution')} 
-                                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer"
+                                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer transition-colors"
                             >
                                 Ver Gráficos de Evolução <ArrowUpRight className="w-3.5 h-3.5" />
                             </button>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        {/* 3 CARDS ESTRATÉGICOS GLOBAIS: TMR, FCR, REINCIDÊNCIA (CARD % QA REMOVIDO) */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                             
-                            {/* TMR */}
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between">
-                                <div>
+                            {/* TMR Setor */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-purple-950/25 via-zinc-900/80 to-zinc-950/90 border-purple-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-purple-500/10 via-white/90 to-purple-50/40 border-purple-200/80 text-gray-900')
+                            }`}>
+                                {/* Ícone de fundo com efeito translúcido e gradiente */}
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Clock className={`w-28 h-28 ${
+                                        isDarkMode ? 'text-purple-500/10' : 'text-purple-600/15'
+                                    }`} />
+                                </div>
+
+                                <div className="relative z-10">
                                     <div className="flex justify-between items-start mb-2">
-                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Clock className="w-4 h-4 text-purple-600" /> TMR Setor
+                                        <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                                            isDarkMode ? 'text-purple-400' : 'text-purple-700'
+                                        }`}>
+                                            TMR Setor
                                         </span>
                                         <TrendBadge type="tmr" val={latestKpi.tmr} goal={goals.tmr} />
                                     </div>
-                                    <div className="text-3xl font-black text-gray-900 tracking-tight mt-1">
+                                    <div className={`text-3xl font-black tracking-tight mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                         {latestKpi.tmr || '00:00:00'}
                                     </div>
                                 </div>
-                                <div className="pt-4 mt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+
+                                <div className={`relative z-10 pt-4 mt-3 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-purple-100 text-gray-500'
+                                }`}>
                                     <span>Meta Estipulada:</span>
-                                    <span className="font-bold font-mono text-purple-700">≤ {goals.tmr}</span>
+                                    <span className="font-bold text-purple-600 dark:text-purple-400">≤ {goals.tmr}</span>
                                 </div>
                             </div>
 
-                            {/* FCR */}
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between">
-                                <div>
+                            {/* FCR (1º Contato) */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-emerald-950/25 via-zinc-900/80 to-zinc-950/90 border-emerald-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-emerald-500/10 via-white/90 to-emerald-50/40 border-emerald-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Target className={`w-28 h-28 ${
+                                        isDarkMode ? 'text-emerald-500/10' : 'text-emerald-600/15'
+                                    }`} />
+                                </div>
+
+                                <div className="relative z-10">
                                     <div className="flex justify-between items-start mb-2">
-                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Target className="w-4 h-4 text-emerald-600" /> FCR (1º Contato)
+                                        <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                                            isDarkMode ? 'text-emerald-400' : 'text-emerald-700'
+                                        }`}>
+                                            FCR (1º Contato)
                                         </span>
                                         <TrendBadge type="fcr" val={latestKpi.fcr} goal={goals.fcr} />
                                     </div>
-                                    <div className="text-3xl font-black text-gray-900 tracking-tight mt-1">
+                                    <div className={`text-3xl font-black tracking-tight mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                         {latestKpi.fcr}%
                                     </div>
                                 </div>
-                                <div className="pt-4 mt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+
+                                <div className={`relative z-10 pt-4 mt-3 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-emerald-100 text-gray-500'
+                                }`}>
                                     <span>Meta Estipulada:</span>
-                                    <span className="font-bold font-mono text-emerald-700">≥ {goals.fcr}%</span>
+                                    <span className="font-bold text-emerald-600 dark:text-emerald-400">≥ {goals.fcr}%</span>
                                 </div>
                             </div>
 
-                            {/* REINCIDÊNCIA */}
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between">
-                                <div>
+                            {/* Reincidência */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-blue-950/25 via-zinc-900/80 to-zinc-950/90 border-blue-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-blue-500/10 via-white/90 to-blue-50/40 border-blue-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Activity className={`w-28 h-28 ${
+                                        isDarkMode ? 'text-blue-500/10' : 'text-blue-600/15'
+                                    }`} />
+                                </div>
+
+                                <div className="relative z-10">
                                     <div className="flex justify-between items-start mb-2">
-                                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Activity className="w-4 h-4 text-blue-600" /> Reincidência
+                                        <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                                            isDarkMode ? 'text-blue-400' : 'text-blue-700'
+                                        }`}>
+                                            Reincidência
                                         </span>
                                         <TrendBadge type="recurrence" val={latestKpi.recurrence} goal={goals.recurrence} />
                                     </div>
-                                    <div className="text-3xl font-black text-gray-900 tracking-tight mt-1">
+                                    <div className={`text-3xl font-black tracking-tight mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
                                         {latestKpi.recurrence}%
                                     </div>
                                 </div>
-                                <div className="pt-4 mt-3 border-t border-gray-100 flex items-center justify-between text-xs text-gray-500">
+
+                                <div className={`relative z-10 pt-4 mt-3 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-blue-100 text-gray-500'
+                                }`}>
                                     <span>Meta Estipulada:</span>
-                                    <span className="font-bold font-mono text-blue-700">≤ {goals.recurrence}%</span>
+                                    <span className="font-bold text-blue-600 dark:text-blue-400">≤ {goals.recurrence}%</span>
                                 </div>
                             </div>
 
-                            {/* GAUGE DE QUALIDADE QA */}
-                            <div className={`p-5 rounded-xl border shadow-2xs hover:shadow-md transition-all flex flex-col items-center justify-between relative ${
+                        </div>
+                    </div>
+
+                    {/* NOVA SESSÃO: INDICADORES DA TERCEIRIZADA (FCR, CONFORMIDADE E % DE QUALIDADE) */}
+                    <div>
+                        <div className="flex items-center justify-between mb-3">
+                            <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                <Headphones className="w-4 h-4 text-indigo-600" /> Indicadores da Terceirizada
+                            </h2>
+                            <button 
+                                onClick={() => handleNavigate('third_party_audits')} 
+                                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Acessar painel completo de auditoria da terceirizada"
+                            >
+                                Painel de Auditoria <ArrowUpRight className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            
+                            {/* FCR Terceirizada (Resolvido no 1º Contato) */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group ${
                                 isDarkMode 
-                                    ? 'bg-[#181a20] border-zinc-800/80 shadow-[0_0_15px_rgba(16,185,129,0.06)]' 
-                                    : (theme === 'warm' ? 'bg-[#ede6dc] border-[#cdbfae]' : 'bg-white border-gray-200')
+                                    ? 'bg-gradient-to-br from-indigo-950/25 via-zinc-900/80 to-zinc-950/90 border-indigo-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-indigo-500/10 via-white/90 to-indigo-50/40 border-indigo-200/80 text-gray-900')
                             }`}>
-                                <div className="w-full flex justify-between items-start mb-1">
-                                    <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isDarkMode ? 'text-zinc-400' : 'text-gray-400'}`}>
-                                        <Star className="w-4 h-4 text-amber-500" /> % QA Conforme
-                                    </span>
-                                    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                                        qaStats.taxa >= (goals.qa || 85) 
-                                            ? (isDarkMode ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/50' : 'bg-emerald-100 text-emerald-800') 
-                                            : (isDarkMode ? 'bg-amber-950/80 text-amber-300 border border-amber-800/50' : 'bg-amber-100 text-amber-800')
-                                    }`}>
-                                        {qaStats.taxa >= (goals.qa || 85) ? 'Excelente' : 'Atenção'}
-                                    </span>
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Target className={`w-28 h-28 ${
+                                        isDarkMode ? 'text-indigo-500/10' : 'text-indigo-600/15'
+                                    }`} />
                                 </div>
 
-                                <div className="w-full h-24 flex items-center justify-center relative">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <PieChart>
-                                            <Pie
-                                                data={[
-                                                    { value: Number(qaStats.taxa) },
-                                                    { value: Math.max(0, 100 - Number(qaStats.taxa)) }
-                                                ]}
-                                                cx="50%"
-                                                cy="80%"
-                                                startAngle={180}
-                                                endAngle={0}
-                                                innerRadius={50}
-                                                outerRadius={68}
-                                                dataKey="value"
-                                                stroke="none"
-                                            >
-                                                <Cell fill={qaStats.taxa >= (goals.qa || 85) ? "#10b981" : "#f59e0b"} />
-                                                <Cell fill={isDarkMode ? "#272a33" : (theme === 'warm' ? "#ded5c8" : "#f3f4f6")} />
-                                            </Pie>
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                    <div className="absolute bottom-2 flex flex-col items-center">
-                                        <span className={`text-2xl font-black ${
-                                            qaStats.taxa >= (goals.qa || 85) 
-                                                ? (isDarkMode ? "text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.35)]" : "text-emerald-600") 
-                                                : (isDarkMode ? "text-amber-400 drop-shadow-[0_0_10px_rgba(251,191,36,0.35)]" : "text-amber-600")
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                                            isDarkMode ? 'text-indigo-400' : 'text-indigo-700'
                                         }`}>
-                                            {qaStats.taxa}%
+                                            FCR Terceirizada
                                         </span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                            thirdPartyStats.fcr >= 70 
+                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40' 
+                                                : 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40'
+                                        }`}>
+                                            <TrendingUp className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                                            {thirdPartyStats.fcr >= 70 ? 'Resolução Alta' : 'Acompanhar'}
+                                        </span>
+                                    </div>
+                                    <div className={`text-3xl font-black tracking-tight mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        {thirdPartyStats.fcr}%
                                     </div>
                                 </div>
 
-                                <div className={`w-full pt-2 border-t flex items-center justify-between text-xs ${
-                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-gray-100 text-gray-500'
+                                <div className={`relative z-10 pt-4 mt-3 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-indigo-100 text-gray-500'
                                 }`}>
-                                    <span>Meta QA: ≥ {goals.qa || 85}%</span>
-                                    <span className={`text-[11px] ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}>{qaStats.total} auditorias</span>
+                                    <span>Chamados Resolvidos:</span>
+                                    <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                                        {thirdPartyStats.resolvedCount} de {thirdPartyStats.completedCount}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Conformidade de Procedimentos */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-teal-950/25 via-zinc-900/80 to-zinc-950/90 border-teal-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-teal-500/10 via-white/90 to-teal-50/40 border-teal-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <ShieldCheck className={`w-28 h-28 ${
+                                        isDarkMode ? 'text-teal-500/10' : 'text-teal-600/15'
+                                    }`} />
+                                </div>
+
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                                            isDarkMode ? 'text-teal-400' : 'text-teal-700'
+                                        }`}>
+                                            Conformidade
+                                        </span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                            thirdPartyStats.compliance >= 80 
+                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40' 
+                                                : 'bg-rose-100 text-rose-800 border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/40'
+                                        }`}>
+                                            {thirdPartyStats.compliance >= 80 ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <AlertCircle className="w-3 h-3 text-rose-600" />}
+                                            {thirdPartyStats.compliance >= 80 ? 'Procedimento Correto' : 'Revisar Roteiro'}
+                                        </span>
+                                    </div>
+                                    <div className={`text-3xl font-black tracking-tight mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        {thirdPartyStats.compliance}%
+                                    </div>
+                                </div>
+
+                                <div className={`relative z-10 pt-4 mt-3 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-teal-100 text-gray-500'
+                                }`}>
+                                    <span>Conformes / Não Conformes:</span>
+                                    <span className="font-bold text-teal-600 dark:text-teal-400">
+                                        {thirdPartyStats.conformeCount} / {thirdPartyStats.naoConformeCount}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* % de Qualidade da Terceirizada */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-amber-950/25 via-zinc-900/80 to-zinc-950/90 border-amber-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-amber-500/10 via-white/90 to-amber-50/40 border-amber-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Star className={`w-28 h-28 ${
+                                        isDarkMode ? 'text-amber-500/10' : 'text-amber-600/15'
+                                    }`} />
+                                </div>
+
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className={`text-[11px] font-bold uppercase tracking-wider block ${
+                                            isDarkMode ? 'text-amber-400' : 'text-amber-700'
+                                        }`}>
+                                            % de Qualidade
+                                        </span>
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                            thirdPartyStats.qualityRate >= 80 
+                                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40' 
+                                                : 'bg-amber-100 text-amber-800 border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40'
+                                        }`}>
+                                            <Star className="w-3 h-3 text-amber-500" />
+                                            {thirdPartyStats.qualityRate >= 80 ? 'Atendimento Aprovado' : 'Atenção'}
+                                        </span>
+                                    </div>
+                                    <div className={`text-3xl font-black tracking-tight mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                        {thirdPartyStats.qualityRate}%
+                                    </div>
+                                </div>
+
+                                <div className={`relative z-10 pt-4 mt-3 border-t flex items-center justify-between text-xs ${
+                                    isDarkMode ? 'border-zinc-800 text-zinc-400' : 'border-amber-100 text-gray-500'
+                                }`}>
+                                    <span>Avaliações Positivas:</span>
+                                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                                        {thirdPartyStats.positiveCount} de {thirdPartyStats.positiveCount + thirdPartyStats.negativeCount} avaliadas
+                                    </span>
                                 </div>
                             </div>
 
@@ -877,59 +1164,107 @@ const DashboardOverview = () => {
                         </h2>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs border-l-4 border-l-emerald-500">
-                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                                    <CheckSquare className="w-4 h-4 text-emerald-600" /> Média Finalizações
-                                </span>
-                                <div className="text-3xl font-black text-gray-900 tracking-tight">
-                                    {teamStats.avgVol}
+                            {/* Média Finalizações */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-emerald-950/20 via-zinc-900/80 to-zinc-950/90 border-emerald-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-emerald-500/10 via-white/90 to-emerald-50/30 border-emerald-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <CheckSquare className={`w-24 h-24 ${
+                                        isDarkMode ? 'text-emerald-500/10' : 'text-emerald-600/15'
+                                    }`} />
                                 </div>
-                                <span className="text-xs text-gray-400 mt-2 block font-medium">
-                                    Atendimentos concluídos / analista
-                                </span>
-                            </div>
-
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs border-l-4 border-l-blue-500">
-                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                                    <Phone className="w-4 h-4 text-blue-600" /> TMA Médio (Voz)
-                                </span>
-                                <div className="text-3xl font-black text-gray-900 tracking-tight font-mono">
-                                    {teamStats.avgTmaTel}
-                                </div>
-                                <span className="text-xs text-gray-400 mt-2 block font-medium">
-                                    Tempo médio em ligação telefônica
-                                </span>
-                            </div>
-
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs border-l-4 border-l-purple-500">
-                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                                    <MessageCircle className="w-4 h-4 text-purple-600" /> TMA Médio (Chat)
-                                </span>
-                                <div className="text-3xl font-black text-gray-900 tracking-tight font-mono">
-                                    {teamStats.avgTmaHuggy}
-                                </div>
-                                <span className="text-xs text-gray-400 mt-2 block font-medium">
-                                    Tempo médio no atendimento Huggy
-                                </span>
-                            </div>
-
-                            <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs border-l-4 border-l-amber-500">
-                                <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1.5 mb-2">
-                                    <Star className="w-4 h-4 text-amber-500" /> Pontuação por Turno
-                                </span>
-                                <div className="grid grid-cols-2 gap-2 mt-1">
-                                    <div className="border-r border-gray-100 pr-2">
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Dia (Pico)</span>
-                                        <span className="text-xl font-black text-amber-600">{teamStats.avgPtsDay} pts</span>
+                                <div className="relative z-10">
+                                    <span className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider block mb-1">
+                                        Média Finalizações
+                                    </span>
+                                    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                        {teamStats.avgVol}
                                     </div>
-                                    <div className="pl-2">
-                                        <span className="text-[10px] text-gray-400 font-bold uppercase block">Noturno</span>
-                                        <span className="text-xl font-black text-indigo-600">{teamStats.avgPtsNight} pts</span>
-                                    </div>
+                                    <span className="text-xs text-gray-500 dark:text-zinc-400 mt-2 block font-medium">
+                                        Atendimentos concluídos / analista
+                                    </span>
                                 </div>
-                                <span className="text-[11px] text-gray-400 mt-2 block">
-                                    Média da última semana apurada
-                                </span>
+                            </div>
+
+                            {/* TMA Médio (Voz) */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-blue-950/20 via-zinc-900/80 to-zinc-950/90 border-blue-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-blue-500/10 via-white/90 to-blue-50/30 border-blue-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Phone className={`w-24 h-24 ${
+                                        isDarkMode ? 'text-blue-500/10' : 'text-blue-600/15'
+                                    }`} />
+                                </div>
+                                <div className="relative z-10">
+                                    <span className="text-[11px] font-bold text-blue-700 dark:text-blue-400 uppercase tracking-wider block mb-1">
+                                        TMA Médio (Voz)
+                                    </span>
+                                    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                        {teamStats.avgTmaTel}
+                                    </div>
+                                    <span className="text-xs text-gray-500 dark:text-zinc-400 mt-2 block font-medium">
+                                        Tempo médio em ligação telefônica
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* TMA Médio (Chat) */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-purple-950/20 via-zinc-900/80 to-zinc-950/90 border-purple-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-purple-500/10 via-white/90 to-purple-50/30 border-purple-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <MessageCircle className={`w-24 h-24 ${
+                                        isDarkMode ? 'text-purple-500/10' : 'text-purple-600/15'
+                                    }`} />
+                                </div>
+                                <div className="relative z-10">
+                                    <span className="text-[11px] font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider block mb-1">
+                                        TMA Médio (Chat)
+                                    </span>
+                                    <div className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
+                                        {teamStats.avgTmaHuggy}
+                                    </div>
+                                    <span className="text-xs text-gray-500 dark:text-zinc-400 mt-2 block font-medium">
+                                        Tempo médio no atendimento Huggy
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Pontuação por Turno */}
+                            <div className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-lg hover:-translate-y-1 transition-all duration-300 ease-out group ${
+                                isDarkMode 
+                                    ? 'bg-gradient-to-br from-amber-950/20 via-zinc-900/80 to-zinc-950/90 border-amber-900/30 text-white' 
+                                    : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-amber-500/10 via-white/90 to-amber-50/30 border-amber-200/80 text-gray-900')
+                            }`}>
+                                <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Star className={`w-24 h-24 ${
+                                        isDarkMode ? 'text-amber-500/10' : 'text-amber-600/15'
+                                    }`} />
+                                </div>
+                                <div className="relative z-10">
+                                    <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider block mb-1">
+                                        Pontuação por Turno
+                                    </span>
+                                    <div className="grid grid-cols-2 gap-2 mt-2">
+                                        <div className="border-r border-gray-200 dark:border-zinc-800 pr-2">
+                                            <span className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase block">Dia (Pico)</span>
+                                            <span className="text-xl font-black text-amber-600 dark:text-amber-400">{teamStats.avgPtsDay} pts</span>
+                                        </div>
+                                        <div className="pl-2">
+                                            <span className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase block">Noturno</span>
+                                            <span className="text-xl font-black text-indigo-600 dark:text-indigo-400">{teamStats.avgPtsNight} pts</span>
+                                        </div>
+                                    </div>
+                                    <span className="text-[11px] text-gray-400 dark:text-zinc-500 mt-2 block">
+                                        Média da última semana apurada
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -946,24 +1281,27 @@ const DashboardOverview = () => {
                             <div 
                                 id="card-leader-day"
                                 onClick={() => setModalInfo({ title: 'Top Desempenho por Média (Manhã I, II & Tarde - Pico)', data: teamStats.rankings.topPointsDay, formatVal: (v) => `${v} pts (média)` })}
-                                className="bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 text-white p-5 rounded-xl shadow-xs border border-emerald-500/30 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group"
+                                className="relative overflow-hidden bg-gradient-to-br from-emerald-600 via-emerald-700 to-emerald-900 text-white p-5 rounded-2xl shadow-xs border border-emerald-500/30 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out group active:scale-[0.98]"
                             >
-                                <div className="flex justify-between items-start">
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Award className="w-28 h-28 text-white/10" />
+                                </div>
+                                <div className="relative z-10 flex justify-between items-start">
                                     <div>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 flex items-center gap-1">
-                                            <Award className="w-3.5 h-3.5 text-amber-300" /> Líder Geral (Dia)
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 block">
+                                            Líder Geral (Dia)
                                         </span>
                                         <span className="text-[10px] text-emerald-200/80 font-medium block">
                                             Manhã I, II & Tarde (Pico)
                                         </span>
                                     </div>
-                                    <Info className="w-4 h-4 text-emerald-300 opacity-60 group-hover:opacity-100" />
+                                    <Info className="w-4 h-4 text-emerald-200 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
                                 </div>
-                                <div className="my-2">
+                                <div className="relative z-10 my-2">
                                     <span className="text-lg font-black block truncate" title={teamStats.topDay.name}>
                                         {teamStats.topDay.name}
                                     </span>
-                                    <div className="text-xs text-emerald-100 font-bold flex items-center gap-1 flex-wrap">
+                                    <div className="text-xs text-emerald-100 font-bold flex items-center gap-1 flex-wrap mt-0.5">
                                         <span>{teamStats.topDay.val} pts de média</span>
                                         {teamStats.topDay.evalCount > 0 && (
                                             <span className="text-[10px] text-emerald-200/90 font-normal">
@@ -977,8 +1315,8 @@ const DashboardOverview = () => {
                                         )}
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-emerald-200 flex items-center gap-1 mt-1">
-                                    Ver ranking por média <ChevronRight className="w-3 h-3" />
+                                <span className="relative z-10 text-[11px] text-emerald-200 flex items-center gap-1 mt-1 font-bold group-hover:underline">
+                                    Ver ranking por média <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </div>
 
@@ -986,24 +1324,27 @@ const DashboardOverview = () => {
                             <div 
                                 id="card-leader-night"
                                 onClick={() => setModalInfo({ title: 'Top Desempenho por Média (Noturno)', data: teamStats.rankings.topPointsNight, formatVal: (v) => `${v} pts (média)` })}
-                                className="bg-gradient-to-br from-indigo-800 via-indigo-900 to-zinc-950 text-white p-5 rounded-xl shadow-xs border border-indigo-700/30 flex flex-col justify-between cursor-pointer hover:shadow-md transition-all group"
+                                className="relative overflow-hidden bg-gradient-to-br from-indigo-800 via-indigo-900 to-zinc-950 text-white p-5 rounded-2xl shadow-xs border border-indigo-700/30 flex flex-col justify-between cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out group active:scale-[0.98]"
                             >
-                                <div className="flex justify-between items-start">
+                                <div className="absolute -right-4 -bottom-4 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <Award className="w-28 h-28 text-white/10" />
+                                </div>
+                                <div className="relative z-10 flex justify-between items-start">
                                     <div>
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-200 flex items-center gap-1">
-                                            <Award className="w-3.5 h-3.5 text-yellow-300" /> Líder Geral (Noite)
+                                        <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-200 block">
+                                            Líder Geral (Noite)
                                         </span>
                                         <span className="text-[10px] text-indigo-200/80 font-medium block">
                                             Noturno (13:45 às 20:00)
                                         </span>
                                     </div>
-                                    <Info className="w-4 h-4 text-indigo-300 opacity-60 group-hover:opacity-100" />
+                                    <Info className="w-4 h-4 text-indigo-200 opacity-70 group-hover:opacity-100 group-hover:scale-110 transition-all" />
                                 </div>
-                                <div className="my-2">
+                                <div className="relative z-10 my-2">
                                     <span className="text-lg font-black block truncate" title={teamStats.topNight.name}>
                                         {teamStats.topNight.name}
                                     </span>
-                                    <div className="text-xs text-indigo-100 font-bold flex items-center gap-1 flex-wrap">
+                                    <div className="text-xs text-indigo-100 font-bold flex items-center gap-1 flex-wrap mt-0.5">
                                         <span>{teamStats.topNight.val} pts de média</span>
                                         {teamStats.topNight.evalCount > 0 && (
                                             <span className="text-[10px] text-indigo-200/90 font-normal">
@@ -1017,53 +1358,75 @@ const DashboardOverview = () => {
                                         )}
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-indigo-200 flex items-center gap-1 mt-1">
-                                    Ver ranking por média <ChevronRight className="w-3 h-3" />
+                                <span className="relative z-10 text-[11px] text-indigo-200 flex items-center gap-1 mt-1 font-bold group-hover:underline">
+                                    Ver ranking por média <ChevronRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                                 </span>
                             </div>
 
                             {/* MAIOR TMA VOZ (ATENÇÃO) */}
                             <div 
                                 onClick={() => setModalInfo({ title: 'Maiores TMAs em Telefonia', data: teamStats.rankings.maxTmaTel })}
-                                className="bg-white p-5 rounded-xl border border-gray-200 border-l-4 border-l-rose-500 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group"
+                                className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer group active:scale-[0.98] ${
+                                    isDarkMode 
+                                        ? 'bg-gradient-to-br from-rose-950/20 via-zinc-900/80 to-zinc-950/90 border-rose-900/40 text-white' 
+                                        : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-rose-500/10 via-white/90 to-rose-50/30 border-rose-200/80 text-gray-900')
+                                }`}
                             >
-                                <div className="flex justify-between items-start">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1">
-                                        <AlertTriangle className="w-3.5 h-3.5 text-rose-500" /> Maior TMA Voz
-                                    </span>
-                                    <Info className="w-4 h-4 text-gray-300 group-hover:text-gray-600" />
+                                <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <AlertTriangle className={`w-24 h-24 ${
+                                        isDarkMode ? 'text-rose-500/10' : 'text-rose-600/15'
+                                    }`} />
                                 </div>
-                                <div className="my-2">
-                                    <span className="text-2xl font-black text-rose-600 font-mono">
+                                <div className="relative z-10 flex justify-between items-start">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400 block">
+                                        Maior TMA Voz
+                                    </span>
+                                    <Info className="w-4 h-4 text-gray-400 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors" />
+                                </div>
+                                <div className="relative z-10 my-2">
+                                    <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
                                         {teamStats.maxTmaTel.val}
                                     </span>
-                                    <span className="text-xs text-gray-700 font-bold block truncate mt-0.5" title={teamStats.maxTmaTel.name}>
+                                    <span className="text-xs text-gray-700 dark:text-zinc-300 font-bold block truncate mt-0.5" title={teamStats.maxTmaTel.name}>
                                         {teamStats.maxTmaTel.name}
                                     </span>
                                 </div>
-                                <span className="text-[11px] text-rose-600 font-medium">Requer alinhamento de escopo</span>
+                                <span className="relative z-10 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                                    Requer alinhamento de escopo
+                                </span>
                             </div>
 
                             {/* MENOR MÉDIA DE FINALIZAÇÕES (ATENÇÃO) */}
                             <div 
                                 onClick={() => setModalInfo({ title: 'Menor Média de Finalizações', data: teamStats.rankings.lowestVol })}
-                                className="bg-white p-5 rounded-xl border border-gray-200 border-l-4 border-l-amber-500 shadow-2xs hover:shadow-md transition-all flex flex-col justify-between cursor-pointer group"
+                                className={`relative overflow-hidden p-5 rounded-2xl border backdrop-blur-md shadow-2xs hover:shadow-xl hover:-translate-y-1 transition-all duration-300 ease-out flex flex-col justify-between cursor-pointer group active:scale-[0.98] ${
+                                    isDarkMode 
+                                        ? 'bg-gradient-to-br from-amber-950/20 via-zinc-900/80 to-zinc-950/90 border-amber-900/40 text-white' 
+                                        : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-amber-500/10 via-white/90 to-amber-50/30 border-amber-200/80 text-gray-900')
+                                }`}
                             >
-                                <div className="flex justify-between items-start">
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1">
-                                        <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> Menor Volume
-                                    </span>
-                                    <Info className="w-4 h-4 text-gray-300 group-hover:text-gray-600" />
+                                <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-6">
+                                    <AlertTriangle className={`w-24 h-24 ${
+                                        isDarkMode ? 'text-amber-500/10' : 'text-amber-600/15'
+                                    }`} />
                                 </div>
-                                <div className="my-2">
-                                    <span className="text-2xl font-black text-amber-600 font-mono">
+                                <div className="relative z-10 flex justify-between items-start">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 block">
+                                        Menor Volume
+                                    </span>
+                                    <Info className="w-4 h-4 text-gray-400 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors" />
+                                </div>
+                                <div className="relative z-10 my-2">
+                                    <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
                                         {teamStats.lowestAvgVol.val} fin.
                                     </span>
-                                    <span className="text-xs text-gray-700 font-bold block truncate mt-0.5" title={teamStats.lowestAvgVol.name}>
+                                    <span className="text-xs text-gray-700 dark:text-zinc-300 font-bold block truncate mt-0.5" title={teamStats.lowestAvgVol.name}>
                                         {teamStats.lowestAvgVol.name}
                                     </span>
                                 </div>
-                                <span className="text-[11px] text-amber-600 font-medium">Oportunidade de capacitação</span>
+                                <span className="relative z-10 text-[11px] text-amber-600 dark:text-amber-400 font-medium">
+                                    Oportunidade de capacitação
+                                </span>
                             </div>
 
                         </div>
@@ -1632,7 +1995,7 @@ const DashboardOverview = () => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs font-extrabold text-amber-700 font-mono block">{teamStats.topDay.val} pts</span>
+                                            <span className="text-xs font-extrabold text-amber-700 block">{teamStats.topDay.val} pts</span>
                                             <span className="text-[10px] text-gray-500 font-medium">(média)</span>
                                         </div>
                                     </div>
@@ -1686,7 +2049,7 @@ const DashboardOverview = () => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs font-extrabold text-indigo-700 font-mono block">{teamStats.topNight.val} pts</span>
+                                            <span className="text-xs font-extrabold text-indigo-700 block">{teamStats.topNight.val} pts</span>
                                             <span className="text-[10px] text-gray-500 font-medium">(média)</span>
                                         </div>
                                     </div>
@@ -1743,7 +2106,7 @@ const DashboardOverview = () => {
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <span className="font-bold text-gray-900 text-sm font-mono block">
+                                            <span className="font-bold text-gray-900 text-sm block">
                                                 {modalInfo.formatVal ? modalInfo.formatVal(item.val) : item.val}
                                             </span>
                                         </div>

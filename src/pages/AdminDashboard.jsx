@@ -189,7 +189,7 @@ const AdminDashboard = () => {
             case 'my_history':
                 return <MyHistory currentUserId={currentUser?.firestoreId || currentUser?.uid} />;
             case 'dashboard':
-                return <DashboardOverview />;
+                return <DashboardOverview onNavigate={setActiveTab} />;
             case 'hub':
                 return <CollaboratorsHub />;
             case 'rankings':
@@ -219,7 +219,7 @@ const AdminDashboard = () => {
             case 'DailyQueueTracker':
                 return <DailyQueueTracker />;
             default:
-                return <DashboardOverview />;
+                return <DashboardOverview onNavigate={setActiveTab} />;
         }
     };
 
