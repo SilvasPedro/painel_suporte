@@ -101,7 +101,7 @@ const AdminDashboard = () => {
                 { id: 'metrics', label: 'Avaliações Semanais', icon: TrendingUp },
                 { id: 'monthly_evaluations', label: 'Análise Mensal (1:1)', icon: FileText },
                 { id: 'DailyQueueTracker', label: 'Demanda Diária', icon: Activity },
-                { id: 'reports', label: 'Relatórios Críticos', icon: ClipboardList },
+                { id: 'reports', label: 'Tarefas & Relatórios', icon: ClipboardList },
                 { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
                 { id: 'third_party_audits', label: 'Auditoria Terceirizada', icon: Headphones },
                 { id: 'rankings', label: 'Rankings da Equipe', icon: Trophy },

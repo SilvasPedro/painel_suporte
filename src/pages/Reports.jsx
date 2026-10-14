@@ -3,8 +3,9 @@ import {
     Plus, Search, Eye, Edit2, Trash2, X, Loader2, 
     AlertTriangle, CheckCircle, Clock, Filter, 
     Lightbulb, Monitor, Building, Zap, Bug, MessageSquare, Send,
-    Table, Columns3, LayoutGrid, List, Copy, Printer, ChevronLeft, ChevronRight,
-    User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock
+    Table, Columns3, LayoutGrid, List, Copy, ChevronLeft, ChevronRight,
+    User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock,
+    CornerDownRight, MessageCircle
 } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -87,6 +88,11 @@ const Reports = () => {
     const [quickComment, setQuickComment] = useState('');
     const [quickSaving, setQuickSaving] = useState(false);
 
+    // Thread de Interação em Comentários
+    const [newCommentText, setNewCommentText] = useState('');
+    const [newCommentStatus, setNewCommentStatus] = useState('');
+    const [sendingComment, setSendingComment] = useState(false);
+
     // ==========================================
     // BUSCA DE DADOS EM TEMPO REAL VIA CACHE COMPARTILHADO
     // ==========================================
@@ -112,6 +118,10 @@ const Reports = () => {
             });
 
             setReports(fetchedData);
+            setViewingReport(prev => {
+                if (!prev) return null;
+                return fetchedData.find(r => r.id === prev.id) || prev;
+            });
             setLoading(false);
         });
 
@@ -144,6 +154,9 @@ const Reports = () => {
             const protoSafe = (r.protocol || '').toLowerCase();
             const authorSafe = (r.creatorName || '').toLowerCase();
             const commentSafe = (r.adminComment || r.closingComment || '').toLowerCase();
+            const commentsSafe = Array.isArray(r.comments)
+                ? r.comments.map(c => `${c.content || ''} ${c.authorName || ''}`).join(' ').toLowerCase()
+                : '';
             const searchLower = searchTerm.toLowerCase();
 
             const matchSearch = searchTerm === '' || 
@@ -151,7 +164,8 @@ const Reports = () => {
                 descSafe.includes(searchLower) ||
                 protoSafe.includes(searchLower) ||
                 authorSafe.includes(searchLower) ||
-                commentSafe.includes(searchLower);
+                commentSafe.includes(searchLower) ||
+                commentsSafe.includes(searchLower);
 
             const matchStatus = statusFilter === '' || r.status === statusFilter;
             const matchType = typeFilter === '' || r.type === typeFilter;
@@ -304,26 +318,118 @@ const Reports = () => {
         setViewingReport(report);
         setQuickStatus(report.status || 'Pendente');
         setQuickComment(report.adminComment || report.closingComment || '');
+        setNewCommentText('');
+        setNewCommentStatus(report.status || 'Pendente');
+    };
+
+    const formatCommentDate = (dateVal) => {
+        if (!dateVal) return '';
+        try {
+            const d = typeof dateVal === 'string' ? new Date(dateVal) : (dateVal.toDate ? dateVal.toDate() : new Date(dateVal));
+            if (isNaN(d.getTime())) return '';
+            const now = new Date();
+            const isToday = d.toDateString() === now.toDateString();
+            const timeStr = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            if (isToday) {
+                return `Hoje às ${timeStr}`;
+            }
+            const dateStr = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            return `${dateStr} às ${timeStr}`;
+        } catch {
+            return '';
+        }
+    };
+
+    // Adicionar novo comentário na thread (Colaborador ou Gestão)
+    const handleAddComment = async (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (!viewingReport || !newCommentText.trim()) return;
+
+        setSendingComment(true);
+        try {
+            const userUid = currentUser?.firestoreId || currentUser?.uid || 'user';
+            const userName = currentUser?.name || currentUser?.displayName || 'Usuário';
+            const userRole = currentUser?.role || normalizedRole || 'Colaborador';
+
+            const newComment = {
+                id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+                authorId: userUid,
+                authorName: userName,
+                authorRole: userRole,
+                isStaff: Boolean(canManageTickets),
+                content: newCommentText.trim(),
+                createdAt: new Date().toISOString()
+            };
+
+            const existingComments = Array.isArray(viewingReport.comments) ? viewingReport.comments : [];
+            const updatedComments = [...existingComments, newComment];
+
+            const updateData = {
+                comments: updatedComments,
+                lastActivityAt: new Date(),
+                lastUpdatedBy: userName,
+                updatedAt: new Date()
+            };
+
+            // Se for gestor/supervisor e alterou o status junto com o comentário
+            if (canManageTickets && newCommentStatus && newCommentStatus !== viewingReport.status) {
+                updateData.status = newCommentStatus;
+            }
+
+            await updateDoc(doc(db, "critical_reports", viewingReport.id), updateData);
+
+            setViewingReport(prev => ({
+                ...prev,
+                ...updateData
+            }));
+
+            setNewCommentText('');
+            showToast("Comentário adicionado com sucesso!", "success");
+        } catch (err) {
+            showToast("Erro ao adicionar comentário: " + err.message, "error");
+        } finally {
+            setSendingComment(false);
+        }
     };
 
     const handleQuickUpdate = async () => {
         if (!viewingReport) return;
         setQuickSaving(true);
         try {
+            const userName = currentUser?.name || 'Gestão';
+            const userUid = currentUser?.firestoreId || currentUser?.uid || 'user';
+            const userRole = currentUser?.role || normalizedRole || 'Gestor';
+
             const updatePayload = {
                 status: quickStatus,
                 adminComment: quickComment,
-                lastUpdatedBy: currentUser?.name || 'Gestão',
+                lastUpdatedBy: userName,
                 updatedAt: new Date()
             };
+
+            // Se um comentário/parecer for preenchido, adiciona também na thread de comentários
+            if (quickComment && quickComment.trim()) {
+                const existingComments = Array.isArray(viewingReport.comments) ? viewingReport.comments : [];
+                const lastComment = existingComments[existingComments.length - 1];
+                if (!lastComment || lastComment.content !== quickComment.trim()) {
+                    const newComment = {
+                        id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
+                        authorId: userUid,
+                        authorName: userName,
+                        authorRole: userRole,
+                        isStaff: true,
+                        content: `[Parecer da Gestão • Status: ${quickStatus}]\n${quickComment.trim()}`,
+                        createdAt: new Date().toISOString()
+                    };
+                    updatePayload.comments = [...existingComments, newComment];
+                }
+            }
 
             await updateDoc(doc(db, "critical_reports", viewingReport.id), updatePayload);
             showToast("Andamento e parecer atualizados com sucesso!", "success");
             setViewingReport(prev => ({ 
                 ...prev, 
-                status: quickStatus, 
-                adminComment: quickComment,
-                lastUpdatedBy: currentUser?.name || 'Gestão'
+                ...updatePayload
             }));
         } catch (err) {
             showToast("Erro ao atualizar ticket: " + err.message, "error");
@@ -332,9 +438,9 @@ const Reports = () => {
         }
     };
 
-    // Copiar Resumo do Ticket
+    // Copiar Resumo do Ticket com Histórico de Comentários
     const handleCopyReportSummary = (report) => {
-        const text = `📋 [SOLICITAÇÃO #${report.id.slice(0, 6).toUpperCase()}]
+        let text = `📋 [TAREFA / RELATÓRIO #${report.id.slice(0, 6).toUpperCase()}]
 • Título: ${getDisplayTitle(report)}
 • Tipo: ${report.type || 'Análise de Erro'}
 • Prioridade: ${report.priority || 'Normal'}
@@ -344,12 +450,21 @@ const Reports = () => {
 • Protocolo: ${report.protocol || 'N/A'}
 • Impacto no Cliente: ${report.affectedClient === 'Sim' ? `SIM (${report.howAffected || 'Sim'})` : 'Não'}
 • Descrição:
-${report.description || 'Sem descrição'}
-${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n${report.adminComment || report.closingComment}` : ''}`;
+${report.description || 'Sem descrição'}`;
+
+        if (Array.isArray(report.comments) && report.comments.length > 0) {
+            text += `\n\n💬 Histórico de Interações (${report.comments.length}):`;
+            report.comments.forEach((c, idx) => {
+                const roleTag = c.authorRole || (c.isStaff ? 'Liderança' : 'Solicitante');
+                text += `\n[${idx + 1}] ${c.authorName} (${roleTag}): ${c.content}`;
+            });
+        } else if (report.adminComment || report.closingComment) {
+            text += `\n• Parecer da Gestão:\n${report.adminComment || report.closingComment}`;
+        }
 
         navigator.clipboard.writeText(text);
         setCopiedText(true);
-        showToast("Resumo do chamado copiado para a área de transferência!", "success");
+        showToast("Resumo da demanda copiado para a área de transferência!", "success");
         setTimeout(() => setCopiedText(false), 2000);
     };
 
@@ -435,7 +550,7 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
         return (
             <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 h-full p-8">
                 <Loader2 className="w-10 h-10 text-red-600 animate-spin mb-3" />
-                <p className="text-sm font-medium text-gray-600">Carregando solicitações e relatórios críticos...</p>
+                <p className="text-sm font-medium text-gray-600">Carregando tarefas e relatórios...</p>
             </div>
         );
     }
@@ -455,7 +570,7 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                         <div>
                             <div className="flex items-center gap-2">
                                 <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                                    Central de Solicitações & Relatórios
+                                    Tarefas & Relatórios
                                 </h1>
                                 {canViewAllReports ? (
                                     <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
@@ -469,8 +584,8 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                             </div>
                             <p className="text-sm text-gray-500">
                                 {canViewAllReports 
-                                    ? "Visualização e despacho de todos os relatórios críticos, incidentes e sugestões da operação." 
-                                    : "Acompanhe suas solicitações, reporte de erros sistêmicos e sugestões de melhoria."}
+                                    ? "Visualização, despacho e interação em comentários de tarefas, relatórios e incidentes da operação." 
+                                    : "Acompanhe suas tarefas, solicitações, reporte de erros e interaja em comentários com a liderança."}
                             </p>
                         </div>
                     </div>
@@ -813,11 +928,19 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                                             </span>
                                                             {getPriorityBadge(report.priority)}
                                                         </div>
-                                                        {report.protocol && (
-                                                            <span className="text-[11px] text-gray-400 font-mono">
-                                                                Prot: {report.protocol}
-                                                            </span>
-                                                        )}
+                                                        <div className="flex items-center gap-2">
+                                                            {report.protocol && (
+                                                                <span className="text-[11px] text-gray-400 font-mono">
+                                                                    Prot: {report.protocol}
+                                                                </span>
+                                                            )}
+                                                            {Array.isArray(report.comments) && report.comments.length > 0 && (
+                                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200" title={`${report.comments.length} comentários registrados`}>
+                                                                    <MessageSquare className="w-2.5 h-2.5" />
+                                                                    {report.comments.length}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4 whitespace-nowrap">
@@ -945,11 +1068,16 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                                             <span>{formatDate(report.date)}</span>
                                                         </div>
 
-                                                        {(report.adminComment || report.closingComment) && (
+                                                        {Array.isArray(report.comments) && report.comments.length > 0 ? (
+                                                            <div className="flex items-center gap-1.5 text-[11px] text-blue-700 font-bold bg-blue-50/90 p-1.5 rounded-md border border-blue-200">
+                                                                <MessageSquare className="w-3 h-3 text-blue-600" />
+                                                                <span>{report.comments.length} {report.comments.length === 1 ? 'interação' : 'interações'}</span>
+                                                            </div>
+                                                        ) : (report.adminComment || report.closingComment) ? (
                                                             <div className="flex items-center gap-1 text-[11px] text-blue-600 font-bold bg-blue-50/70 p-1.5 rounded-md">
                                                                 <MessageSquare className="w-3 h-3" /> Resposta da Gestão registrada
                                                             </div>
-                                                        )}
+                                                        ) : null}
                                                     </div>
                                                 ))
                                             )}
@@ -1017,6 +1145,12 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                         </div>
 
                                         <div className="flex items-center gap-2">
+                                            {Array.isArray(report.comments) && report.comments.length > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-1 rounded-lg border border-blue-200" title={`${report.comments.length} comentários`}>
+                                                    <MessageSquare className="w-3 h-3 text-blue-600" />
+                                                    <span>{report.comments.length}</span>
+                                                </span>
+                                            )}
                                             <button 
                                                 onClick={() => handleOpenViewModal(report)} 
                                                 className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -1060,7 +1194,13 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                             </span>
                                         </div>
 
-                                        <div className="flex items-center gap-4 shrink-0">
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            {Array.isArray(report.comments) && report.comments.length > 0 && (
+                                                <span className="inline-flex items-center gap-1 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-200">
+                                                    <MessageSquare className="w-2.5 h-2.5" />
+                                                    {report.comments.length}
+                                                </span>
+                                            )}
                                             <span className="text-gray-600 font-medium hidden sm:inline">
                                                 {report.creatorName || 'Autor'}
                                             </span>
@@ -1362,7 +1502,7 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
             {/* ========================================================================= */}
             {viewingReport && (
                 <div className="fixed inset-0 bg-zinc-950/75 flex items-center justify-center p-3 sm:p-6 z-[80] backdrop-blur-xs">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl xl:max-w-6xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
                         
                         {/* CABEÇALHO DO MODAL */}
                         <div className="p-5 bg-zinc-950 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 border-b border-zinc-800">
@@ -1476,63 +1616,66 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                             </div>
                         </div>
                         
-                        {/* CORPO DO MODAL (DUAS COLUNAS) */}
-                        <div className="p-6 overflow-y-auto flex-1 flex flex-col lg:flex-row gap-6 bg-gray-50">
+                        {/* CORPO DO MODAL */}
+                        <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-gray-50">
                             
-                            {/* COLUNA ESQUERDA: Detalhes da Solicitação */}
-                            <div className="flex-1 space-y-6">
-                                
-                                {/* Painel de Metadados em Grid */}
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                    <div>
-                                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status Atual</span>
-                                        {getStatusBadge(viewingReport.status)}
-                                    </div>
-                                    <div>
-                                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prioridade</span>
-                                        {getPriorityBadge(viewingReport.priority || 'Normal')}
-                                    </div>
-                                    <div>
-                                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Data Ocorrência</span>
-                                        <span className="text-xs font-bold text-gray-900 block mt-0.5">
-                                            {formatDate(viewingReport.date)}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Protocolo</span>
-                                        <span className="text-xs font-mono font-bold text-gray-700 block mt-0.5">
-                                            {viewingReport.protocol || 'Nenhum'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {/* Solicitante e Data de Criação */}
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold flex items-center justify-center text-sm border border-red-200">
-                                            {(viewingReport.creatorName || 'U').charAt(0).toUpperCase()}
+                            {/* ========================================================================= */}
+                            {/* PARTE DE CIMA: VISUALIZAÇÃO ESTENDIDA DOS DADOS DO TICKET                 */}
+                            {/* ========================================================================= */}
+                            <div className="space-y-4">
+                                {/* Painel de Metadados e Solicitante Estendido */}
+                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b border-gray-100">
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status Atual</span>
+                                            {getStatusBadge(viewingReport.status)}
                                         </div>
                                         <div>
-                                            <span className="text-xs font-bold text-gray-900 block">
-                                                {viewingReport.creatorName || 'Desconhecido'}
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prioridade</span>
+                                            {getPriorityBadge(viewingReport.priority || 'Normal')}
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Data Ocorrência</span>
+                                            <span className="text-xs font-bold text-gray-900 block mt-0.5">
+                                                {formatDate(viewingReport.date)}
                                             </span>
-                                            <span className="text-[11px] text-gray-500">
-                                                Solicitante / Analista responsável pelo registro
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Protocolo</span>
+                                            <span className="text-xs font-mono font-bold text-gray-700 block mt-0.5">
+                                                {viewingReport.protocol || 'Nenhum'}
                                             </span>
                                         </div>
                                     </div>
 
-                                    {viewingReport.createdAt?.toDate && (
-                                        <span className="text-[11px] text-gray-400 font-medium hidden sm:inline">
-                                            Registrado em: {viewingReport.createdAt.toDate().toLocaleString('pt-BR')}
-                                        </span>
-                                    )}
+                                    {/* Solicitante e Data de Criação */}
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-0.5">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold flex items-center justify-center text-sm border border-red-200 shrink-0">
+                                                {(viewingReport.creatorName || 'U').charAt(0).toUpperCase()}
+                                            </div>
+                                            <div>
+                                                <span className="text-xs font-bold text-gray-900 block">
+                                                    {viewingReport.creatorName || 'Desconhecido'}
+                                                </span>
+                                                <span className="text-[11px] text-gray-500">
+                                                    Solicitante / Analista responsável pelo registro
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {viewingReport.createdAt?.toDate && (
+                                            <span className="text-[11px] text-gray-400 font-medium">
+                                                Registrado em: {viewingReport.createdAt.toDate().toLocaleString('pt-BR')}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
 
-                                {/* Descrição Completa */}
-                                <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs space-y-2">
+                                {/* Descrição Completa Estendida */}
+                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
                                             Descrição Completa da Demanda
                                         </span>
                                         <button 
@@ -1540,7 +1683,7 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                                 navigator.clipboard.writeText(viewingReport.description || '');
                                                 showToast("Descrição copiada!", "success");
                                             }}
-                                            className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1 cursor-pointer"
+                                            className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1 cursor-pointer transition-colors"
                                         >
                                             <Copy className="w-3.5 h-3.5" /> Copiar texto
                                         </button>
@@ -1550,259 +1693,475 @@ ${(report.adminComment || report.closingComment) ? `\n• Parecer da Gestão:\n$
                                     </p>
                                 </div>
 
-                                {/* Alerta de Impacto no Cliente */}
+                                {/* Alerta de Impacto no Cliente (se houver) */}
                                 {viewingReport.affectedClient === 'Sim' && (
-                                    <div className="p-4 rounded-xl bg-red-50 border border-red-200 shadow-2xs space-y-1.5">
+                                    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 shadow-2xs space-y-1.5">
                                         <div className="flex items-center gap-2 text-red-800 font-black text-xs uppercase tracking-wider">
                                             <AlertOctagon className="w-4 h-4 text-red-600" />
                                             Impacto Identificado no Atendimento ao Cliente
                                         </div>
-                                        <p className="text-xs text-red-900 leading-relaxed bg-white/80 p-3 rounded-lg border border-red-200/60 font-medium">
+                                        <p className="text-xs text-red-900 leading-relaxed bg-white/80 p-3 rounded-xl border border-red-200/60 font-medium">
                                             {viewingReport.howAffected || 'Impacto confirmado, porém sem descrição adicional.'}
                                         </p>
                                     </div>
                                 )}
 
-                                {/* Ações Rápidas no Rodapé da Solicitação */}
-                                <div className="flex flex-wrap items-center gap-2 pt-2">
-                                    <button 
-                                        onClick={() => handleCopyReportSummary(viewingReport)}
-                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                        {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                        Copiar Resumo Formatado
-                                    </button>
-
-                                    <button 
-                                        onClick={() => window.print()}
-                                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
-                                    >
-                                        <Printer className="w-3.5 h-3.5" /> Imprimir Relatório
-                                    </button>
+                                {/* Ações Rápidas no Rodapé da Solicitação Estendida */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => handleCopyReportSummary(viewingReport)}
+                                            className="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                        >
+                                            {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                            Copiar Resumo Formatado
+                                        </button>
+                                    </div>
 
                                     {canEditOrDelete(viewingReport) && (
-                                        <>
+                                        <div className="flex items-center gap-2">
                                             <button 
                                                 onClick={() => {
                                                     const rep = viewingReport;
                                                     setViewingReport(null);
                                                     openEditModal(rep);
                                                 }}
-                                                className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                                                className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                             >
-                                                <Edit2 className="w-3.5 h-3.5" /> Editar
+                                                <Edit2 className="w-3.5 h-3.5" /> Editar Solicitação
                                             </button>
                                             <button 
                                                 onClick={() => setDeletingReport(viewingReport)}
-                                                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                                                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" /> Excluir
                                             </button>
-                                        </>
+                                        </div>
                                     )}
                                 </div>
                             </div>
 
-                            {/* COLUNA DIREITA: Gestão / Parecer Técnico */}
-                            <div className="w-full lg:w-84 flex flex-col gap-4">
-                                {canManageTickets ? (
-                                    /* PAINEL DE GESTÃO DO TICKET (GESTOR / SUPERVISOR) */
-                                    <div className="bg-white p-5 rounded-xl border border-blue-200 shadow-sm flex flex-col gap-4">
-                                        <div className="border-b border-blue-100 pb-3">
-                                            <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
-                                                <ShieldCheck className="w-4 h-4 text-blue-600"/>
-                                                Despacho & Gestão do Ticket
-                                            </h4>
-                                            <p className="text-[11px] text-gray-500 mt-1">
-                                                Atualize a fase do chamado e registre a resolução visível ao colaborador.
+                            {/* ========================================================================= */}
+                            {/* PARTE DE BAIXO: LADO A LADO - COMENTÁRIOS E DESPACHO / GESTÃO              */}
+                            {/* ========================================================================= */}
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pt-1">
+                                
+                                {/* LADO ESQUERDO: INTERAÇÕES & COMENTÁRIOS DO CHAMADO */}
+                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4 flex flex-col">
+                                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
+                                                <MessageSquare className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    Interações & Comentários
+                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
+                                                        {Array.isArray(viewingReport.comments) ? viewingReport.comments.length : 0}
+                                                    </span>
+                                                </h4>
+                                                <p className="text-[11px] text-gray-400">
+                                                    Canal direto de comunicação entre o solicitante e a liderança
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Parecer / Solução Histórica Legada (se existir adminComment fora do array de comentários) */}
+                                    {(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution) && (!Array.isArray(viewingReport.comments) || !viewingReport.comments.some(c => c.content?.includes(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution))) && (
+                                        <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200/80 text-xs text-blue-950 space-y-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="font-bold text-[11px] text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+                                                    Posicionamento / Resolução Registrada:
+                                                </span>
+                                                {viewingReport.lastUpdatedBy && (
+                                                    <span className="text-[10px] text-blue-600 font-medium">
+                                                        Por: {viewingReport.lastUpdatedBy}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="whitespace-pre-wrap leading-relaxed">
+                                                {viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution}
                                             </p>
                                         </div>
+                                    )}
 
-                                        {/* Mudança de Status */}
-                                        <div>
-                                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                                                Atualizar Status
-                                            </label>
-                                            <select 
-                                                value={quickStatus} 
-                                                onChange={(e) => setQuickStatus(e.target.value)} 
-                                                className="w-full p-2.5 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-blue-50/40 font-bold text-blue-950 text-sm cursor-pointer shadow-2xs"
-                                            >
-                                                <option value="Pendente">Pendente (Na fila de triagem)</option>
-                                                <option value="Em Andamento">Em Andamento (Em análise/resolução)</option>
-                                                <option value="Resolvido">Resolvido (Demanda solucionada)</option>
-                                                <option value="Cancelado">Cancelado / Recusado</option>
-                                            </select>
-                                        </div>
+                                    {/* Lista de Comentários / Timeline */}
+                                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+                                        {Array.isArray(viewingReport.comments) && viewingReport.comments.length > 0 ? (
+                                            viewingReport.comments.map((comment, idx) => {
+                                                const isAuthor = comment.authorId === (currentUser?.firestoreId || currentUser?.uid);
+                                                const isTicketCreator = comment.authorId === viewingReport.creatorId;
+                                                const isLeader = comment.isStaff || (comment.authorRole && ['gestor', 'supervisor', 'admin', 'gerente', 'coordenador'].some(r => String(comment.authorRole).toLowerCase().includes(r)));
 
-                                        {/* Modelos Rápidos de Resposta */}
+                                                return (
+                                                    <div 
+                                                        key={comment.id || idx}
+                                                        className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all ${
+                                                            isLeader 
+                                                                ? 'bg-blue-50/50 border-blue-200/80' 
+                                                                : isTicketCreator
+                                                                    ? 'bg-amber-50/40 border-amber-200/70'
+                                                                    : 'bg-gray-50 border-gray-200'
+                                                        }`}
+                                                    >
+                                                        {/* Avatar com inicial */}
+                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border ${
+                                                            isLeader 
+                                                                ? 'bg-blue-600 text-white border-blue-700' 
+                                                                : isTicketCreator
+                                                                    ? 'bg-amber-500 text-white border-amber-600'
+                                                                    : 'bg-gray-700 text-white border-gray-800'
+                                                        }`}>
+                                                            {(comment.authorName || 'U').charAt(0).toUpperCase()}
+                                                        </div>
+
+                                                        {/* Conteúdo da Mensagem */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+                                                                <div className="flex items-center gap-1.5 flex-wrap">
+                                                                    <span className="text-xs font-bold text-gray-900">
+                                                                        {comment.authorName}
+                                                                    </span>
+                                                                    {isAuthor && (
+                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-zinc-200/80 text-zinc-800">
+                                                                            Você
+                                                                        </span>
+                                                                    )}
+                                                                    {isLeader ? (
+                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                                                            {comment.authorRole || 'Liderança / Gestão'}
+                                                                        </span>
+                                                                    ) : isTicketCreator ? (
+                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
+                                                                            Autor do Chamado
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-gray-200 text-gray-700">
+                                                                            {comment.authorRole || 'Colaborador'}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <span className="text-[10px] text-gray-400 font-medium">
+                                                                    {formatCommentDate(comment.createdAt)}
+                                                                </span>
+                                                            </div>
+
+                                                            <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap break-words font-normal">
+                                                                {comment.content}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })
+                                        ) : (
+                                            <div className="p-4 rounded-xl border border-dashed border-gray-200 bg-gray-50/50 text-center space-y-1">
+                                                <MessageSquare className="w-5 h-5 text-gray-400 mx-auto" />
+                                                <p className="text-xs font-medium text-gray-500">
+                                                    Nenhum comentário registrado ainda.
+                                                </p>
+                                                <p className="text-[11px] text-gray-400">
+                                                    Tire dúvidas, informe detalhes que faltaram ou complemente o chamado no campo abaixo.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Formulário Interativo de Envio de Comentário */}
+                                    <div className="pt-2 border-t border-gray-100 space-y-2.5">
+                                        {/* Sugestões Rápidas (Chips de 1 clique) */}
                                         <div>
-                                            <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                                Modelos Rápidos de Parecer
-                                            </label>
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                                                Respostas Rápidas / Atalhos
+                                            </span>
                                             <div className="flex flex-wrap gap-1.5">
-                                                {[
-                                                    "Em análise pela equipe técnica.",
-                                                    "Ajuste aplicado com sucesso.",
-                                                    "Solicitamos mais detalhes para reprodução.",
-                                                    "Resolvido na versão atual."
-                                                ].map((tmpl, idx) => (
-                                                    <button 
+                                                {(canManageTickets ? [
+                                                    "⚠️ Faltam dados ou protocolo para análise.",
+                                                    "⏳ Em análise pela equipe técnica.",
+                                                    "✅ Ajuste aplicado com sucesso.",
+                                                    "🔄 Aguardando retorno do solicitante."
+                                                ] : [
+                                                    "ℹ️ Informações adicionadas conforme solicitado.",
+                                                    "📌 Segue protocolo de atendimento.",
+                                                    "👍 Testado e confirmado o funcionamento.",
+                                                    "❓ Gostaria de um retorno sobre o andamento."
+                                                ]).map((chip, idx) => (
+                                                    <button
                                                         key={idx}
                                                         type="button"
-                                                        onClick={() => setQuickComment(tmpl)}
-                                                        className="text-[10px] font-medium bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-800 px-2 py-1 rounded transition-colors cursor-pointer text-left"
+                                                        onClick={() => setNewCommentText(prev => prev ? `${prev} ${chip}` : chip)}
+                                                        className="text-[10px] font-medium bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
                                                     >
-                                                        {tmpl}
+                                                        {chip}
                                                     </button>
                                                 ))}
                                             </div>
                                         </div>
 
-                                        {/* Campo de Comentário / Parecer */}
-                                        <div className="flex-1 flex flex-col">
-                                            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                                                Parecer da Liderança / Resolução
-                                            </label>
-                                            <textarea 
-                                                rows="6" 
-                                                placeholder="Descreva a ação tomada, orientações ao colaborador ou justificativa do encerramento..." 
-                                                value={quickComment} 
-                                                onChange={(e) => setQuickComment(e.target.value)} 
-                                                className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-white text-gray-800 text-sm shadow-2xs resize-none leading-relaxed" 
+                                        {/* Campo de Texto para Comentar */}
+                                        <div className="space-y-2">
+                                            <textarea
+                                                rows={3}
+                                                value={newCommentText}
+                                                onChange={(e) => setNewCommentText(e.target.value)}
+                                                placeholder={canManageTickets 
+                                                    ? "Escreva um comentário, solicite informações faltantes ou responda ao colaborador..." 
+                                                    : "Escreva sua atualização, responda às dúvidas da liderança ou anexe o protocolo..."}
+                                                className="w-full p-3 border border-gray-300 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-600 outline-none bg-white resize-none shadow-2xs leading-relaxed"
                                             />
-                                        </div>
 
-                                        <button 
-                                            onClick={handleQuickUpdate} 
-                                            disabled={quickSaving}
-                                            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                                        >
-                                            {quickSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                            Salvar Andamento & Parecer
-                                        </button>
-                                    </div>
-                                ) : (
-                                    /* PAINEL DE FEEDBACK E RESOLUÇÃO VISÍVEL AO COLABORADOR */
-                                    <div className="space-y-4">
-                                        <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-                                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                                                        <ShieldCheck className="w-4 h-4" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
-                                                            Status & Resolução Oficial
-                                                        </h4>
-                                                        <p className="text-[10px] text-gray-400">
-                                                            Posicionamento da Supervisão e Gestão
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                                    <Lock className="w-3 h-3 text-amber-600" />
-                                                    Gestão Exclusiva
-                                                </div>
-                                            </div>
-
-                                            {/* Status em Destaque com Descrição Operacional */}
-                                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3">
-                                                <div>
-                                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                                                        Fase Atual do Ticket
-                                                    </span>
-                                                    <div className="mt-1">
-                                                        {getStatusBadge(viewingReport.status)}
-                                                    </div>
-                                                </div>
-                                                <div className="text-right">
-                                                    <span className="text-[11px] font-medium text-gray-500 block">
-                                                        {viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? (
-                                                            'Demanda concluída'
-                                                        ) : viewingReport.status === 'Em Andamento' ? (
-                                                            'Análise técnica em curso'
-                                                        ) : (
-                                                            'Na fila de triagem'
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* Solução Técnica ou Parecer da Liderança */}
-                                            {(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution) ? (
-                                                <div className="space-y-2 pt-1">
-                                                    <div className="flex items-center justify-between">
-                                                        <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                                                            <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                                                            Parecer / Solução da Gestão:
+                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                                                {/* Se for gestor/supervisor, pode alterar o status do ticket no próprio envio do comentário */}
+                                                {canManageTickets ? (
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-[11px] font-bold text-gray-600 whitespace-nowrap">
+                                                            Status ao comentar:
                                                         </span>
-                                                        <button 
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const solText = viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution || '';
-                                                                navigator.clipboard.writeText(solText);
-                                                                showToast("Parecer copiado com sucesso!", "success");
-                                                            }}
-                                                            className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                                                        <select
+                                                            value={newCommentStatus}
+                                                            onChange={(e) => setNewCommentStatus(e.target.value)}
+                                                            className="text-xs p-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
                                                         >
-                                                            <Copy className="w-3 h-3" /> Copiar Solução
-                                                        </button>
+                                                            <option value={viewingReport.status}>Manter atual ({viewingReport.status})</option>
+                                                            <option value="Pendente">Pendente</option>
+                                                            <option value="Em Andamento">Em Andamento</option>
+                                                            <option value="Resolvido">Resolvido</option>
+                                                            <option value="Cancelado">Cancelado</option>
+                                                        </select>
                                                     </div>
-
-                                                    <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-950 leading-relaxed font-normal whitespace-pre-wrap shadow-2xs">
-                                                        {viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution}
+                                                ) : (
+                                                    <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                                        Sua resposta atualiza o chamado sem precisar editar o original.
                                                     </div>
+                                                )}
 
-                                                    {viewingReport.lastUpdatedBy && (
-                                                        <div className="flex items-center justify-end gap-1 text-[10px] text-gray-400 font-medium pt-1">
-                                                            <span>Atendido por:</span>
-                                                            <strong className="text-gray-600">{viewingReport.lastUpdatedBy}</strong>
-                                                        </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleAddComment}
+                                                    disabled={sendingComment || !newCommentText.trim()}
+                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                                                >
+                                                    {sendingComment ? (
+                                                        <>
+                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                            <span>Enviando...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Send className="w-3.5 h-3.5" />
+                                                            <span>Enviar Comentário</span>
+                                                        </>
                                                     )}
-                                                </div>
-                                            ) : (
-                                                <div className="p-4 rounded-xl border border-dashed border-gray-300 bg-amber-50/30 text-center space-y-1.5">
-                                                    <Clock className="w-6 h-6 text-amber-500 mx-auto" />
-                                                    <h5 className="font-bold text-xs text-gray-800">
-                                                        Aguardando Solução da Liderança
-                                                    </h5>
-                                                    <p className="text-[11px] text-gray-500 leading-relaxed">
-                                                        Sua solicitação está registrada e aguardando despacho de um supervisor ou gestor. Assim que houver um parecer, ele será exibido aqui.
-                                                    </p>
-                                                </div>
-                                            )}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                                            {/* Bloco de Esclarecimento de Permissões */}
-                                            <div className="p-3 rounded-xl bg-gray-50 border border-gray-200 text-[11px] text-gray-600 space-y-1.5">
-                                                <div className="flex items-center gap-1.5 font-bold text-gray-800 text-[11px]">
-                                                    <Lock className="w-3.5 h-3.5 text-amber-600" />
-                                                    Regras de Acesso e Edição
-                                                </div>
-                                                <p className="leading-relaxed text-[10px] text-gray-500">
-                                                    Campos de <strong>Status</strong> e <strong>Solução/Parecer</strong> são de controle exclusivo da gestão. Como colaborador, você pode atualizar as informações que você redigiu no relato.
+                                {/* LADO DIREITO: DESPACHO & GESTÃO DO TICKET (OU VISÃO DA GESTÃO) */}
+                                <div className="flex flex-col gap-4">
+                                    {canManageTickets ? (
+                                        /* PAINEL DE GESTÃO DO TICKET (GESTOR / SUPERVISOR) */
+                                        <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm flex flex-col gap-4">
+                                            <div className="border-b border-blue-100 pb-3">
+                                                <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <ShieldCheck className="w-4 h-4 text-blue-600"/>
+                                                    Despacho & Gestão do Ticket
+                                                </h4>
+                                                <p className="text-[11px] text-gray-500 mt-1">
+                                                    Atualize a fase do chamado e registre a resolução visível ao colaborador.
                                                 </p>
                                             </div>
 
-                                            {/* Botão de Edição Rápida do Relato pelo Autor */}
-                                            {canEditOrDelete(viewingReport) && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const rep = viewingReport;
-                                                        setViewingReport(null);
-                                                        openEditModal(rep);
-                                                    }}
-                                                    className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                                            {/* Mudança de Status */}
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                                                    Atualizar Status
+                                                </label>
+                                                <select 
+                                                    value={quickStatus} 
+                                                    onChange={(e) => setQuickStatus(e.target.value)} 
+                                                    className="w-full p-2.5 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-blue-50/40 font-bold text-blue-950 text-sm cursor-pointer shadow-2xs"
                                                 >
-                                                    <Edit2 className="w-3.5 h-3.5 text-amber-700" />
-                                                    <span>Editar Meu Relato / Solicitação</span>
-                                                </button>
-                                            )}
+                                                    <option value="Pendente">Pendente (Na fila de triagem)</option>
+                                                    <option value="Em Andamento">Em Andamento (Em análise/resolução)</option>
+                                                    <option value="Resolvido">Resolvido (Demanda solucionada)</option>
+                                                    <option value="Cancelado">Cancelado / Recusado</option>
+                                                </select>
+                                            </div>
+
+                                            {/* Modelos Rápidos de Resposta */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                                    Modelos Rápidos de Parecer
+                                                </label>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {[
+                                                        "Em análise pela equipe técnica.",
+                                                        "Ajuste aplicado com sucesso.",
+                                                        "Solicitamos mais detalhes para reprodução.",
+                                                        "Resolvido na versão atual."
+                                                    ].map((tmpl, idx) => (
+                                                        <button 
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => setQuickComment(tmpl)}
+                                                            className="text-[10px] font-medium bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-800 px-2 py-1 rounded-lg transition-colors cursor-pointer text-left border border-gray-200 hover:border-blue-200"
+                                                        >
+                                                            {tmpl}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Campo de Comentário / Parecer */}
+                                            <div className="flex-1 flex flex-col">
+                                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
+                                                    Parecer da Liderança / Resolução
+                                                </label>
+                                                <textarea 
+                                                    rows="5" 
+                                                    placeholder="Descreva a ação tomada, orientações ao colaborador ou justificativa do encerramento..." 
+                                                    value={quickComment} 
+                                                    onChange={(e) => setQuickComment(e.target.value)} 
+                                                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-white text-gray-800 text-xs shadow-2xs resize-none leading-relaxed" 
+                                                />
+                                            </div>
+
+                                            <button 
+                                                onClick={handleQuickUpdate} 
+                                                disabled={quickSaving}
+                                                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
+                                            >
+                                                {quickSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                                Salvar Andamento & Parecer
+                                            </button>
                                         </div>
-                                    </div>
-                                )}
+                                    ) : (
+                                        /* PAINEL DE FEEDBACK E RESOLUÇÃO VISÍVEL AO COLABORADOR */
+                                        <div className="space-y-4">
+                                            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
+                                                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                                                            <ShieldCheck className="w-4 h-4" />
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                                                                Status & Resolução Oficial
+                                                            </h4>
+                                                            <p className="text-[10px] text-gray-400">
+                                                                Posicionamento da Supervisão e Gestão
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+                                                        <Lock className="w-3 h-3 text-amber-600" />
+                                                        Gestão Exclusiva
+                                                    </div>
+                                                </div>
+
+                                                {/* Status em Destaque com Descrição Operacional */}
+                                                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3">
+                                                    <div>
+                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                                            Fase Atual do Ticket
+                                                        </span>
+                                                        <div className="mt-1">
+                                                            {getStatusBadge(viewingReport.status)}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <span className="text-[11px] font-medium text-gray-500 block">
+                                                            {viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? (
+                                                                'Demanda concluída'
+                                                            ) : viewingReport.status === 'Em Andamento' ? (
+                                                                'Análise técnica em curso'
+                                                            ) : (
+                                                                'Na fila de triagem'
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                {/* Solução Técnica ou Parecer da Liderança */}
+                                                {(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution) ? (
+                                                    <div className="space-y-2 pt-1">
+                                                        <div className="flex items-center justify-between">
+                                                            <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                                <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
+                                                                Parecer / Solução da Gestão:
+                                                            </span>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    const solText = viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution || '';
+                                                                    navigator.clipboard.writeText(solText);
+                                                                    showToast("Parecer copiado com sucesso!", "success");
+                                                                }}
+                                                                className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
+                                                            >
+                                                                <Copy className="w-3 h-3" /> Copiar Solução
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-950 leading-relaxed font-normal whitespace-pre-wrap shadow-2xs">
+                                                            {viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution}
+                                                        </div>
+
+                                                        {viewingReport.lastUpdatedBy && (
+                                                            <div className="flex items-center justify-end gap-1 text-[10px] text-gray-400 font-medium pt-1">
+                                                                <span>Atendido por:</span>
+                                                                <strong className="text-gray-600">{viewingReport.lastUpdatedBy}</strong>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <div className="p-4 rounded-xl border border-dashed border-gray-300 bg-amber-50/30 text-center space-y-1.5">
+                                                        <Clock className="w-6 h-6 text-amber-500 mx-auto" />
+                                                        <h5 className="font-bold text-xs text-gray-800">
+                                                            Aguardando Solução da Liderança
+                                                        </h5>
+                                                        <p className="text-[11px] text-gray-500 leading-relaxed">
+                                                            Sua solicitação está registrada e aguardando despacho de um supervisor ou gestor. Assim que houver um parecer, ele será exibido aqui.
+                                                        </p>
+                                                    </div>
+                                                )}
+
+                                                {/* Bloco de Instrução da Nova Interação */}
+                                                <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 space-y-1.5">
+                                                    <div className="flex items-center gap-1.5 font-bold text-blue-950 text-xs">
+                                                        <MessageSquare className="w-4 h-4 text-blue-600" />
+                                                        Interação Contínua
+                                                    </div>
+                                                    <p className="leading-relaxed text-[11px] text-blue-800">
+                                                        Precisa complementar informações, anexar protocolos ou responder dúvidas da gestão? Utilize o campo de comentários ao lado para dialogar em sequência sem precisar recriar ou editar o chamado original.
+                                                    </p>
+                                                </div>
+
+                                                {/* Botão de Edição Rápida do Relato pelo Autor */}
+                                                {canEditOrDelete(viewingReport) && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const rep = viewingReport;
+                                                            setViewingReport(null);
+                                                            openEditModal(rep);
+                                                        }}
+                                                        className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
+                                                    >
+                                                        <Edit2 className="w-3.5 h-3.5 text-amber-700" />
+                                                        <span>Editar Meu Relato / Solicitação</span>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
                             </div>
 
                         </div>

@@ -755,7 +755,7 @@ const DashboardOverview = ({ onNavigate }) => {
             {/* RIBBON DE SAÚDE OPERACIONAL / TICKETS CRÍTICOS            */}
             {/* ========================================================= */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
-                {/* Demandas Pendentes - Clicável direcionando para Relatórios Críticos */}
+                {/* Demandas Pendentes - Clicável direcionando para Tarefas & Relatórios */}
                 <div 
                     onClick={() => handleNavigate('reports')}
                     className={`relative overflow-hidden p-4 rounded-xl border backdrop-blur-md shadow-2xs transition-all duration-300 ease-out cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-amber-400 group active:scale-[0.98] ${
@@ -763,7 +763,7 @@ const DashboardOverview = ({ onNavigate }) => {
                             ? 'bg-gradient-to-br from-amber-950/25 via-zinc-900/80 to-zinc-950/90 border-amber-900/30 text-white' 
                             : (theme === 'warm' ? 'bg-[#ede6dc]/80 border-[#cdbfae]' : 'bg-gradient-to-br from-amber-500/10 via-white/80 to-amber-50/40 border-amber-200/80 text-gray-900')
                     }`}
-                    title="Clique para acessar a tela de Relatórios Críticos"
+                    title="Clique para acessar a tela de Tarefas & Relatórios"
                 >
                     {/* Ícone de fundo com gradiente e transparência suave */}
                     <div className="absolute -right-3 -bottom-3 pointer-events-none transition-transform duration-300 ease-out group-hover:scale-110 group-hover:rotate-3">

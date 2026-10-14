@@ -99,9 +99,9 @@ export const SYSTEM_MODULES = [
     },
     {
         id: 'reports',
-        label: 'Relatórios Críticos',
+        label: 'Tarefas & Relatórios',
         group: 'Lançamentos & Análise',
-        description: 'Registro e auditoria de chamados com incidentes críticos de suporte.'
+        description: 'Registro, despacho e interação de tarefas, chamados críticos e solicitações operacionais.'
     },
     {
         id: 'audits',

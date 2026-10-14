@@ -1,13 +1,43 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.7.3';
+export const CURRENT_VERSION = 'v3.7.4';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.7.3',
+    version: 'v3.7.4',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.7.4: Reformulação da tela para "Tarefas & Relatórios", novo sistema colaborativo de comentários em sequência para interação contínua entre solicitante e gestão diretamente dentro do chamado (sem precisar recriar ou editar o relato original), e remoção definitiva da opção de imprimir relatório.',
+    items: [
+      {
+        icon: Layout,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Novo Nome Oficial: Tarefas & Relatórios',
+        category: 'Navegação & Identidade',
+        description: 'Padronização da nomenclatura em todos os menus, navegação lateral do gestor e do colaborador, controle de permissões RBAC e cabeçalhos operacionais.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Interação Contínua em Comentários na Solicitação',
+        category: 'Colaboração & Atendimento',
+        description: 'Canal de mensagens em sequência dentro do ticket: gestores solicitam dados pendentes e colaboradores complementam em tempo real com respostas e protocolos sem alterar o original.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Interface Mais Limpa & Remoção de Impressão',
+        category: 'Usabilidade',
+        description: 'Remoção do botão de impressão física de relatórios para priorizar o fluxo ágil digital e a cópia de resumos formatados para a área de transferência.'
+      }
+    ]
+  },
+  {
+    version: 'v3.7.3',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.7.3: Redesenho e modernização da tela de Visão Geral KPIs. Remoção do card de % QA dos Indicadores Estratégicos Globais, nova sessão dedicada aos Indicadores da Terceirizada (FCR, Conformidade e % de Qualidade), novo design visual moderno com efeito de vidro (glassmorphism), ícones transparecidos em segundo plano com gradientes temáticos, padronização tipográfica universal (sem fontes blocadas) e navegação interativa direta para Relatórios Críticos ao clicar no cartão de Demandas Pendentes com animação suave de hover.',
     items: [
       {

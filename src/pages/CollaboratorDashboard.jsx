@@ -191,7 +191,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
                     <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                         <ShieldCheck className="w-5 h-5" />
-                        <span className="font-medium">Relatórios Críticos</span>
+                        <span className="font-medium">Tarefas & Relatórios</span>
                     </button>
 
                     <button
