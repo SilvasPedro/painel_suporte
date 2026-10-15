@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles, Bell, Volume2, VolumeX, Send, AlertTriangle, XCircle, Info } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedDocument, subscribeSharedCollection } from '../services/dataCache';
@@ -10,7 +10,7 @@ import QaProcessesTab from '../components/settings/QaProcessesTab';
 import { SYSTEM_SHIFTS, THIRD_PARTY_SCHEDULE_INFO, saveSystemShiftsInfo } from '../services/userProfile';
 
 const Settings = () => {
-    const { showToast } = useNotification();
+    const { showToast, permission, requestPermission, testNotification, soundEnabled, toggleSound } = useNotification();
     const { canEdit, activeRoleInfo, normalizedRole } = usePermissions();
     const isEditable = canEdit('settings');
 
@@ -84,6 +84,9 @@ const Settings = () => {
                 </button>
                 <button onClick={() => setActiveTab('shifts')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'shifts' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                     <Clock className="w-4 h-4"/> Expedientes & Turnos
+                </button>
+                <button onClick={() => setActiveTab('notifications')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'notifications' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    <Bell className="w-4 h-4"/> Notificações Push
                 </button>
             </div>
 
@@ -233,6 +236,150 @@ const Settings = () => {
                     loading={loadingProcesses} 
                     isEditable={isEditable} 
                 />
+            )}
+
+            {activeTab === 'notifications' && (
+                <div className="space-y-6 max-w-4xl">
+                    {/* Card de Status da Notificação do Navegador */}
+                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                            <div>
+                                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                                    <Bell className="w-5 h-5 text-red-600" />
+                                    Notificações Push no Navegador (Web Push)
+                                </h2>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                    Configuração de alertas nativos do navegador para feedbacks de desempenho e atualizações de chamados.
+                                </p>
+                            </div>
+
+                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                                permission === 'granted'
+                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    : permission === 'denied'
+                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                            }`}>
+                                {permission === 'granted' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                                {permission === 'denied' && <XCircle className="w-3.5 h-3.5 text-rose-600" />}
+                                {permission === 'default' && <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
+                                {permission === 'granted' ? 'Permissão Ativa' : permission === 'denied' ? 'Bloqueada no Navegador' : 'Aguardando Permissão'}
+                            </span>
+                        </div>
+
+                        {/* Explicação e Ação de Permissão */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Como funciona o alerta</h3>
+                                <p className="text-xs text-gray-600 leading-relaxed">
+                                    Quando a gestão ou supervisão registra um <strong>Feedback</strong> para um colaborador (ex: Eduardo Caetano), o colaborador que estiver com o sistema aberto em seu computador receberá uma <strong>notificação nativa do sistema operacional/navegador</strong> na tela, mesmo se estiver em outra aba ou minimizado.
+                                </p>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/80 space-y-3">
+                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Ação de Permissão</h3>
+                                <p className="text-xs text-gray-600 leading-relaxed">
+                                    {permission === 'granted' 
+                                        ? 'Seu navegador já está autorizado a emitir popups nativos de alertas.'
+                                        : permission === 'denied'
+                                        ? 'O navegador bloqueou as notificações. Clique no ícone de ajustes/cadeado na barra de endereços do navegador e marque Notificações como "Permitir".'
+                                        : 'Clique no botão abaixo para autorizar as notificações no navegador deste dispositivo.'}
+                                </p>
+                                {permission !== 'granted' && permission !== 'denied' && (
+                                    <button
+                                        type="button"
+                                        onClick={() => requestPermission()}
+                                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                    >
+                                        <Bell className="w-4 h-4" />
+                                        <span>Solicitar Permissão Agora</span>
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Sinal Sonoro */}
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-50 border border-zinc-200">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-700 shadow-2xs">
+                                    {soundEnabled ? <Volume2 className="w-5 h-5 text-emerald-600" /> : <VolumeX className="w-5 h-5 text-gray-400" />}
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-gray-900">Alerta Sonoro Suave (Chime)</h4>
+                                    <p className="text-xs text-gray-500">Tocar sinal acústico agradável ao receber um feedback ou despacho.</p>
+                                </div>
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => toggleSound()}
+                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    soundEnabled 
+                                        ? 'bg-emerald-600 text-white shadow-xs' 
+                                        : 'bg-zinc-200 text-zinc-700'
+                                }`}
+                            >
+                                {soundEnabled ? 'Som Ligado' : 'Mudo'}
+                            </button>
+                        </div>
+
+                        {/* Painel de Testes */}
+                        <div className="p-5 rounded-xl bg-zinc-950 text-white border border-zinc-800 space-y-3">
+                            <div className="flex items-center gap-2">
+                                <Sparkles className="w-4 h-4 text-amber-400" />
+                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Testar no seu Computador</h3>
+                            </div>
+                            <p className="text-xs text-zinc-400">
+                                Dispare um teste imediato para conferir a notificação nativa do navegador, o sinal sonoro e o toast interativo:
+                            </p>
+
+                            <div className="flex flex-wrap gap-3 pt-1">
+                                <button
+                                    type="button"
+                                    onClick={testNotification}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-all border border-zinc-700 cursor-pointer"
+                                >
+                                    <Bell className="w-4 h-4 text-emerald-400" />
+                                    <span>Disparar Notificação de Teste</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        window.dispatchEvent(new CustomEvent('HUBDESK_SIMULATE_FEEDBACK', {
+                                            detail: {
+                                                id: `sim-test-${Date.now()}`,
+                                                type: 'Elogio',
+                                                method: 'Sistema',
+                                                comment: 'Teste prático: Notificação push de feedback entregue com sucesso!',
+                                                createdBy: 'Gestão HubDesk',
+                                                date: new Date().toLocaleDateString('pt-BR'),
+                                                createdAt: new Date().toISOString()
+                                            }
+                                        }));
+                                    }}
+                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                >
+                                    <Send className="w-4 h-4" />
+                                    <span>Simular Chegada de Feedback Real</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Guia Informativo com o exemplo de Eduardo Caetano */}
+                        <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-3">
+                            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                            <div className="text-xs text-blue-900 leading-relaxed space-y-1">
+                                <p className="font-bold">Validação de Teste Multi-Usuário (Exemplo: Eduardo Caetano):</p>
+                                <ol className="list-decimal ml-4 space-y-1 text-blue-800">
+                                    <li>Abra uma janela normal com o usuário do colaborador (ex: Eduardo Caetano) e confirme que as notificações estão ativadas no sininho do topo.</li>
+                                    <li>Em outra janela (ou no computador do Gestor), acesse a aba <strong>Colaboradores</strong> ou <strong>Gestor de Dados</strong> e clique no botão de <strong>Feedback</strong> para o Eduardo Caetano.</li>
+                                    <li>Ao salvar o feedback, o Firestore sincroniza em tempo real e a tela do Eduardo Caetano exibirá a notificação nativa do navegador imediatamente com som e botão direto para abrir o histórico!</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

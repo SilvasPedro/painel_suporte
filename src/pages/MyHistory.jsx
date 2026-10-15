@@ -137,6 +137,18 @@ const MyHistory = ({ currentUserId }) => {
         }
     };
 
+    // Abre feedback automaticamente se acionado por notificação push ou clique de alerta
+    useEffect(() => {
+        const handleOpenFeedback = (e) => {
+            if (e.detail?.feedback) {
+                setActiveTab('feedbacks');
+                setViewingItem(e.detail.feedback);
+            }
+        };
+        window.addEventListener('HUBDESK_OPEN_FEEDBACK', handleOpenFeedback);
+        return () => window.removeEventListener('HUBDESK_OPEN_FEEDBACK', handleOpenFeedback);
+    }, []);
+
     const getSafeDateString = item => {
         if (item.date) {
             if (typeof item.date === 'string' && /^\d{4}-\d{2}-\d{2}/.test(item.date)) {

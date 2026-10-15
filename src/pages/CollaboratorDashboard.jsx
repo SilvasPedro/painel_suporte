@@ -20,6 +20,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
+import NotificationBell from '../components/NotificationBell';
 import MyHistory from './MyHistory';
 import MyProfile from './MyProfile';
 import { calculateUserLevel } from '../services/userProfile';
@@ -101,6 +102,16 @@ const ExtensionsBalloon = () => {
 
 const CollaboratorDashboard = ({ currentUserId }) => {
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    useEffect(() => {
+        const handleNavigateTab = (e) => {
+            if (e.detail?.tab) {
+                setActiveTab(e.detail.tab);
+            }
+        };
+        window.addEventListener('HUBDESK_NAVIGATE_TAB', handleNavigateTab);
+        return () => window.removeEventListener('HUBDESK_NAVIGATE_TAB', handleNavigateTab);
+    }, []);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { currentUser } = useAuth();
     const { showToast } = useNotification();
@@ -397,6 +408,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <NotificationBell />
                         <ThemeSelector variant="compact" />
                     </div>
                 </header>

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
@@ -33,6 +33,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
+import NotificationBell from '../components/NotificationBell';
 import { CURRENT_VERSION } from '../data/changelogData';
 import { calculateUserLevel } from '../services/userProfile';
 
@@ -50,6 +51,18 @@ const AdminDashboard = () => {
     }, [currentUser?.badges]);
 
     const [activeTab, setActiveTab] = useState('dashboard');
+
+    useEffect(() => {
+        const handleNavigateTab = (e) => {
+            if (e.detail?.tab) {
+                // Se for 'history', no Admin mapeia para 'my_history' ou 'history'
+                const target = e.detail.tab === 'history' ? 'my_history' : e.detail.tab;
+                setActiveTab(target);
+            }
+        };
+        window.addEventListener('HUBDESK_NAVIGATE_TAB', handleNavigateTab);
+        return () => window.removeEventListener('HUBDESK_NAVIGATE_TAB', handleNavigateTab);
+    }, []);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -541,6 +554,7 @@ const AdminDashboard = () => {
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        <NotificationBell />
                         <ThemeSelector variant="compact" />
                     </div>
                 </header>

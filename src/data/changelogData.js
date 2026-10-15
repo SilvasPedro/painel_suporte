@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2 } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.7.4';
+export const CURRENT_VERSION = 'v3.8.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.7.4',
+    version: 'v3.8.0',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.8.0: Notificações Push no Navegador em tempo real. Agora, quando a liderança registrar um Feedback (Elogio, Ponto de Melhoria ou Orientação) para qualquer colaborador (ex: Eduardo Caetano), o colaborador com o sistema aberto recebe um alerta nativo do sistema operacional/navegador com sinal sonoro suave e foco imediato para visualização e confirmação de leitura.',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Notificações Push Web em Tempo Real',
+        category: 'Alertas & Desempenho',
+        description: 'Sincronização imediata via Firestore e Service Worker: popups nativos na tela avisando sobre novos feedbacks recebidos, mesmo com o navegador minimizado ou em outra aba.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Central de Notificações no Topo',
+        category: 'Interface & Produtividade',
+        description: 'Novo sino interativo com indicador de permissão, contagem de feedbacks pendentes, botão de disparo de testes de notificação e simulação de feedback.'
+      },
+      {
+        icon: Volume2,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Sinal Sonoro Sintetizado (Chime Harmônico)',
+        category: 'Acessibilidade & Áudio',
+        description: 'Alerta acústico gerado nativamente via Web Audio API, com controle direto para ligar ou mutar o som nas preferências.'
+      },
+      {
+        icon: History,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Abertura e Foco Automático ao Clicar',
+        category: 'Usabilidade & Navegação',
+        description: 'Ao clicar no popup de notificação, a janela do HubDesk é trazida para frente e o modal do feedback é aberto automaticamente.'
+      }
+    ]
+  },
+  {
+    version: 'v3.7.4',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.7.4: Reformulação da tela para "Tarefas & Relatórios", novo sistema colaborativo de comentários em sequência para interação contínua entre solicitante e gestão diretamente dentro do chamado (sem precisar recriar ou editar o relato original), e remoção definitiva da opção de imprimir relatório.',
     items: [
       {

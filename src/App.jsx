@@ -1,13 +1,9 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { messaging } from './services/firebase';
-import { getToken } from 'firebase/messaging';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from './services/firebase';
 import FloatingExtensions from './components/FloatingExtensions';
 
 // Importação das páginas
@@ -15,55 +11,7 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import AccountInactive from './pages/AccountInactive';
 
-// ==========================================
-// GERENCIADOR DE NOTIFICAÇÕES (Invisível)
-// ==========================================
-const NotificationManager = () => {
-    const { currentUser, isInactive } = useAuth();
-
-    useEffect(() => {
-        async function requestNotificationPermission() {
-            try {
-                if (!messaging || typeof window === 'undefined' || !('Notification' in window)) {
-                    return;
-                }
-                const permission = await Notification.requestPermission();
-                if (permission === 'granted') {
-                    const token = await getToken(messaging, { 
-                        vapidKey: 'BGK2ZQE-DyWlwEk00nwgXppWc8kmJfidnErECA81peK1iUHkgf32D_9NgXxL73N7mED68U1ZEzRvT43tGQ1x0Vg' 
-                    });
-                    
-                    if (token) {
-                        console.log('Token FCM gerado com sucesso:', token);
-                        
-                        if (currentUser.firestoreId) {
-                            try {
-                                await updateDoc(doc(db, 'collaborators', currentUser.firestoreId), {
-                                    fcmToken: token
-                                });
-                                console.log('Token salvo no perfil do usuário com sucesso!');
-                            } catch (e) {
-                                console.error('Erro ao salvar token no banco:', e);
-                            }
-                        }
-                    } else {
-                        console.log('Nenhum token de registro disponível.');
-                    }
-                } else {
-                    console.log('Permissão para notificações foi negada pelo usuário.');
-                }
-            } catch (error) {
-                console.error('Erro ao pedir permissão para notificações:', error);
-            }
-        }
-
-        if (currentUser && !isInactive && !currentUser.isInactive) {
-            requestNotificationPermission();
-        }
-    }, [currentUser, isInactive]);
-
-    return null; 
-};
+import NotificationManager from './components/NotificationManager';
 
 // ==========================================
 // PROTEÇÃO DE ROTAS (RBAC ATUALIZADO)
