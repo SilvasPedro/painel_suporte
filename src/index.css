@@ -322,6 +322,27 @@ html[data-theme="dark"] body {
   border-color: rgba(168, 85, 247, 0.25) !important;
 }
 
+[data-theme="dark"] .bg-fuchsia-50,
+[data-theme="dark"] .bg-fuchsia-100,
+[data-theme="dark"] [class*="bg-fuchsia-50"],
+[data-theme="dark"] [class*="bg-fuchsia-100"] {
+  background-color: rgba(217, 70, 239, 0.12) !important;
+  color: #e879f9 !important;
+  border-color: rgba(217, 70, 239, 0.25) !important;
+}
+
+[data-theme="dark"] .text-fuchsia-700,
+[data-theme="dark"] .text-fuchsia-800,
+[data-theme="dark"] .text-fuchsia-900 {
+  color: #f0abfc !important;
+}
+
+[data-theme="dark"] .border-fuchsia-200,
+[data-theme="dark"] .border-fuchsia-300,
+[data-theme="dark"] .border-fuchsia-400 {
+  border-color: rgba(217, 70, 239, 0.25) !important;
+}
+
 /* Gráficos Recharts no Modo Escuro */
 [data-theme="dark"] .recharts-cartesian-grid-horizontal line,
 [data-theme="dark"] .recharts-cartesian-grid-vertical line {

@@ -319,13 +319,13 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                 </div>
 
                 <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-                    <div className="flex items-center gap-3 bg-fuchsia-50 border border-fuchsia-200 px-4 py-2.5 rounded-xl shadow-xs">
-                        <div className="p-2 bg-fuchsia-100 rounded-lg text-fuchsia-700">
+                    <div className="flex items-center gap-3 bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-200 dark:border-fuchsia-900/60 px-4 py-2.5 rounded-xl shadow-xs">
+                        <div className="p-2 bg-fuchsia-100 dark:bg-fuchsia-900/50 rounded-lg text-fuchsia-700 dark:text-fuchsia-300">
                             <MessageSquare className="w-4 h-4" />
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold text-fuchsia-700 uppercase tracking-wider block">Feedbacks Novos</span>
-                            <span className="text-lg font-black text-fuchsia-900 leading-none">{unreadFeedbacks}</span>
+                            <span className="text-[10px] font-bold text-fuchsia-700 dark:text-fuchsia-400 uppercase tracking-wider block">Feedbacks Novos</span>
+                            <span className="text-lg font-black text-fuchsia-900 dark:text-fuchsia-100 leading-none">{unreadFeedbacks}</span>
                         </div>
                     </div>
 

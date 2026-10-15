@@ -693,13 +693,13 @@ const MyDashboardOverview = ({ currentUserId, currentUser }) => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 w-full xl:w-auto mt-4 xl:mt-0">
-                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 px-4 py-2.5 rounded-lg border border-fuchsia-400 shadow-sm min-w-[140px]">
-                        <div className="p-1.5 bg-white/20 rounded-md shrink-0">
-                            <MessageSquare className="w-4 h-4 text-white" />
+                    <div className="flex-1 sm:flex-none flex items-center gap-3 bg-gradient-to-br from-fuchsia-500 to-fuchsia-600 dark:from-fuchsia-950/70 dark:to-fuchsia-900/70 px-4 py-2.5 rounded-lg border border-fuchsia-400 dark:border-fuchsia-800/60 shadow-sm min-w-[140px]">
+                        <div className="p-1.5 bg-white/20 dark:bg-white/10 rounded-md shrink-0">
+                            <MessageSquare className="w-4 h-4 text-white dark:text-fuchsia-200" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-fuchsia-100 uppercase tracking-tight line-clamp-1">Feedbacks Novos</span>
-                            <span className="text-xl font-black text-white leading-tight">{unreadFeedbacks}</span>
+                            <span className="text-[10px] font-bold text-fuchsia-100 dark:text-fuchsia-300 uppercase tracking-tight line-clamp-1">Feedbacks Novos</span>
+                            <span className="text-xl font-black text-white dark:text-fuchsia-100 leading-tight">{unreadFeedbacks}</span>
                         </div>
                     </div>
 

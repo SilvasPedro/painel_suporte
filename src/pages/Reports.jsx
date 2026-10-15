@@ -5,7 +5,7 @@ import {
     Lightbulb, Monitor, Building, Zap, Bug, MessageSquare, Send,
     Table, Columns3, LayoutGrid, List, Copy, ChevronLeft, ChevronRight,
     User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock,
-    CornerDownRight, MessageCircle
+    CornerDownRight, MessageCircle, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -51,6 +51,7 @@ const Reports = () => {
     // ==========================================
     // Modos de visualização: 'table' (Tabela), 'kanban' (Quadro), 'cards' (Grade), 'compact' (Lista rápida)
     const [viewMode, setViewMode] = useState('table');
+    const [showSummary, setShowSummary] = useState(true);
 
     // Filtros
     const [searchTerm, setSearchTerm] = useState('');
@@ -556,300 +557,352 @@ ${report.description || 'Sem descrição'}`;
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col space-y-6">
+        <div className="flex-1 p-2 sm:p-4 h-full flex flex-col bg-gray-50 font-sans overflow-hidden">
             
-            {/* ========================================== */}
-            {/* CABEÇALHO PRINCIPAL COM CONTEXTO DE ROLE   */}
-            {/* ========================================== */}
-            <header className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shrink-0">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2.5 bg-red-50 text-red-600 rounded-xl border border-red-100">
-                            <Lightbulb className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                                    Tarefas & Relatórios
-                                </h1>
-                                {canViewAllReports ? (
-                                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-purple-100 text-purple-800 border border-purple-200 flex items-center gap-1">
-                                        <ShieldCheck className="w-3.5 h-3.5 text-purple-600" /> Visão Operacional Completa
-                                    </span>
-                                ) : (
-                                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200 flex items-center gap-1">
-                                        <User className="w-3.5 h-3.5 text-blue-600" /> Minhas Solicitações
-                                    </span>
-                                )}
-                            </div>
-                            <p className="text-sm text-gray-500">
-                                {canViewAllReports 
-                                    ? "Visualização, despacho e interação em comentários de tarefas, relatórios e incidentes da operação." 
-                                    : "Acompanhe suas tarefas, solicitações, reporte de erros e interaja em comentários com a liderança."}
-                            </p>
+            {/* ========================================================================= */}
+            {/* CABEÇALHO COMPACTO DA PÁGINA (OTIMIZADO NO EIXO VERTICAL - REF: MEU HISTÓRICO) */}
+            {/* ========================================================================= */}
+            <header className="mb-2 bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200/90 shadow-2xs shrink-0 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center shrink-0 shadow-2xs">
+                        <Lightbulb className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="text-sm sm:text-base font-black text-gray-900 tracking-tight">
+                                Tarefas & Relatórios
+                            </h1>
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                                {filteredReports.length} {filteredReports.length === 1 ? 'ticket' : 'tickets'}
+                            </span>
+                            {canViewAllReports ? (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 hidden sm:inline-flex items-center gap-1">
+                                    <ShieldCheck className="w-3 h-3 text-purple-600" /> Visão Operacional
+                                </span>
+                            ) : (
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 hidden sm:inline-flex items-center gap-1">
+                                    <User className="w-3 h-3 text-blue-600" /> Meus Chamados
+                                </span>
+                            )}
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 w-full sm:w-auto">
-                    <button 
-                        onClick={openNewReportModal}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-all shadow-sm hover:shadow active:scale-[0.98] cursor-pointer"
+                {/* Ações do Topo: Toggle de Resumo, Alternância de Modo e Nova Solicitação */}
+                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                    {/* Toggle do Resumo Estatístico */}
+                    <button
+                        type="button"
+                        onClick={() => setShowSummary(prev => !prev)}
+                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200/80"
+                        title={showSummary ? "Ocultar cards de resumo para focar no histórico de tickets" : "Exibir cards de resumo"}
                     >
-                        <Plus className="w-5 h-5" /> Nova Solicitação
+                        {showSummary ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                        <span className="hidden sm:inline">{showSummary ? 'Ocultar Resumo' : 'Ver Resumo'}</span>
+                    </button>
+
+                    {/* Modos de Visualização Compactos */}
+                    <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 shrink-0">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('table')}
+                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                viewMode === 'table' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Tabela (Foco no histórico detalhado)"
+                        >
+                            <Table className="w-3 h-3 text-red-600" />
+                            <span className="hidden sm:inline">Tabela</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('kanban')}
+                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                viewMode === 'kanban' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Quadro Kanban (Por fases)"
+                        >
+                            <Columns3 className="w-3 h-3 text-red-600" />
+                            <span className="hidden sm:inline">Kanban</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('cards')}
+                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                viewMode === 'cards' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Cards"
+                        >
+                            <LayoutGrid className="w-3 h-3 text-red-600" />
+                            <span className="hidden sm:inline">Cards</span>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('compact')}
+                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                                viewMode === 'compact' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            }`}
+                            title="Lista Compacta"
+                        >
+                            <List className="w-3 h-3 text-red-600" />
+                            <span className="hidden sm:inline">Compacta</span>
+                        </button>
+                    </div>
+
+                    {/* Botão Nova Solicitação */}
+                    <button
+                        type="button"
+                        onClick={openNewReportModal}
+                        className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white shadow-2xs"
+                        title="Abrir novo chamado / solicitação crítica"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Nova Solicitação</span>
                     </button>
                 </div>
             </header>
 
-            {/* ========================================== */}
-            {/* CARDS DE RESUMO (MÉTRICAS CLICÁVEIS)       */}
-            {/* ========================================== */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 shrink-0">
-                <button 
-                    onClick={() => setStatusFilter('')}
-                    className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        statusFilter === '' && clientImpactFilter === ''
-                            ? 'bg-zinc-900 text-white border-zinc-900 shadow-md ring-2 ring-zinc-900/20' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 shadow-2xs'
-                    }`}
-                >
-                    <span className="text-xs font-bold uppercase tracking-wider block opacity-75">Total Registrado</span>
-                    <div className="text-2xl font-black mt-1 flex items-baseline justify-between">
-                        <span>{metricsSummary.total}</span>
-                        <Sparkles className="w-4 h-4 opacity-50" />
-                    </div>
-                </button>
+            {/* ========================================================================= */}
+            {/* FAIXA RESUMO ESTATÍSTICO COMPACTO (COLAPSÁVEL - REF: MEU HISTÓRICO)       */}
+            {/* ========================================================================= */}
+            {showSummary && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2 shrink-0 animate-in fade-in duration-150">
+                    <button 
+                        onClick={() => setStatusFilter('')}
+                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                            statusFilter === '' && clientImpactFilter === ''
+                                ? 'border-zinc-900 bg-zinc-900 text-white ring-1 ring-zinc-900' 
+                                : 'border-gray-200/90 text-gray-700 hover:border-gray-300'
+                        }`}
+                        title="Mostrar todas as solicitações"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === '' && clientImpactFilter === '' ? 'text-zinc-300' : 'text-gray-400'}`}>
+                                Total Registrado
+                            </span>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === '' && clientImpactFilter === '' ? 'text-white' : 'text-gray-900'}`}>
+                                {metricsSummary.total}
+                            </span>
+                        </div>
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
+                            statusFilter === '' && clientImpactFilter === ''
+                                ? 'bg-zinc-800 text-white border-zinc-700'
+                                : 'bg-gray-50 text-gray-700 border-gray-100'
+                        }`}>
+                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </div>
+                    </button>
 
-                <button 
-                    onClick={() => { setStatusFilter('Pendente'); setClientImpactFilter(''); }}
-                    className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        statusFilter === 'Pendente' 
-                            ? 'bg-amber-600 text-white border-amber-600 shadow-md ring-2 ring-amber-600/20' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-amber-200 shadow-2xs'
-                    }`}
-                >
-                    <span className="text-xs font-bold uppercase tracking-wider block opacity-85 text-amber-700">Pendentes</span>
-                    <div className="text-2xl font-black mt-1 flex items-baseline justify-between">
-                        <span className={statusFilter === 'Pendente' ? 'text-white' : 'text-amber-700'}>{metricsSummary.pending}</span>
-                        <Clock className={`w-4 h-4 ${statusFilter === 'Pendente' ? 'text-white' : 'text-amber-500'}`} />
-                    </div>
-                </button>
+                    <button 
+                        onClick={() => { setStatusFilter('Pendente'); setClientImpactFilter(''); }}
+                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                            statusFilter === 'Pendente' 
+                                ? 'border-amber-600 bg-amber-600 text-white ring-1 ring-amber-600' 
+                                : 'border-gray-200/90 text-gray-700 hover:border-amber-300'
+                        }`}
+                        title="Filtrar por solicitações pendentes"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Pendente' ? 'text-amber-100' : 'text-amber-700'}`}>
+                                Pendentes
+                            </span>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Pendente' ? 'text-white' : 'text-amber-800'}`}>
+                                {metricsSummary.pending}
+                            </span>
+                        </div>
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
+                            statusFilter === 'Pendente' 
+                                ? 'bg-amber-700 text-white border-amber-600' 
+                                : 'bg-amber-50 text-amber-700 border-amber-100'
+                        }`}>
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </div>
+                    </button>
 
-                <button 
-                    onClick={() => { setStatusFilter('Em Andamento'); setClientImpactFilter(''); }}
-                    className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        statusFilter === 'Em Andamento' 
-                            ? 'bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-600/20' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-blue-200 shadow-2xs'
-                    }`}
-                >
-                    <span className="text-xs font-bold uppercase tracking-wider block opacity-85 text-blue-700">Em Andamento</span>
-                    <div className="text-2xl font-black mt-1 flex items-baseline justify-between">
-                        <span className={statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-700'}>{metricsSummary.inProgress}</span>
-                        <Clock className={`w-4 h-4 ${statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-500'}`} />
-                    </div>
-                </button>
+                    <button 
+                        onClick={() => { setStatusFilter('Em Andamento'); setClientImpactFilter(''); }}
+                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                            statusFilter === 'Em Andamento' 
+                                ? 'border-blue-600 bg-blue-600 text-white ring-1 ring-blue-600' 
+                                : 'border-gray-200/90 text-gray-700 hover:border-blue-300'
+                        }`}
+                        title="Filtrar por solicitações em andamento"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Em Andamento' ? 'text-blue-100' : 'text-blue-700'}`}>
+                                Em Andamento
+                            </span>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-800'}`}>
+                                {metricsSummary.inProgress}
+                            </span>
+                        </div>
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
+                            statusFilter === 'Em Andamento' 
+                                ? 'bg-blue-700 text-white border-blue-600' 
+                                : 'bg-blue-50 text-blue-700 border-blue-100'
+                        }`}>
+                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </div>
+                    </button>
 
-                <button 
-                    onClick={() => { setStatusFilter('Resolvido'); setClientImpactFilter(''); }}
-                    className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                        statusFilter === 'Resolvido' 
-                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-600/20' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-200 shadow-2xs'
-                    }`}
-                >
-                    <span className="text-xs font-bold uppercase tracking-wider block opacity-85 text-emerald-700">Resolvidos</span>
-                    <div className="text-2xl font-black mt-1 flex items-baseline justify-between">
-                        <span className={statusFilter === 'Resolvido' ? 'text-white' : 'text-emerald-700'}>{metricsSummary.resolved}</span>
-                        <CheckCircle className={`w-4 h-4 ${statusFilter === 'Resolvido' ? 'text-white' : 'text-emerald-500'}`} />
-                    </div>
-                </button>
+                    <button 
+                        onClick={() => { setStatusFilter('Resolvido'); setClientImpactFilter(''); }}
+                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                            statusFilter === 'Resolvido' 
+                                ? 'border-emerald-600 bg-emerald-600 text-white ring-1 ring-emerald-600' 
+                                : 'border-gray-200/90 text-gray-700 hover:border-emerald-300'
+                        }`}
+                        title="Filtrar por solicitações resolvidas"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Resolvido' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                                Resolvidos
+                            </span>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Resolvido' ? 'text-white' : 'text-emerald-800'}`}>
+                                {metricsSummary.resolved}
+                            </span>
+                        </div>
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
+                            statusFilter === 'Resolvido' 
+                                ? 'bg-emerald-700 text-white border-emerald-600' 
+                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                        }`}>
+                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </div>
+                    </button>
 
-                <button 
-                    onClick={() => { setClientImpactFilter('Sim'); setStatusFilter(''); }}
-                    className={`p-4 rounded-xl border text-left transition-all cursor-pointer col-span-2 sm:col-span-1 ${
-                        clientImpactFilter === 'Sim' 
-                            ? 'bg-red-600 text-white border-red-600 shadow-md ring-2 ring-red-600/20' 
-                            : 'bg-white text-gray-700 border-gray-200 hover:border-red-200 shadow-2xs'
-                    }`}
-                >
-                    <span className="text-xs font-bold uppercase tracking-wider block opacity-85 text-red-700">Afetou Cliente</span>
-                    <div className="text-2xl font-black mt-1 flex items-baseline justify-between">
-                        <span className={clientImpactFilter === 'Sim' ? 'text-white' : 'text-red-700'}>{metricsSummary.clientImpact}</span>
-                        <AlertTriangle className={`w-4 h-4 ${clientImpactFilter === 'Sim' ? 'text-white' : 'text-red-500'}`} />
-                    </div>
-                </button>
-            </div>
+                    <button 
+                        onClick={() => { setClientImpactFilter('Sim'); setStatusFilter(''); }}
+                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer col-span-2 sm:col-span-1 ${
+                            clientImpactFilter === 'Sim' 
+                                ? 'border-red-600 bg-red-600 text-white ring-1 ring-red-600' 
+                                : 'border-gray-200/90 text-gray-700 hover:border-red-300'
+                        }`}
+                        title="Filtrar por casos que impactaram o cliente"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${clientImpactFilter === 'Sim' ? 'text-red-100' : 'text-red-700'}`}>
+                                Afetou Cliente
+                            </span>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${clientImpactFilter === 'Sim' ? 'text-white' : 'text-red-800'}`}>
+                                {metricsSummary.clientImpact}
+                            </span>
+                        </div>
+                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
+                            clientImpactFilter === 'Sim' 
+                                ? 'bg-red-700 text-white border-red-600' 
+                                : 'bg-red-50 text-red-700 border-red-100'
+                        }`}>
+                            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        </div>
+                    </button>
+                </div>
+            )}
 
-            {/* ========================================== */}
-            {/* BARRA DE FILTROS E MODOS DE VISUALIZAÇÃO   */}
-            {/* ========================================== */}
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col gap-4 shrink-0">
-                <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
+            {/* ========================================================================= */}
+            {/* TOOLBAR INTEGRADA E COMPACTA (REF: MEU HISTÓRICO)                          */}
+            {/* ========================================================================= */}
+            <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-gray-200 shadow-2xs mb-2 shrink-0">
+                <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center justify-between">
                     
-                    {/* Campo de Busca */}
-                    <div className="flex-1 relative">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                    {/* Campo de Busca Compacto */}
+                    <div className="flex-1 relative min-w-[200px]">
+                        <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <input 
                             type="text" 
                             placeholder="Buscar por título, descrição, protocolo, autor ou resposta..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm transition-all bg-gray-50/50 focus:bg-white"
+                            className="w-full pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-red-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
                         />
                         {searchTerm && (
-                            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
-                                <X className="w-4 h-4" />
+                            <button 
+                                onClick={() => setSearchTerm('')} 
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                                title="Limpar busca"
+                            >
+                                <X className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
 
-                    {/* Modos de Visualização (Table, Kanban, Cards, Compact) */}
-                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0 self-start lg:self-auto">
-                        <button 
-                            onClick={() => setViewMode('table')} 
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'table' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                            title="Tabela Detalhada"
-                        >
-                            <Table className="w-3.5 h-3.5 text-red-600" />
-                            <span className="hidden sm:inline">Tabela</span>
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('kanban')} 
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'kanban' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                            title="Quadro por Status"
-                        >
-                            <Columns3 className="w-3.5 h-3.5 text-red-600" />
-                            <span className="hidden sm:inline">Quadro Kanban</span>
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('cards')} 
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'cards' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                            title="Grade de Cartões"
-                        >
-                            <LayoutGrid className="w-3.5 h-3.5 text-red-600" />
-                            <span className="hidden sm:inline">Grade</span>
-                        </button>
-                        <button 
-                            onClick={() => setViewMode('compact')} 
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'compact' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                            }`}
-                            title="Lista Compacta"
-                        >
-                            <List className="w-3.5 h-3.5 text-red-600" />
-                            <span className="hidden sm:inline">Compacta</span>
-                        </button>
-                    </div>
-                </div>
-
-                {/* Filtros Dropdowns */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-2 border-t border-gray-100">
-                    <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Status</label>
+                    {/* Filtros Dropdowns Compactos */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
                         <select 
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-1 focus:ring-red-500 outline-none cursor-pointer"
                         >
-                            <option value="">Todos os Status</option>
+                            <option value="">Status: Todos</option>
                             <option value="Pendente">Pendente</option>
                             <option value="Em Andamento">Em Andamento</option>
-                            <option value="Resolvido">Resolvido / Concluído</option>
-                            <option value="Cancelado">Cancelado / Recusado</option>
+                            <option value="Resolvido">Resolvido</option>
+                            <option value="Cancelado">Cancelado</option>
                         </select>
-                    </div>
 
-                    <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Tipo de Solicitação</label>
                         <select 
                             value={typeFilter}
                             onChange={(e) => setTypeFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-1 focus:ring-red-500 outline-none cursor-pointer"
                         >
-                            <option value="">Todos os Tipos</option>
+                            <option value="">Tipo: Todos</option>
                             <option value="Análise de Erro">Análise de Erro</option>
-                            <option value="Melhoria de Sistema">Melhoria de Sistema</option>
-                            <option value="Melhoria de Ambiente">Melhoria de Ambiente</option>
+                            <option value="Melhoria de Sistema">Melhoria Sistema</option>
+                            <option value="Melhoria de Ambiente">Melhoria Ambiente</option>
                         </select>
-                    </div>
 
-                    <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Prioridade</label>
                         <select 
                             value={priorityFilter}
                             onChange={(e) => setPriorityFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-1 focus:ring-red-500 outline-none cursor-pointer"
                         >
-                            <option value="">Todas as Prioridades</option>
-                            <option value="Alta">Alta Urgência</option>
+                            <option value="">Prioridade: Todas</option>
+                            <option value="Alta">Alta</option>
                             <option value="Normal">Normal</option>
                             <option value="Baixa">Baixa</option>
                         </select>
-                    </div>
 
-                    <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Impacto Cliente</label>
                         <select 
                             value={clientImpactFilter}
                             onChange={(e) => setClientImpactFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="px-2 py-1.5 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-1 focus:ring-red-500 outline-none cursor-pointer"
                         >
-                            <option value="">Todos os Casos</option>
+                            <option value="">Impacto: Todos</option>
                             <option value="Sim">Afetou Cliente</option>
-                            <option value="Não">Interno apenas</option>
+                            <option value="Não">Interno</option>
                         </select>
-                    </div>
 
-                    {/* Filtro de Solicitante (Apenas Gestor/Supervisor) */}
-                    {canViewAllReports ? (
-                        <div>
-                            <label className="block text-[10px] font-bold text-purple-700 uppercase tracking-wider mb-1">
-                                Solicitante (Equipe)
-                            </label>
+                        {canViewAllReports && (
                             <select 
                                 value={creatorFilter}
                                 onChange={(e) => setCreatorFilter(e.target.value)}
-                                className="w-full px-3 py-1.5 border border-purple-200 rounded-lg text-xs font-medium text-gray-700 bg-purple-50/40 focus:ring-2 focus:ring-purple-600 outline-none cursor-pointer"
+                                className="px-2 py-1.5 border border-purple-200 rounded-lg text-xs font-medium text-purple-900 bg-purple-50/50 focus:ring-1 focus:ring-purple-500 outline-none cursor-pointer max-w-[150px] truncate"
                             >
-                                <option value="">Todos os Solicitantes ({uniqueCreators.length})</option>
+                                <option value="">Solicitante: Todos ({uniqueCreators.length})</option>
                                 {uniqueCreators.map(name => (
                                     <option key={name} value={name}>{name}</option>
                                 ))}
                             </select>
-                        </div>
-                    ) : (
-                        <div className="flex items-end">
-                            {hasActiveFilters && (
-                                <button 
-                                    onClick={clearAllFilters}
-                                    className="w-full px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                                >
-                                    <RotateCcw className="w-3 h-3" /> Limpar Filtros
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
+                        )}
 
-                {hasActiveFilters && canViewAllReports && (
-                    <div className="flex justify-between items-center pt-2 text-xs text-gray-500 border-t border-gray-100">
-                        <span>Exibindo <strong>{filteredReports.length}</strong> de {reports.length} solicitações filtradas</span>
-                        <button 
-                            onClick={clearAllFilters}
-                            className="text-red-600 hover:text-red-700 font-bold flex items-center gap-1 cursor-pointer"
-                        >
-                            <RotateCcw className="w-3 h-3" /> Redefinir Filtros
-                        </button>
+                        {hasActiveFilters && (
+                            <button 
+                                onClick={clearAllFilters}
+                                className="px-2 py-1.5 border border-red-200 text-red-600 hover:bg-red-50 rounded-lg text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                title="Limpar todos os filtros ativos"
+                            >
+                                <RotateCcw className="w-3 h-3" />
+                                <span className="hidden sm:inline">Limpar</span>
+                            </button>
+                        )}
                     </div>
-                )}
+                </div>
             </div>
+
+            {/* ========================================================================= */}
+            {/* CONTAINER DEDICADO AO HISTÓRICO DE TICKETS (FOCO TOTAL NA VISUALIZAÇÃO)     */}
+            {/* ========================================================================= */}
+            <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
 
             {/* ========================================== */}
             {/* CONTEÚDO PRINCIPAL (BASEADO NO VIEW MODE)  */}
@@ -887,8 +940,8 @@ ${report.description || 'Sem descrição'}`;
                     {/* MODO 1: TABELA DETALHADA               */}
                     {/* -------------------------------------- */}
                     {viewMode === 'table' && (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden flex-1 flex flex-col">
-                            <div className="overflow-x-auto flex-1">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden flex-1 min-h-0 flex flex-col">
+                            <div className="overflow-x-auto overflow-y-auto flex-1">
                                 <table className="min-w-full divide-y divide-gray-200 text-sm">
                                     <thead className="bg-zinc-950 text-white sticky top-0 z-10">
                                         <tr>
@@ -1003,7 +1056,7 @@ ${report.description || 'Sem descrição'}`;
                     {/* MODO 2: QUADRO KANBAN POR STATUS       */}
                     {/* -------------------------------------- */}
                     {viewMode === 'kanban' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 flex-1 min-h-0 overflow-y-auto">
                             {[
                                 { status: 'Pendente', title: 'Triagem / Pendentes', color: 'border-amber-300 bg-amber-50/40 text-amber-900', badge: 'bg-amber-100 text-amber-800' },
                                 { status: 'Em Andamento', title: 'Em Andamento', color: 'border-blue-300 bg-blue-50/40 text-blue-900', badge: 'bg-blue-100 text-blue-800' },
@@ -1092,7 +1145,7 @@ ${report.description || 'Sem descrição'}`;
                     {/* MODO 3: GRADE DE CARTÕES (BENTO GRID)  */}
                     {/* -------------------------------------- */}
                     {viewMode === 'cards' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 flex-1 min-h-0 overflow-y-auto pr-1">
                             {filteredReports.map((report) => (
                                 <div 
                                     key={report.id}
@@ -1168,8 +1221,8 @@ ${report.description || 'Sem descrição'}`;
                     {/* MODO 4: LISTA COMPACTA (ALTA DENSIDADE) */}
                     {/* -------------------------------------- */}
                     {viewMode === 'compact' && (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden flex-1">
-                            <div className="divide-y divide-gray-200">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden flex-1 min-h-0 flex flex-col">
+                            <div className="divide-y divide-gray-200 overflow-y-auto flex-1">
                                 {filteredReports.map((report) => (
                                     <div 
                                         key={report.id}
@@ -1215,6 +1268,7 @@ ${report.description || 'Sem descrição'}`;
                     )}
                 </>
             )}
+            </div>
 
             {/* ========================================================================= */}
             {/* MODAL DE CRIAÇÃO / EDIÇÃO DE SOLICITAÇÃO                                 */}
