@@ -208,6 +208,7 @@ const MyHistory = ({ currentUserId }) => {
     const handleMarkAsRead = async (id) => {
         try {
             await updateDoc(doc(db, "feedbacks", id), { read: true });
+            window.dispatchEvent(new CustomEvent('HUBDESK_FEEDBACK_READ', { detail: { id } }));
             showToast("Feedback marcado como lido!", "success");
             setData(prev => prev.map(item => item.id === id ? { ...item, read: true } : item));
             if (viewingItem && viewingItem.id === id) {

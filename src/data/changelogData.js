@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.8.2';
+export const CURRENT_VERSION = 'v3.8.3';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.8.2',
+    version: 'v3.8.3',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.8.3: Aprimoramento completo do sistema de notificações. O ícone de notificações na barra superior agora registra o histórico persistente das notificações recentes com ações para marcar como lida e apagar. Além disso, a barra lateral conta com indicador visual de bolinha vermelha pulsante em "Meu Histórico" (ao receber novos feedbacks) e em "Tarefas & Relatórios" (para novas solicitações e atualizações de status).',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Histórico Recente de Notificações',
+        category: 'Central de Notificações',
+        description: 'Registro cronológico persistente de todos os feedbacks recebidos, novos relatórios despachados e alterações de status, com filtro entre todas e não lidas.'
+      },
+      {
+        icon: CheckCircle2,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Ações de Marcar como Lida e Apagar',
+        category: 'Gestão de Avisos',
+        description: 'Controle individual para marcar avisos como lidos ou apagá-los do histórico, além de navegação direta com 1 clique para o feedback ou relatório correspondente.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Bolinha Vermelha Pulsante na Barra Lateral',
+        category: 'Alertas Visuais em Tempo Real',
+        description: 'Indicadores animados na barra lateral destacam instantaneamente a chegada de novos feedbacks em "Meu Histórico" e de novas demandas/atualizações em "Tarefas & Relatórios".'
+      }
+    ]
+  },
+  {
+    version: 'v3.8.2',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.8.2: Melhoria na exportação de auditorias da equipe terceirizada. Os protocolos de atendimento (como 2610.XXXXX e protocolos longos do ERP MK) agora são exportados estritamente como texto puro no arquivo .CSV para evitar conversão indevida ou notação científica no Excel, e foi adicionada a exportação oficial em formato .PDF para facilitar o anexo e compartilhamento dos protocolos unificados.',
     items: [
       {

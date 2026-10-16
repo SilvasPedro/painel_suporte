@@ -141,8 +141,8 @@ const AppRoutes = () => {
 function App() {
     return (
         <ThemeProvider>
-            <NotificationProvider>
-                <AuthProvider>
+            <AuthProvider>
+                <NotificationProvider>
                     <PermissionsProvider>
                         <BrowserRouter>
                             <NotificationManager />
@@ -150,8 +150,8 @@ function App() {
                             <FloatingExtensions />
                         </BrowserRouter>
                     </PermissionsProvider>
-                </AuthProvider>
-            </NotificationProvider>
+                </NotificationProvider>
+            </AuthProvider>
         </ThemeProvider>
     );
 }

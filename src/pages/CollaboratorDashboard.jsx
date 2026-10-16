@@ -114,7 +114,13 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     }, []);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const { currentUser } = useAuth();
-    const { showToast } = useNotification();
+    const { 
+        showToast, 
+        pulseHistory, 
+        pulseReports, 
+        clearPulseHistory, 
+        clearPulseReports 
+    } = useNotification();
 
     // Estados dos Modais
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -185,9 +191,21 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
 
 
-                    <button onClick={() => setActiveTab('history')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <History className="w-5 h-5" />
+                    <button 
+                        onClick={() => { setActiveTab('history'); clearPulseHistory(); }} 
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
+                    >
+                        <History className="w-5 h-5 shrink-0" />
                         <span className="font-medium">Meu Histórico</span>
+                        {pulseHistory && (
+                            <span 
+                                className="relative flex h-2.5 w-2.5 shrink-0 ml-auto"
+                                title="Novo feedback recebido!"
+                            >
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                            </span>
+                        )}
                     </button>
 
                     {/* ADICIONE O NOVO BOTÃO DA ESCALA AQUI */}
@@ -200,9 +218,21 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                         <CalendarDays className="w-5 h-5" /> <span className="font-medium">Escala Diária</span>
                     </button>
 
-                    <button onClick={() => setActiveTab('reports')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                        <ShieldCheck className="w-5 h-5" />
+                    <button 
+                        onClick={() => { setActiveTab('reports'); clearPulseReports(); }} 
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
+                    >
+                        <ShieldCheck className="w-5 h-5 shrink-0" />
                         <span className="font-medium">Tarefas & Relatórios</span>
+                        {pulseReports && (
+                            <span 
+                                className="relative flex h-2.5 w-2.5 shrink-0 ml-auto"
+                                title="Novas tarefas ou atualizações de chamados!"
+                            >
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                            </span>
+                        )}
                     </button>
 
                     <button
@@ -355,8 +385,31 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             <button onClick={() => { setActiveTab('dashboard'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'dashboard' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                                 <Activity className="w-5 h-5" /> <span className="font-medium">Meu Desempenho</span>
                             </button>
-                            <button onClick={() => { setActiveTab('history'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
-                                <History className="w-5 h-5" /> <span className="font-medium">Meu Histórico</span>
+                            <button 
+                                onClick={() => { setActiveTab('history'); clearPulseHistory(); setIsMobileMenuOpen(false); }} 
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'history' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
+                            >
+                                <History className="w-5 h-5 shrink-0" />
+                                <span className="font-medium">Meu Histórico</span>
+                                {pulseHistory && (
+                                    <span className="relative flex h-2.5 w-2.5 shrink-0 ml-auto">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                    </span>
+                                )}
+                            </button>
+                            <button 
+                                onClick={() => { setActiveTab('reports'); clearPulseReports(); setIsMobileMenuOpen(false); }} 
+                                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'reports' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}
+                            >
+                                <ShieldCheck className="w-5 h-5 shrink-0" />
+                                <span className="font-medium">Tarefas & Relatórios</span>
+                                {pulseReports && (
+                                    <span className="relative flex h-2.5 w-2.5 shrink-0 ml-auto">
+                                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                    </span>
+                                )}
                             </button>
                             <button onClick={() => { setActiveTab('demands'); setIsMobileMenuOpen(false); }} className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg transition-colors ${activeTab === 'demands' ? 'bg-red-600/10 text-red-500 font-bold border-l-4 border-red-600' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'}`}>
                                 <Database className="w-5 h-5" /> <span className="font-medium">Lançamentos</span>

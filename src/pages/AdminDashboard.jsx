@@ -44,7 +44,13 @@ const logo = faviconLogo;
 const AdminDashboard = () => {
     const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
     const { currentUser } = useAuth();
-    const { showToast } = useNotification();
+    const { 
+        showToast, 
+        pulseHistory, 
+        pulseReports, 
+        clearPulseHistory, 
+        clearPulseReports 
+    } = useNotification();
 
     const userLevel = useMemo(() => {
         return calculateUserLevel(currentUser?.badges);
@@ -343,10 +349,18 @@ const AdminDashboard = () => {
                                     {menu.items.map(item => {
                                         const Icon = item.icon;
                                         const isActive = effectiveActiveTab === item.id;
+                                        const isHistory = item.id === 'my_history' || item.id === 'history';
+                                        const isReports = item.id === 'reports';
+                                        const showPulse = (isHistory && pulseHistory) || (isReports && pulseReports);
+
                                         return (
                                             <button 
                                                 key={item.id}
-                                                onClick={() => setActiveTab(item.id)} 
+                                                onClick={() => {
+                                                    setActiveTab(item.id);
+                                                    if (isHistory) clearPulseHistory();
+                                                    if (isReports) clearPulseReports();
+                                                }} 
                                                 title={isSidebarCollapsed ? item.label : ""}
                                                 className={`w-full flex items-center rounded-lg transition-colors ${
                                                     isSidebarCollapsed ? 'justify-center p-3' : 'px-4 py-2.5 gap-3'
@@ -356,8 +370,29 @@ const AdminDashboard = () => {
                                                     : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'
                                                 }`}
                                             >
-                                                <Icon className={`${isSidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} shrink-0`} />
-                                                {!isSidebarCollapsed && <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>}
+                                                <div className="relative shrink-0 flex items-center justify-center">
+                                                    <Icon className={isSidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} />
+                                                    {isSidebarCollapsed && showPulse && (
+                                                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {!isSidebarCollapsed && (
+                                                    <>
+                                                        <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                                                        {showPulse && (
+                                                            <span 
+                                                                className="relative flex h-2.5 w-2.5 shrink-0 ml-auto"
+                                                                title={isHistory ? "Novo feedback recebido!" : "Novas demandas ou atualizações de chamados!"}
+                                                            >
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                                            </span>
+                                                        )}
+                                                    </>
+                                                )}
                                             </button>
                                         );
                                     })}
@@ -482,11 +517,17 @@ const AdminDashboard = () => {
                                         {menu.items.map(item => {
                                             const Icon = item.icon;
                                             const isActive = effectiveActiveTab === item.id;
+                                            const isHistory = item.id === 'my_history' || item.id === 'history';
+                                            const isReports = item.id === 'reports';
+                                            const showPulse = (isHistory && pulseHistory) || (isReports && pulseReports);
+
                                             return (
                                                 <button
                                                     key={item.id}
                                                     onClick={() => {
                                                         setActiveTab(item.id);
+                                                        if (isHistory) clearPulseHistory();
+                                                        if (isReports) clearPulseReports();
                                                         setIsMobileMenuOpen(false);
                                                     }}
                                                     className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
@@ -497,6 +538,15 @@ const AdminDashboard = () => {
                                                 >
                                                     <Icon className="w-5 h-5 shrink-0" />
                                                     <span>{item.label}</span>
+                                                    {showPulse && (
+                                                        <span 
+                                                            className="relative flex h-2.5 w-2.5 shrink-0 ml-auto"
+                                                            title={isHistory ? "Novo feedback recebido!" : "Novas demandas ou atualizações de chamados!"}
+                                                        >
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                                        </span>
+                                                    )}
                                                 </button>
                                             );
                                         })}
