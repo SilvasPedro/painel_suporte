@@ -323,6 +323,18 @@ const Reports = () => {
         setNewCommentStatus(report.status || 'Pendente');
     };
 
+    // Abre o relatório automaticamente se disparado por notificação push ou clique de alerta
+    useEffect(() => {
+        const handleOpenReport = (e) => {
+            if (e.detail?.report) {
+                const found = reports.find(r => r.id === e.detail.report.id) || e.detail.report;
+                handleOpenViewModal(found);
+            }
+        };
+        window.addEventListener('HUBDESK_OPEN_REPORT', handleOpenReport);
+        return () => window.removeEventListener('HUBDESK_OPEN_REPORT', handleOpenReport);
+    }, [reports]);
+
     const formatCommentDate = (dateVal) => {
         if (!dateVal) return '';
         try {

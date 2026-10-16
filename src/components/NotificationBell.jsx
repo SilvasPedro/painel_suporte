@@ -87,6 +87,37 @@ export const NotificationBell = () => {
         setIsOpen(false);
     };
 
+    const handleSimulateNewReport = () => {
+        window.dispatchEvent(new CustomEvent('HUBDESK_SIMULATE_NEW_REPORT', {
+            detail: {
+                id: `sim-rep-${Date.now()}`,
+                title: 'Lentidão no sistema de integração ERP',
+                type: 'Falha Operacional',
+                priority: 'Alta',
+                protocol: 'DEM-9842',
+                status: 'Pendente',
+                creatorName: 'Eduardo Caetano',
+                description: 'Identificado travamento recorrente durante consulta de protocolos de clientes.',
+                date: new Date().toISOString().split('T')[0]
+            }
+        }));
+        setIsOpen(false);
+    };
+
+    const handleSimulateStatusChange = () => {
+        window.dispatchEvent(new CustomEvent('HUBDESK_SIMULATE_REPORT_STATUS', {
+            detail: {
+                id: `sim-status-${Date.now()}`,
+                title: 'Ajuste de cadastro de cliente bloqueado',
+                type: 'Análise de Erro',
+                protocol: 'DEM-4120',
+                status: 'Resolvido',
+                adminComment: 'Ajuste concluído no banco de dados e acesso liberado com sucesso.'
+            }
+        }));
+        setIsOpen(false);
+    };
+
     return (
         <div className="relative" ref={dropdownRef}>
             {/* BOTÃO DO SINO NO HEADER */}
@@ -236,7 +267,27 @@ export const NotificationBell = () => {
                                     title="Simular a chegada de um feedback para você"
                                 >
                                     <Send className="w-3.5 h-3.5" />
-                                    <span>Simular Feedback</span>
+                                    <span>Feedback (Colab)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleSimulateNewReport}
+                                    className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-all border border-zinc-700 cursor-pointer"
+                                    title="Simular notificação de novo relatório para usuários Gestores"
+                                >
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                                    <span>Novo Relatório (Gestor)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleSimulateStatusChange}
+                                    className="flex items-center justify-center gap-1.5 p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-all border border-zinc-700 cursor-pointer"
+                                    title="Simular notificação de alteração de status para o solicitante do chamado"
+                                >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                                    <span>Status Alterado (Colab)</span>
                                 </button>
                             </div>
                         </div>
@@ -244,9 +295,14 @@ export const NotificationBell = () => {
                         {/* DICA DE FLUXO */}
                         <div className="p-3 rounded-xl bg-blue-50/70 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/30 flex items-start gap-2 text-blue-900 dark:text-blue-300">
                             <Info className="w-4 h-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-                            <p className="text-[11px] leading-relaxed">
-                                <strong>Como funciona na prática:</strong> Quando qualquer gestor lançar um Feedback (Elogio, Ponto de Melhoria ou Orientação) para você, o navegador exibirá o aviso nativo imediatamente e um clique levará direto para o detalhe do feedback.
-                            </p>
+                            <div className="text-[11px] leading-relaxed space-y-1">
+                                <p><strong>Regras de Notificação (v3.8.1):</strong></p>
+                                <ul className="list-disc ml-3.5 space-y-0.5">
+                                    <li><strong>Novo Relatório:</strong> Usuários com perfil de <em>Gestor</em> recebem notificação imediata no navegador para despachar o ticket.</li>
+                                    <li><strong>Mudança de Status:</strong> O <em>solicitante</em> que abriu o relatório recebe notificação informando o novo status e parecer.</li>
+                                    <li><strong>Feedbacks:</strong> O colaborador recebe alerta imediato no navegador com link direto para o histórico.</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>

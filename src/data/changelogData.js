@@ -1,13 +1,73 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2 } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.8.0';
+export const CURRENT_VERSION = 'v3.8.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.8.0',
+    version: 'v3.8.2',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.8.2: Melhoria na exportação de auditorias da equipe terceirizada. Os protocolos de atendimento (como 2610.XXXXX e protocolos longos do ERP MK) agora são exportados estritamente como texto puro no arquivo .CSV para evitar conversão indevida ou notação científica no Excel, e foi adicionada a exportação oficial em formato .PDF para facilitar o anexo e compartilhamento dos protocolos unificados.',
+    items: [
+      {
+        icon: FileSpreadsheet,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Preservação de Protocolos em Texto no CSV',
+        category: 'Auditorias & Exportação',
+        description: 'Aplicação da sintaxe de texto puro ="..." em todos os protocolos terceirizados e do ERP, impedindo que o Excel os converta em números decimais com vírgula ou em notação científica exponencial.'
+      },
+      {
+        icon: FileText,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Nova Exportação em PDF Formatado',
+        category: 'Documentos & Anexos',
+        description: 'Geração com 1 clique de relatório oficial em formato A4 Paisagem com mini painel de KPIs (Conformidade, Qualidade e FCR) e tabela completa pronta para anexar em chamados.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Download Seguro via Blob UTF-8 BOM',
+        category: 'Performance & Compatibilidade',
+        description: 'Substituição de data-URI por Blob nativo com cabeçalho UTF-8 BOM, garantindo que acentos e caracteres especiais abram com perfeição em qualquer versão do Excel.'
+      }
+    ]
+  },
+  {
+    version: 'v3.8.1',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
+    summary: 'Atualização v3.8.1: Notificações Inteligentes para Tarefas & Relatórios. Notificação automática no navegador para usuários com role de Gestor sempre que uma nova solicitação/relatório for aberto no sistema, e notificação instantânea para o solicitante sempre que o status do seu chamado for alterado pela liderança.',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Novo Relatório para Gestores',
+        category: 'Demandas & Alertas',
+        description: 'Usuários com perfil de Gestor/Supervisor recebem notificação nativa imediata no navegador com link direto quando qualquer colaborador abrir uma nova demanda crítica.'
+      },
+      {
+        icon: RefreshCw,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Atualização de Status para o Solicitante',
+        category: 'Acompanhamento de Chamados',
+        description: 'O colaborador que abriu o relatório é notificado assim que a liderança alterar o status (ex: Em Andamento, Resolvido) ou emitir parecer oficial.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Central de Notificações com Simuladores',
+        category: 'Validação & Testes',
+        description: 'Novo menu de testes no sino do cabeçalho permitindo simular com 1 clique a chegada de relatórios para gestores e mudanças de status para colaboradores.'
+      }
+    ]
+  },
+  {
+    version: 'v3.8.0',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.8.0: Notificações Push no Navegador em tempo real. Agora, quando a liderança registrar um Feedback (Elogio, Ponto de Melhoria ou Orientação) para qualquer colaborador (ex: Eduardo Caetano), o colaborador com o sistema aberto recebe um alerta nativo do sistema operacional/navegador com sinal sonoro suave e foco imediato para visualização e confirmação de leitura.',
     items: [
       {

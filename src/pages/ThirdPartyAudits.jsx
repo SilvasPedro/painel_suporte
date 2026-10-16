@@ -19,6 +19,7 @@ import {
     ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
     Legend, Cell, PieChart, Pie 
 } from 'recharts';
+import { exportThirdPartyAuditsPDF } from '../services/pdfExportService';
 
 // Lista oficial dos processos exigidos
 const OFFICIAL_PROCESSES = [
@@ -28,6 +29,15 @@ const OFFICIAL_PROCESSES = [
     'Informações',
     'Assuntos Financeiros'
 ];
+
+// Regra de validação: Verificação de auditoria concluída vs pendente de preenchimento
+const isAuditCompleted = (a) => Boolean(
+    a &&
+    a.clientName && a.clientName.trim() && 
+    a.operatorName && a.operatorName.trim() && 
+    a.procedures && a.outcome
+);
+const isAuditPending = (a) => !isAuditCompleted(a);
 
 export default function ThirdPartyAudits() {
     const { showToast } = useNotification();
@@ -82,14 +92,7 @@ export default function ThirdPartyAudits() {
     const [editingAudit, setEditingAudit] = useState(null);
     const [viewingAudit, setViewingAudit] = useState(null);
     const [copiedField, setCopiedField] = useState(null);
-
-    // Regra de validação: Verificação de auditoria concluída vs pendente de preenchimento
-    const isAuditCompleted = (a) => Boolean(
-        a.clientName && a.clientName.trim() && 
-        a.operatorName && a.operatorName.trim() && 
-        a.procedures && a.outcome
-    );
-    const isAuditPending = (a) => !isAuditCompleted(a);
+    const [isExportingPDF, setIsExportingPDF] = useState(false);
 
     // Estado do formulário - O campo 'date' inicia SEMPRE em branco para nova auditoria manual
     // Procedimentos e Saída iniciam desmarcados para o auditor selecionar obrigatoriamente
@@ -890,7 +893,9 @@ export default function ThirdPartyAudits() {
         }
     };
 
-    // Exportação em formato CSV
+    // ========================================================
+    // EXPORTAÇÃO CSV (PROTOCOLOS EM FORMATO TEXTO PURO)
+    // ========================================================
     const handleExportCSV = () => {
         if (filteredAudits.length === 0) {
             showToast('Nenhuma auditoria para exportar.', 'warning');
@@ -904,32 +909,87 @@ export default function ThirdPartyAudits() {
             'Auditor', 'Observações'
         ];
 
+        // Formatador para forçar células no Excel/Planilhas como TEXTO PURO
+        // Impede que protocolos como 2610.XXXXX sejam convertidos em números decimais
+        // e que números longos (como do ERP MK) sejam convertidos em notação científica (ex: 1.23E+14)
+        const formatAsText = (val) => {
+            if (!val || String(val).trim() === '') return '""';
+            const clean = String(val).replace(/"/g, '""').trim();
+            return `="${clean}"`;
+        };
+
+        const escapeCSV = (val) => {
+            if (val === null || val === undefined) return '""';
+            return `"${String(val).replace(/"/g, '""')}"`;
+        };
+
         const rows = filteredAudits.map(a => [
-            a.date || '',
-            `"${(a.protocol || '').replace(/"/g, '""')}"`,
-            isAuditCompleted(a) ? 'Concluída' : 'Pendente',
-            a.procedures || '',
-            a.quality || '',
-            `"${(a.process || '').replace(/"/g, '""')}"`,
-            `"${(a.operatorName || '').replace(/"/g, '""')}"`,
-            `"${(a.erpProtocol || '').replace(/"/g, '""')}"`,
-            `"${(a.clientName || '').replace(/"/g, '""')}"`,
-            a.outcome || '',
-            `"${(a.auditorName || '').replace(/"/g, '""')}"`,
-            `"${(a.notes || '').replace(/"/g, '""')}"`
+            escapeCSV(a.date ? a.date.split('-').reverse().join('/') : ''),
+            formatAsText(a.protocol),
+            escapeCSV(isAuditCompleted(a) ? 'Concluída' : 'Pendente'),
+            escapeCSV(a.procedures || ''),
+            escapeCSV(a.quality || ''),
+            escapeCSV(a.process || ''),
+            escapeCSV(a.operatorName || ''),
+            formatAsText(a.erpProtocol),
+            escapeCSV(a.clientName || ''),
+            escapeCSV(a.outcome || ''),
+            escapeCSV(a.auditorName || ''),
+            escapeCSV(a.notes || '')
         ]);
 
-        const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + 
-            [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
-
-        const encodedUri = encodeURI(csvContent);
+        const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map(r => r.join(';'))].join('\r\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
+        link.href = url;
         link.setAttribute('download', `auditorias_terceirizadas_${periodType}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        showToast('Exportação concluída com sucesso!', 'success');
+        URL.revokeObjectURL(url);
+        showToast('Exportação CSV gerada com sucesso! Protocolos preservados como texto.', 'success');
+    };
+
+    // ========================================================
+    // EXPORTAÇÃO PDF (DOCUMENTO UNIFICADO PARA ANEXO)
+    // ========================================================
+    const handleExportPDF = () => {
+        if (filteredAudits.length === 0) {
+            showToast('Nenhuma auditoria para exportar.', 'warning');
+            return;
+        }
+
+        setIsExportingPDF(true);
+        try {
+            const periodLabelMap = {
+                current: 'Mês Corrente',
+                previous: 'Mês Anterior',
+                last7: 'Últimos 7 dias',
+                last30: 'Últimos 30 dias',
+                month: `Mês ${selectedMonth}`,
+                custom: `Personalizado (${customStartDate || ''} até ${customEndDate || ''})`,
+                all: 'Todo o Histórico'
+            };
+
+            exportThirdPartyAuditsPDF({
+                audits: filteredAudits,
+                periodLabel: periodLabelMap[periodType] || periodType,
+                kpiStats: {
+                    compliancePct: metrics.compliancePercent,
+                    qualityPct: metrics.qualityPositiveRate,
+                    fcrPct: metrics.fcrPercent
+                },
+                generatedBy: currentUser?.name || 'Gestão HubDesk'
+            });
+
+            showToast('Relatório em PDF gerado com sucesso! Arquivo pronto para anexo.', 'success');
+        } catch (error) {
+            console.error('Erro ao gerar PDF:', error);
+            showToast('Erro ao exportar PDF: ' + error.message, 'error');
+        } finally {
+            setIsExportingPDF(false);
+        }
     };
 
     return (
@@ -959,7 +1019,7 @@ export default function ThirdPartyAudits() {
                                     Auditorias de Qualidade Terceirizada
                                 </h1>
                                 <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
-                                    Equipe Externa • v3.7.2
+                                    Equipe Externa • v3.8.2
                                 </span>
                             </div>
                             <p className="text-xs text-gray-500 mt-0.5">
@@ -998,11 +1058,23 @@ export default function ThirdPartyAudits() {
                         <button
                             type="button"
                             onClick={handleExportCSV}
-                            className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-xl border border-gray-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                            title="Exportar dados filtrados em CSV"
+                            className="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            title="Exportar dados filtrados em CSV com protocolos em formato de texto"
                         >
-                            <Download className="w-3.5 h-3.5 text-gray-500" />
+                            <Download className="w-3.5 h-3.5 text-emerald-600" />
                             <span>Exportar CSV</span>
+                        </button>
+
+                        {/* Botão Exportar PDF */}
+                        <button
+                            type="button"
+                            disabled={isExportingPDF}
+                            onClick={handleExportPDF}
+                            className="px-3 py-2 bg-white hover:bg-red-50 text-red-800 text-xs font-bold rounded-xl border border-red-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            title="Exportar relatório e protocolos unificados em formato .PDF para anexo"
+                        >
+                            {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" /> : <FileText className="w-3.5 h-3.5 text-red-600" />}
+                            <span>Exportar PDF</span>
                         </button>
 
                         {/* Botão Nova Auditoria */}
