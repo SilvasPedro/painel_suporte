@@ -5,6 +5,7 @@ import {
     Share2, Compass, Tag, CheckCheck, Clock
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { resolveUserName } from '../../utils/userResolvers';
 
 export default function FeedbackDetailModal({
     isOpen,
@@ -66,7 +67,7 @@ export default function FeedbackDetailModal({
                                 </span>
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">
-                                Enviado em {formattedDate} {feedback.createdBy ? `por ${feedback.createdBy}` : ''}
+                                Enviado em {formattedDate} {feedback.createdBy ? `por ${resolveUserName(feedback.createdBy)}` : ''}
                             </p>
                         </div>
                     </div>

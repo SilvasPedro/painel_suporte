@@ -11,6 +11,7 @@ import {
     BarChart, Bar, LineChart, Line, AreaChart, Area, 
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
+import { resolveUserName } from '../../utils/userResolvers';
 
 // --- UTILITÁRIOS DE CONVERSÃO E FORMATAÇÃO ROBUSTOS ---
 const parseDateObj = (dateStr) => {
@@ -1432,7 +1433,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                         </p>
                                                         {f.createdBy && (
                                                             <div className="text-[9px] text-gray-400 text-right pt-0.5">
-                                                                Por: {f.createdBy}
+                                                                Por: {resolveUserName(f.createdBy)}
                                                             </div>
                                                         )}
                                                     </div>
@@ -1560,7 +1561,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                         </p>
 
                                                         <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-50">
-                                                            <span>Líder: <strong className="text-gray-700">{f.createdBy || 'Gestão'}</strong></span>
+                                                            <span>Líder: <strong className="text-gray-700">{resolveUserName(f.createdBy)}</strong></span>
                                                         </div>
                                                     </div>
                                                 );

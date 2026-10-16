@@ -584,7 +584,7 @@ const AdminDashboard = () => {
 
             <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
                 {/* Barra de Topo Unificada com Seletor Rápido de Tema */}
-                <header className="h-14 border-b border-gray-200 bg-white px-4 sm:px-6 flex items-center justify-between shrink-0 z-10 shadow-2xs">
+                <header className="h-14 border-b border-gray-200 bg-white px-4 sm:px-6 flex items-center justify-between shrink-0 z-30 relative shadow-2xs">
                     <div className="flex items-center gap-3 min-w-0">
                         <button 
                             type="button"

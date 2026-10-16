@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
 import { doc, setDoc, updateDoc, collection, addDoc } from "firebase/firestore"
 import { db, auth, firebaseConfig } from "./firebase";
+import { resolveUserName } from '../utils/userResolvers';
 
 // Instância para criar a conta sem deslogar o Admin
 const adminApp = initializeApp(firebaseConfig, "AdminWorker");
@@ -46,9 +47,10 @@ export const updateCollaboratorProfile = async (uid, updatedData) => {
 };
 
 // --- FUNÇÃO DE REGISTRAR FEEDBACK ---
-export const registerFeedback = async (collaboratorId, feedbackData) => {
-  // Pega o e-mail do Admin que está logado no momento
-  const adminEmail = auth.currentUser?.email || "Admin Desconhecido";
+export const registerFeedback = async (collaboratorId, feedbackData, loggedUser = null) => {
+  // Pega o nome de exibição do Gestor logado ao invés do e-mail puro
+  const authorEmail = loggedUser?.email || auth.currentUser?.email || "";
+  const authorName = loggedUser?.name || loggedUser?.displayName || auth.currentUser?.displayName || resolveUserName(authorEmail);
   const now = new Date();
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const yyyy = now.getFullYear();
@@ -61,7 +63,9 @@ export const registerFeedback = async (collaboratorId, feedbackData) => {
     method: feedbackData.method,
     protocol: feedbackData.protocol || "N/A", // Se vazio, salva como N/A
     comment: feedbackData.comment,
-    createdBy: adminEmail, // A mágica da auditoria acontece aqui!
+    createdBy: authorName, // Nome legível do usuário (ex: "Pedro Silva")
+    createdByName: authorName,
+    createdByEmail: authorEmail,
     createdAt: now.toISOString(),
     date: now.toLocaleDateString('pt-BR'),
     month: `${mm}/${yyyy}`

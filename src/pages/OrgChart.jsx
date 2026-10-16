@@ -373,7 +373,7 @@ const OrgChart = ({ readOnly }) => {
             await setDoc(doc(db, 'system_settings', DOCUMENT_ID), {
                 structure: chart,
                 updatedAt: new Date().toISOString(),
-                updatedBy: currentUser?.email || 'Admin'
+                updatedBy: currentUser?.name || currentUser?.displayName || currentUser?.email || 'Admin'
             });
             setSavedChart(JSON.parse(JSON.stringify(chart)));
             setHasUnsavedChanges(false);

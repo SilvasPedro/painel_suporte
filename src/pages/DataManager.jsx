@@ -18,6 +18,7 @@ const collectionMap = {
 import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
+import { resolveUserName } from '../utils/userResolvers';
 import { usePermissions } from '../context/PermissionsContext';
 
 // --- CÁLCULO DE PONTUAÇÃO DO DESEMPENHO ---
@@ -1670,7 +1671,7 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
 
                             {item.createdBy && (
                                 <div className="text-xs text-gray-400 text-right">
-                                    Registrado por: <strong className="text-gray-600">{item.createdBy}</strong>
+                                    Registrado por: <strong className="text-gray-600">{resolveUserName(item.createdBy)}</strong>
                                 </div>
                             )}
                         </div>
@@ -1714,7 +1715,7 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
 
                             {item.createdBy && (
                                 <div className="text-xs text-gray-400 text-right">
-                                    Registrado por: <strong className="text-gray-600">{item.createdBy}</strong>
+                                    Registrado por: <strong className="text-gray-600">{resolveUserName(item.createdBy)}</strong>
                                 </div>
                             )}
                         </div>

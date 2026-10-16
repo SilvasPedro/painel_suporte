@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { registerFeedback } from '../../services/adminAuth';
 import { useNotification } from '../../context/NotificationContext';
+import { useAuth } from '../../context/AuthContext';
 
 const FEEDBACK_TYPES = [
     { id: 'Elogio', label: 'Elogio', icon: ThumbsUp, color: 'border-emerald-500 bg-emerald-50 text-emerald-800' },
@@ -20,6 +21,7 @@ const METHODS = [
 ];
 
 export const FeedbackModal = ({ colab, onClose }) => {
+    const { currentUser } = useAuth();
     const { showToast } = useNotification();
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -38,7 +40,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
 
         setLoading(true);
         try {
-            await registerFeedback(colab.id, formData);
+            await registerFeedback(colab.id, formData, currentUser);
             showToast("Feedback registrado com sucesso!", "success");
             onClose();
         } catch (error) {

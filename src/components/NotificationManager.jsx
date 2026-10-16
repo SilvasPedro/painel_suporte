@@ -4,6 +4,7 @@ import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { registerMessagingServiceWorker } from '../services/browserNotifications';
+import { resolveUserName } from '../utils/userResolvers';
 
 /**
  * Componente invisível de escuta em tempo real para Notificações Push do Navegador (v3.8.1)
@@ -119,7 +120,7 @@ export const NotificationManager = () => {
 
             notify({
                 title: `📢 Novo Feedback: ${simulated.type}`,
-                body: `De: ${simulated.createdBy || 'Gestão'}\n"${simulated.comment}"`,
+                body: `De: ${resolveUserName(simulated.createdBy) || 'Gestão'}\n"${simulated.comment}"`,
                 type: 'feedback',
                 tag: `feedback-sim-${Date.now()}`,
                 data: { feedback: simulated, type: 'feedback' },
@@ -242,7 +243,8 @@ export const NotificationManager = () => {
                     }
 
                     const feedbackTitle = `📢 Novo Feedback: ${item.type || 'Desempenho'}`;
-                    const author = item.createdBy ? `De: ${item.createdBy}\n` : '';
+                    const authorName = item.createdBy ? resolveUserName(item.createdBy) : 'Gestão';
+                    const author = authorName ? `De: ${authorName}\n` : '';
                     const commentPreview = item.comment 
                         ? (item.comment.length > 120 ? item.comment.substring(0, 117) + '...' : item.comment)
                         : 'Você recebeu um novo feedback no sistema.';
@@ -346,7 +348,7 @@ export const NotificationManager = () => {
                     const createdByCurrentUser = isCreatorOfReport(rep);
 
                     if (isGestor && !createdByCurrentUser) {
-                        const reporter = rep.creatorName || rep.creatorEmail || 'Colaborador';
+                        const reporter = resolveUserName(rep.creatorName || rep.creatorEmail) || 'Colaborador';
                         const protocolBadge = rep.protocol ? ` • #${rep.protocol}` : '';
                         const desc = rep.description 
                             ? (rep.description.length > 110 ? rep.description.substring(0, 107) + '...' : rep.description)
@@ -392,8 +394,9 @@ export const NotificationManager = () => {
 
                     if (isMyReport && !updatedByMe) {
                         const protocolStr = rep.protocol ? `Protocolo #${rep.protocol}` : (rep.title || 'Sua solicitação');
+                        const authorStaff = rep.lastUpdatedBy ? resolveUserName(rep.lastUpdatedBy) : 'Gestão';
                         const parecesPreview = rep.adminComment 
-                            ? `\nParecer: "${rep.adminComment.length > 80 ? rep.adminComment.substring(0, 77) + '...' : rep.adminComment}"`
+                            ? `\nParecer de ${authorStaff}: "${rep.adminComment.length > 70 ? rep.adminComment.substring(0, 67) + '...' : rep.adminComment}"`
                             : '';
 
                         notify({

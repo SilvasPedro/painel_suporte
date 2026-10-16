@@ -13,6 +13,7 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
+import { resolveUserName } from '../utils/userResolvers';
 
 const Reports = () => {
     const { showToast } = useNotification();
@@ -286,7 +287,8 @@ const Reports = () => {
                 showToast("Solicitação atualizada com sucesso!", "success");
             } else {
                 reportPayload.creatorId = currentUser.firestoreId || currentUser.uid;
-                reportPayload.creatorName = currentUser.name || currentUser.displayName || 'Colaborador';
+                reportPayload.creatorName = currentUser.name || currentUser.displayName || resolveUserName(currentUser.email) || 'Colaborador';
+                reportPayload.creatorEmail = currentUser.email || '';
                 reportPayload.createdAt = new Date();
                 await addDoc(collection(db, "critical_reports"), reportPayload);
                 showToast("Solicitação enviada com sucesso!", "success");
@@ -361,7 +363,7 @@ const Reports = () => {
         setSendingComment(true);
         try {
             const userUid = currentUser?.firestoreId || currentUser?.uid || 'user';
-            const userName = currentUser?.name || currentUser?.displayName || 'Usuário';
+            const userName = currentUser?.name || currentUser?.displayName || resolveUserName(currentUser?.email) || 'Usuário';
             const userRole = currentUser?.role || normalizedRole || 'Colaborador';
 
             const newComment = {
@@ -409,7 +411,7 @@ const Reports = () => {
         if (!viewingReport) return;
         setQuickSaving(true);
         try {
-            const userName = currentUser?.name || 'Gestão';
+            const userName = currentUser?.name || currentUser?.displayName || resolveUserName(currentUser?.email) || 'Gestão';
             const userUid = currentUser?.firestoreId || currentUser?.uid || 'user';
             const userRole = currentUser?.role || normalizedRole || 'Gestor';
 

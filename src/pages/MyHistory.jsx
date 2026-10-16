@@ -15,6 +15,7 @@ import AuditDetailModal from '../components/history/AuditDetailModal';
 import FeedbackDetailModal from '../components/history/FeedbackDetailModal';
 import WeeklyMetricDetailModal from '../components/history/WeeklyMetricDetailModal';
 import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluationDetailModal';
+import { resolveUserName } from '../utils/userResolvers';
 
 const getItemDateObj = (item) => {
     if (!item) return null;
@@ -342,7 +343,7 @@ const MyHistory = ({ currentUserId }) => {
                 const matchComment = (item.comment || '').toLowerCase().includes(term);
                 const matchNotes = (item.notes || '').toLowerCase().includes(term);
                 const matchProtocol = String(item.protocol || '').toLowerCase().includes(term);
-                const matchEvaluator = (item.evaluatorName || item.createdBy || '').toLowerCase().includes(term);
+                const matchEvaluator = (item.evaluatorName || resolveUserName(item.createdBy) || '').toLowerCase().includes(term);
                 const matchProcess = (item.processName || qaProcesses[item.processId]?.name || '').toLowerCase().includes(term);
                 const matchChannel = (item.channel || item.method || '').toLowerCase().includes(term);
                 const dateBr = itemDate ? itemDate.toLocaleDateString('pt-BR') : '';
@@ -954,7 +955,7 @@ const MyHistory = ({ currentUserId }) => {
                                             )}
                                             {activeTab === 'feedbacks' && (
                                                 <span className="text-[11px] text-gray-500 font-medium">
-                                                    {item.createdBy || 'Gestão'}
+                                                    {resolveUserName(item.createdBy)}
                                                 </span>
                                             )}
                                             {activeTab === 'metrics' && (
@@ -1051,7 +1052,7 @@ const MyHistory = ({ currentUserId }) => {
                                             </p>
                                             {item.createdBy && (
                                                 <div className="text-[10px] text-gray-400">
-                                                    Por: <strong className="text-gray-700">{item.createdBy}</strong>
+                                                    Por: <strong className="text-gray-700">{resolveUserName(item.createdBy)}</strong>
                                                 </div>
                                             )}
                                         </div>
