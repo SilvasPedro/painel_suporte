@@ -55,20 +55,29 @@ export const registerFeedback = async (collaboratorId, feedbackData, loggedUser 
   const mm = String(now.getMonth() + 1).padStart(2, '0');
   const yyyy = now.getFullYear();
 
-  // Prepara o pacote de dados
+  // Prepara o pacote de dados estruturado (v3.8.4)
   const payload = {
     collaboratorId,
     colabId: collaboratorId,
     type: feedbackData.type,
     method: feedbackData.method,
-    protocol: feedbackData.protocol || "N/A", // Se vazio, salva como N/A
-    comment: feedbackData.comment,
+    hasProtocol: Boolean(feedbackData.hasProtocol),
+    protocol: feedbackData.hasProtocol ? (feedbackData.protocol || "N/A") : "N/A",
+    praiseReason: feedbackData.praiseReason || "",
+    guidanceText: feedbackData.guidanceText || "",
+    improvementError: feedbackData.improvementError || "",
+    improvementCorrect: feedbackData.improvementCorrect || "",
+    improvementDeadline: feedbackData.improvementDeadline || "",
+    tags: Array.isArray(feedbackData.tags) ? feedbackData.tags : [],
+    comment: feedbackData.comment || "",
     createdBy: authorName, // Nome legível do usuário (ex: "Pedro Silva")
     createdByName: authorName,
     createdByEmail: authorEmail,
     createdAt: now.toISOString(),
     date: now.toLocaleDateString('pt-BR'),
-    month: `${mm}/${yyyy}`
+    month: `${mm}/${yyyy}`,
+    read: false, // Inicialmente não lido pelo colaborador
+    readAt: null
   };
 
   // Salva em uma coleção separada chamada 'feedbacks'

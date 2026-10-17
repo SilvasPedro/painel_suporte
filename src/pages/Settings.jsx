@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles, Bell, Volume2, VolumeX, Send, AlertTriangle, XCircle, Info } from 'lucide-react';
+import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles, Bell, Volume2, VolumeX, Send, AlertTriangle, XCircle, Info, Tag } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedDocument, subscribeSharedCollection } from '../services/dataCache';
@@ -7,6 +7,7 @@ import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
 import RbacSettingsTab from '../components/RbacSettingsTab';
 import QaProcessesTab from '../components/settings/QaProcessesTab';
+import FeedbackTagsTab from '../components/settings/FeedbackTagsTab';
 import { SYSTEM_SHIFTS, THIRD_PARTY_SCHEDULE_INFO, saveSystemShiftsInfo } from '../services/userProfile';
 
 const Settings = () => {
@@ -84,6 +85,9 @@ const Settings = () => {
                 </button>
                 <button onClick={() => setActiveTab('shifts')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'shifts' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                     <Clock className="w-4 h-4"/> Expedientes & Turnos
+                </button>
+                <button onClick={() => setActiveTab('feedback_tags')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'feedback_tags' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
+                    <Tag className="w-4 h-4"/> Tags de Feedback
                 </button>
                 <button onClick={() => setActiveTab('notifications')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'notifications' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
                     <Bell className="w-4 h-4"/> Notificações Push
@@ -236,6 +240,10 @@ const Settings = () => {
                     loading={loadingProcesses} 
                     isEditable={isEditable} 
                 />
+            )}
+
+            {activeTab === 'feedback_tags' && (
+                <FeedbackTagsTab />
             )}
 
             {activeTab === 'notifications' && (

@@ -178,7 +178,7 @@ export const NotificationBell = () => {
     };
 
     return (
-        <div className="relative z-50" ref={dropdownRef}>
+        <div className="relative z-[60]" ref={dropdownRef}>
             {/* BOTÃO DO SINO NO HEADER */}
             <button
                 type="button"
@@ -207,9 +207,9 @@ export const NotificationBell = () => {
                 )}
             </button>
 
-            {/* PAINEL SUSPENSO (DROPDOWN MODERNO) */}
+            {/* PAINEL SUSPENSO (DROPDOWN MODERNO COM Z-[70] PARA FICAR SEMPRE SOBRE CABEÇALHOS DE TABELAS) */}
             {isOpen && (
-                <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden z-[60] animate-in fade-in zoom-in-95 duration-150">
+                <div className="absolute right-0 mt-2 w-84 sm:w-96 bg-white dark:bg-zinc-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-zinc-800 overflow-hidden z-[70] animate-in fade-in zoom-in-95 duration-150">
                     {/* CABEÇALHO DO PAINEL */}
                     <div className="p-4 bg-zinc-950 text-white flex items-center justify-between border-b border-zinc-800">
                         <div className="flex items-center gap-2.5">

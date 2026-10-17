@@ -5,7 +5,7 @@ import {
     CheckCircle2, Phone, ThumbsUp, Minus, ThumbsDown, LayoutGrid, 
     Table, Download, RotateCcw, Sparkles, XCircle, Award, 
     Calendar, ArrowUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
-    SlidersHorizontal, Clock, AlertTriangle
+    SlidersHorizontal, Clock, AlertTriangle, Hash, CheckCheck, Tag
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -884,18 +884,54 @@ const MyHistory = ({ currentUserId }) => {
                                         <td className="px-3.5 py-2">
                                             {/* ABA: FEEDBACKS */}
                                             {activeTab === 'feedbacks' && (
-                                                <div className="flex items-center gap-2 max-w-lg">
-                                                    {!item.read && (
-                                                        <span className="w-2 h-2 rounded-full bg-fuchsia-500 animate-pulse shrink-0" title="Não lido"></span>
+                                                <div className="flex flex-col gap-1 max-w-xl py-0.5">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        {!item.read ? (
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300 animate-pulse">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-600" />
+                                                                Novo
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
+                                                                <CheckCheck className="w-3 h-3 text-emerald-600" />
+                                                                Lido
+                                                            </span>
+                                                        )}
+
+                                                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${
+                                                            item.type === 'Elogio' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
+                                                            item.type === 'Ponto de Melhoria' ? 'bg-amber-50 text-amber-800 border-amber-200' : 
+                                                            'bg-blue-50 text-blue-800 border-blue-200'
+                                                        }`}>
+                                                            {item.type}
+                                                        </span>
+
+                                                        {item.method && (
+                                                            <span className="text-[10px] font-medium text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">
+                                                                {item.method}
+                                                            </span>
+                                                        )}
+
+                                                        {item.protocol && item.protocol !== 'N/A' && (
+                                                            <span className="text-[10px] font-mono font-bold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
+                                                                <Hash className="w-2.5 h-2.5 text-red-500" />
+                                                                {item.protocol}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Tags associadas */}
+                                                    {Array.isArray(item.tags) && item.tags.length > 0 && (
+                                                        <div className="flex items-center gap-1 flex-wrap">
+                                                            {item.tags.map(t => (
+                                                                <span key={t} className="text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                                                                    {t}
+                                                                </span>
+                                                            ))}
+                                                        </div>
                                                     )}
-                                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold shrink-0 border ${
-                                                        item.type === 'Elogio' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
-                                                        item.type === 'Ponto de Melhoria' ? 'bg-amber-50 text-amber-800 border-amber-200' : 
-                                                        'bg-blue-50 text-blue-800 border-blue-200'
-                                                    }`}>
-                                                        {item.type}
-                                                    </span>
-                                                    <span className="text-xs text-gray-700 truncate font-medium">
+
+                                                    <span className="text-xs text-gray-700 line-clamp-1 font-medium">
                                                         {item.comment || 'Sem mensagem descritiva.'}
                                                     </span>
                                                 </div>
@@ -1046,13 +1082,53 @@ const MyHistory = ({ currentUserId }) => {
 
                                     {/* Corpo do Card */}
                                     {activeTab === 'feedbacks' && (
-                                        <div className="space-y-1">
-                                            <p className="text-xs text-gray-700 line-clamp-2 leading-snug">
-                                                {item.comment || 'Sem mensagem descritiva.'}
+                                        <div className="space-y-2">
+                                            {/* Status de Leitura & Canal */}
+                                            <div className="flex items-center justify-between text-[11px] gap-1">
+                                                {!item.read ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300 animate-pulse">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-600" />
+                                                        Novo
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200">
+                                                        <CheckCheck className="w-3 h-3 text-emerald-600" />
+                                                        Lido
+                                                    </span>
+                                                )}
+
+                                                <div className="flex items-center gap-1">
+                                                    {item.method && (
+                                                        <span className="text-[10px] text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-medium">
+                                                            {item.method}
+                                                        </span>
+                                                    )}
+                                                    {item.protocol && item.protocol !== 'N/A' && (
+                                                        <span className="text-[10px] font-mono font-bold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">
+                                                            ID: {item.protocol}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Tags */}
+                                            {Array.isArray(item.tags) && item.tags.length > 0 && (
+                                                <div className="flex items-center gap-1 flex-wrap">
+                                                    {item.tags.map(t => (
+                                                        <span key={t} className="text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                                                            {t}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            <p className="text-xs text-gray-700 line-clamp-3 leading-snug bg-gray-50/70 p-2 rounded-lg border border-gray-100 italic">
+                                                &quot;{item.comment || 'Sem mensagem descritiva.'}&quot;
                                             </p>
+
                                             {item.createdBy && (
                                                 <div className="text-[10px] text-gray-400">
-                                                    Por: <strong className="text-gray-700">{resolveUserName(item.createdBy)}</strong>
+                                                    Líder: <strong className="text-gray-700">{resolveUserName(item.createdBy)}</strong>
                                                 </div>
                                             )}
                                         </div>

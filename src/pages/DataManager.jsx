@@ -6,7 +6,7 @@ import {
     Clock, Award, Sparkles, User, Hash, FileText, Check, BarChart2,
     LayoutGrid, Table, List, Filter, ArrowUpDown, SlidersHorizontal,
     Users, ChevronLeft, ChevronRight, RotateCcw, CheckCircle, AlertCircle,
-    CalendarRange, Layers, Flame, Tag, ThumbsUp, HelpCircle
+    CalendarRange, Layers, Flame, Tag, ThumbsUp, HelpCircle, CheckCheck
 } from 'lucide-react';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 const collectionMap = {
@@ -229,10 +229,12 @@ const DataManager = () => {
     const statusTypeOptions = useMemo(() => {
         if (activeTab === 'feedbacks') {
             return [
-                { value: 'all', label: 'Todos os Tipos' },
+                { value: 'all', label: 'Todos os Feedbacks' },
                 { value: 'Elogio', label: 'Elogio' },
                 { value: 'Ponto de Melhoria', label: 'Ponto de Melhoria' },
                 { value: 'Orientação', label: 'Orientação' },
+                { value: 'read_true', label: 'Status: Apenas Lidos' },
+                { value: 'read_false', label: 'Status: Apenas Não Lidos (Pendentes)' }
             ];
         }
         if (activeTab === 'audits') {
@@ -280,7 +282,8 @@ const DataManager = () => {
                 const matchComment = item.comment && item.comment.toLowerCase().includes(queryStr);
                 const matchMethod = item.method && item.method.toLowerCase().includes(queryStr);
                 const matchEvaluator = item.evaluatorName && item.evaluatorName.toLowerCase().includes(queryStr);
-                if (!matchName && !matchType && !matchProtocol && !matchComment && !matchMethod && !matchEvaluator) {
+                const matchTags = Array.isArray(item.tags) && item.tags.some(t => String(t).toLowerCase().includes(queryStr));
+                if (!matchName && !matchType && !matchProtocol && !matchComment && !matchMethod && !matchEvaluator && !matchTags) {
                     return false;
                 }
             }
@@ -293,7 +296,13 @@ const DataManager = () => {
             // 3. Filtro de Status / Tipo Contextual
             if (statusTypeFilter !== 'all') {
                 if (activeTab === 'feedbacks') {
-                    if (item.type !== statusTypeFilter) return false;
+                    if (statusTypeFilter === 'read_true') {
+                        if (!item.read) return false;
+                    } else if (statusTypeFilter === 'read_false') {
+                        if (item.read) return false;
+                    } else if (item.type !== statusTypeFilter) {
+                        return false;
+                    }
                 } else if (activeTab === 'audits') {
                     if (item.status !== statusTypeFilter) return false;
                 } else if (activeTab === 'metrics') {
@@ -376,7 +385,9 @@ const DataManager = () => {
             const elogios = filteredData.filter(i => i.type === 'Elogio').length;
             const melhorias = filteredData.filter(i => i.type === 'Ponto de Melhoria').length;
             const orientacoes = filteredData.filter(i => i.type === 'Orientação').length;
-            return { total, elogios, melhorias, orientacoes };
+            const lidos = filteredData.filter(i => Boolean(i.read)).length;
+            const pendentes = filteredData.filter(i => !i.read).length;
+            return { total, elogios, melhorias, orientacoes, lidos, pendentes };
         }
         if (activeTab === 'metrics') {
             let totalFinalizados = 0;
@@ -706,12 +717,23 @@ const DataManager = () => {
                         </span>
 
                         {activeTab === 'feedbacks' && (
-                            <div className="flex items-center gap-2 text-xs">
+                            <div className="flex items-center gap-2 text-xs flex-wrap">
                                 <span className="inline-flex items-center gap-1 text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold">
                                     <ThumbsUp className="w-3 h-3" /> {statsSummary.elogios} Elogios
                                 </span>
                                 <span className="inline-flex items-center gap-1 text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md font-semibold">
                                     <AlertTriangle className="w-3 h-3" /> {statsSummary.melhorias} Melhorias
+                                </span>
+                                {statsSummary.orientacoes > 0 && (
+                                    <span className="inline-flex items-center gap-1 text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md font-semibold">
+                                        <HelpCircle className="w-3 h-3" /> {statsSummary.orientacoes} Orientações
+                                    </span>
+                                )}
+                                <span className="inline-flex items-center gap-1 text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2 py-0.5 rounded-md font-bold">
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> {statsSummary.lidos} Lidos
+                                </span>
+                                <span className="inline-flex items-center gap-1 text-amber-900 bg-amber-100/90 border border-amber-300 px-2 py-0.5 rounded-md font-bold">
+                                    <Clock className="w-3 h-3 text-amber-600 animate-pulse" /> {statsSummary.pendentes} Pendentes
                                 </span>
                             </div>
                         )}
@@ -828,6 +850,14 @@ const DataManager = () => {
                                                 </th>
                                             )}
                                             <th className="px-5 py-3.5 text-left font-semibold">Resumo do Dado</th>
+                                            {activeTab === 'feedbacks' && (
+                                                <th className="px-5 py-3.5 text-left font-semibold">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                                                        <span>Status de Leitura</span>
+                                                    </div>
+                                                </th>
+                                            )}
                                             <th className="px-5 py-3.5 text-right font-semibold">Ações</th>
                                         </tr>
                                     </thead>
@@ -858,21 +888,40 @@ const DataManager = () => {
 
                                                     <td className="px-5 py-3.5">
                                                         {activeTab === 'feedbacks' && (
-                                                            <div className="flex items-center gap-2">
-                                                                <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
-                                                                    item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-800' : 
-                                                                    item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-800' : 
-                                                                    'bg-blue-100 text-blue-800'
-                                                                }`}>
-                                                                    {item.type}
-                                                                </span>
-                                                                {item.method && (
-                                                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md">
-                                                                        {item.method}
+                                                            <div className="flex flex-col gap-1.5 max-w-[340px]">
+                                                                <div className="flex items-center gap-2 flex-wrap">
+                                                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                                                                        item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-800' : 
+                                                                        item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-800' : 
+                                                                        'bg-blue-100 text-blue-800'
+                                                                    }`}>
+                                                                        {item.type}
                                                                     </span>
+                                                                    {item.method && (
+                                                                        <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md font-medium border border-gray-200">
+                                                                            {item.method}
+                                                                        </span>
+                                                                    )}
+                                                                    {item.protocol && item.protocol !== 'N/A' && (
+                                                                        <span className="text-xs font-mono font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
+                                                                            ID: {item.protocol}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Tags associadas */}
+                                                                {Array.isArray(item.tags) && item.tags.length > 0 && (
+                                                                    <div className="flex items-center gap-1 flex-wrap">
+                                                                        {item.tags.map(t => (
+                                                                            <span key={t} className="text-[10px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                                                                                {t}
+                                                                            </span>
+                                                                        ))}
+                                                                    </div>
                                                                 )}
+
                                                                 {item.comment && (
-                                                                    <span className="text-xs text-gray-500 max-w-[280px] truncate hidden md:inline-block">
+                                                                    <span className="text-xs text-gray-600 truncate">
                                                                         &quot;{item.comment}&quot;
                                                                     </span>
                                                                 )}
@@ -933,6 +982,33 @@ const DataManager = () => {
                                                         )}
                                                     </td>
                                                     
+                                                    {activeTab === 'feedbacks' && (
+                                                        <td className="px-5 py-3.5">
+                                                            {item.read ? (
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 w-fit shadow-2xs">
+                                                                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                                                                        Lido pelo Colaborador
+                                                                    </span>
+                                                                    {item.readAt && (
+                                                                        <span className="text-[11px] text-gray-500 font-medium pl-1 flex items-center gap-1">
+                                                                            <Clock className="w-3 h-3 text-gray-400" />
+                                                                            {new Date(item.readAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex flex-col gap-0.5">
+                                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 w-fit shadow-2xs">
+                                                                        <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0 animate-pulse" />
+                                                                        Pendente (Não Lido)
+                                                                    </span>
+                                                                    <span className="text-[10px] text-gray-400 pl-1 font-medium">Aguardando confirmação</span>
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                    )}
+
                                                     <td className="px-5 py-3.5 text-right">
                                                         <div className="flex justify-end items-center gap-1">
                                                             <button 
@@ -1043,7 +1119,38 @@ const DataManager = () => {
 
                                                     {/* Conteúdo Contextual do Card */}
                                                     {activeTab === 'feedbacks' && (
-                                                        <div className="space-y-2 mb-3">
+                                                        <div className="space-y-2.5 mb-3">
+                                                            {/* Status de Leitura no Card */}
+                                                            <div className="flex items-center justify-between gap-1 text-[11px]">
+                                                                {item.read ? (
+                                                                    <span className="inline-flex items-center gap-1 font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                                        Lido pelo Colaborador
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1 font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md">
+                                                                        <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                                                                        Pendente (Não Lido)
+                                                                    </span>
+                                                                )}
+                                                                {item.readAt && (
+                                                                    <span className="text-[10px] text-gray-400 font-medium">
+                                                                        {new Date(item.readAt).toLocaleDateString('pt-BR')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Tags */}
+                                                            {Array.isArray(item.tags) && item.tags.length > 0 && (
+                                                                <div className="flex items-center gap-1 flex-wrap">
+                                                                    {item.tags.map(t => (
+                                                                        <span key={t} className="text-[10px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                                                                            {t}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+
                                                             {item.comment ? (
                                                                 <p className="text-xs text-gray-600 line-clamp-3 bg-gray-50/80 p-2.5 rounded-xl border border-gray-100 italic">
                                                                     &quot;{item.comment}&quot;
@@ -1051,9 +1158,12 @@ const DataManager = () => {
                                                             ) : (
                                                                 <p className="text-xs text-gray-400 italic">Sem comentário adicional.</p>
                                                             )}
-                                                            <div className="flex items-center justify-between text-[11px] text-gray-500">
+
+                                                            <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-100">
                                                                 <span>Canal: <strong className="text-gray-800">{item.method || 'Geral'}</strong></span>
-                                                                {item.protocol && <span>Protocolo: <strong className="font-mono text-gray-800">{item.protocol}</strong></span>}
+                                                                {item.protocol && item.protocol !== 'N/A' && (
+                                                                    <span>Protocolo: <strong className="font-mono text-gray-800">{item.protocol}</strong></span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     )}
@@ -1632,15 +1742,14 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                 </div>
                             </div>
 
-                            {/* TIPO E CANAL */}
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            {/* METADADOS RÁPIDOS: TIPO, CANAL, PROTOCOLO E STATUS DE LEITURA */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                 <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
                                     <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Classificação</span>
                                     <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${
                                         item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-800' :
                                         item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-800' :
-                                        item.type === 'Reclamação' ? 'bg-red-100 text-red-800' :
-                                        item.type === 'Sugestão' ? 'bg-blue-100 text-blue-800' :
+                                        item.type === 'Orientação' ? 'bg-blue-100 text-blue-800' :
                                         'bg-purple-100 text-purple-800'
                                     }`}>
                                         {item.type || 'Não informado'}
@@ -1648,26 +1757,133 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                 </div>
 
                                 <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Meio / Canal</span>
-                                    <span className="text-sm font-bold text-gray-800">{item.method || 'Geral'}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Canal / Meio</span>
+                                    <span className="text-sm font-bold text-gray-800">{item.method || 'Presencial'}</span>
                                 </div>
 
                                 <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Protocolo</span>
-                                    <span className="text-sm font-mono font-bold text-gray-800">{item.protocol || '--'}</span>
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Protocolo ou ID</span>
+                                    <span className="text-sm font-mono font-bold text-gray-800">
+                                        {item.protocol && item.protocol !== 'N/A' ? item.protocol : 'Sem protocolo'}
+                                    </span>
+                                </div>
+
+                                <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase block mb-1">Status de Leitura</span>
+                                    {item.read ? (
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md w-fit">
+                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                                Lido pelo Colaborador
+                                            </span>
+                                            {item.readAt && (
+                                                <span className="text-[10px] text-gray-500 font-medium">
+                                                    {new Date(item.readAt).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' })}
+                                                </span>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md w-fit">
+                                            <Clock className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
+                                            Pendente (Não Lido)
+                                        </span>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* COMENTÁRIO */}
-                            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
-                                <span className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1.5 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-red-500" />
-                                    Comentário do Feedback
-                                </span>
-                                <div className="p-3.5 bg-gray-50 rounded-lg border border-gray-100 text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">
-                                    {item.comment || 'Nenhum comentário registrado.'}
+                            {/* TAGS ASSOCIADAS */}
+                            {Array.isArray(item.tags) && item.tags.length > 0 && (
+                                <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs">
+                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                                        <Tag className="w-3 h-3 text-red-600" /> Competências & Tags
+                                    </span>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {item.tags.map(tag => (
+                                            <span key={tag} className="text-xs font-bold bg-red-50 text-red-700 px-2.5 py-1 rounded-lg border border-red-200">
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+
+                            {/* CAMPOS ESTRUTURADOS v3.8.4 SE DISPONÍVEIS */}
+                            {item.type === 'Elogio' && item.praiseReason && (
+                                <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-xs">
+                                    <span className="text-xs font-bold text-emerald-800 uppercase flex items-center gap-1.5 mb-2">
+                                        <ThumbsUp className="w-4 h-4 text-emerald-600" />
+                                        Motivo do Elogio / Reconhecimento
+                                    </span>
+                                    <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-100 text-emerald-950 text-sm whitespace-pre-wrap leading-relaxed">
+                                        {item.praiseReason}
+                                    </div>
+                                </div>
+                            )}
+
+                            {item.type === 'Orientação' && item.guidanceText && (
+                                <div className="bg-white p-4 rounded-xl border border-blue-200 shadow-xs">
+                                    <span className="text-xs font-bold text-blue-800 uppercase flex items-center gap-1.5 mb-2">
+                                        <HelpCircle className="w-4 h-4 text-blue-600" />
+                                        Orientação Passada ao Colaborador
+                                    </span>
+                                    <div className="p-3 bg-blue-50/50 rounded-lg border border-blue-100 text-blue-950 text-sm whitespace-pre-wrap leading-relaxed">
+                                        {item.guidanceText}
+                                    </div>
+                                </div>
+                            )}
+
+                            {item.type === 'Ponto de Melhoria' && (item.improvementError || item.improvementCorrect || item.improvementDeadline) && (
+                                <div className="space-y-3">
+                                    {item.improvementError && (
+                                        <div className="bg-white p-4 rounded-xl border border-amber-200 shadow-xs">
+                                            <span className="text-xs font-bold text-amber-900 uppercase flex items-center gap-1.5 mb-1.5">
+                                                <AlertTriangle className="w-4 h-4 text-amber-600" />
+                                                Erro / Oportunidade Observada
+                                            </span>
+                                            <div className="p-3 bg-amber-50/50 rounded-lg border border-amber-100 text-amber-950 text-sm whitespace-pre-wrap leading-relaxed">
+                                                {item.improvementError}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {item.improvementCorrect && (
+                                        <div className="bg-white p-4 rounded-xl border border-emerald-200 shadow-xs">
+                                            <span className="text-xs font-bold text-emerald-800 uppercase flex items-center gap-1.5 mb-1.5">
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                                                Forma Correta de Proceder
+                                            </span>
+                                            <div className="p-3 bg-emerald-50/50 rounded-lg border border-emerald-100 text-emerald-950 text-sm whitespace-pre-wrap leading-relaxed">
+                                                {item.improvementCorrect}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {item.improvementDeadline && (
+                                        <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-xs flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Clock className="w-4 h-4 text-red-600" />
+                                                <span className="text-xs font-bold text-gray-700">Prazo para Aplicação da Solução:</span>
+                                            </div>
+                                            <span className="text-sm font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-lg">
+                                                {item.improvementDeadline}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* COMENTÁRIO GERAL / UNIFICADO */}
+                            {(!item.praiseReason && !item.guidanceText && !item.improvementError) && item.comment && (
+                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs">
+                                    <span className="text-xs font-bold text-gray-600 uppercase flex items-center gap-1.5 mb-2">
+                                        <MessageSquare className="w-4 h-4 text-red-500" />
+                                        Comentário do Feedback
+                                    </span>
+                                    <div className="p-3.5 bg-gray-50 rounded-lg border border-gray-100 text-gray-800 text-sm whitespace-pre-wrap leading-relaxed">
+                                        {item.comment}
+                                    </div>
+                                </div>
+                            )}
 
                             {item.createdBy && (
                                 <div className="text-xs text-gray-400 text-right">
@@ -2146,41 +2362,55 @@ const EditModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                         <select 
                                             value={formData.type || 'Elogio'} 
                                             onChange={(e) => handleChange('type', e.target.value)}
-                                            className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none text-sm"
+                                            className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none text-sm font-semibold"
                                         >
                                             <option value="Elogio">Elogio</option>
+                                            <option value="Orientação">Orientação</option>
                                             <option value="Ponto de Melhoria">Ponto de Melhoria</option>
-                                            <option value="Reclamação">Reclamação</option>
-                                            <option value="Sugestão">Sugestão</option>
-                                            <option value="Dúvida">Dúvida</option>
                                         </select>
                                     </div>
 
                                     <div>
                                         <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Meio / Canal</label>
                                         <select 
-                                            value={formData.method || 'Chat'} 
+                                            value={formData.method || 'Presencial'} 
                                             onChange={(e) => handleChange('method', e.target.value)}
-                                            className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none text-sm"
+                                            className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none text-sm font-semibold"
                                         >
-                                            <option value="Chat">Chat</option>
-                                            <option value="Telefone">Telefone</option>
-                                            <option value="WhatsApp">WhatsApp</option>
-                                            <option value="E-mail">E-mail</option>
                                             <option value="Presencial">Presencial</option>
-                                            <option value="Videoconferência">Videoconferência</option>
+                                            <option value="Telefonia">Telefonia</option>
+                                            <option value="Chat">Chat</option>
+                                            <option value="Sistema (ERP)">Sistema (ERP)</option>
                                         </select>
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Protocolo</label>
+                                        <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Protocolo ou ID</label>
                                         <input 
                                             type="text"
                                             value={formData.protocol || ''}
                                             onChange={(e) => handleChange('protocol', e.target.value)}
-                                            placeholder="Ex: 2026-09871"
+                                            placeholder="Ex: 2610.1234 ou N/A"
                                             className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none text-sm font-mono"
                                         />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-xs font-bold text-gray-600 uppercase mb-1">Status de Leitura pelo Colaborador</label>
+                                        <select 
+                                            value={formData.read ? 'true' : 'false'} 
+                                            onChange={(e) => {
+                                                const isRead = e.target.value === 'true';
+                                                handleChange('read', isRead);
+                                                if (isRead && !formData.readAt) {
+                                                    handleChange('readAt', new Date().toISOString());
+                                                }
+                                            }}
+                                            className="w-full p-2.5 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none text-sm font-semibold"
+                                        >
+                                            <option value="false">Pendente (Não Lido)</option>
+                                            <option value="true">Lido pelo Colaborador</option>
+                                        </select>
                                     </div>
                                 </div>
 

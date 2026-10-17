@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.8.3';
+export const CURRENT_VERSION = 'v3.8.4';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.8.3',
+    version: 'v3.8.4',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.8.4: Reformulação completa do sistema de Feedbacks. Modal de lançamento do Gestor/Supervisor com estrutura guiada (Elogio, Orientação e Ponto de Melhoria com erro/conduta/prazo), canal de observação, seleção obrigatória de Protocolo/ID e tags de competências. Nova aba em Configurações para gestão de tags, reformulação visual moderna na visão do usuário e coluna de status de leitura na Gestão de Dados.',
+    items: [
+      {
+        icon: MessageSquare,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Modal Estruturado do Gestor / Supervisor',
+        category: 'Lançamento de Feedbacks',
+        description: 'Fluxo guiado por categoria: Elogio (motivo), Orientação (conduta orientada) e Ponto de Melhoria (erro observado, forma correta e prazo). Canal de observação e Switch Sim/Não obrigatório para Protocolo/ID.'
+      },
+      {
+        icon: Tag,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Gestão de Tags de Competências em Configurações',
+        category: 'Personalização & Tags',
+        description: 'Aba dedicada na tela de configurações para adicionar, editar e remover tags (Processo, Agilidade, Conhecimento, Qualidade, Cooperação, Pontualidade, Comportamento).'
+      },
+      {
+        icon: CheckCircle2,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Coluna e Controle de Leitura na Gestão de Dados',
+        category: 'Gestão de Dados & Auditoria',
+        description: 'Coluna dedicada na tabela de feedbacks indicando em tempo real se o colaborador marcou como lido (com data/hora) ou pendente, com contadores de resumo e filtros dedicados.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Visão do Colaborador Totalmente Reformulada',
+        category: 'Experiência do Usuário',
+        description: 'Design moderno em Meu Histórico com tags destacadas, protocolo, canal e modal de detalhes completo com cards dedicados para cada tipo de retorno.'
+      }
+    ]
+  },
+  {
+    version: 'v3.8.3',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.8.3: Aprimoramento completo do sistema de notificações. O ícone de notificações na barra superior agora registra o histórico persistente das notificações recentes com ações para marcar como lida e apagar. Além disso, a barra lateral conta com indicador visual de bolinha vermelha pulsante em "Meu Histórico" (ao receber novos feedbacks) e em "Tarefas & Relatórios" (para novas solicitações e atualizações de status).',
     items: [
       {
