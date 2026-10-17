@@ -167,9 +167,11 @@ const AdminDashboard = () => {
 
     // Determina a aba efetivamente ativa sem disparar re-render em cascata
     const effectiveActiveTab = canView(activeTab) ? activeTab : (firstAllowedTab || activeTab);
+    const isProfileActive = effectiveActiveTab === 'my_profile';
 
     // Rótulo textual da aba atual para exibição na barra de topo
     const currentMenuLabel = useMemo(() => {
+        if (effectiveActiveTab === 'my_profile') return 'Meu Perfil';
         for (const menu of navMenus) {
             const found = menu.items.find(i => i.id === effectiveActiveTab);
             if (found) return found.label;
@@ -272,10 +274,18 @@ const AdminDashboard = () => {
                     <button 
                         type="button"
                         onClick={() => setActiveTab('my_profile')}
-                        className="mx-3 mt-3 p-3 rounded-xl bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800/80 flex items-center gap-3 transition-colors text-left cursor-pointer group"
-                        title={`Ver e Editar Meu Perfil (v3.6) • Nível ${userLevel}`}
+                        className={`mx-3 mt-3 p-3 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer group relative ${
+                            isProfileActive 
+                                ? 'bg-gradient-to-r from-red-950/70 via-zinc-900 to-zinc-900 border-2 border-red-500 shadow-lg shadow-red-950/60 ring-2 ring-red-500/25' 
+                                : 'bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800/80'
+                        }`}
+                        title={`Ver e Editar Meu Perfil (v3.6) • Nível ${userLevel}${isProfileActive ? ' (Tela Atual)' : ''}`}
                     >
-                        <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs">
+                        {isProfileActive && (
+                            <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-red-500 rounded-r-full shadow-sm shadow-red-500" />
+                        )}
+
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs transition-all bg-red-600/20 text-red-500 border border-red-500/30">
                             {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                 <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -283,11 +293,19 @@ const AdminDashboard = () => {
                             )}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-white group-hover:text-red-400 truncate transition-colors">
-                                {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
-                            </p>
+                            <div className="flex items-center justify-between gap-1">
+                                <p className={`text-xs truncate transition-colors ${
+                                    isProfileActive ? 'font-black text-white' : 'font-bold text-white group-hover:text-red-400'
+                                }`}>
+                                    {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
+                                </p>
+                            </div>
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
+                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                    isProfileActive 
+                                        ? 'bg-red-500/20 text-red-200 border-red-500/40' 
+                                        : (activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300')
+                                }`}>
                                     {activeRoleInfo?.label || normalizedRole}
                                 </span>
                                 <span 
@@ -306,8 +324,12 @@ const AdminDashboard = () => {
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('my_profile')}
-                                className="w-10 h-10 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs overflow-hidden cursor-pointer"
-                                title={`Meu Perfil: ${currentUser?.name || 'Usuário'} • Nível ${userLevel} (${activeRoleInfo?.label || normalizedRole})`}
+                                className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs overflow-hidden cursor-pointer transition-all ${
+                                    isProfileActive
+                                        ? 'bg-red-600 text-white ring-2 ring-red-500 border-2 border-white shadow-lg shadow-red-500/40 scale-105'
+                                        : 'bg-red-600/20 hover:bg-red-600/30 text-red-500 border border-red-500/30'
+                                }`}
+                                title={`Meu Perfil: ${currentUser?.name || 'Usuário'} • Nível ${userLevel} (${activeRoleInfo?.label || normalizedRole})${isProfileActive ? ' (Tela Atual)' : ''}`}
                             >
                                 {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                     <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -480,10 +502,21 @@ const AdminDashboard = () => {
                                 setActiveTab('my_profile');
                                 setIsMobileMenuOpen(false);
                             }}
-                            className="p-3 mx-3 mt-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 flex items-center gap-3 shrink-0 text-left cursor-pointer transition-colors"
-                            title={`Ir para Meu Perfil • Nível ${userLevel}`}
+                            className={`p-3 mx-3 mt-3 rounded-xl flex items-center gap-3 shrink-0 text-left cursor-pointer transition-all relative ${
+                                isProfileActive
+                                    ? 'bg-gradient-to-r from-red-950/70 via-zinc-900 to-zinc-900 border-2 border-red-500 shadow-lg shadow-red-950/60 ring-2 ring-red-500/25'
+                                    : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80'
+                            }`}
+                            title={`Ir para Meu Perfil • Nível ${userLevel}${isProfileActive ? ' (Tela Atual)' : ''}`}
                         >
-                            <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs">
+                            {isProfileActive && (
+                                <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-red-500 rounded-r-full shadow-sm shadow-red-500" />
+                            )}
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs transition-all ${
+                                isProfileActive
+                                    ? 'bg-red-600 text-white ring-2 ring-red-500 border border-white/20 shadow-md shadow-red-500/30'
+                                    : 'bg-red-600/20 text-red-500 border border-red-500/30'
+                            }`}>
                                 {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                     <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -491,11 +524,24 @@ const AdminDashboard = () => {
                                 )}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold text-white truncate">
-                                    {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
-                                </p>
+                                <div className="flex items-center justify-between gap-1">
+                                    <p className={`text-xs truncate transition-colors ${
+                                        isProfileActive ? 'font-black text-white' : 'font-bold text-white'
+                                    }`}>
+                                        {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
+                                    </p>
+                                    {isProfileActive && (
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-950 border border-red-500/50 px-1.5 py-0.5 rounded-md shrink-0 shadow-2xs animate-pulse">
+                                            Tela Atual
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300'}`}>
+                                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                        isProfileActive 
+                                            ? 'bg-red-500/20 text-red-200 border-red-500/40' 
+                                            : (activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300')
+                                    }`}>
                                         {activeRoleInfo?.label || normalizedRole}
                                     </span>
                                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">

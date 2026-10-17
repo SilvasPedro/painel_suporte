@@ -129,6 +129,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
 
     // Nível calculado com base nos emblemas ativos (de 1 a 8)
     const userLevel = useMemo(() => calculateUserLevel(currentUser?.badges), [currentUser?.badges]);
+    const isProfileActive = activeTab === 'profile' || activeTab === 'my_profile';
 
     const currentTabLabel = useMemo(() => {
         const labels = {
@@ -255,10 +256,17 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <button 
                         type="button"
                         onClick={() => setActiveTab('profile')}
-                        className="w-full p-2.5 mb-2 rounded-xl bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800/80 flex items-center gap-3 transition-colors text-left cursor-pointer group shadow-2xs"
-                        title={`Meu Perfil (v3.6) • Nível ${userLevel}`}
+                        className={`w-full p-2.5 mb-2 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer group shadow-2xs relative ${
+                            isProfileActive
+                                ? 'bg-gradient-to-r from-red-950/70 via-zinc-900 to-zinc-900 border-2 border-red-500 shadow-lg shadow-red-950/60 ring-2 ring-red-500/25'
+                                : 'bg-zinc-900 hover:bg-zinc-800/90 border border-zinc-800/80'
+                        }`}
+                        title={`Meu Perfil (v3.6) • Nível ${userLevel}${isProfileActive ? ' (Tela Atual)' : ''}`}
                     >
-                        <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs">
+                        {isProfileActive && (
+                            <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-red-500 rounded-r-full shadow-sm shadow-red-500" />
+                        )}
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs transition-all bg-red-600/20 text-red-500 border border-red-500/30">
                             {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                 <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
@@ -266,11 +274,19 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                             )}
                         </div>
                         <div className="min-w-0 flex-1">
-                            <p className="text-xs font-bold text-white group-hover:text-red-400 truncate transition-colors">
-                                {currentUser?.name || currentUser?.email?.split('@')[0] || 'Colaborador'}
-                            </p>
+                            <div className="flex items-center justify-between gap-1">
+                                <p className={`text-xs truncate transition-colors ${
+                                    isProfileActive ? 'font-black text-white' : 'font-bold text-white group-hover:text-red-400'
+                                }`}>
+                                    {currentUser?.name || currentUser?.email?.split('@')[0] || 'Colaborador'}
+                                </p>
+                            </div>
                             <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border bg-zinc-800 text-zinc-300 border-zinc-700">
+                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                    isProfileActive 
+                                        ? 'bg-red-500/20 text-red-200 border-red-500/40' 
+                                        : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                                }`}>
                                     {currentUser?.role || 'Atendimento'}
                                 </span>
                                 <span 
@@ -355,10 +371,21 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                                 setActiveTab('profile');
                                 setIsMobileMenuOpen(false);
                             }}
-                            className="p-3 mx-3 mt-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80 flex items-center gap-3 shrink-0 text-left cursor-pointer transition-colors shadow-2xs"
-                            title={`Ir para Meu Perfil • Nível ${userLevel}`}
+                            className={`p-3 mx-3 mt-3 rounded-xl flex items-center gap-3 shrink-0 text-left cursor-pointer transition-all shadow-2xs relative ${
+                                isProfileActive
+                                    ? 'bg-gradient-to-r from-red-950/70 via-zinc-900 to-zinc-900 border-2 border-red-500 shadow-lg shadow-red-950/60 ring-2 ring-red-500/25'
+                                    : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80'
+                            }`}
+                            title={`Ir para Meu Perfil • Nível ${userLevel}${isProfileActive ? ' (Tela Atual)' : ''}`}
                         >
-                            <div className="w-10 h-10 rounded-xl bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs">
+                            {isProfileActive && (
+                                <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-red-500 rounded-r-full shadow-sm shadow-red-500" />
+                            )}
+                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs transition-all ${
+                                isProfileActive
+                                    ? 'bg-red-600 text-white ring-2 ring-red-500 border border-white/20 shadow-md shadow-red-500/30'
+                                    : 'bg-red-600/20 text-red-500 border border-red-500/30'
+                            }`}>
                                 {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                     <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -366,11 +393,24 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                                 )}
                             </div>
                             <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold text-white truncate">
-                                    {currentUser?.name || currentUser?.email?.split('@')[0] || 'Colaborador'}
-                                </p>
+                                <div className="flex items-center justify-between gap-1">
+                                    <p className={`text-xs truncate transition-colors ${
+                                        isProfileActive ? 'font-black text-white' : 'font-bold text-white'
+                                    }`}>
+                                        {currentUser?.name || currentUser?.email?.split('@')[0] || 'Colaborador'}
+                                    </p>
+                                    {isProfileActive && (
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-950 border border-red-500/50 px-1.5 py-0.5 rounded-md shrink-0 shadow-2xs animate-pulse">
+                                            Tela Atual
+                                        </span>
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                    <span className="inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border bg-zinc-800 text-zinc-300 border-zinc-700">
+                                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${
+                                        isProfileActive
+                                            ? 'bg-red-500/20 text-red-200 border-red-500/40'
+                                            : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                                    }`}>
                                         {currentUser?.role || 'Atendimento'}
                                     </span>
                                     <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
