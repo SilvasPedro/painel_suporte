@@ -1,0 +1,182 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // FUNÇÕES AUXILIARES GLOBAIS DE SEGURANÇA
+    // ==========================================
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Verifica se o usuário tem privilégio administrativo ou supervisão
+    function isStaffAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "pedrosouzactt@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (
+          exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role in ['Admin', 'Gestor', 'Supervisor', 'NOC', 'Diretor']
+        )
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && (request.auth.uid == userId);
+    }
+
+    // Regra Global Padrão: Negar tudo que não for explicitamente permitido
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ==========================================
+    // COLEÇÃO: CHAMADOS / TAREFAS CRÍTICAS (critical_reports)
+    // ==========================================
+    match /critical_reports/{reportId} {
+      // Gestores/Supervisores/NOC lêem todos; colaboradores lêem chamados públicos ou seus próprios
+      allow read: if isSignedIn() && (
+        isStaffAdmin() ||
+        resource.data.creatorId == request.auth.uid ||
+        resource.data.assigneeId == request.auth.uid ||
+        resource.data.status in ['Pendente', 'Em Andamento', 'Resolvido']
+      );
+
+      // Criação de novos chamados com integridade de autoria
+      allow create: if isSignedIn() && (
+        incoming().creatorId == request.auth.uid ||
+        isStaffAdmin()
+      ) && incoming().title is string
+        && incoming().title.size() <= 200;
+
+      // Atualização: operadores só alteram status e comentários; admins alteram tudo
+      allow update: if isSignedIn() && (
+        isStaffAdmin() ||
+        (
+          resource.data.creatorId == request.auth.uid &&
+          incoming().creatorId == resource.data.creatorId
+        )
+      );
+
+      allow delete: if isStaffAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: COLABORADORES (collaborators)
+    // ==========================================
+    match /collaborators/{colabId} {
+      allow read: if isSignedIn();
+      // Apenas Administradores podem cadastrar, desativar ou alterar cargos RBAC
+      allow create, delete: if isStaffAdmin();
+      allow update: if isSignedIn() && (
+        isStaffAdmin() ||
+        (
+          request.auth.uid == colabId &&
+          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'isInactive', 'permissions'])
+        )
+      );
+    }
+
+    // ==========================================
+    // COLEÇÃO: AUDITORIAS QA (qa_audits)
+    // ==========================================
+    match /qa_audits/{auditId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isStaffAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: FEEDBACKS (feedbacks)
+    // ==========================================
+    match /feedbacks/{feedbackId} {
+      // Leitura permitida para o colaborador avaliado ou equipe de gestão
+      allow read: if isSignedIn() && (
+        isStaffAdmin() ||
+        resource.data.colabId == request.auth.uid ||
+        resource.data.collaboratorId == request.auth.uid
+      );
+      // Criação e gestão exclusiva de liderança
+      allow create, delete: if isStaffAdmin();
+      // Colaborador pode apenas marcar como lido (read = true)
+      allow update: if isSignedIn() && (
+        isStaffAdmin() ||
+        (
+          (resource.data.colabId == request.auth.uid || resource.data.collaboratorId == request.auth.uid) &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt'])
+        )
+      );
+    }
+
+    // ==========================================
+    // COLEÇÕES OPERACIONAIS DE TELECOM & ESCALAS
+    // ==========================================
+    match /dailyDemand/{demandId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    match /sector_kpis/{kpiId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /qa_processes/{processId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /feedback_tags/{tagId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /third_party_audits/{auditId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /third_party_operators/{opId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /weekly_evaluations/{evalId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /monthly_evaluations/{evalId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /sunday_schedules/{schedId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /daily_schedules/{schedId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /system_settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Gerenciado apenas via console/backend seguro
+    }
+  }
+}

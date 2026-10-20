@@ -1,0 +1,85 @@
+import { initializeApp } from "firebase/app";
+import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, setDoc, updateDoc, collection, addDoc } from "firebase/firestore"
+import { db, auth, firebaseConfig } from "./firebase";
+import { resolveUserName } from '../utils/userResolvers';
+
+// Instância para criar a conta sem deslogar o Admin
+const adminApp = initializeApp(firebaseConfig, "AdminWorker");
+const adminAuth = getAuth(adminApp);
+
+export const registerCollaborator = async (name, email, password, role, shift) => {
+  try {
+    // 1. Cria a conta no Auth usando a instância Worker
+    const userCredential = await createUserWithEmailAndPassword(adminAuth, email, password);
+    const newUser = userCredential.user;
+
+    // 2. Desloga IMEDIATAMENTE a instância Worker 
+    // Isso garante que ela não interfira em nada
+    await signOut(adminAuth);
+
+    // 3. Grava no Firestore usando a instância 'db' PRINCIPAL (onde você é o Admin)
+    // Como você está logado na app principal, você tem permissão de Admin
+    await setDoc(doc(db, "collaborators", newUser.uid), {
+      uid: newUser.uid,
+      name,
+      email,
+      role,
+      shift,
+      status: "Ativo",
+      createdAt: new Date().toISOString()
+    });
+
+    return { success: true, uid: newUser.uid };
+  } catch (error) {
+    // Tratamento de erro amigável
+    if (error.code === 'auth/email-already-in-use') {
+      throw new Error("Este e-mail já está cadastrado no sistema.");
+    }
+    throw error;
+  }
+};
+
+// Função para atualizar os dados de perfil de um colaborador existente
+export const updateCollaboratorProfile = async (uid, updatedData) => {
+  const colabRef = doc(db, "collaborators", uid);
+  await updateDoc(colabRef, updatedData);
+};
+
+// --- FUNÇÃO DE REGISTRAR FEEDBACK ---
+export const registerFeedback = async (collaboratorId, feedbackData, loggedUser = null) => {
+  // Pega o nome de exibição do Gestor logado ao invés do e-mail puro
+  const authorEmail = loggedUser?.email || auth.currentUser?.email || "";
+  const authorName = loggedUser?.name || loggedUser?.displayName || auth.currentUser?.displayName || resolveUserName(authorEmail);
+  const now = new Date();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const yyyy = now.getFullYear();
+
+  // Prepara o pacote de dados estruturado (v3.8.4)
+  const payload = {
+    collaboratorId,
+    colabId: collaboratorId,
+    type: feedbackData.type,
+    method: feedbackData.method,
+    hasProtocol: Boolean(feedbackData.hasProtocol),
+    protocol: feedbackData.hasProtocol ? (feedbackData.protocol || "N/A") : "N/A",
+    praiseReason: feedbackData.praiseReason || "",
+    guidanceText: feedbackData.guidanceText || "",
+    improvementError: feedbackData.improvementError || "",
+    improvementCorrect: feedbackData.improvementCorrect || "",
+    improvementDeadline: feedbackData.improvementDeadline || "",
+    tags: Array.isArray(feedbackData.tags) ? feedbackData.tags : [],
+    comment: feedbackData.comment || "",
+    createdBy: authorName, // Nome legível do usuário (ex: "Pedro Silva")
+    createdByName: authorName,
+    createdByEmail: authorEmail,
+    createdAt: now.toISOString(),
+    date: now.toLocaleDateString('pt-BR'),
+    month: `${mm}/${yyyy}`,
+    read: false, // Inicialmente não lido pelo colaborador
+    readAt: null
+  };
+
+  // Salva em uma coleção separada chamada 'feedbacks'
+  await addDoc(collection(db, "feedbacks"), payload);
+};

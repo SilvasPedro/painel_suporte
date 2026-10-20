@@ -1,0 +1,6 @@
+{
+  "summary":  "Auditoria Arquitetural Completa, Plano FinOps do Firestore (<50k reads/dia) e Redesign de UI/UX para Plataforma de Gestão de Suporte de ISP. Inclui diagnóstico em 3 níveis de criticidade, matriz de consumo de leituras antes vs. depois, roadmap ergonômico com Fila/Kanban + Drawer lateral + SLAs dinâmicos, e módulo de alerta de incidentes em lote e falhas massivas por região/circuito.",
+  "updatedAt":  "2026-10-20T17:52:58.965048481Z",
+  "requestFeedback":  true,
+  "userFacing":  true
+}
