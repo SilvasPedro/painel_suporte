@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.8.4';
+export const CURRENT_VERSION = 'v3.9.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.8.4',
+    version: 'v3.9.0',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.9.0: Grande reformulação no módulo de Perfis dos Usuários e Gamificação. Implementação do novo motor de Insígnias e Emblemas de Feitos com 6 conquistas oficiais 100% calculadas de forma automatizada pelas avaliações semanais e auditorias QA, sem intervenção manual de gestores. Obrigatoriedade de preenchimento de Telefone/WhatsApp e Ramal ao entrar no sistema, personalização da capa do perfil com 8 opções de cores e suporte a imagem HTTPS, e remoção da seção não metrificável de conhecimento técnico em redes.',
+    items: [
+      {
+        icon: Trophy,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: '6 Emblemas Oficiais 100% Automatizados',
+        category: 'Gamificação & Feitos',
+        description: 'Cálculo automatizado a partir dos dados reais da operação: Desempenho (>= 95% do turno), Auditorias QA (>= 85%), Agilidade TMA (Voz < 10m & Chat < 25m), Fila Limpa (Perdidas <= 2% contra atendidas), Produtividade Mestre (>= 40 finalizados/sem) e Constância de Ouro (100% semanas positivas).'
+      },
+      {
+        icon: Phone,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Obrigatoriedade de Contato e Ramal ao Entrar',
+        category: 'Segurança & Comunicação',
+        description: 'Verificação automática pós-login: se o usuário não possuir telefone/WhatsApp ou número de ramal cadastrado, a plataforma exibe modal bloqueante exigindo o preenchimento para continuidade do uso.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Personalização do Banner de Capa do Perfil',
+        category: 'Identidade & Customização',
+        description: 'Remoção da tag estática de perfil oficial e adição de seletor com 8 opções de cores/gradientes modernos, além da possibilidade de inserir link HTTPS para imagem de capa personalizada visível para todos os colegas.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Remoção da Seção Manual de Redes',
+        category: 'Otimização de Perfil',
+        description: 'Eliminação da seção de conhecimento técnico em redes, simplificando o perfil e priorizando indicadores objetivos e metrificados da rotina de atendimento.'
+      }
+    ]
+  },
+  {
+    version: 'v3.8.4',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.8.4: Reformulação completa do sistema de Feedbacks. Modal de lançamento do Gestor/Supervisor com estrutura guiada (Elogio, Orientação e Ponto de Melhoria com erro/conduta/prazo), canal de observação, seleção obrigatória de Protocolo/ID e tags de competências. Nova aba em Configurações para gestão de tags, reformulação visual moderna na visão do usuário e coluna de status de leitura na Gestão de Dados.',
     items: [
       {

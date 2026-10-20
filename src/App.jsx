@@ -12,6 +12,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AccountInactive from './pages/AccountInactive';
 
 import NotificationManager from './components/NotificationManager';
+import MandatoryContactModal from './components/profile/MandatoryContactModal';
 
 // ==========================================
 // PROTEÇÃO DE ROTAS (RBAC ATUALIZADO)
@@ -146,6 +147,7 @@ function App() {
                     <PermissionsProvider>
                         <BrowserRouter>
                             <NotificationManager />
+                            <MandatoryContactModal />
                             <AppRoutes />
                             <FloatingExtensions />
                         </BrowserRouter>

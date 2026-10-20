@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
     Camera, Upload, Link as LinkIcon, Check, X, ShieldCheck,
-    Trophy, Zap, Star, Rocket, CalendarCheck, Network, Award, Mail,
-    Phone, Clock, Sun, Sunset, Moon, ExternalLink, Copy, CheckCircle2,
+    Trophy, Zap, Star, Rocket, CalendarCheck, Award, Mail,
+    Phone, Clock, ExternalLink, Copy, CheckCircle2,
     Sparkles, Plus, Trash2, Edit3, Loader2, Save,
-    Lock, Info, AlertCircle, Headphones, Users, UserCheck, Search,
-    ArrowLeft, Eye, ChevronLeft, ChevronRight, ThumbsUp, TrendingUp
+    Headphones, Users, Search,
+    ArrowLeft, Eye, ChevronRight, TrendingUp, Palette, Image as ImageIcon
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
@@ -17,52 +17,26 @@ import {
     saveSystemShiftsInfo,
     PRESET_AVATARS,
     BADGES_CATALOG,
+    BANNER_COLOR_PRESETS,
     SYSTEM_SHIFTS,
     SYSTEM_SHIFTS_MAP,
     THIRD_PARTY_SCHEDULE_INFO,
     normalizeShiftName,
     calculateUserLevel,
-    DEFAULT_NETWORK_TAG_SUGGESTIONS,
     evaluateCollaboratorBadges
 } from '../services/userProfile';
 
-// Mapeamento de ícones dos emblemas oficiais
+// Mapeamento de ícones dos emblemas oficiais da v3.9
 const BADGE_ICONS = {
-    ThumbsUp,
     TrendingUp,
     ShieldCheck,
-    Trophy,
+    Clock,
     Zap,
-    Star,
     Rocket,
-    CalendarCheck,
-    Network,
-    Award
+    Award,
+    Trophy,
+    Sparkles
 };
-
-const NETWORK_LEVELS = [
-    {
-        id: 'Básico',
-        label: 'Básico',
-        color: 'border-emerald-500 text-emerald-600 bg-emerald-500/10',
-        badge: 'bg-emerald-100 text-emerald-800 border-emerald-300',
-        desc: 'Conceitos de IP, DHCP, DNS, roteadores residenciais e cabeamento.'
-    },
-    {
-        id: 'Médio',
-        label: 'Médio',
-        color: 'border-amber-500 text-amber-600 bg-amber-500/10',
-        badge: 'bg-amber-100 text-amber-800 border-amber-300',
-        desc: 'VLANs, sub-redes, GPON/ONU, Wi-Fi Mesh e troubleshooting de enlaces.'
-    },
-    {
-        id: 'Avançado',
-        label: 'Avançado',
-        color: 'border-red-500 text-red-600 bg-red-500/10',
-        badge: 'bg-red-100 text-red-800 border-red-300',
-        desc: 'BGP, OSPF, Mikrotik RouterOS, Huawei OLT, QoS e topologias complexas.'
-    }
-];
 
 const getInitialFormData = (u) => {
     const rawShift = u?.shift || 'Manhã I';
@@ -73,19 +47,18 @@ const getInitialFormData = (u) => {
         name: u?.name || u?.displayName || u?.email?.split('@')[0] || '',
         photoURL: u?.photoURL || u?.photoUrl || '',
         bio: u?.bio || '',
-        networkKnowledge: u?.networkKnowledge || 'Básico',
-        networkSkills: Array.isArray(u?.networkSkills) && u.networkSkills.length > 0 
-            ? u.networkSkills 
-            : ['GPON / Fibra Óptica', 'Wi-Fi 6 / Mesh', 'Troubleshooting N2'],
+        bannerColor: u?.bannerColor || 'carmim',
+        bannerUrl: u?.bannerUrl || '',
         interests: Array.isArray(u?.interests) && u.interests.length > 0
             ? u.interests
-            : ['Engenharia de Redes', 'Atendimento Humanizado', 'Automação'],
+            : ['Atendimento Humanizado', 'Resolução Ágil', 'Automação'],
         phone: u?.phone || '',
+        ramal: u?.ramal || u?.slackOrTeams || '',
+        slackOrTeams: u?.ramal || u?.slackOrTeams || '',
         additionalEmails: Array.isArray(u?.additionalEmails) ? u.additionalEmails : [],
-        slackOrTeams: u?.slackOrTeams || '',
         shift: normShift,
         workHours: u?.workHours || shiftConfig.hours,
-        badges: Array.isArray(u?.badges) ? u.badges : ['emblema_tma', 'emblema_auditorias']
+        badges: Array.isArray(u?.badges) ? u.badges : []
     };
 };
 
@@ -156,19 +129,23 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     const [saving, setSaving] = useState(false);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+    const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
     const [copiedPhone, setCopiedPhone] = useState(false);
 
     // Estado do formulário de Perfil
     const [formData, setFormData] = useState(() => getInitialFormData(user));
 
-    // Inputs temporários para tags e novos e-mails
-    const [newSkillInput, setNewSkillInput] = useState('');
+    // Input temporário para novos e-mails
     const [newEmailInput, setNewEmailInput] = useState('');
 
     // Input temporário no modal de foto
     const [photoUrlInput, setPhotoUrlInput] = useState(() => user?.photoURL || user?.photoUrl || '');
     const [photoPreview, setPhotoPreview] = useState(() => user?.photoURL || user?.photoUrl || '');
+
+    // Rascunho temporário no modal de customização da capa
+    const [bannerColorDraft, setBannerColorDraft] = useState(() => user?.bannerColor || 'carmim');
+    const [bannerUrlDraft, setBannerUrlDraft] = useState(() => user?.bannerUrl || '');
 
     // Sincroniza se o usuário selecionado mudar
     const prevUserIdRef = useRef(user?.firestoreId || user?.uid || user?.id);
@@ -181,6 +158,8 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             setFormData(updated);
             setPhotoUrlInput(updated.photoURL);
             setPhotoPreview(updated.photoURL);
+            setBannerColorDraft(updated.bannerColor || 'carmim');
+            setBannerUrlDraft(updated.bannerUrl || '');
         }
     }, [activeSelectedColab, myAuthUser]);
 
@@ -201,57 +180,60 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         return SYSTEM_SHIFTS_MAP[norm] || SYSTEM_SHIFTS[0];
     }, [formData.shift]);
 
-    // Avaliação 100% automatizada dos 3 emblemas oficiais com base nas métricas reais da operação
+    // Preset selecionado de cor do banner
+    const selectedBannerPreset = useMemo(() => {
+        return BANNER_COLOR_PRESETS.find(p => p.id === formData.bannerColor) || BANNER_COLOR_PRESETS[0];
+    }, [formData.bannerColor]);
+
+    // Avaliação 100% automatizada dos 6 emblemas oficiais com base nas métricas reais da operação
     const badgeEvaluation = useMemo(() => {
         return evaluateCollaboratorBadges({
             collaborator: {
                 ...user,
-                shift: formData.shift || user?.shift,
-                networkKnowledge: formData.networkKnowledge,
-                networkSkills: formData.networkSkills
+                shift: formData.shift || user?.shift
             },
             allCollaborators: collaboratorsList,
             weeklyEvaluations: weeklyEvals,
             qaAudits: qaAuditsList,
             thirdPartyAudits: thirdPartyAuditsList,
-            manualBadges: isGestor ? formData.badges : (user?.badges || [])
+            manualBadges: []
         });
-    }, [user, formData.shift, formData.networkKnowledge, formData.networkSkills, formData.badges, collaboratorsList, weeklyEvals, qaAuditsList, thirdPartyAuditsList, isGestor]);
+    }, [user, formData.shift, collaboratorsList, weeklyEvals, qaAuditsList, thirdPartyAuditsList]);
 
-    // Insígnias ativas no momento (automatizadas + permissão da gestão)
+    // Insígnias ativas no momento (100% automatizadas pelas avaliações e auditorias)
     const activeBadgeList = useMemo(() => {
         return badgeEvaluation.activeBadges || [];
     }, [badgeEvaluation.activeBadges]);
 
-    // Nível calculado com base nos emblemas ativos reais (de 1 a 8)
+    // Nível calculado com base nos emblemas ativos reais (de 1 a 6)
     const userLevel = useMemo(() => {
         return calculateUserLevel(activeBadgeList);
     }, [activeBadgeList]);
 
-    // Manipulação de tags de conhecimento em redes
-    const handleAddSkillTag = (tagToAdd) => {
-        const tag = (tagToAdd || newSkillInput).trim();
-        if (!tag) return;
-        if (formData.networkSkills.includes(tag)) {
-            showToast('Essa tag já foi adicionada.', 'info');
+    // Manipulação do Modal de Banner / Capa
+    const handleOpenBannerModal = () => {
+        if (isViewingOther && !isGestor) {
+            showToast('Você está em modo de visualização. Apenas o próprio colaborador ou a Gestão podem alterar a capa.', 'info');
             return;
         }
-        if (formData.networkSkills.length >= 15) {
-            showToast('Limite máximo de 15 tags atingido.', 'warning');
-            return;
-        }
-        setFormData(prev => ({
-            ...prev,
-            networkSkills: [...prev.networkSkills, tag]
-        }));
-        setNewSkillInput('');
+        setBannerColorDraft(formData.bannerColor || 'carmim');
+        setBannerUrlDraft(formData.bannerUrl || '');
+        setIsBannerModalOpen(true);
     };
 
-    const handleRemoveSkillTag = (tagToRemove) => {
+    const handleConfirmBanner = () => {
+        const cleanUrl = bannerUrlDraft.trim();
+        if (cleanUrl && !cleanUrl.startsWith('https://')) {
+            showToast('A URL da imagem de capa deve começar com https:// para ser válida.', 'warning');
+            return;
+        }
         setFormData(prev => ({
             ...prev,
-            networkSkills: prev.networkSkills.filter(t => t !== tagToRemove)
+            bannerColor: bannerColorDraft,
+            bannerUrl: cleanUrl
         }));
+        setIsBannerModalOpen(false);
+        showToast('Capa do perfil selecionada! Clique em "Salvar Alterações" para confirmar.', 'info');
     };
 
     // Manipulação de e-mails adicionais
@@ -280,21 +262,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             ...prev,
             additionalEmails: prev.additionalEmails.filter(e => e !== emailToRemove)
         }));
-    };
-
-    // Controle de Emblemas (REGRA: Apenas Gestor pode alterar)
-    const handleToggleBadge = (badgeId) => {
-        if (!isGestor) {
-            showToast('Permissão restrita: Apenas o Gestor pode conceder ou alterar os emblemas da equipe.', 'warning');
-            return;
-        }
-        setFormData(prev => {
-            const exists = prev.badges.includes(badgeId);
-            const nextBadges = exists 
-                ? prev.badges.filter(id => id !== badgeId)
-                : [...prev.badges, badgeId];
-            return { ...prev, badges: nextBadges };
-        });
     };
 
     // Alteração de Turno
@@ -387,7 +354,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
         setSaving(true);
         try {
-            await saveUserProfileData(user, formData, isGestor);
+            await saveUserProfileData(user, formData);
             showToast('Perfil atualizado com sucesso no Firebase!', 'success');
         } catch (error) {
             console.error('Erro ao salvar perfil:', error);
@@ -471,15 +438,30 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                 {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO) */}
                 <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-xs overflow-hidden relative">
-                    {/* Fundo Gradiente Elegante com Textura Sutil */}
-                    <div className="h-44 sm:h-52 bg-gradient-to-r from-red-600 via-red-700 to-rose-800 p-6 relative flex items-start justify-between">
+                    {/* Fundo Personalizável (8 Cores ou Imagem HTTPS) com Textura Elegante */}
+                    <div 
+                        className={`h-44 sm:h-52 bg-gradient-to-r ${selectedBannerPreset.gradient} p-6 relative flex items-start justify-between bg-cover bg-center transition-all duration-300`}
+                        style={formData.bannerUrl && formData.bannerUrl.startsWith('https://') ? { backgroundImage: `url(${formData.bannerUrl})` } : {}}
+                    >
+                        {/* Overlay para contraste quando houver imagem */}
+                        {formData.bannerUrl && formData.bannerUrl.startsWith('https://') && (
+                            <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]"></div>
+                        )}
                         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
                         
+                        {/* Botão de Personalização da Capa (Apenas Dono do Perfil ou Gestor) */}
                         <div className="relative z-10 flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-white/10 text-white backdrop-blur-md border border-white/20 shadow-xs">
-                                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-                                Perfil Oficial HubDesk • v3.7.4
-                            </span>
+                            {(!isViewingOther || isGestor) && (
+                                <button
+                                    type="button"
+                                    onClick={handleOpenBannerModal}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-black/30 hover:bg-black/50 text-white backdrop-blur-md border border-white/25 shadow-xs cursor-pointer transition-all active:scale-95"
+                                    title="Personalizar cor ou imagem de capa do seu perfil"
+                                >
+                                    <Palette className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>Personalizar Capa</span>
+                                </button>
+                            )}
                         </div>
 
                         {/* Botão de Salvar Rápido no Topo */}
@@ -561,7 +543,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
                             </div>
 
-                            {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 3) */}
+                            {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 6) */}
                             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-xs">
                                 
                                 {/* Badge de Status Operacional */}
@@ -570,15 +552,15 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     <span>Status: {userOperationalStatus}</span>
                                 </div>
 
-                                {/* Badge de Nível (1 a 3) */}
+                                {/* Badge de Nível (1 a 6) */}
                                 <div 
                                     className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-amber-500/10 border-amber-500/40 text-amber-900 shadow-2xs"
-                                    title={`Nível do Colaborador: ${userLevel} de 3 (${activeBadgeList.length} de 3 emblemas conquistados)`}
+                                    title={`Nível do Colaborador: ${userLevel} de 6 (${activeBadgeList.length} de 6 emblemas conquistados)`}
                                 >
                                     <Sparkles className="w-4 h-4 text-amber-600 animate-spin-slow" />
                                     <span className="font-black text-amber-800">Nível {userLevel}</span>
                                     <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.2 rounded-md">
-                                        {activeBadgeList.length}/3
+                                        {activeBadgeList.length}/6
                                     </span>
                                 </div>
 
@@ -593,12 +575,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     <Clock className="w-4 h-4" />
                                     <span>{currentShift.label}</span>
                                     <span className="text-[10px] opacity-80 font-mono">({currentShift.hours})</span>
-                                </div>
-
-                                {/* Nível de Redes Atual */}
-                                <div className="px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-rose-50 text-rose-900 border-rose-200 shadow-2xs">
-                                    <Network className="w-4 h-4 text-rose-600" />
-                                    <span>Redes: <strong className="text-red-600">{formData.networkKnowledge}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -660,164 +636,25 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 {/* 2. GRID PRINCIPAL: 2 COLUNAS HARMONIOSAS (HABILIDADES & EMBLEMAS | CONTATOS & EXPEDIENTE) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-                    {/* COLUNA ESQUERDA: HABILIDADES, REDES E EMBLEMAS */}
+                    {/* COLUNA ESQUERDA: EMBLEMAS DE FEITOS (100% AUTOMATIZADOS) */}
                     <div className="space-y-6">
 
-                        {/* CARD 2.1: CONHECIMENTOS SOBRE REDES & HABILIDADES */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-5">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                <div>
-                                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                        <Network className="w-4 h-4 text-red-600" />
-                                        Conhecimento Técnico em Redes
-                                    </h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">
-                                        Defina seu nível de proficiência e destaque suas especialidades de conectividade.
-                                    </p>
-                                </div>
-                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
-                                    formData.networkKnowledge === 'Avançado' ? 'bg-red-100 text-red-700 border-red-300' :
-                                    formData.networkKnowledge === 'Médio' ? 'bg-amber-100 text-amber-800 border-amber-300' :
-                                    'bg-emerald-100 text-emerald-800 border-emerald-300'
-                                }`}>
-                                    Nível: {formData.networkKnowledge}
-                                </span>
-                            </div>
-
-                            {/* Seletor de Nível (Básico, Médio, Avançado) */}
-                            <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-2">
-                                    Nível Geral de Conhecimento:
-                                </label>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                    {NETWORK_LEVELS.map(lvl => {
-                                        const isSelected = formData.networkKnowledge === lvl.id;
-                                        return (
-                                            <button
-                                                key={lvl.id}
-                                                type="button"
-                                                onClick={() => setFormData(prev => ({ ...prev, networkKnowledge: lvl.id }))}
-                                                className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                                                    isSelected 
-                                                        ? `${lvl.color} border-2 shadow-xs ring-1 ring-red-200 font-bold`
-                                                        : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100/70 text-gray-600'
-                                                }`}
-                                            >
-                                                <div className="flex items-center justify-between mb-1">
-                                                    <span className="text-xs font-black">{lvl.label}</span>
-                                                    {isSelected && <CheckCircle2 className="w-4 h-4 text-red-600" />}
-                                                </div>
-                                                <p className="text-[11px] text-gray-500 leading-tight">
-                                                    {lvl.desc}
-                                                </p>
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-
-                            {/* Tags Personalizadas de Conhecimento Técnico */}
-                            <div className="pt-2">
-                                <label className="text-xs font-bold text-gray-700 flex items-center justify-between mb-2">
-                                    <span>Tags de Competências & Ferramentas:</span>
-                                    <span className="text-[10px] text-gray-400 font-mono">
-                                        {formData.networkSkills.length}/15 tags
-                                    </span>
-                                </label>
-
-                                {/* Lista de tags ativas */}
-                                <div className="flex flex-wrap gap-2 mb-3">
-                                    {formData.networkSkills.map(tag => (
-                                        <span
-                                            key={tag}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-900 border border-rose-200 shadow-2xs group"
-                                        >
-                                            <span>{tag}</span>
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveSkillTag(tag)}
-                                                className="text-rose-400 hover:text-red-700 p-0.5 rounded transition-colors cursor-pointer"
-                                                title={`Remover tag ${tag}`}
-                                            >
-                                                <X className="w-3 h-3" />
-                                            </button>
-                                        </span>
-                                    ))}
-                                    {formData.networkSkills.length === 0 && (
-                                        <span className="text-xs text-gray-400 italic">
-                                            Nenhuma tag adicionada. Adicione competências abaixo.
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Campo para adicionar nova tag */}
-                                <div className="flex gap-2">
-                                    <input
-                                        type="text"
-                                        value={newSkillInput}
-                                        onChange={(e) => setNewSkillInput(e.target.value)}
-                                        onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSkillTag())}
-                                        placeholder="Digite uma competência (ex: Mikrotik, Wi-Fi 6, OSPF)..."
-                                        className="flex-1 px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600 text-gray-900 placeholder:text-gray-400"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => handleAddSkillTag()}
-                                        className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
-                                    >
-                                        <Plus className="w-3.5 h-3.5" /> Adicionar
-                                    </button>
-                                </div>
-
-                                {/* Sugestões Rápidas de Tags */}
-                                <div className="mt-3 pt-3 border-t border-gray-100">
-                                    <span className="text-[11px] font-semibold text-gray-400 block mb-1.5">
-                                        Sugestões Rápidas (clique para adicionar):
-                                    </span>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {DEFAULT_NETWORK_TAG_SUGGESTIONS
-                                            .filter(s => !formData.networkSkills.includes(s))
-                                            .slice(0, 8)
-                                            .map(suggestion => (
-                                                <button
-                                                    key={suggestion}
-                                                    type="button"
-                                                    onClick={() => handleAddSkillTag(suggestion)}
-                                                    className="px-2 py-1 bg-gray-100 hover:bg-red-50 hover:text-red-700 hover:border-red-200 border border-gray-200 rounded-md text-[11px] font-medium text-gray-600 transition-colors cursor-pointer flex items-center gap-1"
-                                                >
-                                                    <Plus className="w-2.5 h-2.5" />
-                                                    {suggestion}
-                                                </button>
-                                            ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* CARD 2.2: EMBLEMAS & INSÍGNIAS DE FEITOS (SISTEMA 100% AUTOMATIZADO) */}
+                        {/* CARD 2.1: EMBLEMAS & INSÍGNIAS DE FEITOS (SISTEMA 100% AUTOMATIZADO) */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
                                 <div>
                                     <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
                                         <Trophy className="w-4 h-4 text-amber-500" />
                                         Insígnias & Emblemas de Feitos
-                                        <span className="text-[10px] bg-gradient-to-r from-amber-500 to-red-500 text-white font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                                            Automático
-                                        </span>
                                     </h2>
                                     <p className="text-xs text-gray-500 mt-0.5">
-                                        Conquistas ativadas em tempo real com base no desempenho e métricas reais da operação.
+                                        Conquistas calculadas e desbloqueadas em tempo real pelas métricas reais da operação.
                                     </p>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    {isGestor && (
-                                        <span className="text-[11px] font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                            <Edit3 className="w-3 h-3 text-emerald-600" /> Gestor: Ajuste Manual Disponível
-                                        </span>
-                                    )}
-                                    <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                        <Sparkles className="w-3 h-3 text-amber-500" />
+                                    <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
+                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                                         {activeBadgeList.length} de {BADGES_CATALOG.length} Conquistados
                                     </span>
                                 </div>
@@ -828,65 +665,85 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                                 <div className="space-y-0.5">
                                     <span className="font-bold text-gray-900 block">
-                                        3 Emblemas Oficiais com Ativação 100% Automatizada:
+                                        6 Emblemas Oficiais Calculados Automaticamente:
                                     </span>
                                     <p className="text-[11px] text-gray-600 leading-relaxed">
-                                        As insígnias são desbloqueadas e atualizadas em tempo real conforme as métricas consolidadas da operação: 
-                                        <strong> Emblema de Desempenho</strong> (média de pontos &ge; 95% da média do seu turno), 
-                                        <strong> Emblema de Auditorias</strong> (% QA &gt; 90%) e 
-                                        <strong> Emblema de TMA</strong> (Telefonia &lt; 10m e Chat &lt; 25m no mês vigente).
+                                        As insígnias são desbloqueadas diretamente a partir das avaliações semanais e auditorias QA: 
+                                        <strong> Desempenho</strong> (&ge; 95% do turno), 
+                                        <strong> Auditorias QA</strong> (&ge; 85% conformidade), 
+                                        <strong> Agilidade TMA</strong> (Voz &lt; 10m & Chat &lt; 25m), 
+                                        <strong> Fila Limpa</strong> (&le; 2% de perdidas), 
+                                        <strong> Produtividade</strong> (&ge; 40 finalizações/semana) e 
+                                        <strong> Constância</strong> (100% semanas positivas).
                                     </p>
                                 </div>
                             </div>
 
-                            {/* Grade de Emblemas com Métricas Reais e Feedback de Desbloqueio */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                            {/* Grade dos 6 Emblemas com Métricas Reais e Feedback de Desbloqueio */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                                 {BADGES_CATALOG.map(badge => {
                                     const IconComponent = BADGE_ICONS[badge.iconName] || Trophy;
                                     const isUnlocked = activeBadgeList.includes(badge.id);
+                                    const detail = badgeEvaluation.badgeDetails?.[badge.id];
 
                                     return (
                                         <div
                                             key={badge.id}
-                                            onClick={isGestor ? () => handleToggleBadge(badge.id) : undefined}
-                                            className={`p-3.5 rounded-xl border transition-all relative overflow-hidden flex items-start gap-3 ${
-                                                isGestor ? 'cursor-pointer hover:border-amber-400 active:scale-[0.99]' : 'cursor-default select-none'
-                                            } ${
+                                            className={`p-3.5 rounded-xl border transition-all relative overflow-hidden flex flex-col justify-between select-none ${
                                                 isUnlocked
-                                                    ? 'border-amber-300 bg-amber-50/70 shadow-2xs'
-                                                    : 'border-gray-200 bg-gray-50/60 opacity-70'
+                                                    ? 'border-amber-300 bg-amber-50/70 shadow-xs'
+                                                    : 'border-gray-200 bg-gray-50/60 opacity-75'
                                             }`}
-                                            title={isGestor ? `Clique para alternar concessão manual. Critério: ${badge.requirement}` : `Critério: ${badge.requirement}`}
+                                            title={`Critério: ${badge.requirement}`}
                                         >
-                                            {/* Ícone do Emblema */}
-                                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-xs relative ${
-                                                isUnlocked ? badge.bgColor : 'bg-gray-100 border-gray-200 text-gray-400'
-                                            }`}>
-                                                <IconComponent className={`w-5 h-5 ${isUnlocked ? badge.textColor : 'text-gray-400'}`} />
-                                                {isUnlocked && (
-                                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center">
-                                                        <Check className="w-2 h-2 text-white stroke-[3]" />
-                                                    </span>
-                                                )}
+                                            <div className="flex items-start gap-3">
+                                                {/* Ícone do Emblema */}
+                                                <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-xs relative ${
+                                                    isUnlocked ? badge.bgColor : 'bg-gray-100 border-gray-200 text-gray-400'
+                                                }`}>
+                                                    <IconComponent className={`w-5 h-5 ${isUnlocked ? badge.textColor : 'text-gray-400'}`} />
+                                                    {isUnlocked && (
+                                                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center shadow-xs">
+                                                            <Check className="w-2 h-2 text-white stroke-[3]" />
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-gray-900' : 'text-gray-600'}`}>
+                                                            {badge.title}
+                                                        </h3>
+                                                        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
+                                                            isUnlocked ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-gray-200 text-gray-600'
+                                                        }`}>
+                                                            {isUnlocked ? 'Conquistado' : 'Em Progresso'}
+                                                        </span>
+                                                    </div>
+
+                                                    <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                                                        {badge.description}
+                                                    </p>
+                                                </div>
                                             </div>
 
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex items-center justify-between gap-1">
-                                                    <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-gray-900' : 'text-gray-600'}`}>
-                                                        {badge.title}
-                                                    </h3>
-                                                </div>
-
-                                                <p className="text-[11px] text-gray-500 mt-0.5 leading-snug line-clamp-2">
-                                                    {badge.description}
-                                                </p>
-
-                                                {/* Detalhe da Regra */}
-                                                <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[10px]">
-                                                    <span className="font-semibold text-gray-500 truncate">
-                                                        Regra: {badge.requirement}
+                                            {/* Detalhe da Regra e Métrica Atual */}
+                                            <div className="mt-3 pt-2 border-t border-gray-100/80 space-y-1">
+                                                <div className="flex items-center justify-between text-[10px]">
+                                                    <span className="text-gray-500 font-semibold truncate">
+                                                        Meta: {badge.requirement}
                                                     </span>
+                                                    {detail?.currentValue && (
+                                                        <span className="font-mono font-bold text-gray-700">
+                                                            {detail.currentValue}
+                                                        </span>
+                                                    )}
                                                 </div>
+                                                {detail?.feedback && (
+                                                    <p className={`text-[10px] leading-tight ${isUnlocked ? 'text-emerald-700 font-medium' : 'text-gray-500'}`}>
+                                                        {detail.feedback}
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -898,7 +755,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     {/* COLUNA DIREITA: CONTATOS (ACIMA) E HORÁRIO DE EXPEDIENTE (ABAIXO) */}
                     <div className="space-y-6">
 
-                        {/* CARD 2.3: CANAIS DE CONTATO & COMUNICAÇÃO */}
+                        {/* CARD 2.2: CANAIS DE CONTATO & COMUNICAÇÃO */}
                         <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
                             <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
                                 <Phone className="w-4 h-4 text-red-600" />
@@ -945,18 +802,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
                             </div>
 
-                            {/* Ramal ou Canal Interno */}
+                            {/* Ramal de Atendimento */}
                             <div>
                                 <label className="text-[11px] font-bold text-gray-700 block mb-1">
-                                    Ramal VoIP / Teams / Slack:
+                                    Número do Ramal:
                                 </label>
-                                <input
-                                    type="text"
-                                    value={formData.slackOrTeams}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, slackOrTeams: e.target.value }))}
-                                    placeholder="Ex: Ramal 2045 ou @pedro.suporte"
-                                    className="w-full px-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
-                                />
+                                <div className="relative">
+                                    <Headphones className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+                                    <input
+                                        type="text"
+                                        value={formData.ramal}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, ramal: e.target.value, slackOrTeams: e.target.value }))}
+                                        placeholder="Ex: 2045 ou 20"
+                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
+                                    />
+                                </div>
                             </div>
 
                             {/* E-mails Adicionais */}
@@ -1357,6 +1217,152 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
+                    </div>
+                </div>
+            )}
+
+            {/* ========================================================================= */}
+            {/* MODAL DE PERSONALIZAÇÃO DA CAPA / BANNER DO PERFIL (8 CORES + HTTPS)      */}
+            {/* ========================================================================= */}
+            {isBannerModalOpen && (
+                <div 
+                    className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    onClick={() => setIsBannerModalOpen(false)}
+                >
+                    <div 
+                        className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 animate-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Header Modal com Gradiente Oficial */}
+                        <div className="p-5 bg-gradient-to-r from-red-600 to-rose-700 text-white flex items-center justify-between shadow-xs">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
+                                    <Palette className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-white">Personalizar Capa do Perfil</h3>
+                                    <p className="text-[11px] text-red-100">Escolha uma das 8 cores ou informe um link HTTPS de imagem</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsBannerModalOpen(false)}
+                                className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        {/* Conteúdo do Modal */}
+                        <div className="p-6 space-y-5">
+                            {/* Pré-visualização ao Vivo */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-2">
+                                    Pré-visualização da Capa:
+                                </label>
+                                {(() => {
+                                    const previewPreset = BANNER_COLOR_PRESETS.find(p => p.id === bannerColorDraft) || BANNER_COLOR_PRESETS[0];
+                                    const hasValidImg = Boolean(bannerUrlDraft && bannerUrlDraft.trim().startsWith('https://'));
+                                    return (
+                                        <div 
+                                            className={`h-28 rounded-2xl bg-gradient-to-r ${previewPreset.gradient} relative overflow-hidden flex items-end p-3.5 border border-gray-200 shadow-inner transition-all bg-cover bg-center`}
+                                            style={hasValidImg ? { backgroundImage: `url(${bannerUrlDraft.trim()})` } : {}}
+                                        >
+                                            <div className="absolute inset-0 bg-black/25"></div>
+                                            <div className="relative z-10 text-white flex items-center justify-between w-full">
+                                                <div>
+                                                    <span className="text-xs font-black drop-shadow-sm">{previewPreset.name}</span>
+                                                    {hasValidImg && (
+                                                        <span className="block text-[10px] text-white/90 font-medium">Link de imagem HTTPS ativo</span>
+                                                    )}
+                                                </div>
+                                                <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-xs font-bold">
+                                                    Ao vivo
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Seletor de Cores (8 Opções) */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-2">
+                                    Selecione uma Cor de Fundo (8 Opções):
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {BANNER_COLOR_PRESETS.map(preset => {
+                                        const isSelected = bannerColorDraft === preset.id;
+                                        return (
+                                            <button
+                                                key={preset.id}
+                                                type="button"
+                                                onClick={() => setBannerColorDraft(preset.id)}
+                                                className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 cursor-pointer ${
+                                                    isSelected
+                                                        ? 'border-red-600 ring-2 ring-red-300 bg-red-50/50 shadow-xs'
+                                                        : 'border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                                                }`}
+                                            >
+                                                <div className={`h-8 w-full rounded-lg bg-gradient-to-r ${preset.gradient} flex items-center justify-center shadow-2xs`}>
+                                                    {isSelected && <Check className="w-4 h-4 text-white stroke-[3] drop-shadow" />}
+                                                </div>
+                                                <span className="text-[11px] font-bold text-gray-800 truncate block">
+                                                    {preset.name.split(' ')[0]}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Opção Imagem HTTPS */}
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1.5">
+                                    Imagem de Capa Personalizada via Link HTTPS (Opcional):
+                                </label>
+                                <div className="relative">
+                                    <LinkIcon className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-3" />
+                                    <input
+                                        type="url"
+                                        value={bannerUrlDraft}
+                                        onChange={(e) => setBannerUrlDraft(e.target.value)}
+                                        placeholder="https://exemplo.com/minha-capa.jpg"
+                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900 placeholder:text-gray-400"
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between mt-1 text-[10px] text-gray-500">
+                                    <span>Cole um link direto seguro (deve iniciar com https://).</span>
+                                    {bannerUrlDraft && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setBannerUrlDraft('')}
+                                            className="text-red-600 hover:underline font-bold cursor-pointer"
+                                        >
+                                            Remover Imagem
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer Modal */}
+                        <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setIsBannerModalOpen(false)}
+                                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleConfirmBanner}
+                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+                            >
+                                Confirmar Capa
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
