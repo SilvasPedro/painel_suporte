@@ -169,6 +169,11 @@ service cloud.firestore {
       allow write: if isStaffAdmin();
     }
 
+    match /day_off_schedules/{schedId} {
+      allow read: if isSignedIn();
+      allow write: if isStaffAdmin();
+    }
+
     match /system_settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isStaffAdmin();

@@ -32,6 +32,16 @@ const TIMERS = new Map();
 // Chave única para documentos
 const docKey = (col, id) => `doc::${col}::${id}`;
 
+// Limites máximos de FinOps padrão para coleções volumosas para proteger cotas do Firestore
+const DEFAULT_COLLECTION_LIMITS = {
+    critical_reports: 150,
+    dailyDemand: 300,
+    weekly_evaluations: 400,
+    qa_audits: 300,
+    third_party_audits: 300,
+    feedbacks: 300,
+};
+
 // Duração do Keep-Alive: 15 minutos de inatividade antes de desligar um stream
 const KEEP_ALIVE_MS = 15 * 60 * 1000;
 
@@ -182,12 +192,12 @@ export const subscribeSharedCollection = (collectionName, callback, options = {}
         let queryRef;
         const colRef = collection(db, collectionName);
 
-        // Aplica limites de segurança para coleções operacionais volumosas
+        // Aplica limites de segurança e FinOps para coleções operacionais volumosas
         if (options.limitCount) {
             queryRef = query(colRef, limit(options.limitCount));
-        } else if (collectionName === 'critical_reports' && !options.disableLimit) {
-            // Limite padrão seguro para fila de chamados
-            queryRef = query(colRef, limit(100));
+        } else if (!options.disableLimit && DEFAULT_COLLECTION_LIMITS[collectionName]) {
+            // Limite padrão seguro calibrado para cada coleção operacional
+            queryRef = query(colRef, limit(DEFAULT_COLLECTION_LIMITS[collectionName]));
         } else {
             queryRef = colRef;
         }
@@ -298,9 +308,14 @@ export const subscribeSharedDocument = (collectionName, docId, callback) => {
     const subs = SUBSCRIBERS.get(key);
     subs.add(callback);
 
-    const cachedDoc = getCachedDocument(collectionName, docId);
-    if (cachedDoc) {
-        callback(cachedDoc);
+    // Entrega cache imediato se já consultado anteriormente (inclusive se doc for null/não existente)
+    if (MEMORY_CACHE.has(key)) {
+        callback(MEMORY_CACHE.get(key));
+    } else {
+        const cachedDoc = getCachedDocument(collectionName, docId);
+        if (cachedDoc !== null && cachedDoc !== undefined) {
+            callback(cachedDoc);
+        }
     }
 
     if (LISTENERS.has(key)) {

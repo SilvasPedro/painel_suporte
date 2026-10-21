@@ -2,25 +2,60 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, Users, CheckCircle,
-    TrendingUp, CalendarDays
+    CheckCircle2, TrendingUp, CalendarDays, Coffee, Calendar, 
+    ChevronRight, LifeBuoy, Activity
 } from 'lucide-react';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { timeToDecimal, formatTime } from '../utils/timeCalculations';
+import { calculatePerformanceScore } from '../utils/scoringCalculations';
 
-const timeToDecimal = (timeStr) => {
-    if (!timeStr) return 0;
-    const parts = timeStr.split(':');
-    if (parts.length !== 3) return 0;
-    return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10) + (parseInt(parts[2], 10) / 60);
-};
+const formatNextDateInfo = (dateStr, fallbackType = 'folga') => {
+    if (!dateStr) {
+        return {
+            label: fallbackType === 'plantao' ? 'Nenhum agendado' : 'Nenhuma agendada',
+            detail: fallbackType === 'plantao' ? 'Sem plantão registrado neste mês' : 'Sem folga registrada para este mês'
+        };
+    }
 
-const formatTime = (decimalMinutes) => {
-    if (!decimalMinutes && decimalMinutes !== 0) return "00:00:00";
-    const totalSeconds = Math.round(decimalMinutes * 60);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) {
+        return { label: dateStr, detail: 'Data programada' };
+    }
+
+    const year = Number(parts[0]);
+    const month = Number(parts[1]);
+    const day = Number(parts[2]);
+    const target = new Date(year, month - 1, day);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    target.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    const dayFormatted = `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}`;
+    const weekDays = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+    const weekDay = weekDays[target.getDay()] || '';
+
+    if (diffDays === 0) {
+        return {
+            label: `Hoje (${dayFormatted})`,
+            detail: `${weekDay} • Dia de ${fallbackType === 'plantao' ? 'plantão ativo' : 'descanso programado'}!`,
+            isToday: true
+        };
+    }
+    if (diffDays === 1) {
+        return {
+            label: `Amanhã (${dayFormatted})`,
+            detail: `${weekDay} • Próximo ${fallbackType === 'plantao' ? 'plantão' : 'descanso'}`,
+            isTomorrow: true
+        };
+    }
+    return {
+        label: `Dia ${dayFormatted}`,
+        detail: `${weekDay} • em ${diffDays} dias`,
+        daysLeft: diffDays
+    };
 };
 
 const parseDateObj = (dateStr) => {
@@ -34,15 +69,6 @@ const parseDateObj = (dateStr) => {
         if (parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
     }
     return 0;
-};
-
-const formatDateBR = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-        return `${parts[2]}/${parts[1]}`;
-    }
-    return dateStr;
 };
 
 const formatChartDate = (dateString) => {
@@ -80,11 +106,11 @@ const TrendIndicator = ({ type, current, previous }) => {
 };
 
 const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
-    <div className="bg-white rounded-xl shadow-sm p-5 border border-gray-200 flex flex-col justify-between relative overflow-hidden h-full">
+    <div className="bg-white rounded-2xl shadow-2xs p-5 border border-gray-200 hover:border-gray-300 transition-all flex flex-col justify-between relative overflow-hidden h-full">
         <div>
             <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
-                <div className="p-2 bg-gray-50 rounded-lg border border-gray-100">{icon}</div>
+                <div className="p-2 bg-gray-50 rounded-xl border border-gray-100">{icon}</div>
             </div>
             <div className="flex items-end gap-2 mt-1">
                 <div className="text-2xl lg:text-3xl font-black tracking-tight text-gray-900">{value}</div>
@@ -93,12 +119,15 @@ const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
         </div>
         <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-xs">
             <div className="text-gray-500 font-medium">{subtitle}</div>
-            {goalText && <div className="text-gray-600 font-bold bg-gray-50 px-2 py-0.5 rounded border border-gray-100">{goalText}</div>}
+            {goalText && <div className="text-gray-600 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 text-[11px]">{goalText}</div>}
         </div>
     </div>
 );
 
 const MyDashboard = ({ currentUserId, currentUser }) => {
+    const currentUserName = currentUser?.name;
+    const currentUserEmail = currentUser?.email;
+
     const [loading, setLoading] = useState(Boolean(currentUserId));
     const [globalKpi, setGlobalKpi] = useState({ tmr: '00:00:00', fcr: 0, recurrence: 0 });
     const [prevGlobalKpi, setPrevGlobalKpi] = useState(null);
@@ -108,6 +137,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
     const [myTaskToday, setMyTaskToday] = useState(null);
     const [nextSundayShift, setNextSundayShift] = useState(null);
+    const [nextDayOff, setNextDayOff] = useState(null);
 
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
     const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
@@ -145,7 +175,12 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             items.forEach((docItem) => {
                 const assignments = docItem.assignments || {};
                 for (const [dateStr, colabs] of Object.entries(assignments)) {
-                    if (colabs.some(c => c.id === currentUserId)) {
+                    if (Array.isArray(colabs) && colabs.some(c => 
+                        c.id === currentUserId || 
+                        c.uid === currentUserId || 
+                        c.firestoreId === currentUserId ||
+                        (currentUserName && c.name && c.name.trim().toLowerCase() === currentUserName.trim().toLowerCase())
+                    )) {
                         const shiftDate = new Date(dateStr + 'T00:00:00');
                         if (shiftDate >= today) {
                             if (!next || shiftDate < new Date(next)) {
@@ -156,6 +191,33 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                 }
             });
             setNextSundayShift(next);
+        });
+
+        const unsubDayOff = subscribeSharedCollection("day_off_schedules", (items) => {
+            let next = null;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            items.forEach((docItem) => {
+                const assignments = docItem.assignments || {};
+                for (const [dateStr, colabs] of Object.entries(assignments)) {
+                    if (Array.isArray(colabs) && colabs.some(c => 
+                        c.id === currentUserId || 
+                        c.uid === currentUserId || 
+                        c.firestoreId === currentUserId ||
+                        (currentUserName && c.name && c.name.trim().toLowerCase() === currentUserName.trim().toLowerCase()) ||
+                        (currentUserEmail && c.email && c.email.trim().toLowerCase() === currentUserEmail.trim().toLowerCase())
+                    )) {
+                        const offDate = new Date(dateStr + 'T00:00:00');
+                        if (offDate >= today) {
+                            if (!next || offDate < new Date(next + 'T00:00:00')) {
+                                next = dateStr;
+                            }
+                        }
+                    }
+                }
+            });
+            setNextDayOff(next);
         });
 
         const unsubGoals = subscribeSharedDocument("system_settings", "sector_goals", (docData) => {
@@ -226,8 +288,9 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             unsubAudits(); 
             unsubSchedule(); 
             unsubSunday(); 
+            unsubDayOff();
         };
-    }, [currentUserId]);
+    }, [currentUserId, currentUserName, currentUserEmail]);
 
     const qaStats = useMemo(() => {
         const total = myAudits.length;
@@ -235,6 +298,9 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
         const taxa = total > 0 ? ((conformes / total) * 100).toFixed(1) : "0.0";
         return { total, taxa };
     }, [myAudits]);
+
+    const nextSundayInfo = useMemo(() => formatNextDateInfo(nextSundayShift, 'plantao'), [nextSundayShift]);
+    const nextDayOffInfo = useMemo(() => formatNextDateInfo(nextDayOff, 'folga'), [nextDayOff]);
 
     const { myStats, chartData, shiftAvgPts } = useMemo(() => {
         const defaultStats = { totalPoints: 0, avgPoints: '0.0', avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00' };
@@ -247,7 +313,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
         const formattedChartData = [];
 
         myEvals.forEach(e => {
-            let pts = e.pontuacao ?? (Number(e.Atendimentos_Finalizados || 0) * 1 + Number(e.Ligacoes_Atendidas || 0) * 2 + Number(e.Atendimentos_Huggy || 0) * 1 + Number(e.Ligacoes_Perdidas || 0) * -5);
+            const pts = e.pontuacao ?? calculatePerformanceScore(e);
             const telDec = timeToDecimal(e.TMA_Telefonia); 
             const huggyDec = timeToDecimal(e.TMA_Huggy);
             sumPoints += pts; 
@@ -308,84 +374,221 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50">
             {/* Header de Boas-Vindas e Resumo Rápido */}
-            <div className="mb-6 bg-white p-6 rounded-xl border border-gray-200 shadow-sm flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+            <div className="mb-6 bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
                         <User className="w-6 h-6 text-red-600" /> Meu Desempenho
                     </h1>
-                    <p className="text-sm text-gray-500 mt-0.5">
-                        Olá, <strong className="text-gray-800">{currentUser?.name || 'Colaborador'}</strong>. Acompanhe suas métricas individuais e tarefas.
+                    <p className="text-sm text-gray-500 mt-1">
+                        Olá, <strong className="text-gray-800">{currentUser?.name || 'Colaborador'}</strong>. Acompanhe suas métricas individuais, tarefas e escalas.
                     </p>
                 </div>
 
+                {/* Cartões de Informações Principais do Topo */}
                 <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-                    <div className="flex items-center gap-3 bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-200 dark:border-fuchsia-900/60 px-4 py-2.5 rounded-xl shadow-xs">
-                        <div className="p-2 bg-fuchsia-100 dark:bg-fuchsia-900/50 rounded-lg text-fuchsia-700 dark:text-fuchsia-300">
+                    {/* Feedbacks Novos (Ícone no canto superior direito) */}
+                    <div className={`flex justify-between items-start gap-4 px-4 py-3 rounded-2xl border min-w-[155px] transition-all ${
+                        unreadFeedbacks > 0
+                            ? 'bg-zinc-950 text-white border-zinc-800 shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-700 shadow-2xs'
+                    }`}>
+                        <div>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
+                                unreadFeedbacks > 0 ? 'text-fuchsia-400' : 'text-gray-500'
+                            }`}>
+                                Feedbacks Novos
+                            </span>
+                            <span className={`text-2xl font-black leading-none ${
+                                unreadFeedbacks > 0 ? 'text-white' : 'text-gray-900'
+                            }`}>
+                                {unreadFeedbacks}
+                            </span>
+                        </div>
+                        <div className={`p-2 rounded-xl shrink-0 ${
+                            unreadFeedbacks > 0
+                                ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
+                                : 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-100'
+                        }`}>
                             <MessageSquare className="w-4 h-4" />
                         </div>
-                        <div>
-                            <span className="text-[10px] font-bold text-fuchsia-700 dark:text-fuchsia-400 uppercase tracking-wider block">Feedbacks Novos</span>
-                            <span className="text-lg font-black text-fuchsia-900 dark:text-fuchsia-100 leading-none">{unreadFeedbacks}</span>
-                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 px-4 py-2.5 rounded-xl shadow-xs">
-                        <div className="p-2 bg-amber-100 rounded-lg text-amber-700">
+                    {/* Relatos Pendentes (Ícone no canto superior direito) */}
+                    <div className={`flex justify-between items-start gap-4 px-4 py-3 rounded-2xl border min-w-[155px] transition-all ${
+                        reportStats.pending > 0
+                            ? 'bg-zinc-950 text-white border-zinc-800 shadow-sm'
+                            : 'bg-white border-gray-200 text-gray-700 shadow-2xs'
+                    }`}>
+                        <div>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
+                                reportStats.pending > 0 ? 'text-amber-400' : 'text-gray-500'
+                            }`}>
+                                Relatos Pendentes
+                            </span>
+                            <span className={`text-2xl font-black leading-none ${
+                                reportStats.pending > 0 ? 'text-white' : 'text-gray-900'
+                            }`}>
+                                {reportStats.pending}
+                            </span>
+                        </div>
+                        <div className={`p-2 rounded-xl shrink-0 ${
+                            reportStats.pending > 0
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                : 'bg-amber-50 text-amber-600 border border-amber-100'
+                        }`}>
                             <Clock className="w-4 h-4" />
                         </div>
-                        <div>
-                            <span className="text-[10px] font-bold text-amber-700 uppercase tracking-wider block">Relatos Pendentes</span>
-                            <span className="text-lg font-black text-amber-900 leading-none">{reportStats.pending}</span>
-                        </div>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-xl shadow-xs">
-                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-700">
-                            <CheckCircle className="w-4 h-4" />
-                        </div>
+                    {/* Relatos Concluídos (Ícone no canto superior direito) */}
+                    <div className="flex justify-between items-start gap-4 bg-white border border-gray-200 px-4 py-3 rounded-2xl shadow-2xs min-w-[155px]">
                         <div>
-                            <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">Relatos Concluídos</span>
-                            <span className="text-lg font-black text-emerald-900 leading-none">{reportStats.resolved}</span>
+                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
+                                Relatos Concluídos
+                            </span>
+                            <span className="text-2xl font-black text-emerald-600 leading-none">
+                                {reportStats.resolved}
+                            </span>
+                        </div>
+                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0">
+                            <CheckCircle2 className="w-4 h-4" />
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* CARDS DE ESCALA E PLANTÃO DO COLABORADOR */}
-            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className={`p-5 rounded-xl border flex items-center gap-4 shadow-sm transition-all ${
-                    myTaskToday 
-                    ? 'bg-zinc-950 text-white border-zinc-800' 
-                    : 'bg-white border-gray-200 text-gray-800'
-                }`}>
-                    <div className={`p-3.5 rounded-xl ${myTaskToday ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                        <CalendarDays className="w-6 h-6" />
-                    </div>
+            {/* CARDS DE OPERAÇÃO: TAREFA HOJE, PLANTÃO E PRÓXIMA FOLGA NA MESMA LINHA */}
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 1. Minha Tarefa Hoje (Escala Fixa - Ícone no canto superior direito) */}
+                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-blue-500/50 transition-all group">
                     <div>
-                        <p className={`text-xs font-bold uppercase tracking-wider ${myTaskToday ? 'text-red-400' : 'text-gray-400'}`}>
-                            Minha Tarefa Hoje (Escala Fixa)
-                        </p>
-                        <h2 className="text-xl font-black mt-0.5">
-                            {myTaskToday ? `Fila de ${myTaskToday}` : "Sem escala para hoje"}
-                        </h2>
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="space-y-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 block">
+                                    Minha Tarefa Hoje
+                                </span>
+                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+                                    myTaskToday 
+                                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' 
+                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                }`}>
+                                    {myTaskToday ? 'Escala Ativa' : 'Sem Escala'}
+                                </span>
+                            </div>
+                            <div className={`p-2.5 rounded-xl border shrink-0 ${
+                                myTaskToday 
+                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
+                            }`}>
+                                {myTaskToday === 'Telefonia' ? (
+                                    <Phone className="w-5 h-5" />
+                                ) : myTaskToday === 'Huggy' ? (
+                                    <MessageSquare className="w-5 h-5" />
+                                ) : myTaskToday === 'Apoio' ? (
+                                    <LifeBuoy className="w-5 h-5" />
+                                ) : (
+                                    <CalendarDays className="w-5 h-5" />
+                                )}
+                            </div>
+                        </div>
+                        <div className="mt-1">
+                            <h3 className="text-2xl font-black text-white tracking-tight">
+                                {myTaskToday ? (myTaskToday.startsWith('Fila') ? myTaskToday : `Fila de ${myTaskToday}`) : "Sem escala para hoje"}
+                            </h3>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                {myTaskToday 
+                                    ? (myTaskToday === 'Telefonia' ? 'Atendimento receptivo de chamadas de voz' : myTaskToday === 'Huggy' ? 'Atendimento via chat e multicanais' : 'Suporte e apoio operacional às filas')
+                                    : 'Nenhum posto fixo alocado para o dia de hoje'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                        <span>Escala Semanal Operacional</span>
+                        <span className="text-blue-400 font-bold flex items-center gap-1">
+                            {myTaskToday ? 'Ativo' : 'Livre'}
+                        </span>
                     </div>
                 </div>
 
-                <div className={`p-5 rounded-xl border flex items-center gap-4 shadow-sm transition-all ${
-                    nextSundayShift 
-                    ? 'bg-emerald-900/90 text-white border-emerald-800' 
-                    : 'bg-white border-gray-200 text-gray-800'
-                }`}>
-                    <div className={`p-3.5 rounded-xl ${nextSundayShift ? 'bg-emerald-600 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                        <Users className="w-6 h-6" />
-                    </div>
+                {/* 2. Próximo Plantão (Domingos - Ícone no canto superior direito) */}
+                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-amber-500/50 transition-all group">
                     <div>
-                        <p className={`text-xs font-bold uppercase tracking-wider ${nextSundayShift ? 'text-emerald-300' : 'text-gray-400'}`}>
-                            Próximo Plantão de Domingo
-                        </p>
-                        <h2 className="text-xl font-black mt-0.5">
-                            {nextSundayShift ? `Dia ${formatDateBR(nextSundayShift)}` : "Nenhum plantão agendado"}
-                        </h2>
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="space-y-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">
+                                    Próximo Plantão
+                                </span>
+                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+                                    nextSundayShift 
+                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' 
+                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                }`}>
+                                    {nextSundayShift ? 'Domingo' : 'Disponível'}
+                                </span>
+                            </div>
+                            <div className={`p-2.5 rounded-xl border shrink-0 ${
+                                nextSundayShift 
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
+                                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
+                            }`}>
+                                <Users className="w-5 h-5" />
+                            </div>
+                        </div>
+                        <div className="mt-1">
+                            <h3 className="text-2xl font-black text-white tracking-tight">
+                                {nextSundayInfo.label}
+                            </h3>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                {nextSundayInfo.detail}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                        <span>Escalação de Domingo</span>
+                        <span className="text-amber-400 font-bold flex items-center gap-1">
+                            {nextSundayShift ? 'Escalado' : 'Sem plantão'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* 3. Próxima Folga (Tela de Folgas - Ícone no canto superior direito) */}
+                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
+                    <div>
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="space-y-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block">
+                                    Próxima Folga
+                                </span>
+                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
+                                    nextDayOff 
+                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                                }`}>
+                                    {nextDayOff ? (nextDayOffInfo.isToday ? 'Hoje!' : nextDayOffInfo.isTomorrow ? 'Amanhã' : 'Descanso') : 'A Definir'}
+                                </span>
+                            </div>
+                            <div className={`p-2.5 rounded-xl border shrink-0 ${
+                                nextDayOff 
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
+                            }`}>
+                                <Coffee className="w-5 h-5" />
+                            </div>
+                        </div>
+                        <div className="mt-1">
+                            <h3 className="text-2xl font-black text-white tracking-tight">
+                                {nextDayOffInfo.label}
+                            </h3>
+                            <p className="text-xs text-zinc-400 mt-1">
+                                {nextDayOffInfo.detail}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                        <span>Grade Mensal de Folgas</span>
+                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                            {nextDayOff ? 'Folga programada' : 'Aguardando escala'}
+                        </span>
                     </div>
                 </div>
             </div>
@@ -448,7 +651,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                         value={`${globalKpi.fcr || 0}%`} 
                         subtitle="First Call Resolution" 
                         goalText={`Meta: ≥ ${goals.fcr}%`} 
-                        icon={<Target className="w-5 h-5 text-rose-500" />} 
+                        icon={<Target className="w-5 h-5 text-emerald-500" />} 
                         trend={<TrendIndicator type="fcr" current={globalKpi.fcr} previous={prevGlobalKpi?.fcr} />} 
                     />
                     <DashboardCard 
@@ -456,7 +659,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                         value={`${globalKpi.recurrence || 0}%`} 
                         subtitle="Taxa de Retorno" 
                         goalText={`Meta: ≤ ${goals.recurrence}%`} 
-                        icon={<RefreshCw className="w-5 h-5 text-blue-500" />} 
+                        icon={<Activity className="w-5 h-5 text-blue-500" />} 
                         trend={<TrendIndicator type="recurrence" current={globalKpi.recurrence} previous={prevGlobalKpi?.recurrence} />} 
                     />
                 </div>

@@ -1,11 +1,9 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
-
 /**
- * Serviço de Exportação em PDF para Auditorias da Terceirizada (v3.8.2)
+ * Serviço de Exportação em PDF para Auditorias da Terceirizada (v3.8.2 / v3.9.0)
  * Gera documento A4 Paisagem profissional com sumário de métricas e tabela de protocolos unificados.
+ * Utiliza Dynamic Import para carregar jspdf sob demanda (economia substancial no bundle inicial).
  */
-export const exportThirdPartyAuditsPDF = ({
+export const exportThirdPartyAuditsPDF = async ({
     audits,
     periodLabel = 'Período Atual',
     kpiStats = null,
@@ -14,6 +12,10 @@ export const exportThirdPartyAuditsPDF = ({
     if (!audits || audits.length === 0) {
         throw new Error('Nenhuma auditoria disponível para exportação.');
     }
+
+    // Carregamento dinâmico sob demanda
+    const { default: jsPDF } = await import('jspdf');
+    const { default: autoTable } = await import('jspdf-autotable');
 
     // Cria documento A4 Paisagem (297mm x 210mm)
     const doc = new jsPDF({

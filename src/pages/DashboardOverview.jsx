@@ -12,50 +12,8 @@ import {
 } from 'recharts';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useTheme } from '../context/ThemeContext';
-
-// --- CONVERSÕES E UTILITÁRIOS DE TEMPO ---
-const timeToDecimal = (timeStr) => {
-    if (!timeStr || timeStr === '--' || timeStr === '00:00:00') return 0;
-    const parts = String(timeStr).split(':');
-    if (parts.length !== 3) return 0;
-    return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10) + (parseInt(parts[2], 10) / 60);
-};
-
-const formatTime = (decimalMinutes) => {
-    if (!decimalMinutes && decimalMinutes !== 0) return "00:00:00";
-    const totalSeconds = Math.round(decimalMinutes * 60);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-};
-
-const formatDateBR = (dateStr) => {
-    if (!dateStr) return '';
-    // Aceita YYYY-MM-DD ou DD/MM/YYYY
-    if (dateStr.includes('-')) {
-        const [, m, d] = dateStr.split('-');
-        return `${d}/${m}`;
-    }
-    if (dateStr.includes('/')) {
-        const [d, m] = dateStr.split('/');
-        return `${d}/${m}`;
-    }
-    return dateStr;
-};
-
-const parseDateSort = (dateStr) => {
-    if (!dateStr) return 0;
-    if (dateStr.includes('-')) {
-        const [y, m, d] = dateStr.split('-');
-        return new Date(y, m - 1, d).getTime();
-    }
-    if (dateStr.includes('/')) {
-        const [d, m, y] = dateStr.split('/');
-        return new Date(y, m - 1, d).getTime();
-    }
-    return 0;
-};
+import { timeToDecimal, formatTime, formatDateBR, parseDateSort } from '../utils/timeCalculations';
+import { calculatePerformanceScore } from '../utils/scoringCalculations';
 
 // --- HELPERS DE IDENTIFICAÇÃO DE TURNOS OFICIAIS ---
 // Turnos: Manhã I, Manhã II, Tarde e Noturno.
@@ -318,13 +276,7 @@ const DashboardOverview = ({ onNavigate }) => {
             if (!colabInfo && e.name) colabInfo = colabsFull[e.name.trim().toLowerCase()];
 
             if (colabInfo && colabInfo.active !== false) {
-                let pts = e.pontuacao;
-                if (pts === undefined) {
-                    pts = (Number(e.Atendimentos_Finalizados || 0) * 1) +
-                        (Number(e.Ligacoes_Atendidas || 0) * 2) +
-                        (Number(e.Atendimentos_Huggy || 0) * 1) +
-                        (Number(e.Ligacoes_Perdidas || 0) * -5);
-                }
+                const pts = e.pontuacao !== undefined ? e.pontuacao : calculatePerformanceScore(e);
                 const resolvedId = colabInfo.id || colabId;
                 if (!colabPointsData[resolvedId]) colabPointsData[resolvedId] = { sum: 0, count: 0, info: colabInfo };
                 colabPointsData[resolvedId].sum += pts;

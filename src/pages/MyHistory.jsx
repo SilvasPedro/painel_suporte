@@ -16,6 +16,7 @@ import FeedbackDetailModal from '../components/history/FeedbackDetailModal';
 import WeeklyMetricDetailModal from '../components/history/WeeklyMetricDetailModal';
 import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluationDetailModal';
 import { resolveUserName } from '../utils/userResolvers';
+import { calculatePerformanceScore } from '../utils/scoringCalculations';
 
 const getItemDateObj = (item) => {
     if (!item) return null;
@@ -283,7 +284,7 @@ const MyHistory = ({ currentUserId }) => {
             let maxScore = 0;
             let totalCalls = 0;
             data.forEach(i => {
-                const score = Number(i.pontuacao !== undefined ? i.pontuacao : (Number(i.Atendimentos_Finalizados || 0) + Number(i.Ligacoes_Atendidas || 0) * 2 + Number(i.Atendimentos_Huggy || 0) - Number(i.Ligacoes_Perdidas || 0) * 5));
+                const score = Number(i.pontuacao !== undefined ? i.pontuacao : calculatePerformanceScore(i));
                 totalScore += score;
                 if (score > maxScore) maxScore = score;
                 totalCalls += Number(i.Ligacoes_Atendidas || 0);
@@ -401,7 +402,7 @@ const MyHistory = ({ currentUserId }) => {
                 } else if (activeTab === 'monthly') {
                     if (item.classification !== statusFilter) return false;
                 } else if (activeTab === 'metrics') {
-                    const score = Number(item.pontuacao !== undefined ? item.pontuacao : (Number(item.Atendimentos_Finalizados || 0) + Number(item.Ligacoes_Atendidas || 0) * 2 + Number(item.Atendimentos_Huggy || 0) - Number(item.Ligacoes_Perdidas || 0) * 5));
+                    const score = Number(item.pontuacao !== undefined ? item.pontuacao : calculatePerformanceScore(item));
                     if (statusFilter === 'high' && score < 100) return false;
                     if (statusFilter === 'medium' && (score < 50 || score >= 100)) return false;
                     if (statusFilter === 'low' && score >= 50) return false;

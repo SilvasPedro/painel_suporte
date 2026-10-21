@@ -124,10 +124,16 @@ export const SYSTEM_MODULES = [
 
     // Grupo: Escalas
     {
-        id: 'daily_schedule',
-        label: 'Escala Diária',
+        id: 'day_off_schedule',
+        label: 'Escala de Folgas',
         group: 'Escalas',
-        description: 'Planejamento dos horários de expediente e pausas da semana.'
+        description: 'Programação de folgas da equipe com visão de calendário e cards.'
+    },
+    {
+        id: 'daily_schedule',
+        label: 'Escala Diária & Plantão',
+        group: 'Escalas',
+        description: 'Planejamento integrado de postos operacionais diários e plantões de domingos.'
     },
     {
         id: 'schedule',
@@ -175,6 +181,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         audits: { view: true, edit: true },
         third_party_audits: { view: true, edit: true },
         rankings: { view: true, edit: true },
+        schedules_hub: { view: true, edit: true },
+        day_off_schedule: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
         sector_kpis: { view: true, edit: true },
@@ -195,6 +203,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         audits: { view: true, edit: true },
         third_party_audits: { view: true, edit: true },
         rankings: { view: true, edit: false },
+        schedules_hub: { view: true, edit: true },
+        day_off_schedule: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
         sector_kpis: { view: true, edit: false },
@@ -215,6 +225,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         audits: { view: true, edit: false },
         third_party_audits: { view: true, edit: true },
         rankings: { view: true, edit: false },
+        schedules_hub: { view: true, edit: true },
+        day_off_schedule: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
         sector_kpis: { view: false, edit: false },
@@ -235,6 +247,8 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         audits: { view: false, edit: false },
         third_party_audits: { view: false, edit: false },
         rankings: { view: true, edit: false },
+        schedules_hub: { view: true, edit: false },
+        day_off_schedule: { view: true, edit: false },
         daily_schedule: { view: true, edit: false },
         schedule: { view: true, edit: false },
         sector_kpis: { view: false, edit: false },

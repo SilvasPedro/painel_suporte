@@ -6,6 +6,7 @@ import {
     Flame, ChevronRight, ArrowUpRight, CheckCircle2, RotateCcw
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
+import { calculatePerformanceScore } from '../utils/scoringCalculations';
 
 // --- FUNÇÕES DE CONVERSÃO DE TEMPO ---
 const timeToSeconds = (timeStr) => {
@@ -159,14 +160,8 @@ const Rankings = () => {
                 };
             }
 
-            // Soma a Pontuação
-            let pts = e.pontuacao;
-            if (pts === undefined) {
-                pts = (Number(e.Atendimentos_Finalizados || 0) * 1) + 
-                      (Number(e.Ligacoes_Atendidas || 0) * 2) + 
-                      (Number(e.Atendimentos_Huggy || 0) * 1) + 
-                      (Number(e.Ligacoes_Perdidas || 0) * -5);
-            }
+            // Soma a Pontuação (Motor Oficial Unificado)
+            const pts = e.pontuacao !== undefined ? e.pontuacao : calculatePerformanceScore(e);
             colabStats[colabId].pontuacao += pts;
             colabStats[colabId].finalizacoes += Number(e.Atendimentos_Finalizados) || 0;
             colabStats[colabId].ligAtendidas += Number(e.Ligacoes_Atendidas) || 0;

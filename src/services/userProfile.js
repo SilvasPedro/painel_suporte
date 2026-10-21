@@ -1,6 +1,7 @@
 import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
+import { calculatePerformanceScore } from '../utils/scoringCalculations';
 
 /**
  * Atualiza o perfil completo do usuário atual tanto no Firebase Auth (photoURL, displayName)
@@ -528,11 +529,7 @@ export const evaluateCollaboratorBadges = ({
         if (ev.pontuacao !== undefined && ev.pontuacao !== null && ev.pontuacao !== '') {
             return Number(ev.pontuacao) || 0;
         }
-        const fin = Number(ev.Atendimentos_Finalizados || ev.finalizados || 0);
-        const lig = Number(ev.Ligacoes_Atendidas || ev.ligAtendidas || 0);
-        const per = Number(ev.Ligacoes_Perdidas || ev.ligPerdidas || 0);
-        const hug = Number(ev.Atendimentos_Huggy || ev.huggyVol || 0);
-        return (fin * 1) + (lig * 2) + (hug * 1) + (per * -5);
+        return calculatePerformanceScore(ev);
     };
 
     // -------------------------------------------------------------

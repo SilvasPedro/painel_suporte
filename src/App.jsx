@@ -13,6 +13,7 @@ import AccountInactive from './pages/AccountInactive';
 
 import NotificationManager from './components/NotificationManager';
 import MandatoryContactModal from './components/profile/MandatoryContactModal';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // ==========================================
 // PROTEÇÃO DE ROTAS (RBAC ATUALIZADO)
@@ -141,20 +142,24 @@ const AppRoutes = () => {
 // ==========================================
 function App() {
     return (
-        <ThemeProvider>
-            <AuthProvider>
-                <NotificationProvider>
-                    <PermissionsProvider>
-                        <BrowserRouter>
-                            <NotificationManager />
-                            <MandatoryContactModal />
-                            <AppRoutes />
-                            <FloatingExtensions />
-                        </BrowserRouter>
-                    </PermissionsProvider>
-                </NotificationProvider>
-            </AuthProvider>
-        </ThemeProvider>
+        <ErrorBoundary>
+            <ThemeProvider>
+                <AuthProvider>
+                    <NotificationProvider>
+                        <PermissionsProvider>
+                            <BrowserRouter>
+                                <NotificationManager />
+                                <MandatoryContactModal />
+                                <ErrorBoundary>
+                                    <AppRoutes />
+                                </ErrorBoundary>
+                                <FloatingExtensions />
+                            </BrowserRouter>
+                        </PermissionsProvider>
+                    </NotificationProvider>
+                </AuthProvider>
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 }
 

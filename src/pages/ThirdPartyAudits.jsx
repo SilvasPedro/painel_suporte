@@ -954,7 +954,7 @@ export default function ThirdPartyAudits() {
     // ========================================================
     // EXPORTAÇÃO PDF (DOCUMENTO UNIFICADO PARA ANEXO)
     // ========================================================
-    const handleExportPDF = () => {
+    const handleExportPDF = async () => {
         if (filteredAudits.length === 0) {
             showToast('Nenhuma auditoria para exportar.', 'warning');
             return;
@@ -972,7 +972,7 @@ export default function ThirdPartyAudits() {
                 all: 'Todo o Histórico'
             };
 
-            exportThirdPartyAuditsPDF({
+            await exportThirdPartyAuditsPDF({
                 audits: filteredAudits,
                 periodLabel: periodLabelMap[periodType] || periodType,
                 kpiStats: {

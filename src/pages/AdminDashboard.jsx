@@ -1,34 +1,37 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee
 } from 'lucide-react';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
 
-import DashboardOverview from './DashboardOverview';
-import CollaboratorsHub from './CollaboratorsHub';
-import WeeklyMetrics from './WeeklyMetrics';
-import SectorKPIs from './SectorKPIs';
-import DataManager from './DataManager';
-import Settings from './Settings';
-import Reports from './Reports';
-import Audits from './Audits';
-import ThirdPartyAudits from './ThirdPartyAudits';
-import Rankings from './Rankings';
-import DailyQueueTracker from './DailyDemandLaunch';
-import SundaySchedule from './SundaySchedule';
-import DailySchedule from './DailySchedule';
-import OrgChart from './OrgChart';
-import MonthlyEvaluations from './MonthlyEvaluations';
-import MyDashboard from './MyDashboard';
-import MyHistory from './MyHistory';
-import MyProfile from './MyProfile';
+// Carregamento sob demanda (Code-Splitting) para máxima performance de inicialização
+const DashboardOverview = lazy(() => import('./DashboardOverview'));
+const CollaboratorsHub = lazy(() => import('./CollaboratorsHub'));
+const WeeklyMetrics = lazy(() => import('./WeeklyMetrics'));
+const SectorKPIs = lazy(() => import('./SectorKPIs'));
+const DataManager = lazy(() => import('./DataManager'));
+const Settings = lazy(() => import('./Settings'));
+const Reports = lazy(() => import('./Reports'));
+const Audits = lazy(() => import('./Audits'));
+const ThirdPartyAudits = lazy(() => import('./ThirdPartyAudits'));
+const Rankings = lazy(() => import('./Rankings'));
+const DailyQueueTracker = lazy(() => import('./DailyDemandLaunch'));
+const DayOffSchedule = lazy(() => import('./DayOffSchedule'));
+const OperationalSchedules = lazy(() => import('./OperationalSchedules'));
+const OrgChart = lazy(() => import('./OrgChart'));
+const MonthlyEvaluations = lazy(() => import('./MonthlyEvaluations'));
+const MyDashboard = lazy(() => import('./MyDashboard'));
+const MyHistory = lazy(() => import('./MyHistory'));
+const MyProfile = lazy(() => import('./MyProfile'));
+
 import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
@@ -36,6 +39,14 @@ import ThemeSelector from '../components/ThemeSelector';
 import NotificationBell from '../components/NotificationBell';
 import { CURRENT_VERSION } from '../data/changelogData';
 import { calculateUserLevel } from '../services/userProfile';
+
+// Loader visual suave durante a troca de abas
+const PageLoader = () => (
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 h-full">
+        <div className="w-9 h-9 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-xs font-semibold text-gray-500 mt-3 animate-pulse">Carregando módulo...</span>
+    </div>
+);
 
 // Importação do ícone da barra de navegação (mesmo ícone do favicon)
 import faviconLogo from '../assets/favicon_red.png';
@@ -56,7 +67,20 @@ const AdminDashboard = () => {
         return calculateUserLevel(currentUser?.badges);
     }, [currentUser?.badges]);
 
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'dashboard';
+
+    const setActiveTab = useCallback((tabId) => {
+        setSearchParams(prev => {
+            const next = new URLSearchParams(prev);
+            if (tabId === 'dashboard') {
+                next.delete('tab');
+            } else {
+                next.set('tab', tabId);
+            }
+            return next;
+        }, { replace: false });
+    }, [setSearchParams]);
 
     useEffect(() => {
         const handleNavigateTab = (e) => {
@@ -68,7 +92,7 @@ const AdminDashboard = () => {
         };
         window.addEventListener('HUBDESK_NAVIGATE_TAB', handleNavigateTab);
         return () => window.removeEventListener('HUBDESK_NAVIGATE_TAB', handleNavigateTab);
-    }, []);
+    }, [setActiveTab]);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
@@ -131,8 +155,8 @@ const AdminDashboard = () => {
             title: 'Escalas',
             icon: Calendar,
             items: [
-                { id: 'daily_schedule', label: 'Escala Diária', icon: CalendarDays },
-                { id: 'schedule', label: 'Escala de Plantão', icon: Calendar },
+                { id: 'day_off_schedule', label: 'Escala de Folgas', icon: Coffee },
+                { id: 'daily_schedule', label: 'Escala Diária & Plantão', icon: CalendarDays },
             ]
         },
         {
@@ -221,10 +245,13 @@ const AdminDashboard = () => {
                 return <WeeklyMetrics />;
             case 'monthly_evaluations':
                 return <MonthlyEvaluations />;
-            case 'schedule':
-                return <SundaySchedule readOnly={!canEdit('schedule')} />;
+            case 'day_off_schedule':
+                return <DayOffSchedule readOnly={!canEdit('day_off_schedule')} />;
+            case 'operational_schedules':
             case 'daily_schedule':
-                return <DailySchedule readOnly={!canEdit('daily_schedule')} />;
+                return <OperationalSchedules initialTab="diaria" readOnly={!canEdit('daily_schedule')} />;
+            case 'schedule':
+                return <OperationalSchedules initialTab="plantao" readOnly={!canEdit('schedule')} />;
             case 'sector_kpis':
                 return <SectorKPIs />;
             case 'data_manager':
@@ -656,7 +683,9 @@ const AdminDashboard = () => {
                 </header>
 
                 <div className="flex-1 overflow-hidden flex flex-col">
-                    {renderContent()}
+                    <Suspense fallback={<PageLoader />}>
+                        {renderContent()}
+                    </Suspense>
                 </div>
             </main>
 

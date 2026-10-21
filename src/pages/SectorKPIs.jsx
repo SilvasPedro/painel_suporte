@@ -5,6 +5,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
+import { timeToDecimal, formatTime } from '../utils/timeCalculations';
 
 const SectorKPIs = () => {
     const { showToast } = useNotification();
@@ -26,23 +27,6 @@ const SectorKPIs = () => {
 
     // Dados reais do gráfico
     const [chartData, setChartData] = useState([]);
-
-    // --- FUNÇÕES DE CONVERSÃO DE TEMPO ---
-    const timeToDecimal = (timeStr) => {
-        if (!timeStr) return 0;
-        const parts = timeStr.split(':');
-        if (parts.length !== 3) return 0;
-        return (parseInt(parts[0], 10) * 60) + parseInt(parts[1], 10) + (parseInt(parts[2], 10) / 60);
-    };
-
-    const formatTime = (decimalMinutes) => {
-        if (!decimalMinutes && decimalMinutes !== 0) return "00:00:00";
-        const totalSeconds = Math.round(decimalMinutes * 60);
-        const hours = Math.floor(totalSeconds / 3600);
-        const minutes = Math.floor((totalSeconds % 3600) / 60);
-        const seconds = totalSeconds % 60;
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    };
 
     // Formata YYYY-MM-DD para DD/MM para o eixo X do gráfico não ficar gigante
     const formatChartDate = (dateString) => {

@@ -1,13 +1,43 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.9.0';
+export const CURRENT_VERSION = 'v3.10.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.9.0',
+    version: 'v3.10.0',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.10.0: Lançamento do novo módulo de Escala de Folgas (com grade de calendário, cards e suporte a nomes e sobrenomes para homônimos), unificação das Escalas Diária e de Plantão com abas recolhíveis por padrão e botões de atalho, e harmonização visual completa da tela Meu Desempenho com cartões de cor sólida, ícones no canto superior direito e cartão de Próxima Folga sincronizado em tempo real.',
+    items: [
+      {
+        icon: Coffee,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Módulo Completo de Escala de Folgas',
+        category: 'Escalas & Gestão',
+        description: 'Nova tela independente de folgas com visualização em Calendário Mensal e Cards agrupados, atribuição por drag & drop de colaboradores ativos e identificação clara de nome e sobrenome nos cards para evitar confusão entre homônimos.'
+      },
+      {
+        icon: CalendarDays,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Escalas Diária e de Plantão Unificadas',
+        category: 'Operação & Produtividade',
+        description: 'Unificação em tela operacional única com switch rápido. Na Escala Diária, os postos de Telefonia, Huggy/Chat e Apoio vêm recolhidos por padrão com destaque da contagem de pessoas alocadas, além de atalhos para Expandir Tudo e Recolher Tudo.'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Meu Desempenho: Cartões Sólidos & Próxima Folga',
+        category: 'Visão do Colaborador',
+        description: 'Harmonização visual completa no padrão da Visão Geral de KPIs: cartões de Minha Tarefa Hoje, Próximo Plantão e Próxima Folga em linha única com cor sólida escura, ícones no canto superior direito e sincronização direta com a grade de folgas.'
+      }
+    ]
+  },
+  {
+    version: 'v3.9.0',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.9.0: Grande reformulação no módulo de Perfis dos Usuários e Gamificação. Implementação do novo motor de Insígnias e Emblemas de Feitos com 6 conquistas oficiais 100% calculadas de forma automatizada pelas avaliações semanais e auditorias QA, sem intervenção manual de gestores. Obrigatoriedade de preenchimento de Telefone/WhatsApp e Ramal ao entrar no sistema, personalização da capa do perfil com 8 opções de cores e suporte a imagem HTTPS, e remoção da seção não metrificável de conhecimento técnico em redes.',
     items: [
       {

@@ -20,15 +20,7 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { resolveUserName } from '../utils/userResolvers';
 import { usePermissions } from '../context/PermissionsContext';
-
-// --- CÁLCULO DE PONTUAÇÃO DO DESEMPENHO ---
-const calculateScore = (item = {}) => {
-    const finalizados = Number(item.Atendimentos_Finalizados) || 0;
-    const ligAtendidas = Number(item.Ligacoes_Atendidas) || 0;
-    const huggy = Number(item.Atendimentos_Huggy) || 0;
-    const ligPerdidas = Number(item.Ligacoes_Perdidas) || 0;
-    return (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
-};
+import { calculatePerformanceScore as calculateScore } from '../utils/scoringCalculations';
 
 // --- DICIONÁRIO DE TRADUÇÃO (BANCO DE DADOS -> TELA) ---
 const translateKey = (key) => {
