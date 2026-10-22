@@ -30,6 +30,13 @@ export const CHANGELOG_VERSIONS = [
         title: 'Meu Desempenho: Cartões Sólidos & Próxima Folga',
         category: 'Visão do Colaborador',
         description: 'Harmonização visual completa no padrão da Visão Geral de KPIs: cartões de Minha Tarefa Hoje, Próximo Plantão e Próxima Folga em linha única com cor sólida escura, ícones no canto superior direito e sincronização direta com a grade de folgas.'
+      },
+      {
+        icon: TrendingUp,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Gestão Estratégica de KPIs do Setor Redesenhada',
+        category: 'Gestão Estratégica',
+        description: 'Cockpit executivo no topo com cards escuros sólidos e ícones no canto direito, gráficos com linhas de meta dinâmicas e tooltips glassmorphism, filtros flexíveis de período, alternância entre visão individual e consolidada, exportação CSV e tabela CRUD com edição e exclusão de lançamentos.'
       }
     ]
   },
