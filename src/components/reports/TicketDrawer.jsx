@@ -3,10 +3,18 @@ import {
     X, Clock, User, CheckCircle2, AlertTriangle, ShieldCheck, 
     Copy, Check, MessageSquare, Send, ExternalLink, Network,
     Terminal, ArrowRight, CornerDownRight, Sparkles, Bug,
-    Monitor, Building, HelpCircle, Layers, Tag, Eye
+    Monitor, Building, HelpCircle, Layers, Tag, Eye, UserCheck
 } from 'lucide-react';
 import { calculateSlaStatus, ISP_QUICK_SCRIPTS } from '../../utils/ispHelpers';
-import { getCategoryMetadata, normalizeCategory } from '../../types/request.types';
+import {
+    getCategoryMetadata,
+    normalizeCategory,
+    getTaskOriginDepartment,
+    getTaskAssignee,
+    getTaskWatchers,
+    isUserWatcherOnly
+} from '../../types/request.types';
+import SafeMarkdown from './SafeMarkdown';
 
 export default function TicketDrawer({
     report,
@@ -15,7 +23,8 @@ export default function TicketDrawer({
     onUpdateStatus,
     onAddComment,
     canManage,
-    onExpandFull
+    onExpandFull,
+    user = null
 }) {
     const [commentText, setCommentText] = useState('');
     const [copiedField, setCopiedField] = useState(null);
@@ -39,6 +48,10 @@ export default function TicketDrawer({
     const categoryKey = normalizeCategory(report.category || report.type);
     const catMeta = getCategoryMetadata(categoryKey);
     const meta = report.metadata || {};
+    const originDept = getTaskOriginDepartment(report);
+    const assignee = getTaskAssignee(report);
+    const watchers = getTaskWatchers(report);
+    const watcherOnly = isUserWatcherOnly(report, user);
 
     const handleCopy = (text, fieldName) => {
         if (!text) return;
@@ -49,7 +62,7 @@ export default function TicketDrawer({
 
     const handleSendComment = async (e) => {
         e.preventDefault();
-        if (!commentText.trim() || submittingComment) return;
+        if (!commentText.trim() || submittingComment || watcherOnly) return;
 
         setSubmittingComment(true);
         try {
@@ -132,6 +145,14 @@ export default function TicketDrawer({
                                     {report.status || 'Pendente'}
                                 </span>
 
+                                {/* Badge de Departamento de Origem em Destaque */}
+                                {originDept && (
+                                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md border bg-indigo-950/60 text-indigo-300 border-indigo-500/40 flex items-center gap-1">
+                                        <Building className="w-3 h-3" />
+                                        Departamento: {originDept}
+                                    </span>
+                                )}
+
                                 {(report.priority || meta.urgency) && (
                                     <span className="text-xs text-slate-400 font-medium">
                                         Prioridade: <strong className="text-slate-200">{report.priority || meta.urgency}</strong>
@@ -143,15 +164,43 @@ export default function TicketDrawer({
                                 {report.title || 'Solicitação sem título'}
                             </h2>
 
-                            <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-2">
+                            <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-2 flex-wrap">
                                 <span>Aberto por: <strong className="text-slate-300">{report.creatorName || 'Colaborador'}</strong></span>
                                 <span>·</span>
                                 <span>{report.date || 'Hoje'}</span>
+                                <span>·</span>
+                                <span className="inline-flex items-center gap-1">
+                                    <UserCheck className="w-3.5 h-3.5 text-sky-400" />
+                                    Responsável: <strong className="text-slate-200">{assignee ? assignee.name : 'Gestores / Supervisores'}</strong>
+                                </span>
                             </p>
+
+                            {watchers.length > 0 && (
+                                <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                                        <Eye className="w-3 h-3 text-indigo-400" /> Visualizadores:
+                                    </span>
+                                    {watchers.map((w) => (
+                                        <span
+                                            key={w.id}
+                                            className="text-[11px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700"
+                                        >
+                                            {w.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            )}
+
+                            {watcherOnly && (
+                                <div className="mt-3 p-2.5 rounded-lg bg-indigo-950/40 border border-indigo-500/30 text-indigo-200 text-xs flex items-center gap-2">
+                                    <Eye className="w-4 h-4 text-indigo-400 shrink-0" />
+                                    <span>Modo Visualizador (Somente Leitura) — Acompanhamento de status sem permissão de edição.</span>
+                                </div>
+                            )}
                         </div>
 
-                        {/* Barra de Transição Rápida de Status (Para Liderança/Supervisão) */}
-                        {canManage && (
+                        {/* Barra de Transição Rápida de Status (Para Liderança/Supervisão ou Responsável) */}
+                        {canManage && !watcherOnly && (
                             <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 space-y-2">
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                                     Atualizar Fila / Status
@@ -312,13 +361,13 @@ export default function TicketDrawer({
                             </div>
                         )}
 
-                        {/* Descrição Detalhada da Solicitação */}
+                        {/* Descrição Detalhada da Solicitação (Markdown GFM Seguro) */}
                         <div className="space-y-1.5">
                             <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
                                 Descrição Detalhada
                             </h4>
-                            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-200 leading-relaxed whitespace-pre-wrap font-sans">
-                                {report.description || 'Nenhum detalhe adicional informado.'}
+                            <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80 text-xs text-slate-200 leading-relaxed font-sans">
+                                <SafeMarkdown content={report.description} variant="dark" />
                             </div>
                         </div>
 
@@ -400,24 +449,26 @@ export default function TicketDrawer({
                                 )}
                             </div>
 
-                            {/* Envio de Novo Comentário */}
-                            <form onSubmit={handleSendComment} className="flex gap-2 mt-2">
-                                <input
-                                    type="text"
-                                    value={commentText}
-                                    onChange={(e) => setCommentText(e.target.value)}
-                                    placeholder="Adicionar nota técnica ou parecer..."
-                                    className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-sky-500 transition-colors"
-                                />
-                                <button
-                                    type="submit"
-                                    disabled={submittingComment || !commentText.trim()}
-                                    className="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
-                                >
-                                    <Send className="w-3.5 h-3.5" />
-                                    Enviar
-                                </button>
-                            </form>
+                            {/* Envio de Novo Comentário (bloqueado para visualizadores somente leitura) */}
+                            {!watcherOnly && (
+                                <form onSubmit={handleSendComment} className="flex gap-2 mt-2">
+                                    <input
+                                        type="text"
+                                        value={commentText}
+                                        onChange={(e) => setCommentText(e.target.value)}
+                                        placeholder="Adicionar nota técnica ou parecer..."
+                                        className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-hidden focus:border-sky-500 transition-colors"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={submittingComment || !commentText.trim()}
+                                        className="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                                    >
+                                        <Send className="w-3.5 h-3.5" />
+                                        Enviar
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     </div>
 

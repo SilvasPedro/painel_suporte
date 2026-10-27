@@ -648,3 +648,53 @@ html[data-theme="warm"] body {
   filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.15));
 }
 
+/* Contraste WCAG AA/AAA garantido para tipografia de cartões de status ativos nos Temas Escuro e Morno */
+[data-theme="dark"] .text-neutral-800,
+[data-theme="dark"] .text-neutral-900,
+[data-theme="dark"] .text-neutral-950 {
+  color: #f4f4f5 !important;
+}
+[data-theme="dark"] .text-amber-800,
+[data-theme="dark"] .text-amber-900,
+[data-theme="dark"] .text-amber-950 {
+  color: #fde68a !important;
+}
+[data-theme="dark"] .text-blue-800,
+[data-theme="dark"] .text-blue-900,
+[data-theme="dark"] .text-blue-950 {
+  color: #bfdbfe !important;
+}
+[data-theme="dark"] .text-emerald-800,
+[data-theme="dark"] .text-emerald-900,
+[data-theme="dark"] .text-emerald-950 {
+  color: #a7f3d0 !important;
+}
+[data-theme="dark"] .text-red-800,
+[data-theme="dark"] .text-red-900,
+[data-theme="dark"] .text-red-950 {
+  color: #fecaca !important;
+}
+
+[data-theme="warm"] main .text-neutral-800,
+[data-theme="warm"] main .text-neutral-900,
+[data-theme="warm"] main .text-neutral-950 {
+  color: #1c1613 !important;
+}
+[data-theme="warm"] main .text-amber-900,
+[data-theme="warm"] main .text-amber-950 {
+  color: #451a03 !important;
+}
+[data-theme="warm"] main .text-blue-900,
+[data-theme="warm"] main .text-blue-950 {
+  color: #172554 !important;
+}
+[data-theme="warm"] main .text-emerald-900,
+[data-theme="warm"] main .text-emerald-950 {
+  color: #022c22 !important;
+}
+[data-theme="warm"] main .text-red-900,
+[data-theme="warm"] main .text-red-950 {
+  color: #450a0a !important;
+}
+
+

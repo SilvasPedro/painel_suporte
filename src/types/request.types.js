@@ -181,3 +181,455 @@ export const validateRequestForm = (formData) => {
         errors
     };
 };
+
+// ============================================================================
+// SCHEMAS, INTERFACES (TS/JSDoc) & POLÍTICAS RBAC / RLS (v3.10.1)
+// ============================================================================
+
+/**
+ * @typedef {'Gestor' | 'Supervisor' | 'Administrador' | 'Admin' | 'Auditor' | 'Operador' | 'Colaborador'} UserRole
+ */
+
+/**
+ * @typedef {Object} Watcher
+ * @property {string} id - Identificador único do visualizador (UID ou ID de colaborador)
+ * @property {string} [uid] - Firebase Auth UID opcional
+ * @property {string} name - Nome completo do colaborador visualizador
+ * @property {string} [email] - E-mail corporativo do visualizador
+ * @property {UserRole|string} [role] - Cargo/papel do usuário
+ * @property {string} [addedAt] - Timestamp ISO de quando foi adicionado
+ * @property {string} [addedBy] - Nome do usuário que adicionou o visualizador
+ */
+
+/**
+ * @typedef {Object} TaskAssignee
+ * @property {string} id - Identificador único do responsável
+ * @property {string} [uid] - Firebase Auth UID opcional
+ * @property {string} name - Nome completo do responsável
+ * @property {string} [email] - E-mail corporativo do responsável
+ * @property {UserRole|string} [role] - Cargo/papel do responsável
+ * @property {string} [assignedAt] - Timestamp ISO da atribuição
+ * @property {string} [assignedBy] - Nome de quem realizou a atribuição
+ */
+
+/**
+ * @typedef {Object} Task
+ * @property {string} id - ID do chamado/tarefa
+ * @property {string} title - Título resumido
+ * @property {string} description - Descrição detalhada com suporte a Markdown/GFM
+ * @property {string} category - Categoria canônica ('error_analysis' | 'system_improvement' | 'facility_improvement' | 'other')
+ * @property {string} status - Status ('Pendente' | 'Em Andamento' | 'Resolvido' | 'Cancelado')
+ * @property {string} creatorId - Identificador do autor/criador
+ * @property {string} creatorName - Nome do autor/criador
+ * @property {string} [creatorEmail] - E-mail do autor/criador
+ * @property {string} [originDepartment] - Departamento de origem da solicitação
+ * @property {TaskAssignee|null} [assignedTo] - Objeto do colaborador responsável atribuído
+ * @property {string|null} [assigned_to] - ID/identificador do responsável (compatibilidade snake_case)
+ * @property {string|null} [assignedToId] - ID direto do responsável
+ * @property {string|null} [assignedToName] - Nome direto do responsável
+ * @property {Watcher[]} [watchers] - Lista de observadores/visualizadores (somente leitura)
+ * @property {string[]} [watcherIds] - Lista indexada de IDs dos visualizadores
+ * @property {Object} [metadata] - Metadados específicos da categoria
+ */
+
+export const LEADERSHIP_ROLES = ['gestor', 'supervisor', 'administrador', 'admin'];
+
+/**
+ * Verifica se o cargo informado pertence à liderança ("Gestor" ou "Supervisor")
+ * @param {UserRole|string} [role]
+ * @returns {boolean}
+ */
+export const isLeadershipRole = (role = '') => {
+    const normalized = String(role || '').trim().toLowerCase();
+    return LEADERSHIP_ROLES.includes(normalized);
+};
+
+/**
+ * Extrai e normaliza todos os identificadores possíveis de um usuário logado
+ * @param {Object} user
+ * @returns {{ ids: Set<string>, emails: Set<string>, names: Set<string> }}
+ */
+export const extractUserIdentity = (user) => {
+    const ids = new Set();
+    const emails = new Set();
+    const names = new Set();
+
+    if (!user || typeof user !== 'object') {
+        return { ids, emails, names };
+    }
+
+    [user.uid, user.id, user.collaboratorId, user.userId].forEach((val) => {
+        if (val && String(val).trim()) {
+            ids.add(String(val).trim());
+            ids.add(String(val).trim().toLowerCase());
+        }
+    });
+
+    [user.email, user.creatorEmail].forEach((val) => {
+        if (val && String(val).trim()) {
+            const clean = String(val).trim().toLowerCase();
+            emails.add(clean);
+            ids.add(clean);
+        }
+    });
+
+    [user.name, user.displayName, user.fullName].forEach((val) => {
+        if (val && String(val).trim()) {
+            names.add(String(val).trim().toLowerCase());
+        }
+    });
+
+    return { ids, emails, names };
+};
+
+/**
+ * Obtém o departamento de origem consolidado da tarefa
+ * @param {Task|Object} task
+ * @returns {string}
+ */
+export const getTaskOriginDepartment = (task) => {
+    if (!task || typeof task !== 'object') return '';
+    return (
+        task.originDepartment ||
+        task.metadata?.originDepartment ||
+        task.metadata?.affectedDepartment ||
+        task.department ||
+        ''
+    ).trim();
+};
+
+/**
+ * Obtém o objeto normalizado do responsável atribuído à tarefa (ou null se sem responsável)
+ * @param {Task|Object} task
+ * @returns {TaskAssignee|null}
+ */
+export const getTaskAssignee = (task) => {
+    if (!task || typeof task !== 'object') return null;
+
+    const raw = task.assignedTo ?? task.assigned_to ?? null;
+
+    if (raw && typeof raw === 'object') {
+        const id = String(raw.id || raw.uid || raw.email || '').trim();
+        const name = String(raw.name || raw.displayName || '').trim();
+        const email = String(raw.email || '').trim();
+        const role = String(raw.role || '').trim();
+        if (id || name || email) {
+            return {
+                id: id || email || name,
+                uid: raw.uid || id || '',
+                name: name || email || id,
+                email,
+                role,
+                assignedAt: raw.assignedAt || '',
+                assignedBy: raw.assignedBy || ''
+            };
+        }
+    }
+
+    if (typeof raw === 'string' && raw.trim()) {
+        const clean = raw.trim();
+        return {
+            id: String(task.assignedToId || clean).trim(),
+            uid: String(task.assignedToId || clean).trim(),
+            name: String(task.assignedToName || clean).trim(),
+            email: String(task.assignedToEmail || '').trim(),
+            role: String(task.assignedToRole || '').trim()
+        };
+    }
+
+    if (task.assignedToId || task.assignedToName || task.assignedToEmail) {
+        const id = String(task.assignedToId || task.assignedToEmail || task.assignedToName || '').trim();
+        const name = String(task.assignedToName || task.assignedToEmail || task.assignedToId || '').trim();
+        if (id || name) {
+            return {
+                id,
+                uid: id,
+                name,
+                email: String(task.assignedToEmail || '').trim(),
+                role: String(task.assignedToRole || '').trim()
+            };
+        }
+    }
+
+    return null;
+};
+
+/**
+ * Verifica se a tarefa possui um responsável atribuído
+ * @param {Task|Object} task
+ * @returns {boolean}
+ */
+export const hasAssignedResponsible = (task) => {
+    const assignee = getTaskAssignee(task);
+    return Boolean(assignee && (assignee.id || assignee.name || assignee.email));
+};
+
+/**
+ * Retorna a lista normalizada de visualizadores (watchers/viewers) da tarefa
+ * @param {Task|Object} task
+ * @returns {Watcher[]}
+ */
+export const getTaskWatchers = (task) => {
+    if (!task || typeof task !== 'object') return [];
+    const rawList = Array.isArray(task.watchers)
+        ? task.watchers
+        : Array.isArray(task.viewers)
+        ? task.viewers
+        : [];
+
+    const seen = new Set();
+    const result = [];
+
+    rawList.forEach((item) => {
+        if (!item) return;
+        if (typeof item === 'string') {
+            const clean = item.trim();
+            if (!clean) return;
+            const key = clean.toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                result.push({ id: clean, uid: clean, name: clean, email: '', role: '' });
+            }
+            return;
+        }
+        if (typeof item === 'object') {
+            const id = String(item.id || item.uid || item.email || item.name || '').trim();
+            const name = String(item.name || item.displayName || item.email || id).trim();
+            const email = String(item.email || '').trim();
+            const role = String(item.role || '').trim();
+            if (!id && !name) return;
+            const key = (id || email || name).toLowerCase();
+            if (!seen.has(key)) {
+                seen.add(key);
+                result.push({
+                    id: id || name,
+                    uid: String(item.uid || id || '').trim(),
+                    name,
+                    email,
+                    role,
+                    addedAt: item.addedAt || '',
+                    addedBy: item.addedBy || ''
+                });
+            }
+        }
+    });
+
+    return result;
+};
+
+/**
+ * Verifica se o usuário fornecido é o autor/criador da tarefa
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const isUserTaskCreator = (task, user) => {
+    if (!task || !user) return false;
+    const { ids, emails, names } = extractUserIdentity(user);
+
+    const creatorCandidates = [
+        task.creatorId,
+        task.creatorUid,
+        task.creatorEmail,
+        task.authorId
+    ]
+        .filter(Boolean)
+        .map((v) => String(v).trim());
+
+    for (const candidate of creatorCandidates) {
+        if (ids.has(candidate) || ids.has(candidate.toLowerCase()) || emails.has(candidate.toLowerCase())) {
+            return true;
+        }
+    }
+
+    if (task.creatorName && names.has(String(task.creatorName).trim().toLowerCase())) {
+        return true;
+    }
+
+    return false;
+};
+
+/**
+ * Verifica se o usuário fornecido é o responsável atribuído à tarefa
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const isUserTaskAssignee = (task, user) => {
+    if (!task || !user) return false;
+    const assignee = getTaskAssignee(task);
+    if (!assignee) return false;
+
+    const { ids, emails, names } = extractUserIdentity(user);
+
+    const candidateIds = [assignee.id, assignee.uid, assignee.email]
+        .filter(Boolean)
+        .map((v) => String(v).trim());
+
+    for (const cid of candidateIds) {
+        if (ids.has(cid) || ids.has(cid.toLowerCase()) || emails.has(cid.toLowerCase())) {
+            return true;
+        }
+    }
+
+    if (assignee.name && names.has(assignee.name.toLowerCase())) {
+        return true;
+    }
+
+    return false;
+};
+
+/**
+ * Verifica se o usuário fornecido consta na lista de visualizadores (watchers) da tarefa
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const isUserTaskWatcher = (task, user) => {
+    if (!task || !user) return false;
+    const watchers = getTaskWatchers(task);
+    const watcherIds = Array.isArray(task.watcherIds) ? task.watcherIds : [];
+
+    const { ids, emails, names } = extractUserIdentity(user);
+
+    for (const wid of watcherIds) {
+        if (!wid) continue;
+        const clean = String(wid).trim();
+        if (ids.has(clean) || ids.has(clean.toLowerCase()) || emails.has(clean.toLowerCase())) {
+            return true;
+        }
+    }
+
+    for (const w of watchers) {
+        const wCandidates = [w.id, w.uid, w.email].filter(Boolean).map((v) => String(v).trim());
+        for (const c of wCandidates) {
+            if (ids.has(c) || ids.has(c.toLowerCase()) || emails.has(c.toLowerCase())) {
+                return true;
+            }
+        }
+        if (w.name && names.has(w.name.toLowerCase())) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+/**
+ * MATRIZ DE ACESSO E VISIBILIDADE (RLS / RBAC):
+ * - Usuário comum: só visualiza se for (1) Autor/Criador, (2) Responsável atribuído, ou (3) Visualizador.
+ * - Gestores e Supervisores: visualizam suas próprias tarefas, tarefas onde são responsáveis/visualizadores
+ *   E todas as tarefas que não possuem responsável atribuído.
+ *
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const canUserViewTask = (task, user) => {
+    if (!task || !user) return false;
+
+    if (
+        isUserTaskCreator(task, user) ||
+        isUserTaskAssignee(task, user) ||
+        isUserTaskWatcher(task, user)
+    ) {
+        return true;
+    }
+
+    if (isLeadershipRole(user.role)) {
+        // Tarefas sem responsável atribuído são direcionadas e visíveis para Gestores e Supervisores
+        if (!hasAssignedResponsible(task)) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+/**
+ * Filtra uma coleção de tarefas aplicando estritamente a política RLS de visibilidade
+ * @param {Array<Task|Object>} tasks
+ * @param {Object} user
+ * @returns {Array<Task|Object>}
+ */
+export const filterVisibleTasks = (tasks = [], user) => {
+    if (!Array.isArray(tasks) || !user) return [];
+    return tasks.filter((task) => canUserViewTask(task, user));
+};
+
+/**
+ * Verifica se o usuário tem acesso ESTRITAMENTE como Visualizador (somente leitura)
+ * Visualizadores não podem editar campos, fechar o chamado ou adicionar outros visualizadores.
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const isUserWatcherOnly = (task, user) => {
+    if (!task || !user) return false;
+    if (isUserTaskCreator(task, user)) return false;
+    if (isUserTaskAssignee(task, user)) return false;
+    if (isLeadershipRole(user.role)) return false;
+    return isUserTaskWatcher(task, user);
+};
+
+/**
+ * Verifica quem pode gerenciar (adicionar/remover) a lista de visualizadores:
+ * Apenas o criador da tarefa, o responsável direto ou liderança ("Gestor" / "Supervisor").
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const canUserManageWatchers = (task, user) => {
+    if (!user) return false;
+    if (!task) return true; // Na criação de nova tarefa, o autor pode adicionar visualizadores
+    if (isUserWatcherOnly(task, user)) return false;
+    return (
+        isUserTaskCreator(task, user) ||
+        isUserTaskAssignee(task, user) ||
+        isLeadershipRole(user.role)
+    );
+};
+
+/**
+ * Verifica quem pode atribuir ou alterar o responsável da tarefa:
+ * Usuários de liderança ("Gestor" / "Supervisor").
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const canUserAssignResponsible = (task, user) => {
+    if (!user) return false;
+    if (task && isUserWatcherOnly(task, user)) return false;
+    return isLeadershipRole(user.role);
+};
+
+/**
+ * Verifica se o usuário pode alterar status / despachar / encerrar o chamado:
+ * Liderança ou o responsável direto atribuído (nunca um mero visualizador).
+ * @param {Task|Object} task
+ * @param {Object} user
+ * @returns {boolean}
+ */
+export const canUserDispatchOrCloseTask = (task, user) => {
+    if (!task || !user) return false;
+    if (isUserWatcherOnly(task, user)) return false;
+    return isLeadershipRole(user.role) || isUserTaskAssignee(task, user);
+};
+
+/**
+ * Limpeza defensiva adicional contra payloads XSS em texto bruto Markdown
+ * Remove tags <script>, <iframe>, <object>, <embed>, <style> e atributos on*
+ * @param {string} [raw]
+ * @returns {string}
+ */
+export const sanitizeMarkdownInput = (raw = '') => {
+    if (!raw || typeof raw !== 'string') return '';
+    return raw
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+        .replace(/<(object|embed|style|form|meta|link)\b[^>]*>([\s\S]*?<\/\1>)?/gi, '')
+        .replace(/\bon\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '')
+        .replace(/javascript\s*:/gi, 'blocked:');
+};
+
+

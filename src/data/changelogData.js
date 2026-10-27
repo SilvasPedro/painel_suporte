@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.10.0';
+export const CURRENT_VERSION = 'v3.10.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.10.0',
+    version: 'v3.10.1',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.10.1: Melhorias completas na tela de Tarefas & Relatórios — suporte a Markdown rico (GFM com tabelas, listas e blocos de código) com sanitização estrita contra XSS, gestão de Responsável (assigned_to) e Visualizadores (watchers somente leitura), destaque do Departamento de Origem no cabeçalho e metadados, políticas refinadas de visibilidade RBAC/RLS e correção de contraste WCAG AA nos cartões de status nos temas Claro e Morno.',
+    items: [
+      {
+        icon: FileText,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Markdown Rico com Tabelas e Sanitização Anti-XSS',
+        category: 'Tarefas & Relatórios',
+        description: 'Renderização segura de descrições em Markdown (GitHub Flavored Markdown via remark-gfm e rehype-sanitize), suportando tabelas responsivas, checklists, links e código com proteção contra scripts maliciosos.'
+      },
+      {
+        icon: User,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Atribuição de Responsável, Visualizadores e Departamento de Origem',
+        category: 'Governança & Fluxo',
+        description: 'Seleção de colaborador responsável (com direcionamento automático a Gestores e Supervisores quando sem responsável), adição de múltiplos Visualizadores em modo somente leitura e exibição em destaque do Departamento de Origem.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Matriz Estrita de Visibilidade e Controle de Acesso (RLS)',
+        category: 'Segurança & Privacidade',
+        description: 'Isolamento rigoroso na listagem e no acesso direto: colaboradores visualizam apenas tarefas onde são autores, responsáveis ou visualizadores, enquanto Gestores e Supervisores recebem também todas as demandas sem responsável atribuído.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Correção de Contraste dos Cartões de Status (Temas Claro e Morno)',
+        category: 'UI & Acessibilidade',
+        description: 'Revisão das classes de estado ativo nos cartões de filtro de status, garantindo alto contraste tipográfico (WCAG AA/AAA) nos modos Claro, Morno e Escuro.'
+      }
+    ]
+  },
+  {
+    version: 'v3.10.0',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Estável',
     summary: 'Atualização v3.10.0: Lançamento do novo módulo de Escala de Folgas (com grade de calendário, cards e suporte a nomes e sobrenomes para homônimos), unificação das Escalas Diária e de Plantão com abas recolhíveis por padrão e botões de atalho, e harmonização visual completa da tela Meu Desempenho com cartões de cor sólida, ícones no canto superior direito e cartão de Próxima Folga sincronizado em tempo real.',
     items: [
       {

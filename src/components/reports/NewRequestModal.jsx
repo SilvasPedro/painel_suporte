@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
     X, Bug, Monitor, Building, Sparkles, AlertTriangle, 
-    Check, Clock, HelpCircle
+    Check, Clock, HelpCircle, UserCheck, Eye, Plus, Table
 } from 'lucide-react';
 import { 
     REQUEST_CATEGORIES, 
@@ -10,15 +10,23 @@ import {
     FACILITY_URGENCIES, 
     OTHER_SUBTYPES, 
     normalizeCategory,
-    validateRequestForm
+    validateRequestForm,
+    getTaskOriginDepartment,
+    getTaskAssignee,
+    getTaskWatchers,
+    canUserAssignResponsible,
+    canUserManageWatchers
 } from '../../types/request.types';
 import { getCategorySlaHours } from '../../utils/ispHelpers';
+import SafeMarkdown from './SafeMarkdown';
 
 function NewRequestModalContent({
     onClose,
     onSave,
     editingReport,
-    saving
+    saving,
+    user = null,
+    collaborators = []
 }) {
     const initialMeta = editingReport?.metadata || {};
     const initialCat = normalizeCategory(editingReport?.category || editingReport?.type || 'error_analysis');
@@ -29,14 +37,23 @@ function NewRequestModalContent({
     // Estados do Formulário Geral
     const [title, setTitle] = useState(editingReport?.title || '');
     const [description, setDescription] = useState(editingReport?.description || '');
+    const [previewMarkdown, setPreviewMarkdown] = useState(false);
     const [date, setDate] = useState(editingReport?.date || new Date().toISOString().split('T')[0]);
     const priority = editingReport?.priority || 'Normal';
 
-    // Campos de Análise de Erro
+    // Campos de Análise de Erro e Departamento de Origem
     const [protocol, setProtocol] = useState(initialMeta.protocol || editingReport?.protocol || '');
-    const [originDepartment, setOriginDepartment] = useState(initialMeta.originDepartment || editingReport?.originDepartment || '');
+    const [originDepartment, setOriginDepartment] = useState(
+        getTaskOriginDepartment(editingReport) || ''
+    );
     const [affectedClient, setAffectedClient] = useState(initialMeta.affectedClient || editingReport?.affectedClient || 'Não');
     const [howAffected, setHowAffected] = useState(initialMeta.howAffected || editingReport?.howAffected || '');
+
+    // Responsável (assignedTo) e Visualizadores (watchers)
+    const initialAssignee = getTaskAssignee(editingReport);
+    const [selectedAssigneeId, setSelectedAssigneeId] = useState(initialAssignee?.id || '');
+    const [watchersList, setWatchersList] = useState(() => getTaskWatchers(editingReport));
+    const [watcherToAddId, setWatcherToAddId] = useState('');
 
     // Campos de Melhoria de Sistema
     const [affectedApp, setAffectedApp] = useState(initialMeta.affectedApp || editingReport?.affectedApp || '');
@@ -51,6 +68,9 @@ function NewRequestModalContent({
 
     // Validação e Erros em tempo real
     const [formErrors, setFormErrors] = useState({});
+
+    const canAssign = canUserAssignResponsible(editingReport, user);
+    const canManageWatchers = canUserManageWatchers(editingReport, user);
 
     // Fechar com ESC
     useEffect(() => {
@@ -71,8 +91,49 @@ function NewRequestModalContent({
 
     const currentSlaHours = getCategorySlaHours(selectedCategory);
 
+    const handleInsertMarkdownTable = () => {
+        const tableSnippet = `\n| Coluna 1 | Coluna 2 | Status |\n| :--- | :--- | :--- |\n| Exemplo A | Detalhe A | OK |\n| Exemplo B | Detalhe B | Pendente |\n`;
+        setDescription((prev) => `${prev}${tableSnippet}`);
+        setFormErrors((prev) => ({ ...prev, description: '' }));
+    };
+
+    const handleAddWatcher = (collabId) => {
+        const targetId = collabId || watcherToAddId;
+        if (!targetId) return;
+        const found = collaborators.find((c) => String(c.id || c.uid) === String(targetId));
+        if (!found) return;
+        const fId = String(found.id || found.uid || found.email || found.name).trim();
+        const exists = watchersList.some(
+            (w) =>
+                String(w.id).toLowerCase() === fId.toLowerCase() ||
+                (found.email && String(w.email || '').toLowerCase() === String(found.email).toLowerCase()) ||
+                String(w.name || '').toLowerCase() === String(found.name || '').toLowerCase()
+        );
+        if (!exists) {
+            setWatchersList((prev) => [
+                ...prev,
+                {
+                    id: fId,
+                    uid: String(found.uid || fId),
+                    name: String(found.name || found.email || fId),
+                    email: String(found.email || ''),
+                    role: String(found.role || 'Colaborador'),
+                    addedAt: new Date().toISOString(),
+                    addedBy: user?.name || user?.email || 'Usuário'
+                }
+            ]);
+        }
+        setWatcherToAddId('');
+    };
+
+    const handleRemoveWatcher = (watcherId) => {
+        setWatchersList((prev) => prev.filter((w) => String(w.id) !== String(watcherId)));
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        const cleanDept = originDepartment.trim();
 
         const currentFormData = {
             category: selectedCategory,
@@ -80,12 +141,14 @@ function NewRequestModalContent({
             title,
             description,
             date,
+            originDepartment: cleanDept,
             priority: selectedCategory === 'facility_improvement' ? facilityUrgency : priority,
             affectedClient,
             howAffected,
             protocol,
             metadata: {
-                affectedDepartment: originDepartment,
+                affectedDepartment: cleanDept,
+                originDepartment: cleanDept,
                 protocol: protocol.trim(),
                 affectedClient,
                 howAffected: affectedClient === 'Sim' ? howAffected.trim() : '',
@@ -103,6 +166,28 @@ function NewRequestModalContent({
             return;
         }
 
+        // Resolve responsável selecionado
+        let resolvedAssignee = null;
+        if (selectedAssigneeId) {
+            const matchedCollab = collaborators.find(
+                (c) => String(c.id || c.uid) === String(selectedAssigneeId)
+            );
+            if (matchedCollab) {
+                const aId = String(matchedCollab.id || matchedCollab.uid || matchedCollab.email || matchedCollab.name).trim();
+                resolvedAssignee = {
+                    id: aId,
+                    uid: String(matchedCollab.uid || aId),
+                    name: String(matchedCollab.name || matchedCollab.email || aId),
+                    email: String(matchedCollab.email || ''),
+                    role: String(matchedCollab.role || 'Colaborador'),
+                    assignedAt: new Date().toISOString(),
+                    assignedBy: user?.name || user?.email || 'Liderança'
+                };
+            } else if (initialAssignee && String(initialAssignee.id) === String(selectedAssigneeId)) {
+                resolvedAssignee = initialAssignee;
+            }
+        }
+
         // Monta o payload final normalizado e compatível
         const payload = {
             category: selectedCategory,
@@ -110,12 +195,20 @@ function NewRequestModalContent({
             title: title.trim(),
             description: description.trim(),
             date,
+            originDepartment: cleanDept,
             priority: selectedCategory === 'facility_improvement' ? facilityUrgency : priority,
             slaHours: currentSlaHours,
             slaStatus: 'within_sla',
             protocol: protocol.trim(),
             affectedClient: selectedCategory === 'error_analysis' ? affectedClient : 'Não',
             howAffected: selectedCategory === 'error_analysis' && affectedClient === 'Sim' ? howAffected.trim() : '',
+            assignedTo: resolvedAssignee,
+            assigned_to: resolvedAssignee ? resolvedAssignee.id : null,
+            assignedToId: resolvedAssignee ? resolvedAssignee.id : null,
+            assignedToName: resolvedAssignee ? resolvedAssignee.name : null,
+            assignedToEmail: resolvedAssignee ? resolvedAssignee.email : null,
+            watchers: watchersList,
+            watcherIds: watchersList.map((w) => w.id),
             metadata: currentFormData.metadata,
             updatedAt: new Date()
         };
@@ -282,29 +375,64 @@ function NewRequestModalContent({
                         </div>
 
                         <div>
-                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                                {selectedCategory === 'system_improvement' ? 'Descrição da Melhoria Solicitada' :
-                                 selectedCategory === 'facility_improvement' ? 'Descrição da Necessidade / Problema' :
-                                 selectedCategory === 'other' ? 'Descrição da Proposta / Demanda' :
-                                 'Descrição Completa da Falha'} <span className="text-rose-500">*</span>
-                            </label>
-                            <textarea 
-                                rows="4"
-                                value={description}
-                                onChange={(e) => { setDescription(e.target.value); setFormErrors(prev => ({...prev, description: ''})); }}
-                                placeholder={
-                                    selectedCategory === 'error_analysis' 
-                                        ? "Descreva detalhadamente o que ocorreu, os passos para reproduzir ou o impacto observado..." :
-                                    selectedCategory === 'system_improvement'
-                                        ? "Explique a alteração desejada, a motivação operacional e qual benefício trará para o time..." :
-                                    selectedCategory === 'facility_improvement'
-                                        ? "Detalhe o problema enfrentado no equipamento ou posto de trabalho..." :
-                                        "Conteúdo detalhado da proposta para análise da coordenação..."
-                                }
-                                className={`w-full p-3 border rounded-xl outline-none text-sm text-slate-800 resize-none leading-relaxed transition-all ${
-                                    formErrors.description ? 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-500' : 'border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
-                                }`}
-                            />
+                            <div className="flex items-center justify-between gap-2 mb-1 flex-wrap">
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                    {selectedCategory === 'system_improvement' ? 'Descrição da Melhoria Solicitada' :
+                                     selectedCategory === 'facility_improvement' ? 'Descrição da Necessidade / Problema' :
+                                     selectedCategory === 'other' ? 'Descrição da Proposta / Demanda' :
+                                     'Descrição Completa da Falha'} <span className="text-rose-500">*</span>
+                                </label>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={handleInsertMarkdownTable}
+                                        className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1 cursor-pointer transition-colors"
+                                        title="Inserir modelo de tabela em Markdown"
+                                    >
+                                        <Table className="w-3 h-3" />
+                                        Inserir Tabela Markdown
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setPreviewMarkdown((prev) => !prev)}
+                                        className={`px-2 py-0.5 rounded-md text-[11px] font-semibold border flex items-center gap-1 cursor-pointer transition-colors ${
+                                            previewMarkdown
+                                                ? 'bg-slate-900 text-white border-slate-900'
+                                                : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                                        }`}
+                                    >
+                                        <Eye className="w-3 h-3" />
+                                        {previewMarkdown ? 'Editar Texto' : 'Pré-visualizar Markdown'}
+                                    </button>
+                                </div>
+                            </div>
+
+                            {previewMarkdown ? (
+                                <div className="p-4 rounded-xl border border-slate-300 bg-slate-50/70 min-h-[112px]">
+                                    <SafeMarkdown content={description} />
+                                </div>
+                            ) : (
+                                <textarea 
+                                    rows="5"
+                                    value={description}
+                                    onChange={(e) => { setDescription(e.target.value); setFormErrors(prev => ({...prev, description: ''})); }}
+                                    placeholder={
+                                        selectedCategory === 'error_analysis' 
+                                            ? "Descreva detalhadamente o que ocorreu, os passos para reproduzir ou o impacto observado (suporta Markdown, listas e tabelas | col | col |)..." :
+                                        selectedCategory === 'system_improvement'
+                                            ? "Explique a alteração desejada, a motivação operacional e qual benefício trará para o time (suporta Markdown e tabelas)..." :
+                                        selectedCategory === 'facility_improvement'
+                                            ? "Detalhe o problema enfrentado no equipamento ou posto de trabalho..." :
+                                            "Conteúdo detalhado da proposta para análise da coordenação..."
+                                    }
+                                    className={`w-full p-3 border rounded-xl outline-none text-sm text-slate-800 resize-y leading-relaxed transition-all font-sans ${
+                                        formErrors.description ? 'border-rose-400 bg-rose-50/30 focus:ring-2 focus:ring-rose-500' : 'border-slate-300 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10'
+                                    }`}
+                                />
+                            )}
+                            <p className="text-[11px] text-slate-400 mt-1">
+                                Suporte nativo a <strong>Markdown (GFM)</strong>: use <code>**negrito**</code>, listas, blocos de código e tabelas <code>| Coluna 1 | Coluna 2 |</code>.
+                            </p>
                             {formErrors.description && (
                                 <p className="text-xs text-rose-600 mt-1 flex items-center gap-1 font-medium">
                                     <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
@@ -312,6 +440,24 @@ function NewRequestModalContent({
                                 </p>
                             )}
                         </div>
+
+                        {selectedCategory !== 'error_analysis' && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                    Departamento de Origem <span className="font-normal text-slate-400">(Opcional)</span>
+                                </label>
+                                <select
+                                    value={originDepartment}
+                                    onChange={(e) => setOriginDepartment(e.target.value)}
+                                    className="w-full p-2.5 border border-slate-300 rounded-xl focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 outline-none text-sm text-slate-800 bg-white"
+                                >
+                                    <option value="">Selecione o setor/departamento de origem...</option>
+                                    {ERROR_DEPARTMENTS.map(dept => (
+                                        <option key={dept} value={dept}>{dept}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
                     </div>
 
                     {/* 3. CAMPOS DINÂMICOS CONFORME A CATEGORIA */}
@@ -565,6 +711,127 @@ function NewRequestModalContent({
                         </div>
                     )}
 
+                    {/* 4. CONTROLE DE ATRIBUIÇÃO DE RESPONSÁVEL E VISUALIZADORES (RBAC / RLS) */}
+                    <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-2xs space-y-4">
+                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center justify-between">
+                            <span className="flex items-center gap-1.5">
+                                <UserCheck className="w-4 h-4 text-blue-600" />
+                                Responsável & Visualizadores da Tarefa
+                            </span>
+                            <span className="text-[11px] font-normal text-slate-400">Controle de Acesso (RLS)</span>
+                        </h4>
+
+                        {/* Atribuição de Responsável */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                                Colaborador Responsável (`assigned_to`)
+                            </label>
+                            {canAssign ? (
+                                <select
+                                    value={selectedAssigneeId}
+                                    onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                                    className="w-full p-2.5 border border-slate-300 rounded-xl focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 outline-none text-sm text-slate-800 bg-white"
+                                >
+                                    <option value="">
+                                        Sem responsável atribuído (Direcionar para Gestores e Supervisores)
+                                    </option>
+                                    {collaborators.map((c) => {
+                                        const cid = String(c.id || c.uid || c.email || c.name);
+                                        return (
+                                            <option key={cid} value={cid}>
+                                                {c.name} {c.role ? `(${c.role})` : ''}
+                                            </option>
+                                        );
+                                    })}
+                                </select>
+                            ) : (
+                                <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 font-medium">
+                                    {initialAssignee
+                                        ? `Responsável atribuído: ${initialAssignee.name}`
+                                        : 'Sem responsável direto: a tarefa será direcionada automaticamente a todos os Gestores e Supervisores.'}
+                                </div>
+                            )}
+                            <p className="text-[11px] text-slate-500 mt-1">
+                                Se aberta sem responsável atribuído, a tarefa ficará visível para todos os usuários com papel de <strong>Gestor</strong> ou <strong>Supervisor</strong>.
+                            </p>
+                        </div>
+
+                        {/* Gestão de Visualizadores (Watchers) */}
+                        <div className="pt-2 border-t border-slate-100 space-y-2.5">
+                            <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                                <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                                Visualizadores (`watchers` — Somente Leitura)
+                            </label>
+
+                            {canManageWatchers && (
+                                <div className="flex gap-2">
+                                    <select
+                                        value={watcherToAddId}
+                                        onChange={(e) => {
+                                            setWatcherToAddId(e.target.value);
+                                            if (e.target.value) {
+                                                handleAddWatcher(e.target.value);
+                                            }
+                                        }}
+                                        className="flex-1 p-2.5 border border-slate-300 rounded-xl focus:border-slate-900 outline-none text-sm text-slate-800 bg-white"
+                                    >
+                                        <option value="">Adicionar colaborador como visualizador...</option>
+                                        {collaborators.map((c) => {
+                                            const cid = String(c.id || c.uid || c.email || c.name);
+                                            return (
+                                                <option key={cid} value={cid}>
+                                                    {c.name} {c.role ? `(${c.role})` : ''}
+                                                </option>
+                                            );
+                                        })}
+                                    </select>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleAddWatcher(watcherToAddId)}
+                                        disabled={!watcherToAddId}
+                                        className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                        Incluir
+                                    </button>
+                                </div>
+                            )}
+
+                            {watchersList.length > 0 ? (
+                                <div className="flex flex-wrap gap-1.5 pt-1">
+                                    {watchersList.map((w) => (
+                                        <span
+                                            key={w.id}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold"
+                                        >
+                                            <Eye className="w-3 h-3 text-indigo-600" />
+                                            <span>{w.name}</span>
+                                            {w.role && (
+                                                <span className="text-[10px] text-indigo-600 font-normal">
+                                                    ({w.role})
+                                                </span>
+                                            )}
+                                            {canManageWatchers && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleRemoveWatcher(w.id)}
+                                                    className="ml-0.5 text-indigo-500 hover:text-rose-600 cursor-pointer"
+                                                    title="Remover visualizador"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-xs text-slate-400 italic">
+                                    Nenhum visualizador adicional incluído. Visualizadores possuem acesso estritamente de leitura.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
                 </form>
             </div>
 
@@ -613,7 +880,9 @@ export default function NewRequestModal({
     onClose,
     onSave,
     editingReport = null,
-    saving = false
+    saving = false,
+    user = null,
+    collaborators = []
 }) {
     if (!isOpen) return null;
 
@@ -625,6 +894,8 @@ export default function NewRequestModal({
                 onSave={onSave}
                 editingReport={editingReport}
                 saving={saving}
+                user={user}
+                collaborators={collaborators}
             />
         </div>
     );

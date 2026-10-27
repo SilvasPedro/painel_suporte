@@ -5,7 +5,7 @@ import {
     Lightbulb, Monitor, Building, Zap, Bug, MessageSquare, Send,
     Table, Columns3, LayoutGrid, List, Copy, ChevronLeft, ChevronRight,
     User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock,
-    CornerDownRight, MessageCircle, ChevronUp, ChevronDown
+    CornerDownRight, MessageCircle, ChevronUp, ChevronDown, UserCheck
 } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -17,12 +17,23 @@ import { resolveUserName } from '../utils/userResolvers';
 import TicketDrawer from '../components/reports/TicketDrawer';
 import MassiveOutageBanner from '../components/reports/MassiveOutageBanner';
 import NewRequestModal from '../components/reports/NewRequestModal';
+import SafeMarkdown from '../components/reports/SafeMarkdown';
 import { calculateSlaStatus } from '../utils/ispHelpers';
 import { 
     normalizeCategory, 
     getCategoryMetadata, 
     REQUEST_CATEGORIES, 
-    ERROR_DEPARTMENTS 
+    ERROR_DEPARTMENTS,
+    getTaskOriginDepartment,
+    getTaskAssignee,
+    getTaskWatchers,
+    canUserViewTask,
+    filterVisibleTasks,
+    isUserWatcherOnly,
+    canUserManageWatchers,
+    canUserAssignResponsible,
+    canUserDispatchOrCloseTask,
+    isUserTaskCreator
 } from '../types/request.types';
 
 const Reports = () => {
@@ -31,12 +42,13 @@ const Reports = () => {
     const { normalizedRole, isMasterAdmin, canEdit } = usePermissions();
 
     const [reports, setReports] = useState([]);
+    const [collaborators, setCollaborators] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [modalWatcherToAdd, setModalWatcherToAdd] = useState('');
 
     // ==========================================
-    // CONTROLE DE ACESSO E PERMISSÕES (RBAC)
+    // CONTROLE DE ACESSO E PERMISSÕES (RBAC / RLS)
     // ==========================================
-    // Gestor e Supervisor (e Admin/Master) visualizam TODOS os relatórios
     const canViewAllReports = useMemo(() => {
         if (isMasterAdmin) return true;
         const role = String(normalizedRole || '').toLowerCase();
@@ -45,16 +57,27 @@ const Reports = () => {
         return rawRole.includes('gestor') || rawRole.includes('supervis') || rawRole.includes('admin') || rawRole.includes('gerente') || rawRole.includes('coordenador');
     }, [isMasterAdmin, normalizedRole, currentUser?.role]);
 
+    const effectiveUser = useMemo(() => {
+        if (!currentUser) return null;
+        return {
+            ...currentUser,
+            uid: currentUser.uid || currentUser.firestoreId,
+            id: currentUser.firestoreId || currentUser.uid,
+            role: canViewAllReports ? (normalizedRole || currentUser.role || 'Gestor') : (normalizedRole || currentUser.role || 'Colaborador')
+        };
+    }, [currentUser, normalizedRole, canViewAllReports]);
+
     // Gestor e Supervisor podem gerenciar tickets (mudar status e dar parecer)
     const canManageTickets = useMemo(() => {
         return canViewAllReports || canEdit('reports');
     }, [canViewAllReports, canEdit]);
 
-    // Permissão de edição ou exclusão do registro
+    // Permissão de edição ou exclusão do registro (Visualizadores nunca podem editar/excluir)
     const canEditOrDelete = (report) => {
+        if (!report || !effectiveUser) return false;
+        if (isUserWatcherOnly(report, effectiveUser)) return false;
         if (canManageTickets) return true;
-        const userUid = currentUser?.firestoreId || currentUser?.uid;
-        return report.creatorId === userUid;
+        return isUserTaskCreator(report, effectiveUser);
     };
 
     // ==========================================
@@ -102,22 +125,30 @@ const Reports = () => {
 
 
     // ==========================================
-    // BUSCA DE DADOS COM CACHE FINOPS (LIMIT 80)
+    // BUSCA DE COLABORADORES PARA ATRIBUIÇÃO / WATCHERS
     // ==========================================
     useEffect(() => {
         if (!currentUser) return;
+        const unsubscribe = subscribeSharedCollection("collaborators", (items) => {
+            const activeList = items
+                .filter((c) => c.active !== false && c.name)
+                .sort((a, b) => String(a.name).localeCompare(String(b.name), 'pt-BR'));
+            setCollaborators(activeList);
+        });
+        return () => unsubscribe();
+    }, [currentUser]);
 
-        const userIdentifier = currentUser.firestoreId || currentUser.uid;
-        const userIds = new Set([currentUser.firestoreId, currentUser.uid].filter(Boolean));
+    // ==========================================
+    // BUSCA DE DADOS COM CACHE FINOPS & POLÍTICA RLS
+    // ==========================================
+    useEffect(() => {
+        if (!effectiveUser) return;
 
-        // Limite de segurança de 80 chamados para prevenir estouro de cota diária
+        // Aplicação estrita da Matriz de Acesso e Visibilidade (RLS):
+        // - Usuário comum: apenas se for Criador, Responsável ou Visualizador.
+        // - Gestor/Supervisor: suas próprias tarefas, onde é responsável/visualizador e todas sem responsável.
         const unsubscribe = subscribeSharedCollection("critical_reports", (items) => {
-            let fetchedData = [...items];
-
-            // Se for Colaborador/Apoio (sem permissão geral): filtra apenas seus relatórios na memória
-            if (!canViewAllReports) {
-                fetchedData = fetchedData.filter(r => userIds.has(r.creatorId) || r.creatorId === userIdentifier);
-            }
+            const fetchedData = filterVisibleTasks(items, effectiveUser);
 
             // Ordenação pelo mais recente
             fetchedData.sort((a, b) => {
@@ -129,13 +160,14 @@ const Reports = () => {
             setReports(fetchedData);
             setViewingReport(prev => {
                 if (!prev) return null;
-                return fetchedData.find(r => r.id === prev.id) || prev;
+                const updated = fetchedData.find(r => r.id === prev.id);
+                return updated || null;
             });
             setLoading(false);
         });
 
         return () => unsubscribe();
-    }, [currentUser, canViewAllReports]);
+    }, [effectiveUser]);
 
     // ==========================================
     // HELPERS E FILTRAGEM
@@ -178,7 +210,7 @@ const Reports = () => {
 
             const matchStatus = statusFilter === '' || r.status === statusFilter;
             const matchCategory = categoryFilter === '' || normalizeCategory(r.category || r.type) === categoryFilter;
-            const matchDepartment = departmentFilter === '' || (r.metadata?.affectedDepartment || r.originDepartment || '') === departmentFilter;
+            const matchDepartment = departmentFilter === '' || getTaskOriginDepartment(r) === departmentFilter;
             const matchSla = slaFilter === '' || calculateSlaStatus(r).status === slaFilter;
             const matchType = typeFilter === '' || r.type === typeFilter;
             const matchPriority = priorityFilter === '' || r.priority === priorityFilter;
@@ -315,9 +347,13 @@ const Reports = () => {
     };
 
     // ==========================================
-    // AÇÕES DO GESTOR NO MODAL DE VISUALIZAÇÃO
+    // AÇÕES DO GESTOR E RLS NO MODAL DE VISUALIZAÇÃO
     // ==========================================
     const handleOpenViewModal = (report) => {
+        if (!report || !canUserViewTask(report, effectiveUser)) {
+            showToast("Acesso negado: você não possui permissão para visualizar este chamado.", "error");
+            return;
+        }
         setViewingReport(report);
         setIsFullModalOpen(true);
         setIsDrawerOpen(false);
@@ -325,9 +361,159 @@ const Reports = () => {
         setQuickComment(report.adminComment || report.closingComment || '');
         setNewCommentText('');
         setNewCommentStatus(report.status || 'Pendente');
+        setModalWatcherToAdd('');
+    };
+
+    const handleAssignResponsible = async (report, assigneeId) => {
+        if (!report || !canUserAssignResponsible(report, effectiveUser)) {
+            showToast("Apenas lideranças (Gestor / Supervisor) podem atribuir responsáveis.", "error");
+            return;
+        }
+        try {
+            let resolvedAssignee = null;
+            if (assigneeId) {
+                const matchedCollab = collaborators.find(
+                    (c) => String(c.id || c.uid) === String(assigneeId)
+                );
+                if (matchedCollab) {
+                    const aId = String(matchedCollab.id || matchedCollab.uid || matchedCollab.email || matchedCollab.name).trim();
+                    resolvedAssignee = {
+                        id: aId,
+                        uid: String(matchedCollab.uid || aId),
+                        name: String(matchedCollab.name || matchedCollab.email || aId),
+                        email: String(matchedCollab.email || ''),
+                        role: String(matchedCollab.role || 'Colaborador'),
+                        assignedAt: new Date().toISOString(),
+                        assignedBy: effectiveUser?.name || effectiveUser?.email || 'Liderança'
+                    };
+                }
+            }
+
+            // Se a liderança atribuir para outro colaborador e não for o criador,
+            // garante que quem atribuiu permaneça como visualizador para continuar acompanhando
+            let updatedWatchers = getTaskWatchers(report);
+            if (resolvedAssignee && effectiveUser && !isUserTaskCreator(report, effectiveUser)) {
+                const currentUserId = String(effectiveUser.id || effectiveUser.uid || effectiveUser.email || '').trim();
+                const isAssigningToSelf = String(resolvedAssignee.id) === currentUserId;
+                const alreadyWatching = updatedWatchers.some(
+                    (w) => String(w.id).toLowerCase() === currentUserId.toLowerCase()
+                );
+                if (!isAssigningToSelf && !alreadyWatching && currentUserId) {
+                    updatedWatchers = [
+                        ...updatedWatchers,
+                        {
+                            id: currentUserId,
+                            uid: String(effectiveUser.uid || currentUserId),
+                            name: String(effectiveUser.name || effectiveUser.displayName || effectiveUser.email || 'Gestor'),
+                            email: String(effectiveUser.email || ''),
+                            role: String(effectiveUser.role || 'Gestor'),
+                            addedAt: new Date().toISOString(),
+                            addedBy: 'Sistema (Delegação)'
+                        }
+                    ];
+                }
+            }
+
+            const updatePayload = {
+                assignedTo: resolvedAssignee,
+                assigned_to: resolvedAssignee ? resolvedAssignee.id : null,
+                assignedToId: resolvedAssignee ? resolvedAssignee.id : null,
+                assignedToName: resolvedAssignee ? resolvedAssignee.name : null,
+                assignedToEmail: resolvedAssignee ? resolvedAssignee.email : null,
+                watchers: updatedWatchers,
+                watcherIds: updatedWatchers.map((w) => w.id),
+                updatedAt: new Date()
+            };
+
+            await updateDoc(doc(db, "critical_reports", report.id), updatePayload);
+            setViewingReport((prev) => (prev && prev.id === report.id ? { ...prev, ...updatePayload } : prev));
+            showToast(
+                resolvedAssignee
+                    ? `Responsável atribuído: ${resolvedAssignee.name}`
+                    : "Tarefa sem responsável direto (visível para Gestores e Supervisores).",
+                "success"
+            );
+        } catch (err) {
+            showToast("Erro ao atribuir responsável: " + err.message, "error");
+        }
+    };
+
+    const handleAddWatcherToReport = async (report, collabId) => {
+        if (!report || !collabId) return;
+        if (!canUserManageWatchers(report, effectiveUser)) {
+            showToast("Sem permissão para gerenciar visualizadores neste chamado.", "error");
+            return;
+        }
+        try {
+            const found = collaborators.find((c) => String(c.id || c.uid) === String(collabId));
+            if (!found) return;
+            const currentWatchers = getTaskWatchers(report);
+            const fId = String(found.id || found.uid || found.email || found.name).trim();
+            const exists = currentWatchers.some(
+                (w) =>
+                    String(w.id).toLowerCase() === fId.toLowerCase() ||
+                    (found.email && String(w.email || '').toLowerCase() === String(found.email).toLowerCase()) ||
+                    String(w.name || '').toLowerCase() === String(found.name || '').toLowerCase()
+            );
+            if (exists) {
+                showToast("Este colaborador já está na lista de visualizadores.", "info");
+                setModalWatcherToAdd('');
+                return;
+            }
+            const nextWatchers = [
+                ...currentWatchers,
+                {
+                    id: fId,
+                    uid: String(found.uid || fId),
+                    name: String(found.name || found.email || fId),
+                    email: String(found.email || ''),
+                    role: String(found.role || 'Colaborador'),
+                    addedAt: new Date().toISOString(),
+                    addedBy: effectiveUser?.name || effectiveUser?.email || 'Usuário'
+                }
+            ];
+            const updatePayload = {
+                watchers: nextWatchers,
+                watcherIds: nextWatchers.map((w) => w.id),
+                updatedAt: new Date()
+            };
+            await updateDoc(doc(db, "critical_reports", report.id), updatePayload);
+            setViewingReport((prev) => (prev && prev.id === report.id ? { ...prev, ...updatePayload } : prev));
+            setModalWatcherToAdd('');
+            showToast(`${found.name} adicionado como visualizador!`, "success");
+        } catch (err) {
+            showToast("Erro ao adicionar visualizador: " + err.message, "error");
+        }
+    };
+
+    const handleRemoveWatcherFromReport = async (report, watcherId) => {
+        if (!report || !watcherId) return;
+        if (!canUserManageWatchers(report, effectiveUser)) {
+            showToast("Sem permissão para remover visualizadores neste chamado.", "error");
+            return;
+        }
+        try {
+            const currentWatchers = getTaskWatchers(report);
+            const nextWatchers = currentWatchers.filter((w) => String(w.id) !== String(watcherId));
+            const updatePayload = {
+                watchers: nextWatchers,
+                watcherIds: nextWatchers.map((w) => w.id),
+                updatedAt: new Date()
+            };
+            await updateDoc(doc(db, "critical_reports", report.id), updatePayload);
+            setViewingReport((prev) => (prev && prev.id === report.id ? { ...prev, ...updatePayload } : prev));
+            showToast("Visualizador removido.", "success");
+        } catch (err) {
+            showToast("Erro ao remover visualizador: " + err.message, "error");
+        }
     };
 
     const handleDrawerUpdateStatus = async (reportId, newStatus) => {
+        const target = reports.find(r => r.id === reportId) || viewingReport;
+        if (target && !canUserDispatchOrCloseTask(target, effectiveUser)) {
+            showToast("Visualizadores possuem acesso somente leitura e não podem alterar o status.", "error");
+            return;
+        }
         try {
             await updateDoc(doc(db, "critical_reports", reportId), {
                 status: newStatus,
@@ -342,9 +528,13 @@ const Reports = () => {
     };
 
     const handleDrawerAddComment = async (reportId, content) => {
+        const target = reports.find(r => r.id === reportId) || viewingReport;
+        if (target && isUserWatcherOnly(target, effectiveUser)) {
+            showToast("Visualizadores possuem permissão estritamente de leitura.", "error");
+            return;
+        }
         try {
             const reportRef = doc(db, "critical_reports", reportId);
-            const target = reports.find(r => r.id === reportId);
             const currentComments = Array.isArray(target?.comments) ? target.comments : [];
             const newComment = {
                 authorId: currentUser?.uid || 'user',
@@ -364,17 +554,28 @@ const Reports = () => {
         }
     };
 
-    // Abre o relatório automaticamente se disparado por notificação push ou clique de alerta
+    // Abre o relatório automaticamente se disparado por notificação push ou clique de alerta (validando RLS)
     useEffect(() => {
         const handleOpenReport = (e) => {
             if (e.detail?.report) {
                 const found = reports.find(r => r.id === e.detail.report.id) || e.detail.report;
-                handleOpenViewModal(found);
+                if (!canUserViewTask(found, effectiveUser)) {
+                    showToast("Acesso negado: você não possui permissão para acessar este chamado.", "error");
+                    return;
+                }
+                setViewingReport(found);
+                setIsFullModalOpen(true);
+                setIsDrawerOpen(false);
+                setQuickStatus(found.status || 'Pendente');
+                setQuickComment(found.adminComment || found.closingComment || '');
+                setNewCommentText('');
+                setNewCommentStatus(found.status || 'Pendente');
+                setModalWatcherToAdd('');
             }
         };
         window.addEventListener('HUBDESK_OPEN_REPORT', handleOpenReport);
         return () => window.removeEventListener('HUBDESK_OPEN_REPORT', handleOpenReport);
-    }, [reports]);
+    }, [reports, effectiveUser, showToast]);
 
     const formatCommentDate = (dateVal) => {
         if (!dateVal) return '';
@@ -394,10 +595,14 @@ const Reports = () => {
         }
     };
 
-    // Adicionar novo comentário na thread (Colaborador ou Gestão)
+    // Adicionar novo comentário na thread (Colaborador ou Gestão; bloqueado para Visualizadores somente leitura)
     const handleAddComment = async (e) => {
         if (e && e.preventDefault) e.preventDefault();
         if (!viewingReport || !newCommentText.trim()) return;
+        if (isUserWatcherOnly(viewingReport, effectiveUser)) {
+            showToast("Visualizadores possuem acesso apenas de leitura e não podem alterar o chamado.", "error");
+            return;
+        }
 
         setSendingComment(true);
         try {
@@ -425,8 +630,8 @@ const Reports = () => {
                 updatedAt: new Date()
             };
 
-            // Se for gestor/supervisor e alterou o status junto com o comentário
-            if (canManageTickets && newCommentStatus && newCommentStatus !== viewingReport.status) {
+            // Se for gestor/supervisor ou responsável e alterou o status junto com o comentário
+            if (canUserDispatchOrCloseTask(viewingReport, effectiveUser) && newCommentStatus && newCommentStatus !== viewingReport.status) {
                 updateData.status = newCommentStatus;
             }
 
@@ -448,6 +653,10 @@ const Reports = () => {
 
     const handleQuickUpdate = async () => {
         if (!viewingReport) return;
+        if (!canUserDispatchOrCloseTask(viewingReport, effectiveUser)) {
+            showToast("Sem permissão para alterar status ou encerrar este chamado.", "error");
+            return;
+        }
         setQuickSaving(true);
         try {
             const userName = currentUser?.name || currentUser?.displayName || resolveUserName(currentUser?.email) || 'Gestão';
@@ -737,18 +946,18 @@ ${report.description || 'Sem descrição'}`;
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2 shrink-0 animate-in fade-in duration-150">
                     <button 
                         onClick={() => setStatusFilter('')}
-                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
                             statusFilter === '' && clientImpactFilter === ''
-                                ? 'border-zinc-900 bg-zinc-900 text-white ring-1 ring-zinc-900' 
-                                : 'border-gray-200/90 text-gray-700 hover:border-gray-300'
+                                ? 'bg-zinc-200/80 border-zinc-700 text-neutral-900 ring-2 ring-zinc-700/25 shadow-xs' 
+                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-gray-300'
                         }`}
                         title="Mostrar todas as solicitações"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === '' && clientImpactFilter === '' ? 'text-zinc-300' : 'text-gray-400'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === '' && clientImpactFilter === '' ? 'text-neutral-800' : 'text-gray-500'}`}>
                                 Total Registrado
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === '' && clientImpactFilter === '' ? 'text-white' : 'text-gray-900'}`}>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === '' && clientImpactFilter === '' ? 'text-neutral-950' : 'text-gray-900'}`}>
                                 {metricsSummary.total}
                             </span>
                         </div>
@@ -763,24 +972,24 @@ ${report.description || 'Sem descrição'}`;
 
                     <button 
                         onClick={() => { setStatusFilter('Pendente'); setClientImpactFilter(''); }}
-                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
                             statusFilter === 'Pendente' 
-                                ? 'border-amber-600 bg-amber-600 text-white ring-1 ring-amber-600' 
-                                : 'border-gray-200/90 text-gray-700 hover:border-amber-300'
+                                ? 'bg-amber-100 border-amber-600 text-amber-950 ring-2 ring-amber-500/30 shadow-xs' 
+                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-amber-300'
                         }`}
                         title="Filtrar por solicitações pendentes"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Pendente' ? 'text-amber-100' : 'text-amber-700'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Pendente' ? 'text-amber-900' : 'text-amber-700'}`}>
                                 Pendentes
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Pendente' ? 'text-white' : 'text-amber-800'}`}>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Pendente' ? 'text-amber-950' : 'text-amber-800'}`}>
                                 {metricsSummary.pending}
                             </span>
                         </div>
                         <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
                             statusFilter === 'Pendente' 
-                                ? 'bg-amber-700 text-white border-amber-600' 
+                                ? 'bg-amber-600 text-white border-amber-700' 
                                 : 'bg-amber-50 text-amber-700 border-amber-100'
                         }`}>
                             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -789,24 +998,24 @@ ${report.description || 'Sem descrição'}`;
 
                     <button 
                         onClick={() => { setStatusFilter('Em Andamento'); setClientImpactFilter(''); }}
-                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
                             statusFilter === 'Em Andamento' 
-                                ? 'border-blue-600 bg-blue-600 text-white ring-1 ring-blue-600' 
-                                : 'border-gray-200/90 text-gray-700 hover:border-blue-300'
+                                ? 'bg-blue-100 border-blue-600 text-blue-950 ring-2 ring-blue-500/30 shadow-xs' 
+                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-blue-300'
                         }`}
                         title="Filtrar por solicitações em andamento"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Em Andamento' ? 'text-blue-100' : 'text-blue-700'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Em Andamento' ? 'text-blue-900' : 'text-blue-700'}`}>
                                 Em Andamento
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Em Andamento' ? 'text-white' : 'text-blue-800'}`}>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Em Andamento' ? 'text-blue-950' : 'text-blue-800'}`}>
                                 {metricsSummary.inProgress}
                             </span>
                         </div>
                         <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
                             statusFilter === 'Em Andamento' 
-                                ? 'bg-blue-700 text-white border-blue-600' 
+                                ? 'bg-blue-600 text-white border-blue-700' 
                                 : 'bg-blue-50 text-blue-700 border-blue-100'
                         }`}>
                             <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -815,24 +1024,24 @@ ${report.description || 'Sem descrição'}`;
 
                     <button 
                         onClick={() => { setStatusFilter('Resolvido'); setClientImpactFilter(''); }}
-                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
                             statusFilter === 'Resolvido' 
-                                ? 'border-emerald-600 bg-emerald-600 text-white ring-1 ring-emerald-600' 
-                                : 'border-gray-200/90 text-gray-700 hover:border-emerald-300'
+                                ? 'bg-emerald-100 border-emerald-600 text-emerald-950 ring-2 ring-emerald-500/30 shadow-xs' 
+                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-emerald-300'
                         }`}
                         title="Filtrar por solicitações resolvidas"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Resolvido' ? 'text-emerald-100' : 'text-emerald-700'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Resolvido' ? 'text-emerald-900' : 'text-emerald-700'}`}>
                                 Resolvidos
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Resolvido' ? 'text-white' : 'text-emerald-800'}`}>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Resolvido' ? 'text-emerald-950' : 'text-emerald-800'}`}>
                                 {metricsSummary.resolved}
                             </span>
                         </div>
                         <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
                             statusFilter === 'Resolvido' 
-                                ? 'bg-emerald-700 text-white border-emerald-600' 
+                                ? 'bg-emerald-600 text-white border-emerald-700' 
                                 : 'bg-emerald-50 text-emerald-700 border-emerald-100'
                         }`}>
                             <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -841,24 +1050,24 @@ ${report.description || 'Sem descrição'}`;
 
                     <button 
                         onClick={() => { setClientImpactFilter('Sim'); setStatusFilter(''); }}
-                        className={`bg-white rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer col-span-2 sm:col-span-1 ${
+                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer col-span-2 sm:col-span-1 ${
                             clientImpactFilter === 'Sim' 
-                                ? 'border-red-600 bg-red-600 text-white ring-1 ring-red-600' 
-                                : 'border-gray-200/90 text-gray-700 hover:border-red-300'
+                                ? 'bg-red-100 border-red-600 text-red-950 ring-2 ring-red-500/30 shadow-xs' 
+                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-red-300'
                         }`}
                         title="Filtrar por casos que impactaram o cliente"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${clientImpactFilter === 'Sim' ? 'text-red-100' : 'text-red-700'}`}>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${clientImpactFilter === 'Sim' ? 'text-red-900' : 'text-red-700'}`}>
                                 Afetou Cliente
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${clientImpactFilter === 'Sim' ? 'text-white' : 'text-red-800'}`}>
+                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${clientImpactFilter === 'Sim' ? 'text-red-950' : 'text-red-800'}`}>
                                 {metricsSummary.clientImpact}
                             </span>
                         </div>
                         <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
                             clientImpactFilter === 'Sim' 
-                                ? 'bg-red-700 text-white border-red-600' 
+                                ? 'bg-red-600 text-white border-red-700' 
                                 : 'bg-red-50 text-red-700 border-red-100'
                         }`}>
                             <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -1407,12 +1616,14 @@ ${report.description || 'Sem descrição'}`;
                 editingReport={editingId ? reports.find(r => r.id === editingId) : null}
                 saving={saving}
                 canManage={canManageTickets}
+                user={effectiveUser}
+                collaborators={collaborators}
             />
 
             {/* ========================================================================= */}
             {/* MODAL DE VISUALIZAÇÃO EVOLUÍDO E COMPLETO (EXPANDIDO)                     */}
             {/* ========================================================================= */}
-            {viewingReport && isFullModalOpen && (
+            {viewingReport && isFullModalOpen && canUserViewTask(viewingReport, effectiveUser) && (
                 <div className="fixed inset-0 bg-zinc-950/75 flex items-center justify-center p-3 sm:p-6 z-[80] backdrop-blur-xs">
                     <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl xl:max-w-6xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
                         
@@ -1431,6 +1642,17 @@ ${report.description || 'Sem descrição'}`;
                                             {viewingReport.type || 'Análise de Erro'}
                                         </span>
                                         {getPriorityBadge(viewingReport.priority || 'Normal')}
+                                        {/* Badge em Destaque do Departamento de Origem */}
+                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-950/80 text-indigo-200 border border-indigo-500/40 inline-flex items-center gap-1">
+                                            <Building className="w-3 h-3 text-indigo-400" />
+                                            Departamento: {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
+                                        </span>
+                                        {isUserWatcherOnly(viewingReport, effectiveUser) && (
+                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-950/80 text-amber-200 border border-amber-500/40 inline-flex items-center gap-1">
+                                                <Eye className="w-3 h-3 text-amber-400" />
+                                                Visualizador (Somente Leitura)
+                                            </span>
+                                        )}
                                     </div>
                                     <h3 className="text-lg font-bold text-white leading-tight truncate max-w-xl" title={getDisplayTitle(viewingReport)}>
                                         {getDisplayTitle(viewingReport)}
@@ -1538,9 +1760,19 @@ ${report.description || 'Sem descrição'}`;
                             {/* PARTE DE CIMA: VISUALIZAÇÃO ESTENDIDA DOS DADOS DO TICKET                 */}
                             {/* ========================================================================= */}
                             <div className="space-y-4">
+                                {/* Aviso de Modo Visualizador (Somente Leitura) */}
+                                {isUserWatcherOnly(viewingReport, effectiveUser) && (
+                                    <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 text-xs flex items-center gap-2.5 shadow-2xs">
+                                        <Eye className="w-4 h-4 text-indigo-600 shrink-0" />
+                                        <span>
+                                            <strong>Modo Visualizador (Somente Leitura):</strong> Você consta na lista de visualizadores deste chamado e pode acompanhar o status e todas as interações, sem permissão para editar campos, encerrar o chamado ou gerenciar visualizadores.
+                                        </span>
+                                    </div>
+                                )}
+
                                 {/* Painel de Metadados e Solicitante Estendido */}
                                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b border-gray-100">
+                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pb-4 border-b border-gray-100">
                                         <div>
                                             <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status Atual</span>
                                             {getStatusBadge(viewingReport.status)}
@@ -1548,6 +1780,13 @@ ${report.description || 'Sem descrição'}`;
                                         <div>
                                             <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prioridade</span>
                                             {getPriorityBadge(viewingReport.priority || 'Normal')}
+                                        </div>
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Departamento</span>
+                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-bold mt-0.5">
+                                                <Building className="w-3 h-3 text-indigo-600" />
+                                                Departamento: {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
+                                            </span>
                                         </div>
                                         <div>
                                             <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Data Ocorrência</span>
@@ -1564,7 +1803,7 @@ ${report.description || 'Sem descrição'}`;
                                     </div>
 
                                     {/* Solicitante e Data de Criação */}
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-0.5">
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-0.5 pb-4 border-b border-gray-100">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold flex items-center justify-center text-sm border border-red-200 shrink-0">
                                                 {(viewingReport.creatorName || 'U').charAt(0).toUpperCase()}
@@ -1585,9 +1824,126 @@ ${report.description || 'Sem descrição'}`;
                                             </span>
                                         )}
                                     </div>
+
+                                    {/* CONTROLE DE RESPONSÁVEL (ASSIGNED_TO) E VISUALIZADORES (WATCHERS) */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                                        {/* Coluna 1: Responsável Atribuído */}
+                                        <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                                                    Responsável pela Tarefa
+                                                </span>
+                                                {!getTaskAssignee(viewingReport) && (
+                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
+                                                        Fila Gestor / Supervisor
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {canUserAssignResponsible(viewingReport, effectiveUser) ? (
+                                                <select
+                                                    value={getTaskAssignee(viewingReport)?.id || ''}
+                                                    onChange={(e) => handleAssignResponsible(viewingReport, e.target.value)}
+                                                    className="w-full p-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
+                                                >
+                                                    <option value="">
+                                                        Sem responsável (Visível p/ Gestores e Supervisores)
+                                                    </option>
+                                                    {collaborators.map((c) => {
+                                                        const cid = String(c.id || c.uid || c.email || c.name);
+                                                        return (
+                                                            <option key={cid} value={cid}>
+                                                                {c.name} {c.role ? `(${c.role})` : ''}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                            ) : (
+                                                <div className="text-xs font-semibold text-gray-800 py-1">
+                                                    {getTaskAssignee(viewingReport) ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200">
+                                                            <UserCheck className="w-3.5 h-3.5 text-blue-600" />
+                                                            {getTaskAssignee(viewingReport).name}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-600">
+                                                            Sem responsável atribuído (Direcionado a Gestores e Supervisores)
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Coluna 2: Visualizadores (Watchers) */}
+                                        <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                    <Eye className="w-3.5 h-3.5 text-indigo-600" />
+                                                    Visualizadores ({getTaskWatchers(viewingReport).length})
+                                                </span>
+                                                <span className="text-[10px] text-gray-400">
+                                                    Somente leitura
+                                                </span>
+                                            </div>
+
+                                            {canUserManageWatchers(viewingReport, effectiveUser) && (
+                                                <div className="flex gap-1.5">
+                                                    <select
+                                                        value={modalWatcherToAdd}
+                                                        onChange={(e) => {
+                                                            const val = e.target.value;
+                                                            setModalWatcherToAdd(val);
+                                                            if (val) {
+                                                                handleAddWatcherToReport(viewingReport, val);
+                                                            }
+                                                        }}
+                                                        className="flex-1 p-2 border border-gray-300 rounded-lg text-xs text-gray-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
+                                                    >
+                                                        <option value="">Adicionar visualizador...</option>
+                                                        {collaborators.map((c) => {
+                                                            const cid = String(c.id || c.uid || c.email || c.name);
+                                                            return (
+                                                                <option key={cid} value={cid}>
+                                                                    {c.name} {c.role ? `(${c.role})` : ''}
+                                                                </option>
+                                                            );
+                                                        })}
+                                                    </select>
+                                                </div>
+                                            )}
+
+                                            {getTaskWatchers(viewingReport).length > 0 ? (
+                                                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                                    {getTaskWatchers(viewingReport).map((w) => (
+                                                        <span
+                                                            key={w.id}
+                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold"
+                                                        >
+                                                            <span>{w.name}</span>
+                                                            {canUserManageWatchers(viewingReport, effectiveUser) && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleRemoveWatcherFromReport(viewingReport, w.id)}
+                                                                    className="text-indigo-500 hover:text-red-600 cursor-pointer ml-0.5"
+                                                                    title="Remover visualizador"
+                                                                >
+                                                                    <X className="w-3 h-3" />
+                                                                </button>
+                                                            )}
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <p className="text-[11px] text-gray-400 italic">
+                                                    Nenhum visualizador adicionado.
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Descrição Completa Estendida */}
+                                {/* Descrição Completa Estendida (Renderização Markdown GFM Segura + Tabelas) */}
                                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2">
                                     <div className="flex items-center justify-between">
                                         <span className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
@@ -1603,9 +1959,9 @@ ${report.description || 'Sem descrição'}`;
                                             <Copy className="w-3.5 h-3.5" /> Copiar texto
                                         </button>
                                     </div>
-                                    <p className="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 p-4 rounded-xl border border-gray-100 leading-relaxed font-normal">
-                                        {viewingReport.description || 'Sem descrição informada.'}
-                                    </p>
+                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
+                                        <SafeMarkdown content={viewingReport.description || 'Sem descrição informada.'} />
+                                    </div>
                                 </div>
 
                                 {/* Alerta de Impacto no Cliente (se houver) */}
@@ -1783,102 +2139,104 @@ ${report.description || 'Sem descrição'}`;
                                         )}
                                     </div>
 
-                                    {/* Formulário Interativo de Envio de Comentário */}
-                                    <div className="pt-2 border-t border-gray-100 space-y-2.5">
-                                        {/* Sugestões Rápidas (Chips de 1 clique) */}
-                                        <div>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                                                Respostas Rápidas / Atalhos
-                                            </span>
-                                            <div className="flex flex-wrap gap-1.5">
-                                                {(canManageTickets ? [
-                                                    "⚠️ Faltam dados ou protocolo para análise.",
-                                                    "⏳ Em análise pela equipe técnica.",
-                                                    "✅ Ajuste aplicado com sucesso.",
-                                                    "🔄 Aguardando retorno do solicitante."
-                                                ] : [
-                                                    "ℹ️ Informações adicionadas conforme solicitado.",
-                                                    "📌 Segue protocolo de atendimento.",
-                                                    "👍 Testado e confirmado o funcionamento.",
-                                                    "❓ Gostaria de um retorno sobre o andamento."
-                                                ]).map((chip, idx) => (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => setNewCommentText(prev => prev ? `${prev} ${chip}` : chip)}
-                                                        className="text-[10px] font-medium bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-                                                    >
-                                                        {chip}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-
-                                        {/* Campo de Texto para Comentar */}
-                                        <div className="space-y-2">
-                                            <textarea
-                                                rows={3}
-                                                value={newCommentText}
-                                                onChange={(e) => setNewCommentText(e.target.value)}
-                                                placeholder={canManageTickets 
-                                                    ? "Escreva um comentário, solicite informações faltantes ou responda ao colaborador..." 
-                                                    : "Escreva sua atualização, responda às dúvidas da liderança ou anexe o protocolo..."}
-                                                className="w-full p-3 border border-gray-300 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-600 outline-none bg-white resize-none shadow-2xs leading-relaxed"
-                                            />
-
-                                            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                                                {/* Se for gestor/supervisor, pode alterar o status do ticket no próprio envio do comentário */}
-                                                {canManageTickets ? (
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="text-[11px] font-bold text-gray-600 whitespace-nowrap">
-                                                            Status ao comentar:
-                                                        </span>
-                                                        <select
-                                                            value={newCommentStatus}
-                                                            onChange={(e) => setNewCommentStatus(e.target.value)}
-                                                            className="text-xs p-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+                                    {/* Formulário Interativo de Envio de Comentário (Bloqueado para Visualizadores somente leitura) */}
+                                    {!isUserWatcherOnly(viewingReport, effectiveUser) && (
+                                        <div className="pt-2 border-t border-gray-100 space-y-2.5">
+                                            {/* Sugestões Rápidas (Chips de 1 clique) */}
+                                            <div>
+                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                                                    Respostas Rápidas / Atalhos
+                                                </span>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {(canManageTickets ? [
+                                                        "⚠️ Faltam dados ou protocolo para análise.",
+                                                        "⏳ Em análise pela equipe técnica.",
+                                                        "✅ Ajuste aplicado com sucesso.",
+                                                        "🔄 Aguardando retorno do solicitante."
+                                                    ] : [
+                                                        "ℹ️ Informações adicionadas conforme solicitado.",
+                                                        "📌 Segue protocolo de atendimento.",
+                                                        "👍 Testado e confirmado o funcionamento.",
+                                                        "❓ Gostaria de um retorno sobre o andamento."
+                                                    ]).map((chip, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => setNewCommentText(prev => prev ? `${prev} ${chip}` : chip)}
+                                                            className="text-[10px] font-medium bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
                                                         >
-                                                            <option value={viewingReport.status}>Manter atual ({viewingReport.status})</option>
-                                                            <option value="Pendente">Pendente</option>
-                                                            <option value="Em Andamento">Em Andamento</option>
-                                                            <option value="Resolvido">Resolvido</option>
-                                                            <option value="Cancelado">Cancelado</option>
-                                                        </select>
-                                                    </div>
-                                                ) : (
-                                                    <div className="text-[11px] text-gray-500 flex items-center gap-1">
-                                                        <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                                        Sua resposta atualiza o chamado sem precisar editar o original.
-                                                    </div>
-                                                )}
+                                                            {chip}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
 
-                                                <button
-                                                    type="button"
-                                                    onClick={handleAddComment}
-                                                    disabled={sendingComment || !newCommentText.trim()}
-                                                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-                                                >
-                                                    {sendingComment ? (
-                                                        <>
-                                                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                            <span>Enviando...</span>
-                                                        </>
+                                            {/* Campo de Texto para Comentar */}
+                                            <div className="space-y-2">
+                                                <textarea
+                                                    rows={3}
+                                                    value={newCommentText}
+                                                    onChange={(e) => setNewCommentText(e.target.value)}
+                                                    placeholder={canManageTickets 
+                                                        ? "Escreva um comentário, solicite informações faltantes ou responda ao colaborador..." 
+                                                        : "Escreva sua atualização, responda às dúvidas da liderança ou anexe o protocolo..."}
+                                                    className="w-full p-3 border border-gray-300 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-600 outline-none bg-white resize-none shadow-2xs leading-relaxed"
+                                                />
+
+                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
+                                                    {/* Se for gestor/supervisor ou responsável, pode alterar o status do ticket no próprio envio do comentário */}
+                                                    {canUserDispatchOrCloseTask(viewingReport, effectiveUser) ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[11px] font-bold text-gray-600 whitespace-nowrap">
+                                                                Status ao comentar:
+                                                            </span>
+                                                            <select
+                                                                value={newCommentStatus}
+                                                                onChange={(e) => setNewCommentStatus(e.target.value)}
+                                                                className="text-xs p-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
+                                                            >
+                                                                <option value={viewingReport.status}>Manter atual ({viewingReport.status})</option>
+                                                                <option value="Pendente">Pendente</option>
+                                                                <option value="Em Andamento">Em Andamento</option>
+                                                                <option value="Resolvido">Resolvido</option>
+                                                                <option value="Cancelado">Cancelado</option>
+                                                            </select>
+                                                        </div>
                                                     ) : (
-                                                        <>
-                                                            <Send className="w-3.5 h-3.5" />
-                                                            <span>Enviar Comentário</span>
-                                                        </>
+                                                        <div className="text-[11px] text-gray-500 flex items-center gap-1">
+                                                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                                                            Sua resposta atualiza o chamado sem precisar editar o original.
+                                                        </div>
                                                     )}
-                                                </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleAddComment}
+                                                        disabled={sendingComment || !newCommentText.trim()}
+                                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
+                                                    >
+                                                        {sendingComment ? (
+                                                            <>
+                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                                <span>Enviando...</span>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Send className="w-3.5 h-3.5" />
+                                                                <span>Enviar Comentário</span>
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
 
                                 {/* LADO DIREITO: DESPACHO & GESTÃO DO TICKET (OU VISÃO DA GESTÃO) */}
                                 <div className="flex flex-col gap-4">
-                                    {canManageTickets ? (
-                                        /* PAINEL DE GESTÃO DO TICKET (GESTOR / SUPERVISOR) */
+                                    {canUserDispatchOrCloseTask(viewingReport, effectiveUser) ? (
+                                        /* PAINEL DE GESTÃO DO TICKET (GESTOR / SUPERVISOR / RESPONSÁVEL) */
                                         <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm flex flex-col gap-4">
                                             <div className="border-b border-blue-100 pb-3">
                                                 <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
@@ -1955,7 +2313,7 @@ ${report.description || 'Sem descrição'}`;
                                             </button>
                                         </div>
                                     ) : (
-                                        /* PAINEL DE FEEDBACK E RESOLUÇÃO VISÍVEL AO COLABORADOR */
+                                        /* PAINEL DE FEEDBACK E RESOLUÇÃO VISÍVEL AO COLABORADOR / VISUALIZADOR */
                                         <div className="space-y-4">
                                             <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
                                                 <div className="flex items-center justify-between border-b border-gray-100 pb-3">
@@ -2047,15 +2405,17 @@ ${report.description || 'Sem descrição'}`;
                                                 )}
 
                                                 {/* Bloco de Instrução da Nova Interação */}
-                                                <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 space-y-1.5">
-                                                    <div className="flex items-center gap-1.5 font-bold text-blue-950 text-xs">
-                                                        <MessageSquare className="w-4 h-4 text-blue-600" />
-                                                        Interação Contínua
+                                                {!isUserWatcherOnly(viewingReport, effectiveUser) && (
+                                                    <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 space-y-1.5">
+                                                        <div className="flex items-center gap-1.5 font-bold text-blue-950 text-xs">
+                                                            <MessageSquare className="w-4 h-4 text-blue-600" />
+                                                            Interação Contínua
+                                                        </div>
+                                                        <p className="leading-relaxed text-[11px] text-blue-800">
+                                                            Precisa complementar informações, anexar protocolos ou responder dúvidas da gestão? Utilize o campo de comentários ao lado para dialogar em sequência sem precisar recriar ou editar o chamado original.
+                                                        </p>
                                                     </div>
-                                                    <p className="leading-relaxed text-[11px] text-blue-800">
-                                                        Precisa complementar informações, anexar protocolos ou responder dúvidas da gestão? Utilize o campo de comentários ao lado para dialogar em sequência sem precisar recriar ou editar o chamado original.
-                                                    </p>
-                                                </div>
+                                                )}
 
                                                 {/* Botão de Edição Rápida do Relato pelo Autor */}
                                                 {canEditOrDelete(viewingReport) && (
@@ -2136,7 +2496,7 @@ ${report.description || 'Sem descrição'}`;
             {/* ========================================================================= */}
             <TicketDrawer
                 report={viewingReport}
-                isOpen={isDrawerOpen && Boolean(viewingReport) && !isFullModalOpen}
+                isOpen={isDrawerOpen && Boolean(viewingReport) && !isFullModalOpen && canUserViewTask(viewingReport, effectiveUser)}
                 onClose={() => {
                     setIsDrawerOpen(false);
                     setViewingReport(null);
@@ -2144,8 +2504,9 @@ ${report.description || 'Sem descrição'}`;
                 }}
                 onUpdateStatus={handleDrawerUpdateStatus}
                 onAddComment={handleDrawerAddComment}
-                canManage={canManageTickets}
+                canManage={canUserDispatchOrCloseTask(viewingReport, effectiveUser)}
                 onExpandFull={() => setIsFullModalOpen(true)}
+                user={effectiveUser}
             />
 
         </div>
