@@ -5,7 +5,7 @@ import {
     Lightbulb, Monitor, Building, Zap, Bug, MessageSquare, Send,
     Table, Columns3, LayoutGrid, List, Copy, ChevronLeft, ChevronRight,
     User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock,
-    CornerDownRight, MessageCircle, ChevronUp, ChevronDown, UserCheck
+    CornerDownRight, MessageCircle, ChevronUp, ChevronDown, UserCheck, CheckSquare
 } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -771,6 +771,7 @@ ${report.description || 'Sem descrição'}`;
     const getTypeIcon = (categoryOrType, className = "w-4 h-4") => {
         const cat = normalizeCategory(categoryOrType);
         if (cat === 'error_analysis') return <Bug className={`${className} text-rose-600`} />;
+        if (cat === 'task') return <CheckSquare className={`${className} text-sky-600`} />;
         if (cat === 'system_improvement') return <Monitor className={`${className} text-indigo-600`} />;
         if (cat === 'facility_improvement') return <Building className={`${className} text-emerald-600`} />;
         return <Sparkles className={`${className} text-purple-600`} />;
@@ -782,6 +783,7 @@ ${report.description || 'Sem descrição'}`;
         return (
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold border ${meta.theme.badgeClass}`}>
                 {cat === 'error_analysis' && <Bug className="w-3.5 h-3.5" />}
+                {cat === 'task' && <CheckSquare className="w-3.5 h-3.5" />}
                 {cat === 'system_improvement' && <Monitor className="w-3.5 h-3.5" />}
                 {cat === 'facility_improvement' && <Building className="w-3.5 h-3.5" />}
                 {cat === 'other' && <Sparkles className="w-3.5 h-3.5" />}
@@ -1647,6 +1649,16 @@ ${report.description || 'Sem descrição'}`;
                                             <Building className="w-3 h-3 text-indigo-400" />
                                             Departamento: {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
                                         </span>
+                                        {viewingReport.affectedClient === 'Sim' ? (
+                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-950/80 text-rose-200 border border-rose-500/40 inline-flex items-center gap-1">
+                                                <AlertTriangle className="w-3 h-3 text-rose-400" />
+                                                Afetou Cliente: Sim
+                                            </span>
+                                        ) : (
+                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700 inline-flex items-center gap-1">
+                                                Afetou Cliente: Não
+                                            </span>
+                                        )}
                                         {isUserWatcherOnly(viewingReport, effectiveUser) && (
                                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-950/80 text-amber-200 border border-amber-500/40 inline-flex items-center gap-1">
                                                 <Eye className="w-3 h-3 text-amber-400" />
@@ -1770,9 +1782,13 @@ ${report.description || 'Sem descrição'}`;
                                     </div>
                                 )}
 
-                                {/* Painel de Metadados e Solicitante Estendido */}
+                                {/* Painel Unificado de Metadados e Solicitante */}
                                 <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-                                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 pb-4 border-b border-gray-100">
+                                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 pb-4 border-b border-gray-100">
+                                        <div>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tipo de O.S.</span>
+                                            {getTypeBadge(viewingReport.category || viewingReport.type)}
+                                        </div>
                                         <div>
                                             <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status Atual</span>
                                             {getStatusBadge(viewingReport.status)}
@@ -1785,37 +1801,37 @@ ${report.description || 'Sem descrição'}`;
                                             <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Departamento</span>
                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-bold mt-0.5">
                                                 <Building className="w-3 h-3 text-indigo-600" />
-                                                Departamento: {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
+                                                {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Data Ocorrência</span>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Data / Prazo</span>
                                             <span className="text-xs font-bold text-gray-900 block mt-0.5">
-                                                {formatDate(viewingReport.date)}
+                                                {formatDate(viewingReport.due_date || viewingReport.date)}
                                             </span>
                                         </div>
                                         <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Protocolo</span>
-                                            <span className="text-xs font-mono font-bold text-gray-700 block mt-0.5">
-                                                {viewingReport.protocol || 'Nenhum'}
-                                            </span>
+                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Afetou Cliente?</span>
+                                            {viewingReport.affectedClient === 'Sim' ? (
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-0.5">
+                                                    <AlertTriangle className="w-3 h-3 text-rose-600" /> Sim
+                                                </span>
+                                            ) : (
+                                                <span className="text-xs text-gray-500 font-medium block mt-1">Não</span>
+                                            )}
                                         </div>
                                     </div>
 
-                                    {/* Etiquetas (Tags) da Tarefa / O.S. */}
-                                    {Array.isArray(viewingReport.tags) && viewingReport.tags.length > 0 && (
-                                        <div className="flex items-center gap-1.5 flex-wrap pb-3 border-b border-gray-100">
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mr-1">
-                                                Etiquetas:
+                                    {/* Informação Breve de Como Afetou o Cliente */}
+                                    {viewingReport.affectedClient === 'Sim' && (
+                                        <div className="p-3.5 bg-rose-50/80 rounded-xl border border-rose-200 space-y-1">
+                                            <span className="text-xs font-bold text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
+                                                <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
+                                                Impacto no Atendimento ao Cliente:
                                             </span>
-                                            {viewingReport.tags.map((t) => (
-                                                <span
-                                                    key={t}
-                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200 border border-gray-200 dark:border-zinc-700"
-                                                >
-                                                    #{t}
-                                                </span>
-                                            ))}
+                                            <p className="text-xs text-rose-800 leading-relaxed font-medium">
+                                                {viewingReport.howAffected || 'Impacto confirmado pelo solicitante.'}
+                                            </p>
                                         </div>
                                     )}
 

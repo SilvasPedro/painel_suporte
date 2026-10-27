@@ -11,6 +11,7 @@ import {
     sanitizeMarkdownInput,
     validateTaskForm,
     TASK_PRIORITIES,
+    TASK_TYPES,
     DEFAULT_TAG_SUGGESTIONS
 } from './request.types';
 
@@ -114,22 +115,36 @@ describe('Hubdesk v3.10.1 — RLS Visibility, Watchers, Assignee & Markdown Secu
         expect(emptyResult.errors.department).toBeDefined();
         expect(emptyResult.errors.due_date).toBeDefined();
 
+        // Falha se afetou o cliente for Sim mas sem descrição do impacto
+        const missingImpact = validateTaskForm({
+            title: 'Falha de conexão na OLT central',
+            description: 'Perda de pacotes detectada na porta PON 3.',
+            originDepartment: 'NOC',
+            due_date: '2026-10-30',
+            affectedClient: 'Sim',
+            howAffected: ''
+        });
+        expect(missingImpact.isValid).toBe(false);
+        expect(missingImpact.errors.howAffected).toBeDefined();
+
         // Formulário completo passa
         const validResult = validateTaskForm({
             title: 'Falha de conexão na OLT central',
             description: 'Perda de pacotes detectada na porta PON 3 após manutenção preventiva.',
             originDepartment: 'NOC',
             due_date: '2026-10-30',
-            tags: ['Rede / NOC', 'Urgente']
+            affectedClient: 'Sim',
+            howAffected: 'Clientes da zona sul sem navegação por 30 minutos.'
         });
         expect(validResult.isValid).toBe(true);
         expect(validResult.errors).toEqual({});
     });
 
-    it('fornece constantes oficiais de prioridade e sugestões de tags para O.S.', () => {
+    it('fornece tipos oficiais de O.S. e prioridades', () => {
+        const typeIds = TASK_TYPES.map((t) => t.id);
+        expect(typeIds).toEqual(['error_analysis', 'task', 'facility_improvement', 'system_improvement', 'other']);
+
         const priorityIds = TASK_PRIORITIES.map((p) => p.id);
         expect(priorityIds).toEqual(['Baixa', 'Normal', 'Alta', 'Crítica']);
-        expect(DEFAULT_TAG_SUGGESTIONS).toContain('Rede / NOC');
-        expect(DEFAULT_TAG_SUGGESTIONS).toContain('Cliente VIP');
     });
 });

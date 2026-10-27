@@ -17,6 +17,18 @@ export const REQUEST_CATEGORIES = {
             iconColor: 'text-rose-600'
         }
     },
+    TASK: {
+        id: 'task',
+        label: 'Tarefa',
+        description: 'Tarefas operacionais, ordens de serviço e manutenções de rotina',
+        defaultSlaHours: 48,
+        theme: {
+            badgeClass: 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40',
+            dotClass: 'bg-sky-500',
+            activeBorder: 'border-sky-500 bg-sky-50/50 text-sky-900',
+            iconColor: 'text-sky-600'
+        }
+    },
     SYSTEM_IMPROVEMENT: {
         id: 'system_improvement',
         label: 'Melhoria de Sistema',
@@ -129,19 +141,31 @@ export const DEFAULT_TAG_SUGGESTIONS = [
     'Financeiro'
 ];
 
+// Tipos Oficiais de Ordem de Serviço / Tarefas
+export const TASK_TYPES = [
+    { id: 'error_analysis', label: 'Análise de Erro' },
+    { id: 'task', label: 'Tarefa' },
+    { id: 'facility_improvement', label: 'Melhoria de Ambiente' },
+    { id: 'system_improvement', label: 'Melhoria de Sistema' },
+    { id: 'other', label: 'Outros' }
+];
+
 /**
  * Normaliza qualquer chave ou label para a chave de categoria canônica
  */
 export const normalizeCategory = (categoryOrType = '') => {
     const val = String(categoryOrType).trim().toLowerCase();
-    if (val === 'error_analysis' || val.includes('erro') || val.includes('falha') || val.includes('análise')) {
+    if (val === 'error_analysis' || val.includes('erro') || val.includes('falha') || val.includes('análise') || val.includes('analise')) {
         return 'error_analysis';
     }
-    if (val === 'system_improvement' || val.includes('sistema') || val.includes('software') || val.includes('erp')) {
-        return 'system_improvement';
+    if (val === 'task' || val === 'tarefa' || val.includes('tarefa') || val === 'servico' || val === 'service_order' || val.includes('ordem')) {
+        return 'task';
     }
     if (val === 'facility_improvement' || val.includes('ambiente') || val.includes('infra') || val.includes('equipamento') || val.includes('cadeira')) {
         return 'facility_improvement';
+    }
+    if (val === 'system_improvement' || val.includes('sistema') || val.includes('software') || val.includes('erp')) {
+        return 'system_improvement';
     }
     return 'other';
 };
@@ -154,6 +178,8 @@ export const getCategoryMetadata = (categoryOrType = '') => {
     switch (key) {
         case 'error_analysis':
             return REQUEST_CATEGORIES.ERROR_ANALYSIS;
+        case 'task':
+            return REQUEST_CATEGORIES.TASK;
         case 'system_improvement':
             return REQUEST_CATEGORIES.SYSTEM_IMPROVEMENT;
         case 'facility_improvement':
@@ -253,6 +279,13 @@ export const validateTaskForm = (taskData = {}) => {
     const date = taskData.due_date || taskData.dueDate || taskData.date;
     if (!date) {
         errors.due_date = 'Informe a data de entrega ou prazo da O.S.';
+    }
+
+    if (taskData.affectedClient === 'Sim') {
+        const cleanHow = (taskData.howAffected || '').trim();
+        if (!cleanHow) {
+            errors.howAffected = 'Informe brevemente como o cliente foi afetado.';
+        }
     }
 
     return {

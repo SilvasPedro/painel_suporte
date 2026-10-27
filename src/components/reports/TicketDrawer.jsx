@@ -3,7 +3,7 @@ import {
     X, Clock, User, CheckCircle2, AlertTriangle, ShieldCheck, 
     Copy, Check, MessageSquare, Send, ExternalLink, Network,
     Terminal, ArrowRight, CornerDownRight, Sparkles, Bug,
-    Monitor, Building, HelpCircle, Layers, Tag, Eye, UserCheck
+    Monitor, Building, HelpCircle, Layers, Tag, Eye, UserCheck, AlertOctagon
 } from 'lucide-react';
 import { calculateSlaStatus, ISP_QUICK_SCRIPTS } from '../../utils/ispHelpers';
 import {
@@ -153,6 +153,17 @@ export default function TicketDrawer({
                                     </span>
                                 )}
 
+                                {(report.affectedClient === 'Sim' || meta.affectedClient === 'Sim') ? (
+                                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-md border bg-rose-950/60 text-rose-300 border-rose-500/40 flex items-center gap-1">
+                                        <AlertTriangle className="w-3 h-3 text-rose-400" />
+                                        Afetou Cliente: Sim
+                                    </span>
+                                ) : (
+                                    <span className="text-xs font-medium px-2.5 py-0.5 rounded-md border bg-slate-800 text-slate-400 border-slate-700">
+                                        Afetou Cliente: Não
+                                    </span>
+                                )}
+
                                 {(report.priority || meta.urgency) && (
                                     <span className="text-xs text-slate-400 font-medium">
                                         Prioridade: <strong className="text-slate-200">{report.priority || meta.urgency}</strong>
@@ -242,6 +253,63 @@ export default function TicketDrawer({
                                 </div>
                             </div>
                         )}
+
+                        {/* PAINEL UNIFICADO DE INFORMAÇÕES DA O.S. */}
+                        <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/80 space-y-3">
+                            <h4 className="text-xs font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                                <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                                Informações Unificadas da O.S.
+                            </h4>
+
+                            <div className="grid grid-cols-2 gap-3 text-xs">
+                                <div>
+                                    <span className="text-slate-400 block text-[11px]">Tipo de O.S.:</span>
+                                    <span className="text-slate-200 font-bold mt-0.5 block">
+                                        {report.type || catMeta.label || 'Tarefa'}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span className="text-slate-400 block text-[11px]">Setor de Origem:</span>
+                                    <span className="text-indigo-300 font-bold mt-0.5 block flex items-center gap-1">
+                                        <Building className="w-3 h-3 text-indigo-400" />
+                                        {originDept || 'Geral / Suporte'}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span className="text-slate-400 block text-[11px]">Prioridade:</span>
+                                    <span className="text-slate-200 font-semibold mt-0.5 block">
+                                        {report.priority || 'Normal'}
+                                    </span>
+                                </div>
+
+                                <div>
+                                    <span className="text-slate-400 block text-[11px]">Prazo / Data:</span>
+                                    <span className="text-slate-200 font-mono mt-0.5 block">
+                                        {report.due_date || report.date || 'Hoje'}
+                                    </span>
+                                </div>
+
+                                <div className="col-span-2 pt-2 border-t border-slate-750">
+                                    <span className="text-slate-400 block text-[11px]">Impacto no Atendimento / Cliente:</span>
+                                    <span className={`inline-block font-semibold mt-0.5 ${
+                                        (meta.affectedClient === 'Sim' || report.affectedClient === 'Sim') 
+                                            ? 'text-rose-400 font-bold' 
+                                            : 'text-slate-300'
+                                    }`}>
+                                        {(meta.affectedClient === 'Sim' || report.affectedClient === 'Sim') ? 'Sim, Houve Impacto no Cliente' : 'Não / Falha Interna'}
+                                    </span>
+
+                                    {(meta.howAffected || report.howAffected) && (
+                                        <div className="mt-2 p-2.5 rounded-lg bg-rose-950/40 border border-rose-800/40 text-rose-200 text-xs leading-relaxed">
+                                            <strong className="block text-rose-300 mb-0.5">Como afetou o cliente:</strong>
+                                            {meta.howAffected || report.howAffected}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
                         {/* BLOCO HIERÁRQUICO DE DADOS ESPECÍFICOS CONFORME A CATEGORIA */}
                         

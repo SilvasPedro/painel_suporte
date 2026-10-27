@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
     X, Check, AlertTriangle, UserCheck, Eye, Edit3, Plus, 
     Table, Bold, Italic, List, ListOrdered, Code, Link2, 
-    Quote, Calendar, Tag, Layers, Flag, Building
+    Quote, Calendar, Layers, Flag, Building, Bug, CheckSquare, 
+    Monitor, Sparkles, AlertOctagon
 } from 'lucide-react';
 import { 
     ERROR_DEPARTMENTS,
     TASK_PRIORITIES,
-    DEFAULT_TAG_SUGGESTIONS,
+    TASK_TYPES,
+    normalizeCategory,
     getTaskOriginDepartment,
     getTaskAssignee,
     getTaskWatchers,
@@ -25,8 +27,8 @@ import SafeMarkdown from './SafeMarkdown';
 /**
  * TaskFormModal (Hubdesk v3.10.1)
  * Modal moderno de Criação e Edição de Ordens de Serviço (O.S. / Tarefas)
- * Layout em Grid limpo, acessibilidade por teclado, temas Claro/Escuro/Morno,
- * editor rico Markdown (GFM) com sanitização XSS e omissão estrita de anexos/estimativas.
+ * Controles em Grid: Título, Departamento de Origem, Tipo da Solicitação,
+ * Prioridade, Prazo, Responsável, Visualizadores e Impacto no Cliente (Afetou o Cliente).
  *
  * @param {Object} props
  * @param {boolean} props.isOpen - Se o modal está aberto
@@ -52,24 +54,23 @@ export default function TaskFormModal({
 
     // 2. Valores Iniciais
     const initialAssignee = getTaskAssignee(editingReport);
-    const initialDept = getTaskOriginDepartment(editingReport) || editingReport?.department || '';
+    const initialDept = getTaskOriginDepartment(editingReport) || editingReport?.department || (user?.department || '');
+    const initialType = normalizeCategory(editingReport?.category || editingReport?.type || 'task');
     const initialDueDate = editingReport?.due_date || editingReport?.dueDate || editingReport?.date || new Date().toISOString().split('T')[0];
-    const initialTags = Array.isArray(editingReport?.tags)
-        ? editingReport.tags
-        : Array.isArray(editingReport?.metadata?.tags)
-        ? editingReport.metadata.tags
-        : [];
+    const initialAffectedClient = editingReport?.affectedClient || editingReport?.metadata?.affectedClient || 'Não';
+    const initialHowAffected = editingReport?.howAffected || editingReport?.metadata?.howAffected || '';
 
     // 3. Estados dos Campos da O.S.
     const [title, setTitle] = useState(editingReport?.title || '');
     const [originDepartment, setOriginDepartment] = useState(initialDept);
-    const [selectedAssigneeId, setSelectedAssigneeId] = useState(initialAssignee?.id || '');
+    const [selectedType, setSelectedType] = useState(initialType);
     const [priority, setPriority] = useState(editingReport?.priority || 'Normal');
     const [dueDate, setDueDate] = useState(initialDueDate);
+    const [selectedAssigneeId, setSelectedAssigneeId] = useState(initialAssignee?.id || '');
     const [watchersList, setWatchersList] = useState(() => getTaskWatchers(editingReport));
     const [watcherToAddId, setWatcherToAddId] = useState('');
-    const [tags, setTags] = useState(initialTags);
-    const [tagInput, setTagInput] = useState('');
+    const [affectedClient, setAffectedClient] = useState(initialAffectedClient);
+    const [howAffected, setHowAffected] = useState(initialHowAffected);
     const [description, setDescription] = useState(editingReport?.description || '');
     const [previewMarkdown, setPreviewMarkdown] = useState(false);
 
@@ -106,7 +107,7 @@ export default function TaskFormModal({
 
     if (!isOpen) return null;
 
-    // Inserção inteligente de sintaxe Markdown no textarea
+    // Inserção de sintaxe Markdown no cursor do textarea
     const insertMarkdownSyntax = (before, after = '', defaultPlaceholder = '') => {
         const textarea = textareaRef.current;
         if (!textarea) {
@@ -134,32 +135,8 @@ export default function TaskFormModal({
     };
 
     const handleInsertTable = () => {
-        const tableTemplate = `\n| Item / Recurso | Detalhe / Parâmetro | Status |\n| :--- | :--- | :--- |\n| Exemplo 1 | Configuração OLT | Ativo |\n| Exemplo 2 | Teste de Enlace | Pendente |\n`;
+        const tableTemplate = `\n| Item / Parâmetro | Detalhe | Status |\n| :--- | :--- | :--- |\n| Exemplo 1 | Configuração OLT | Concluído |\n| Exemplo 2 | Teste de Enlace | Pendente |\n`;
         insertMarkdownSyntax(tableTemplate, '', '');
-    };
-
-    // Gerenciamento de Tags
-    const handleAddTag = (rawTag) => {
-        const clean = String(rawTag || tagInput)
-            .replace(/^[#\s]+/, '')
-            .trim();
-        if (!clean) return;
-        const exists = tags.some((t) => t.toLowerCase() === clean.toLowerCase());
-        if (!exists) {
-            setTags((prev) => [...prev, clean]);
-        }
-        setTagInput('');
-    };
-
-    const handleRemoveTag = (tagToRemove) => {
-        setTags((prev) => prev.filter((t) => t !== tagToRemove));
-    };
-
-    const handleTagKeyDown = (e) => {
-        if (e.key === 'Enter' || e.key === ',') {
-            e.preventDefault();
-            handleAddTag();
-        }
     };
 
     // Gerenciamento de Visualizadores (Watchers)
@@ -220,6 +197,10 @@ export default function TaskFormModal({
             errors.due_date = 'Informe a data de entrega / prazo da O.S.';
         }
 
+        if (affectedClient === 'Sim' && !howAffected.trim()) {
+            errors.howAffected = 'Informe brevemente como a ocorrência afetou o cliente.';
+        }
+
         if (!cleanDesc) {
             errors.description = 'A descrição detalhada da O.S. é obrigatória.';
         } else if (cleanDesc.length < 5) {
@@ -256,16 +237,22 @@ export default function TaskFormModal({
             }
         }
 
-        // Payload limpo e compatível (SEM anexos e SEM estimativa)
+        const typeOption = TASK_TYPES.find((t) => t.id === selectedType);
+        const resolvedTypeLabel = typeOption?.label || 'Tarefa';
+
+        // Payload limpo, unificado e compatível (SEM anexos e SEM estimativas)
         const payload = {
             title: cleanTitle,
             description: cleanDesc,
             originDepartment: cleanDept,
             department: cleanDept,
+            category: selectedType,
+            type: resolvedTypeLabel,
             priority,
             due_date: cleanDueDate,
             date: cleanDueDate,
-            tags,
+            affectedClient,
+            howAffected: affectedClient === 'Sim' ? howAffected.trim() : '',
             assignedTo: resolvedAssignee,
             assigned_to: resolvedAssignee ? resolvedAssignee.id : null,
             assignedToId: resolvedAssignee ? resolvedAssignee.id : null,
@@ -273,13 +260,14 @@ export default function TaskFormModal({
             assignedToEmail: resolvedAssignee ? resolvedAssignee.email : null,
             watchers: watchersList,
             watcherIds: watchersList.map((w) => w.id),
-            category: editingReport?.category || 'service_order',
-            type: editingReport?.type || 'Ordem de Serviço',
             metadata: {
                 ...(editingReport?.metadata || {}),
                 originDepartment: cleanDept,
                 department: cleanDept,
-                tags,
+                category: selectedType,
+                type: resolvedTypeLabel,
+                affectedClient,
+                howAffected: affectedClient === 'Sim' ? howAffected.trim() : '',
                 due_date: cleanDueDate
             },
             updatedAt: new Date()
@@ -300,7 +288,11 @@ export default function TaskFormModal({
                 <div className="px-6 py-4 bg-slate-900 dark:bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-slate-800 dark:border-zinc-800">
                     <div className="flex items-center gap-3">
                         <div className="p-2 rounded-xl bg-slate-800 dark:bg-zinc-900 border border-slate-700 dark:border-zinc-800 text-indigo-400">
-                            <Layers className="w-5 h-5 text-indigo-400" />
+                            {selectedType === 'error_analysis' && <Bug className="w-5 h-5 text-rose-500" />}
+                            {selectedType === 'task' && <CheckSquare className="w-5 h-5 text-sky-400" />}
+                            {selectedType === 'facility_improvement' && <Building className="w-5 h-5 text-emerald-400" />}
+                            {selectedType === 'system_improvement' && <Monitor className="w-5 h-5 text-indigo-400" />}
+                            {selectedType === 'other' && <Sparkles className="w-5 h-5 text-purple-400" />}
                         </div>
                         <div>
                             <h3 id="task-form-modal-title" className="text-base font-bold text-white flex items-center gap-2">
@@ -365,7 +357,7 @@ export default function TaskFormModal({
                                 )}
                             </div>
 
-                            {/* LINHA 1 DA GRADE: DEPARTAMENTO & PESSOA RESPONSÁVEL */}
+                            {/* LINHA 1 DA GRADE: DEPARTAMENTO DE ORIGEM & TIPO DE SOLICITAÇÃO */}
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Coluna A: Departamento de Origem */}
                                 <div>
@@ -403,40 +395,26 @@ export default function TaskFormModal({
                                     )}
                                 </div>
 
-                                {/* Coluna B: Pessoa Responsável (assigned_to) */}
+                                {/* Coluna B: Tipo da Solicitação (No lugar de Tags) */}
                                 <div>
-                                    <label htmlFor="task-assignee" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                                        <UserCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                                        Pessoa Responsável
+                                    <label htmlFor="task-type-select" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                        <Layers className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                        Tipo <span className="text-rose-500">*</span>
                                     </label>
-                                    {canAssign ? (
-                                        <select
-                                            id="task-assignee"
-                                            value={selectedAssigneeId}
-                                            onChange={(e) => setSelectedAssigneeId(e.target.value)}
-                                            className="w-full p-2.5 border border-slate-300 dark:border-zinc-700 rounded-xl focus:border-slate-900 dark:focus:border-indigo-400 focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-indigo-500/20 outline-none text-sm bg-white dark:bg-zinc-800/80 text-slate-900 dark:text-zinc-100"
-                                        >
-                                            <option value="">
-                                                Sem responsável direto (Direcionar para Gestores e Supervisores)
+                                    <select
+                                        id="task-type-select"
+                                        value={selectedType}
+                                        onChange={(e) => setSelectedType(e.target.value)}
+                                        className="w-full p-2.5 border border-slate-300 dark:border-zinc-700 rounded-xl focus:border-slate-900 dark:focus:border-indigo-400 focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-indigo-500/20 outline-none text-sm bg-white dark:bg-zinc-800/80 text-slate-900 dark:text-zinc-100 font-semibold"
+                                    >
+                                        {TASK_TYPES.map((t) => (
+                                            <option key={t.id} value={t.id}>
+                                                {t.label}
                                             </option>
-                                            {collaborators.map((c) => {
-                                                const cid = String(c.id || c.uid || c.email || c.name);
-                                                return (
-                                                    <option key={cid} value={cid}>
-                                                        {c.name} {c.role ? `(${c.role})` : ''}
-                                                    </option>
-                                                );
-                                            })}
-                                        </select>
-                                    ) : (
-                                        <div className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 font-medium">
-                                            {initialAssignee
-                                                ? `Responsável atribuído: ${initialAssignee.name}`
-                                                : 'Sem responsável direto: direcionada automaticamente a Gestores e Supervisores.'}
-                                        </div>
-                                    )}
+                                        ))}
+                                    </select>
                                     <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
-                                        Se deixado em branco, a O.S. será roteada e visibilizada para usuários com perfil de <strong>Gestor</strong> e <strong>Supervisor</strong>.
+                                        Classificação operacional: Análise de Erro, Tarefa, Melhorias ou Outros.
                                     </p>
                                 </div>
                             </div>
@@ -494,10 +472,46 @@ export default function TaskFormModal({
                                 </div>
                             </div>
 
-                            {/* LINHA 3 DA GRADE: VISUALIZADORES & ETIQUETAS (TAGS) */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100 dark:border-zinc-800">
-                                
-                                {/* Coluna A: Visualizadores (watchers - somente leitura) */}
+                            {/* LINHA 3 DA GRADE: PESSOA RESPONSÁVEL & VISUALIZADORES */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Coluna A: Pessoa Responsável (assigned_to) */}
+                                <div>
+                                    <label htmlFor="task-assignee" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                                        <UserCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                        Pessoa Responsável
+                                    </label>
+                                    {canAssign ? (
+                                        <select
+                                            id="task-assignee"
+                                            value={selectedAssigneeId}
+                                            onChange={(e) => setSelectedAssigneeId(e.target.value)}
+                                            className="w-full p-2.5 border border-slate-300 dark:border-zinc-700 rounded-xl focus:border-slate-900 dark:focus:border-indigo-400 focus:ring-2 focus:ring-slate-900/10 dark:focus:ring-indigo-500/20 outline-none text-sm bg-white dark:bg-zinc-800/80 text-slate-900 dark:text-zinc-100"
+                                        >
+                                            <option value="">
+                                                Sem responsável direto (Direcionar para Gestores e Supervisores)
+                                            </option>
+                                            {collaborators.map((c) => {
+                                                const cid = String(c.id || c.uid || c.email || c.name);
+                                                return (
+                                                    <option key={cid} value={cid}>
+                                                        {c.name} {c.role ? `(${c.role})` : ''}
+                                                    </option>
+                                                );
+                                            })}
+                                        </select>
+                                    ) : (
+                                        <div className="p-2.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-xs text-amber-950 dark:text-amber-200 font-medium">
+                                            {initialAssignee
+                                                ? `Responsável atribuído: ${initialAssignee.name}`
+                                                : 'Sem responsável direto: direcionada automaticamente a Gestores e Supervisores.'}
+                                        </div>
+                                    )}
+                                    <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-1">
+                                        Se deixado em branco, a O.S. será roteada e visibilizada para usuários com perfil de <strong>Gestor</strong> e <strong>Supervisor</strong>.
+                                    </p>
+                                </div>
+
+                                {/* Coluna B: Visualizadores (watchers - somente leitura) */}
                                 <div className="space-y-2">
                                     <label htmlFor="task-watchers-select" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
                                         <Eye className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -568,80 +582,77 @@ export default function TaskFormModal({
                                         </p>
                                     )}
                                 </div>
+                            </div>
 
-                                {/* Coluna B: Etiquetas (Tags) */}
-                                <div className="space-y-2">
-                                    <label htmlFor="task-tag-input" className="block text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                                        <Tag className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
-                                        Etiquetas (Tags)
+                            {/* LINHA 4 DA GRADE: AFETOU O CLIENTE? (SIM / NÃO) */}
+                            <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 space-y-3">
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                                        <AlertOctagon className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+                                        Afetou o Atendimento / Cliente? <span className="text-rose-500">*</span>
                                     </label>
-
+                                    
                                     <div className="flex gap-2">
-                                        <input
-                                            id="task-tag-input"
-                                            type="text"
-                                            value={tagInput}
-                                            onChange={(e) => setTagInput(e.target.value)}
-                                            onKeyDown={handleTagKeyDown}
-                                            placeholder="Ex: Rede, VIP, Hardware..."
-                                            className="flex-1 p-2 border border-slate-300 dark:border-zinc-700 rounded-xl focus:border-slate-900 dark:focus:border-indigo-400 outline-none text-xs bg-white dark:bg-zinc-800/80 text-slate-900 dark:text-zinc-100"
-                                        />
                                         <button
                                             type="button"
-                                            onClick={() => handleAddTag()}
-                                            disabled={!tagInput.trim()}
-                                            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 dark:bg-zinc-800 dark:hover:bg-zinc-700 disabled:opacity-40 text-white rounded-xl text-xs font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                            onClick={() => {
+                                                setAffectedClient('Não');
+                                                setHowAffected('');
+                                                setFormErrors((prev) => ({ ...prev, howAffected: '' }));
+                                            }}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                                affectedClient === 'Não'
+                                                    ? 'bg-slate-900 dark:bg-zinc-100 text-white dark:text-zinc-900 border-slate-900 dark:border-zinc-100 shadow-2xs'
+                                                    : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700'
+                                            }`}
                                         >
-                                            <Plus className="w-3.5 h-3.5" />
-                                            Adicionar
+                                            Não / Falha Interna
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAffectedClient('Sim')}
+                                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                                affectedClient === 'Sim'
+                                                    ? 'bg-rose-600 text-white border-rose-500 shadow-2xs ring-2 ring-rose-500/20'
+                                                    : 'bg-white dark:bg-zinc-800 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700'
+                                            }`}
+                                        >
+                                            Sim, Houve Impacto
                                         </button>
                                     </div>
-
-                                    {/* Chips de Tags Ativas */}
-                                    {tags.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 pt-1">
-                                            {tags.map((t) => (
-                                                <span
-                                                    key={t}
-                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-800 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 text-xs font-semibold"
-                                                >
-                                                    #{t}
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleRemoveTag(t)}
-                                                        className="ml-0.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 cursor-pointer"
-                                                        title={`Remover tag #${t}`}
-                                                        aria-label={`Remover tag ${t}`}
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </button>
-                                                </span>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Sugestões Rápidas de Tags */}
-                                    <div className="flex flex-wrap items-center gap-1 pt-1">
-                                        <span className="text-[10px] text-slate-400 dark:text-zinc-500 mr-1">Sugestões:</span>
-                                        {DEFAULT_TAG_SUGGESTIONS.map((sug) => {
-                                            const isSelected = tags.includes(sug);
-                                            return (
-                                                <button
-                                                    key={sug}
-                                                    type="button"
-                                                    onClick={() => (isSelected ? handleRemoveTag(sug) : handleAddTag(sug))}
-                                                    className={`text-[10px] px-2 py-0.5 rounded-md border transition-colors cursor-pointer ${
-                                                        isSelected
-                                                            ? 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-900 dark:text-indigo-200 border-indigo-300 dark:border-indigo-800'
-                                                            : 'bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-400 border-slate-200 dark:border-zinc-700'
-                                                    }`}
-                                                >
-                                                    +{sug}
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
                                 </div>
+
+                                {/* Campo Condicional: Como afetou o cliente? */}
+                                {affectedClient === 'Sim' && (
+                                    <div className="p-3.5 bg-rose-50/70 dark:bg-rose-950/30 rounded-xl border border-rose-200 dark:border-rose-900/60 animate-in fade-in slide-in-from-top-1 duration-200 space-y-1">
+                                        <label htmlFor="task-how-affected" className="block text-xs font-bold text-rose-900 dark:text-rose-300 uppercase tracking-wider">
+                                            Como isso afetou o cliente? <span className="text-rose-600 dark:text-rose-400">*</span>
+                                        </label>
+                                        <input
+                                            id="task-how-affected"
+                                            type="text"
+                                            value={howAffected}
+                                            onChange={(e) => {
+                                                setHowAffected(e.target.value);
+                                                setFormErrors((prev) => ({ ...prev, howAffected: '' }));
+                                            }}
+                                            placeholder="Ex: Cliente ficou sem navegação por 35 minutos após queda do enlace..."
+                                            aria-invalid={!!formErrors.howAffected}
+                                            aria-describedby={formErrors.howAffected ? 'task-how-affected-error' : undefined}
+                                            className={`w-full p-2.5 border rounded-xl outline-none text-sm text-slate-900 dark:text-zinc-100 bg-white dark:bg-zinc-800 transition-all ${
+                                                formErrors.howAffected
+                                                    ? 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                                                    : 'border-rose-300 dark:border-rose-800 focus:border-rose-600 dark:focus:border-rose-400'
+                                            }`}
+                                        />
+                                        {formErrors.howAffected && (
+                                            <p id="task-how-affected-error" role="alert" className="text-xs text-rose-700 dark:text-rose-400 mt-1 flex items-center gap-1 font-medium">
+                                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                                {formErrors.howAffected}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -652,7 +663,6 @@ export default function TaskFormModal({
                                     Descrição da O.S. <span className="text-rose-500">*</span>
                                 </label>
 
-                                {/* Barra de Ferramentas Rica Markdown */}
                                 <div className="flex items-center gap-1 flex-wrap bg-slate-100 dark:bg-zinc-800 p-1 rounded-lg border border-slate-200 dark:border-zinc-700">
                                     <button
                                         type="button"
@@ -730,7 +740,6 @@ export default function TaskFormModal({
 
                                     <div className="w-px h-4 bg-slate-300 dark:bg-zinc-700 mx-0.5" />
 
-                                    {/* Alternância de Pré-visualização */}
                                     <button
                                         type="button"
                                         onClick={() => setPreviewMarkdown((prev) => !prev)}
@@ -756,7 +765,6 @@ export default function TaskFormModal({
                                 </div>
                             </div>
 
-                            {/* Campo Textarea ou Preview Seguro */}
                             {previewMarkdown ? (
                                 <div className="p-4 rounded-xl border border-slate-300 dark:border-zinc-700 bg-slate-50/70 dark:bg-zinc-800/50 min-h-[140px] text-sm overflow-x-auto">
                                     <SafeMarkdown content={description} />
