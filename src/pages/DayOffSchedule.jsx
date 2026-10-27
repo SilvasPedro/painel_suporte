@@ -3,12 +3,14 @@ import {
     Calendar, LayoutGrid, ChevronLeft, ChevronRight, Save, 
     Loader2, Users, GripVertical, X, Plus, Search, 
     Coffee, AlertCircle, CheckCircle2, Clock, Filter,
-    Sparkles, ArrowRight, UserCheck, CalendarDays, ShieldAlert
+    Sparkles, ArrowRight, UserCheck, CalendarDays, ShieldAlert,
+    ChevronDown
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
+import { getHolidaysForYear } from '../utils/holidays';
 
 // Helper para obter dias do mês formatados em grade de calendário (com padding)
 const getCalendarMatrix = (year, month) => {
@@ -128,6 +130,23 @@ export const DayOffSchedule = ({ readOnly = false }) => {
     const month = currentDate.getMonth();
     const documentId = `${year}-${String(month + 1).padStart(2, '0')}`;
     
+    // Memoiza os feriados para os anos necessários na matriz de calendário
+    const holidaysMap = useMemo(() => {
+        const currentYearHolidays = getHolidaysForYear(year);
+        const prevYearHolidays = month === 0 ? getHolidaysForYear(year - 1) : {};
+        const nextYearHolidays = month === 11 ? getHolidaysForYear(year + 1) : {};
+        return { ...prevYearHolidays, ...currentYearHolidays, ...nextYearHolidays };
+    }, [year, month]);
+
+    // Quantidade de feriados nacionais elegíveis a 100% H.E no mês atual
+    const holidayOffsInMonth = useMemo(() => {
+        return Object.values(holidaysMap).filter(h => {
+            const hYear = h.date.getFullYear();
+            const hMonth = h.date.getMonth();
+            return hYear === year && hMonth === month && h.isEligibleHE100;
+        }).length;
+    }, [holidaysMap, year, month]);
+
     const calendarDays = useMemo(() => {
         return getCalendarMatrix(year, month);
     }, [year, month]);
@@ -364,6 +383,15 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                     {totalOffsInMonth} {totalOffsInMonth === 1 ? 'folga programada' : 'folgas programadas'}
                                 </span>
                             )}
+                            {holidayOffsInMonth > 0 && (
+                                <span 
+                                    className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 shadow-2xs" 
+                                    title={`${holidayOffsInMonth} feriado(s) nacional(is) com 100% H.E em ${MONTH_NAMES[month]}`}
+                                >
+                                    <Sparkles className="w-3 h-3 text-amber-600" />
+                                    {holidayOffsInMonth} {holidayOffsInMonth === 1 ? 'feriado 100% H.E' : 'feriados 100% H.E'}
+                                </span>
+                            )}
                         </div>
                         <p className="text-xs text-gray-500 hidden sm:block">
                             Arraste os colaboradores ativos para os dias do mês ou clique em + para atribuir folgas
@@ -400,30 +428,59 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                         </button>
                     </div>
 
-                    {/* Navegador de Mês */}
-                    <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200">
-                        <button
-                            type="button"
-                            onClick={handlePrevMonth}
-                            className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-                            title="Mês Anterior"
-                        >
-                            <ChevronLeft className="w-4 h-4" />
-                        </button>
+                    {/* Navegador de Mês e Seletor Dropdown */}
+                    <div className="flex items-center gap-1.5">
+                        <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200">
+                            <button
+                                type="button"
+                                onClick={handlePrevMonth}
+                                className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                                title="Mês Anterior"
+                                aria-label="Mês Anterior"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </button>
+                            <div className="relative flex items-center">
+                                <select
+                                    value={`${year}-${month}`}
+                                    onChange={(e) => {
+                                        const [y, m] = e.target.value.split('-').map(Number);
+                                        setCurrentDate(new Date(y, m, 1));
+                                    }}
+                                    aria-label="Mês e Ano Selecionados"
+                                    className="appearance-none bg-transparent pl-3 pr-6 py-1 text-xs font-black text-gray-800 capitalize cursor-pointer focus:outline-none"
+                                >
+                                    {[-1, 0, 1].flatMap((yearOffset) => {
+                                        const targetYear = new Date().getFullYear() + yearOffset;
+                                        return MONTH_NAMES.map((name, idx) => (
+                                            <option key={`${targetYear}-${idx}`} value={`${targetYear}-${idx}`}>
+                                                {name} {targetYear}
+                                            </option>
+                                        ));
+                                    })}
+                                </select>
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                            </div>
+                            <button
+                                type="button"
+                                onClick={handleNextMonth}
+                                className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                                title="Próximo Mês"
+                                aria-label="Próximo Mês"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        {/* Botão de Ação Separado: Retornar ao Mês Atual ("Hoje") */}
                         <button
                             type="button"
                             onClick={handleCurrentMonth}
-                            className="px-2.5 py-1 text-xs font-bold text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
+                            className="px-2.5 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-white rounded-xl border border-gray-200 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                            title="Ir para o mês atual"
+                            aria-label="Ir para o mês atual"
                         >
                             Hoje
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleNextMonth}
-                            className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-                            title="Próximo Mês"
-                        >
-                            <ChevronRight className="w-4 h-4" />
                         </button>
                     </div>
 
@@ -569,6 +626,9 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                     const assigned = schedule[cell.dateString] || [];
                                     const isToday = cell.dateString === todayString;
                                     const isDropTarget = dragOverDate === cell.dateString;
+                                    const holiday = holidaysMap[cell.dateString];
+                                    // Feriados nacionais que caem de segunda a sábado recebem destaque de 100% H.E (domingos mantêm padrão)
+                                    const isEligibleHoliday = Boolean(cell.isCurrentMonth && holiday && holiday.isEligibleHE100);
 
                                     return (
                                         <div
@@ -576,33 +636,49 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                             onDragOver={(e) => handleDragOver(e, cell.dateString)}
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, cell.dateString)}
+                                            title={isEligibleHoliday ? `${holiday.name} - Feriado - 100% H.E` : undefined}
+                                            aria-label={isEligibleHoliday ? `${cell.dayNumber} de ${MONTH_NAMES[month]} - ${holiday.name} - Feriado 100% H.E` : undefined}
                                             className={`min-h-[110px] sm:min-h-[130px] p-1.5 sm:p-2 flex flex-col transition-all relative ${
                                                 !cell.isCurrentMonth
                                                     ? 'bg-gray-50/40 text-gray-300'
-                                                    : isToday
-                                                        ? 'bg-red-50/20'
-                                                        : 'bg-white'
-                                            } ${
-                                                isDropTarget
-                                                    ? 'ring-2 ring-red-500 ring-inset bg-red-50/60 scale-[0.99]'
-                                                    : ''
+                                                    : isDropTarget
+                                                        ? 'ring-2 ring-red-500 ring-inset bg-red-50/60 scale-[0.99]'
+                                                        : isEligibleHoliday
+                                                            ? 'bg-amber-50/80 border-amber-300 hover:bg-amber-100/50'
+                                                            : isToday
+                                                                ? 'bg-red-50/20'
+                                                                : 'bg-white'
                                             }`}
                                         >
                                             {/* Cabeçalho do Dia */}
                                             <div className="flex items-center justify-between mb-1.5 select-none">
-                                                <span
-                                                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black font-mono ${
-                                                        isToday
-                                                            ? 'bg-red-600 text-white shadow-xs'
-                                                            : cell.isCurrentMonth
-                                                                ? 'text-gray-800'
-                                                                : 'text-gray-300'
-                                                    }`}
-                                                >
-                                                    {cell.dayNumber}
-                                                </span>
+                                                <div className="flex items-center gap-1.5 min-w-0">
+                                                    <span
+                                                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-black font-mono shrink-0 ${
+                                                            isToday
+                                                                ? 'bg-red-600 text-white shadow-xs'
+                                                                : isEligibleHoliday
+                                                                    ? 'bg-amber-400 text-amber-950 shadow-2xs font-black'
+                                                                    : cell.isCurrentMonth
+                                                                        ? 'text-gray-800'
+                                                                        : 'text-gray-300'
+                                                        }`}
+                                                    >
+                                                        {cell.dayNumber}
+                                                    </span>
 
-                                                <div className="flex items-center gap-1">
+                                                    {isEligibleHoliday && (
+                                                        <span 
+                                                            className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-200 text-amber-900 border border-amber-300 shadow-2xs truncate cursor-help"
+                                                            title={`${holiday.name} - Feriado - 100% H.E`}
+                                                        >
+                                                            <Sparkles className="w-2.5 h-2.5 text-amber-700 shrink-0" />
+                                                            <span className="truncate">100% H.E</span>
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-1 shrink-0">
                                                     {assigned.length > 0 && (
                                                         <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-red-100 text-red-700 border border-red-200">
                                                             {assigned.length} {assigned.length === 1 ? 'folga' : 'folgas'}
@@ -617,12 +693,23 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                             }}
                                                             className="w-5 h-5 rounded-md hover:bg-gray-200 text-gray-400 hover:text-gray-700 flex items-center justify-center transition-colors cursor-pointer"
                                                             title="Adicionar colaborador nesta folga"
+                                                            aria-label={`Adicionar folga em ${cell.dayNumber} de ${MONTH_NAMES[month]}`}
                                                         >
                                                             <Plus className="w-3.5 h-3.5" />
                                                         </button>
                                                     )}
                                                 </div>
                                             </div>
+
+                                            {/* Tag informativa do feriado elegível */}
+                                            {isEligibleHoliday && (
+                                                <div 
+                                                    className="mb-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-amber-900 bg-amber-100/90 border border-amber-200 truncate select-none shadow-2xs"
+                                                    title={`${holiday.name} - Feriado - 100% H.E`}
+                                                >
+                                                    {holiday.name}
+                                                </div>
+                                            )}
 
                                             {/* Lista de Colaboradores de Folga no Dia */}
                                             <div className="flex-1 space-y-1 overflow-y-auto max-h-[90px] sm:max-h-[110px] scrollbar-hide">
@@ -717,11 +804,13 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                             {cardsGroupBy === 'days' ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
                                     {calendarDays
-                                        .filter(cell => cell.isCurrentMonth && (schedule[cell.dateString]?.length > 0 || cell.dateString === todayString))
+                                        .filter(cell => cell.isCurrentMonth && (schedule[cell.dateString]?.length > 0 || cell.dateString === todayString || holidaysMap[cell.dateString]?.isEligibleHE100))
                                         .map((cell) => {
                                             const assigned = schedule[cell.dateString] || [];
                                             const isToday = cell.dateString === todayString;
                                             const isDropTarget = dragOverDate === cell.dateString;
+                                            const holiday = holidaysMap[cell.dateString];
+                                            const isEligibleHoliday = Boolean(holiday?.isEligibleHE100);
 
                                             return (
                                                 <div
@@ -729,27 +818,40 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                     onDragOver={(e) => handleDragOver(e, cell.dateString)}
                                                     onDragLeave={handleDragLeave}
                                                     onDrop={(e) => handleDrop(e, cell.dateString)}
+                                                    title={isEligibleHoliday ? `${holiday.name} - Feriado - 100% H.E` : undefined}
+                                                    aria-label={isEligibleHoliday ? `${cell.dayNumber} de ${MONTH_NAMES[month]} - ${holiday.name} - Feriado 100% H.E` : undefined}
                                                     className={`bg-white rounded-2xl border p-4 shadow-xs flex flex-col justify-between transition-all ${
                                                         isDropTarget
                                                             ? 'border-red-500 ring-2 ring-red-400/40 bg-red-50/30'
-                                                            : isToday
-                                                                ? 'border-red-300 ring-1 ring-red-200'
-                                                                : 'border-gray-200 hover:border-gray-300'
+                                                            : isEligibleHoliday
+                                                                ? 'border-amber-300 bg-amber-50/30 hover:border-amber-400'
+                                                                : isToday
+                                                                    ? 'border-red-300 ring-1 ring-red-200'
+                                                                    : 'border-gray-200 hover:border-gray-300'
                                                     }`}
                                                 >
                                                     <div>
                                                         {/* Header do Card */}
                                                         <div className="flex items-center justify-between pb-3 border-b border-gray-100">
                                                             <div className="flex items-center gap-2">
-                                                                <span className="w-8 h-8 rounded-xl bg-gray-100 font-mono font-black text-sm text-gray-900 flex items-center justify-center border border-gray-200">
+                                                                <span className={`w-8 h-8 rounded-xl font-mono font-black text-sm flex items-center justify-center border ${
+                                                                    isEligibleHoliday
+                                                                        ? 'bg-amber-200 text-amber-950 border-amber-300'
+                                                                        : 'bg-gray-100 text-gray-900 border-gray-200'
+                                                                }`}>
                                                                     {cell.dayNumber}
                                                                 </span>
                                                                 <div>
-                                                                    <p className="text-xs font-black text-gray-900 capitalize">
-                                                                        {cell.date.toLocaleDateString('pt-BR', { weekday: 'long' })}
+                                                                    <p className="text-xs font-black text-gray-900 capitalize flex items-center gap-1.5">
+                                                                        <span>{cell.date.toLocaleDateString('pt-BR', { weekday: 'long' })}</span>
+                                                                        {isEligibleHoliday && (
+                                                                            <span className="text-[10px] font-black px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 border border-amber-300">
+                                                                                100% H.E
+                                                                            </span>
+                                                                        )}
                                                                     </p>
                                                                     <p className="text-[11px] text-gray-400 font-mono">
-                                                                        {cell.dateString} {isToday && '• Hoje'}
+                                                                        {cell.dateString} {isToday && '• Hoje'} {isEligibleHoliday && `• ${holiday.name}`}
                                                                     </p>
                                                                 </div>
                                                             </div>
@@ -878,12 +980,25 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                             <div className="flex flex-wrap gap-1.5">
                                                                 {myOffDates.map(dStr => {
                                                                     const dayNum = dStr.split('-')[2];
+                                                                    const offHoliday = holidaysMap[dStr];
+                                                                    const isOffEligibleHE = Boolean(offHoliday?.isEligibleHE100);
                                                                     return (
                                                                         <span
                                                                             key={dStr}
-                                                                            className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-800 border border-gray-200 flex items-center gap-1.5 shadow-2xs"
+                                                                            title={isOffEligibleHE ? `${offHoliday.name} - Feriado - 100% H.E` : undefined}
+                                                                            aria-label={isOffEligibleHE ? `Dia ${dayNum} - ${offHoliday.name} - Feriado 100% H.E` : undefined}
+                                                                            className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border flex items-center gap-1.5 shadow-2xs ${
+                                                                                isOffEligibleHE
+                                                                                    ? 'bg-amber-100 text-amber-900 border-amber-300'
+                                                                                    : 'bg-gray-100 text-gray-800 border-gray-200'
+                                                                            }`}
                                                                         >
                                                                             <span>Dia {dayNum}</span>
+                                                                            {isOffEligibleHE && (
+                                                                                <span className="text-[9px] font-black px-1 rounded bg-amber-200 text-amber-950 border border-amber-300">
+                                                                                    100% H.E
+                                                                                </span>
+                                                                            )}
                                                                             {!readOnly && (
                                                                                 <button
                                                                                     type="button"

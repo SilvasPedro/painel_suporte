@@ -471,29 +471,58 @@ export const OperationalSchedules = ({
 
                     {/* Controles Específicos para Escala de Plantão (Mês anterior / próximo) */}
                     {activeTab === 'plantao' && (
-                        <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200">
-                            <button
-                                type="button"
-                                onClick={() => setCurrentSundayDate(new Date(sundayYear, sundayMonth - 1, 1))}
-                                className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-                                title="Mês Anterior"
-                            >
-                                <ChevronLeft className="w-4 h-4" />
-                            </button>
+                        <div className="flex items-center gap-1.5">
+                            <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentSundayDate(new Date(sundayYear, sundayMonth - 1, 1))}
+                                    className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                                    title="Mês Anterior"
+                                    aria-label="Mês Anterior"
+                                >
+                                    <ChevronLeft className="w-4 h-4" />
+                                </button>
+                                <div className="relative flex items-center">
+                                    <select
+                                        value={`${sundayYear}-${sundayMonth}`}
+                                        onChange={(e) => {
+                                            const [y, m] = e.target.value.split('-').map(Number);
+                                            setCurrentSundayDate(new Date(y, m, 1));
+                                        }}
+                                        aria-label="Mês e Ano Selecionados"
+                                        className="appearance-none bg-transparent pl-3 pr-6 py-1 text-xs font-black text-gray-800 capitalize cursor-pointer focus:outline-none"
+                                    >
+                                        {[-1, 0, 1].flatMap((yearOffset) => {
+                                            const targetYear = new Date().getFullYear() + yearOffset;
+                                            return MONTH_NAMES.map((name, idx) => (
+                                                <option key={`${targetYear}-${idx}`} value={`${targetYear}-${idx}`}>
+                                                    {name} {targetYear}
+                                                </option>
+                                            ));
+                                        })}
+                                    </select>
+                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentSundayDate(new Date(sundayYear, sundayMonth + 1, 1))}
+                                    className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                                    title="Próximo Mês"
+                                    aria-label="Próximo Mês"
+                                >
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            {/* Botão de Ação Separado: Retornar ao Mês Atual ("Hoje") */}
                             <button
                                 type="button"
                                 onClick={() => setCurrentSundayDate(new Date())}
-                                className="px-2 py-1 text-xs font-bold text-gray-700 hover:text-gray-900 transition-colors cursor-pointer"
+                                className="px-2.5 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-white rounded-xl border border-gray-200 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                                title="Ir para o mês atual"
+                                aria-label="Ir para o mês atual"
                             >
                                 Hoje
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setCurrentSundayDate(new Date(sundayYear, sundayMonth + 1, 1))}
-                                className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
-                                title="Próximo Mês"
-                            >
-                                <ChevronRight className="w-4 h-4" />
                             </button>
                         </div>
                     )}
