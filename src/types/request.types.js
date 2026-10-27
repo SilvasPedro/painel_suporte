@@ -89,6 +89,46 @@ export const OTHER_SUBTYPES = [
     'Sugestão de Processo / Ideia Geral'
 ];
 
+// Níveis Oficiais de Prioridade de Tarefas / O.S.
+export const TASK_PRIORITIES = [
+    {
+        id: 'Baixa',
+        label: 'Baixa Prioridade',
+        badge: 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800',
+        dot: 'bg-emerald-500'
+    },
+    {
+        id: 'Normal',
+        label: 'Normal / Média',
+        badge: 'bg-blue-50 text-blue-800 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800',
+        dot: 'bg-blue-500'
+    },
+    {
+        id: 'Alta',
+        label: 'Alta Prioridade',
+        badge: 'bg-amber-50 text-amber-900 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800',
+        dot: 'bg-amber-500'
+    },
+    {
+        id: 'Crítica',
+        label: 'Crítica / Urgente',
+        badge: 'bg-rose-50 text-rose-900 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800',
+        dot: 'bg-rose-600 animate-pulse'
+    }
+];
+
+// Sugestões Rápidas de Etiquetas (Tags) para Ordens de Serviço
+export const DEFAULT_TAG_SUGGESTIONS = [
+    'Rede / NOC',
+    'Fibra Óptica',
+    'Hardware / Equipamento',
+    'Cliente VIP',
+    'ERP / Sistema',
+    'Urgente',
+    'Infraestrutura',
+    'Financeiro'
+];
+
 /**
  * Normaliza qualquer chave ou label para a chave de categoria canônica
  */
@@ -182,6 +222,45 @@ export const validateRequestForm = (formData) => {
     };
 };
 
+/**
+ * Validação do formulário de Ordem de Serviço / Tarefa (Layout Grid v3.10.1)
+ * Valida Título, Descrição, Departamento e Data de Prazo
+ * @param {Object} taskData
+ * @returns {{ isValid: boolean, errors: Record<string, string> }}
+ */
+export const validateTaskForm = (taskData = {}) => {
+    const errors = {};
+
+    const cleanTitle = (taskData.title || '').trim();
+    if (!cleanTitle) {
+        errors.title = 'O título da O.S. é obrigatório.';
+    } else if (cleanTitle.length < 3) {
+        errors.title = 'O título deve ter no mínimo 3 caracteres.';
+    }
+
+    const cleanDesc = (taskData.description || '').trim();
+    if (!cleanDesc) {
+        errors.description = 'A descrição detalhada da tarefa é obrigatória.';
+    } else if (cleanDesc.length < 5) {
+        errors.description = 'A descrição deve ter no mínimo 5 caracteres.';
+    }
+
+    const dept = (taskData.originDepartment || taskData.department || '').trim();
+    if (!dept) {
+        errors.department = 'Selecione o departamento de origem.';
+    }
+
+    const date = taskData.due_date || taskData.dueDate || taskData.date;
+    if (!date) {
+        errors.due_date = 'Informe a data de entrega ou prazo da O.S.';
+    }
+
+    return {
+        isValid: Object.keys(errors).length === 0,
+        errors
+    };
+};
+
 // ============================================================================
 // SCHEMAS, INTERFACES (TS/JSDoc) & POLÍTICAS RBAC / RLS (v3.10.1)
 // ============================================================================
@@ -217,19 +296,27 @@ export const validateRequestForm = (formData) => {
  * @property {string} id - ID do chamado/tarefa
  * @property {string} title - Título resumido
  * @property {string} description - Descrição detalhada com suporte a Markdown/GFM
- * @property {string} category - Categoria canônica ('error_analysis' | 'system_improvement' | 'facility_improvement' | 'other')
- * @property {string} status - Status ('Pendente' | 'Em Andamento' | 'Resolvido' | 'Cancelado')
- * @property {string} creatorId - Identificador do autor/criador
- * @property {string} creatorName - Nome do autor/criador
+ * @property {string} [category] - Categoria canônica ('error_analysis' | 'system_improvement' | 'facility_improvement' | 'other' | 'service_order')
+ * @property {string} [type] - Rótulo de exibição do tipo da tarefa / O.S.
+ * @property {'Baixa' | 'Normal' | 'Alta' | 'Crítica'} [priority] - Nível de prioridade da O.S.
+ * @property {string} [status] - Status ('Pendente' | 'Em Andamento' | 'Resolvido' | 'Cancelado' | 'Rejeitado')
+ * @property {string} [creatorId] - Identificador do autor/criador
+ * @property {string} [creatorName] - Nome do autor/criador
  * @property {string} [creatorEmail] - E-mail do autor/criador
  * @property {string} [originDepartment] - Departamento de origem da solicitação
+ * @property {string} [department] - Alias para originDepartment
+ * @property {string} [due_date] - Prazo / data limite de entrega formatada (YYYY-MM-DD)
+ * @property {string} [date] - Data de registro ou ocorrido
+ * @property {string[]} [tags] - Lista de etiquetas dinâmicas da O.S.
  * @property {TaskAssignee|null} [assignedTo] - Objeto do colaborador responsável atribuído
  * @property {string|null} [assigned_to] - ID/identificador do responsável (compatibilidade snake_case)
  * @property {string|null} [assignedToId] - ID direto do responsável
  * @property {string|null} [assignedToName] - Nome direto do responsável
  * @property {Watcher[]} [watchers] - Lista de observadores/visualizadores (somente leitura)
  * @property {string[]} [watcherIds] - Lista indexada de IDs dos visualizadores
- * @property {Object} [metadata] - Metadados específicos da categoria
+ * @property {Object} [metadata] - Metadados específicos adicionais
+ * @property {Date|string} [createdAt] - Data de criação
+ * @property {Date|string} [updatedAt] - Data da última atualização
  */
 
 export const LEADERSHIP_ROLES = ['gestor', 'supervisor', 'administrador', 'admin'];

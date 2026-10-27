@@ -8,7 +8,10 @@ import {
     canUserDispatchOrCloseTask,
     getTaskOriginDepartment,
     hasAssignedResponsible,
-    sanitizeMarkdownInput
+    sanitizeMarkdownInput,
+    validateTaskForm,
+    TASK_PRIORITIES,
+    DEFAULT_TAG_SUGGESTIONS
 } from './request.types';
 
 describe('Hubdesk v3.10.1 — RLS Visibility, Watchers, Assignee & Markdown Security', () => {
@@ -100,5 +103,33 @@ describe('Hubdesk v3.10.1 — RLS Visibility, Watchers, Assignee & Markdown Secu
         expect(cleaned).not.toContain('javascript:');
         expect(cleaned).toContain('| Coluna 1 | Coluna 2 |');
         expect(cleaned).toContain('| Valor A | Valor B |');
+    });
+
+    it('valida formulário de O.S. (TaskFormModal) com validação de grid e campos obrigatórios', () => {
+        // Formulário vazio falha
+        const emptyResult = validateTaskForm({});
+        expect(emptyResult.isValid).toBe(false);
+        expect(emptyResult.errors.title).toBeDefined();
+        expect(emptyResult.errors.description).toBeDefined();
+        expect(emptyResult.errors.department).toBeDefined();
+        expect(emptyResult.errors.due_date).toBeDefined();
+
+        // Formulário completo passa
+        const validResult = validateTaskForm({
+            title: 'Falha de conexão na OLT central',
+            description: 'Perda de pacotes detectada na porta PON 3 após manutenção preventiva.',
+            originDepartment: 'NOC',
+            due_date: '2026-10-30',
+            tags: ['Rede / NOC', 'Urgente']
+        });
+        expect(validResult.isValid).toBe(true);
+        expect(validResult.errors).toEqual({});
+    });
+
+    it('fornece constantes oficiais de prioridade e sugestões de tags para O.S.', () => {
+        const priorityIds = TASK_PRIORITIES.map((p) => p.id);
+        expect(priorityIds).toEqual(['Baixa', 'Normal', 'Alta', 'Crítica']);
+        expect(DEFAULT_TAG_SUGGESTIONS).toContain('Rede / NOC');
+        expect(DEFAULT_TAG_SUGGESTIONS).toContain('Cliente VIP');
     });
 });

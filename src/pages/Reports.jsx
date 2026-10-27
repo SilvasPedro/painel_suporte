@@ -1802,6 +1802,23 @@ ${report.description || 'Sem descrição'}`;
                                         </div>
                                     </div>
 
+                                    {/* Etiquetas (Tags) da Tarefa / O.S. */}
+                                    {Array.isArray(viewingReport.tags) && viewingReport.tags.length > 0 && (
+                                        <div className="flex items-center gap-1.5 flex-wrap pb-3 border-b border-gray-100">
+                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mr-1">
+                                                Etiquetas:
+                                            </span>
+                                            {viewingReport.tags.map((t) => (
+                                                <span
+                                                    key={t}
+                                                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 dark:bg-zinc-800 text-gray-700 dark:text-zinc-200 border border-gray-200 dark:border-zinc-700"
+                                                >
+                                                    #{t}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     {/* Solicitante e Data de Criação */}
                                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-0.5 pb-4 border-b border-gray-100">
                                         <div className="flex items-center gap-3">

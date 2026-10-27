@@ -361,6 +361,25 @@ export default function TicketDrawer({
                             </div>
                         )}
 
+                        {/* Etiquetas (Tags) */}
+                        {Array.isArray(report.tags) && report.tags.length > 0 && (
+                            <div className="space-y-1.5">
+                                <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                                    Etiquetas (Tags)
+                                </h4>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {report.tags.map((t) => (
+                                        <span
+                                            key={t}
+                                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-800 text-slate-200 border border-slate-700"
+                                        >
+                                            #{t}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
                         {/* Descrição Detalhada da Solicitação (Markdown GFM Seguro) */}
                         <div className="space-y-1.5">
                             <h4 className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
