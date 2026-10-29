@@ -6,7 +6,8 @@ import {
     Clock, Award, Sparkles, User, Hash, FileText, Check, BarChart2,
     LayoutGrid, Table, List, Filter, ArrowUpDown, SlidersHorizontal,
     Users, ChevronLeft, ChevronRight, RotateCcw, CheckCircle, AlertCircle,
-    CalendarRange, Layers, Flame, Tag, ThumbsUp, HelpCircle, CheckCheck
+    CalendarRange, Layers, Flame, Tag, ThumbsUp, HelpCircle, CheckCheck,
+    Download, FileSpreadsheet, ChevronDown
 } from 'lucide-react';
 import { doc, deleteDoc, updateDoc } from 'firebase/firestore';
 const collectionMap = {
@@ -21,6 +22,7 @@ import { useNotification } from '../context/NotificationContext';
 import { resolveUserName } from '../utils/userResolvers';
 import { usePermissions } from '../context/PermissionsContext';
 import { calculatePerformanceScore as calculateScore } from '../utils/scoringCalculations';
+import { executeDataExport } from '../utils/dataExport';
 
 // --- DICIONÁRIO DE TRADUÇÃO (BANCO DE DADOS -> TELA) ---
 const translateKey = (key) => {
@@ -84,6 +86,8 @@ const DataManager = () => {
     const [viewingItem, setViewingItem] = useState(null);
     const [editingItem, setEditingItem] = useState(null);
     const [deletingItem, setDeletingItem] = useState(null);
+    const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+    const [isExportDropdownOpen, setIsExportDropdownOpen] = useState(false);
 
     const getSafeDateString = (item) => {
         if (item.date) {
@@ -441,6 +445,61 @@ const DataManager = () => {
         setCurrentPage(1);
     };
 
+    const colabFilterName = colabFilter === 'all'
+        ? 'Todos'
+        : (collaboratorsMap[colabFilter] || colabFilter);
+
+    const periodLabels = {
+        all: 'Todo o histórico',
+        today: 'Hoje',
+        '7days': 'Últimos 7 dias',
+        '30days': 'Últimos 30 dias',
+        this_month: 'Este Mês'
+    };
+    const currentPeriodLabel = dateFilter
+        ? `Data: ${dateFilter}`
+        : (periodLabels[periodFilter] || 'Personalizado');
+
+    const handleExportData = (format, exportScope = 'filtered') => {
+        try {
+            const targetData = exportScope === 'all' ? data : filteredData;
+            if (!targetData || targetData.length === 0) {
+                showToast("Nenhum registro encontrado para exportação com os filtros atuais.", "warning");
+                return;
+            }
+
+            const result = executeDataExport({
+                format,
+                activeTab,
+                data: targetData,
+                collaboratorsMap,
+                qaProcesses,
+                statsSummary,
+                filtersContext: {
+                    colabFilterName,
+                    periodLabel: currentPeriodLabel,
+                    activeTab,
+                    exportScope: exportScope === 'all' ? 'Todos os registros' : 'Registros filtrados'
+                }
+            });
+
+            if (format === 'md') {
+                showToast(
+                    `Arquivo "${result.filename}" gerado com sucesso! Salve na pasta __dados_colaboradores para a IA.`,
+                    "success"
+                );
+            } else {
+                showToast(
+                    `Planilha "${result.filename}" exportada com sucesso (${result.count} registros)!`,
+                    "success"
+                );
+            }
+        } catch (error) {
+            console.error('Erro na exportação de dados:', error);
+            showToast("Erro ao exportar dados: " + (error.message || 'Falha inesperada'), "error");
+        }
+    };
+
     const handleDelete = async () => {
         try {
             await deleteDoc(doc(db, collectionMap[activeTab], deletingItem.id));
@@ -479,6 +538,92 @@ const DataManager = () => {
                 </div>
 
                 <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
+                    {/* Botão de Exportação com Menu Dropdown */}
+                    <div className="relative">
+                        <button
+                            id="btn-export-datamanager-menu"
+                            type="button"
+                            onClick={() => setIsExportDropdownOpen(prev => !prev)}
+                            className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                            title="Exportar dados do sistema (.csv ou .md para IA)"
+                        >
+                            <Download className="w-4 h-4 text-red-600" />
+                            <span>Exportar Dados</span>
+                            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isExportDropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+
+                        {isExportDropdownOpen && (
+                            <>
+                                <div 
+                                    className="fixed inset-0 z-30" 
+                                    onClick={() => setIsExportDropdownOpen(false)} 
+                                />
+                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-gray-200 shadow-xl z-40 p-2 text-xs divide-y divide-gray-100 animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="p-2">
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Exportação Rápida (Filtros Atuais)</p>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsExportDropdownOpen(false);
+                                                handleExportData('md', 'filtered');
+                                            }}
+                                            className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-red-50/70 text-left transition-colors cursor-pointer group"
+                                        >
+                                            <div className="p-1.5 rounded-lg bg-red-100 text-red-700 group-hover:bg-red-200 shrink-0">
+                                                <Sparkles className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-gray-900 group-hover:text-red-700 flex items-center gap-1.5">
+                                                    <span>Markdown (.md) para IA</span>
+                                                    <span className="text-[9px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-black">IA</span>
+                                                </div>
+                                                <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
+                                                    Para a pasta <code className="text-red-600 bg-red-50 px-1 rounded font-mono font-semibold">__dados_colaboradores</code> e análises mensais.
+                                                </p>
+                                            </div>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsExportDropdownOpen(false);
+                                                handleExportData('csv', 'filtered');
+                                            }}
+                                            className="w-full flex items-start gap-2.5 p-2 mt-1 rounded-xl hover:bg-emerald-50/70 text-left transition-colors cursor-pointer group"
+                                        >
+                                            <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200 shrink-0">
+                                                <FileSpreadsheet className="w-4 h-4" />
+                                            </div>
+                                            <div>
+                                                <div className="font-bold text-gray-900 group-hover:text-emerald-700">Planilha Excel (.csv)</div>
+                                                <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
+                                                    Formato padrão com delimitador ponto-e-vírgula (;) e UTF-8 BOM.
+                                                </p>
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="p-2 pt-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setIsExportDropdownOpen(false);
+                                                setIsExportModalOpen(true);
+                                            }}
+                                            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer"
+                                        >
+                                            <span className="flex items-center gap-2">
+                                                <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
+                                                Opções Avançadas de Exportação...
+                                            </span>
+                                            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
                     {!isEditable ? (
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold">
                             <ShieldAlert className="w-4 h-4 text-amber-600" />
@@ -772,17 +917,44 @@ const DataManager = () => {
                         )}
                     </div>
 
-                    {/* Botão de limpar filtros caso haja algum ativo */}
-                    {hasActiveFilters && (
-                        <button
-                            id="clear-all-filters-btn"
-                            onClick={handleResetFilters}
-                            className="inline-flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 font-bold bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-                        >
-                            <RotateCcw className="w-3.5 h-3.5" />
-                            Limpar filtros ativos
-                        </button>
-                    )}
+                    <div className="flex items-center gap-2 flex-wrap">
+                        {/* Botões Rápidos de Exportação */}
+                        <div className="inline-flex items-center gap-1 bg-gray-100/90 p-1 rounded-xl border border-gray-200/80 shadow-2xs">
+                            <button
+                                id="quick-export-md-btn"
+                                type="button"
+                                onClick={() => handleExportData('md', 'filtered')}
+                                title="Exportar dados filtrados em Markdown para pasta __dados_colaboradores (IA)"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-gray-700 hover:text-red-700 hover:bg-white rounded-lg transition-all cursor-pointer"
+                            >
+                                <Sparkles className="w-3.5 h-3.5 text-red-600" />
+                                <span>Exportar .md (IA)</span>
+                            </button>
+                            <span className="text-gray-300">|</span>
+                            <button
+                                id="quick-export-csv-btn"
+                                type="button"
+                                onClick={() => handleExportData('csv', 'filtered')}
+                                title="Exportar dados filtrados em planilha CSV (Excel)"
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-gray-700 hover:text-emerald-700 hover:bg-white rounded-lg transition-all cursor-pointer"
+                            >
+                                <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>.csv</span>
+                            </button>
+                        </div>
+
+                        {/* Botão de limpar filtros caso haja algum ativo */}
+                        {hasActiveFilters && (
+                            <button
+                                id="clear-all-filters-btn"
+                                onClick={handleResetFilters}
+                                className="inline-flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 font-bold bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                            >
+                                <RotateCcw className="w-3.5 h-3.5" />
+                                Limpar filtros ativos
+                            </button>
+                        )}
+                    </div>
                 </div>
             </div>
 
@@ -1434,6 +1606,20 @@ const DataManager = () => {
                     item={editingItem} 
                     onClose={() => setEditingItem(null)} 
                     onSave={handleEditSave} 
+                />
+            )}
+            {isExportModalOpen && (
+                <ExportModal
+                    activeTab={activeTab}
+                    filteredCount={filteredData.length}
+                    totalCount={data.length}
+                    colabFilterName={colabFilterName}
+                    periodLabel={currentPeriodLabel}
+                    onClose={() => setIsExportModalOpen(false)}
+                    onExport={({ format, scope }) => {
+                        handleExportData(format, scope);
+                        setIsExportModalOpen(false);
+                    }}
                 />
             )}
         </div>
@@ -2603,6 +2789,222 @@ const EditModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                     >
                         <Check className="w-4 h-4" />
                         Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// MODAL DE EXPORTAÇÃO (.CSV / .MD PARA IA)
+const ExportModal = ({
+    activeTab,
+    filteredCount,
+    totalCount,
+    colabFilterName,
+    periodLabel,
+    onClose,
+    onExport
+}) => {
+    const [format, setFormat] = useState('md');
+    const [scope, setScope] = useState('filtered');
+
+    const tabLabels = {
+        feedbacks: 'Feedbacks de Colaboradores',
+        metrics: 'Desempenho e Produtividade',
+        kpis: 'KPIs do Setor',
+        audits: 'Auditorias QA'
+    };
+
+    const count = scope === 'filtered' ? filteredCount : totalCount;
+    const nowIso = new Date().toISOString().split('T')[0];
+    const safeColab = colabFilterName !== 'Todos' ? `_${colabFilterName.replace(/\s+/g, '_')}` : '';
+    const suggestedFilename = `hubdesk_${activeTab}${safeColab}_${nowIso}.${format}`;
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        onExport({ format, scope });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl max-w-xl w-full border border-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                {/* CABEÇALHO */}
+                <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 p-5 text-white flex items-center justify-between border-b border-zinc-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-red-600/20 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
+                            <Download className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-base text-white tracking-tight flex items-center gap-2">
+                                Exportar Dados da Gestão
+                            </h3>
+                            <p className="text-xs text-zinc-400">
+                                Aba ativa: <strong className="text-zinc-200">{tabLabels[activeTab] || activeTab}</strong>
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="text-zinc-400 hover:text-white p-1.5 rounded-xl hover:bg-zinc-800/80 transition-colors cursor-pointer"
+                        title="Fechar modal"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                {/* CORPO */}
+                <form id="exportForm" onSubmit={handleSubmit} className="p-6 space-y-5 overflow-y-auto flex-1">
+                    {/* 1. ESCOPO */}
+                    <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">
+                            1. Escopo dos Registros
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setScope('filtered')}
+                                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                    scope === 'filtered'
+                                        ? 'border-red-600 bg-red-50/60 ring-2 ring-red-600/20'
+                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-xs text-gray-900">Registros Filtrados</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-red-100 text-red-800">
+                                        {filteredCount} {filteredCount === 1 ? 'item' : 'itens'}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 leading-snug">
+                                    Apenas os dados correspondentes aos filtros ativos na tela ({colabFilterName !== 'Todos' ? `Colab: ${colabFilterName}, ` : ''}{periodLabel}).
+                                </p>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setScope('all')}
+                                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                    scope === 'all'
+                                        ? 'border-red-600 bg-red-50/60 ring-2 ring-red-600/20'
+                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="font-bold text-xs text-gray-900">Todos os Registros</span>
+                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gray-100 text-gray-800">
+                                        {totalCount} {totalCount === 1 ? 'item' : 'itens'}
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 leading-snug">
+                                    Exporta a totalidade dos registros da aba atual sem aplicar filtros de busca ou período.
+                                </p>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* 2. FORMATO */}
+                    <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-2">
+                            2. Formato de Exportação
+                        </label>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setFormat('md')}
+                                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden ${
+                                    format === 'md'
+                                        ? 'border-red-600 bg-gradient-to-br from-red-50/80 to-white ring-2 ring-red-600/20'
+                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 flex items-center justify-center shrink-0">
+                                            <Sparkles className="w-3.5 h-3.5" />
+                                        </div>
+                                        <span className="font-black text-xs text-gray-900">Markdown (.md)</span>
+                                    </div>
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-red-600 text-white shadow-2xs">
+                                        Para IA
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 leading-relaxed mt-1">
+                                    Estruturado com tabelas GFM, resumos consolidados e todos os comentários e pareceres integrais para ingestão por IA na pasta <strong className="text-gray-700 font-bold">__dados_colaboradores</strong>.
+                                </p>
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={() => setFormat('csv')}
+                                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                    format === 'csv'
+                                        ? 'border-emerald-600 bg-gradient-to-br from-emerald-50/80 to-white ring-2 ring-emerald-600/20'
+                                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                                            <FileSpreadsheet className="w-3.5 h-3.5" />
+                                        </div>
+                                        <span className="font-black text-xs text-gray-900">Planilha (.csv)</span>
+                                    </div>
+                                    <span className="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-100 text-emerald-800">
+                                        Excel
+                                    </span>
+                                </div>
+                                <p className="text-[11px] text-gray-500 leading-relaxed mt-1">
+                                    Formato delimitado por ponto-e-vírgula (;) com codificação UTF-8 BOM para compatibilidade nativa com Microsoft Excel e Google Planilhas.
+                                </p>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* DICA DE ANEXAR NA PASTA __dados_colaboradores */}
+                    {format === 'md' && (
+                        <div className="p-3.5 bg-amber-50 border border-amber-200/80 rounded-2xl flex items-start gap-3">
+                            <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="text-xs text-amber-900 leading-relaxed">
+                                <strong className="font-bold">Pasta __dados_colaboradores:</strong>
+                                <span className="block mt-0.5 text-amber-800">
+                                    Após o download, anexe ou copie este arquivo diretamente na pasta <code className="bg-amber-100 text-amber-900 px-1 py-0.5 rounded font-mono font-bold">__dados_colaboradores</code>. A IA usará os pareceres integrais e os históricos para a análise mensal de desempenho!
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* PRÉVIA DO ARQUIVO */}
+                    <div className="p-3 bg-gray-50 border border-gray-200 rounded-2xl text-xs space-y-1 font-mono">
+                        <div className="flex items-center justify-between text-gray-500 text-[11px]">
+                            <span>Arquivo gerado:</span>
+                            <span className="font-bold text-gray-800">{count} registros</span>
+                        </div>
+                        <div className="font-bold text-gray-900 truncate flex items-center gap-1.5">
+                            <FileText className="w-3.5 h-3.5 text-gray-500 shrink-0" />
+                            <span>{suggestedFilename}</span>
+                        </div>
+                    </div>
+                </form>
+
+                {/* RODAPÉ */}
+                <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between shrink-0">
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-white font-bold text-xs transition-colors cursor-pointer"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        form="exportForm"
+                        disabled={count === 0}
+                        className="px-5 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        <Download className="w-4 h-4" />
+                        <span>Baixar Arquivo ({format.toUpperCase()})</span>
                     </button>
                 </div>
             </div>
