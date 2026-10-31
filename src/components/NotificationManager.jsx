@@ -22,6 +22,10 @@ export const NotificationManager = () => {
     const knownFeedbackIds = useRef(new Set());
     const isFeedbackInitialized = useRef(false);
 
+    // Rastreia IDs conhecidos para avaliações mensais (1:1)
+    const knownMonthlyIds = useRef(new Set());
+    const isMonthlyInitialized = useRef(false);
+
     // Rastreia relatórios conhecidos e seus status anteriores: Map<reportId, { status: string, creatorId: string }>
     const knownReportsMap = useRef(new Map());
     const isReportsInitialized = useRef(false);
@@ -42,6 +46,21 @@ export const NotificationManager = () => {
     }, [currentUser, isInactive, requestPermission]);
 
     // 2. Funções utilitárias para abrir itens na aplicação
+        const openMonthlyInApp = (evaluationItem) => {
+        if (typeof window === 'undefined') return;
+        window.focus();
+
+        window.dispatchEvent(new CustomEvent('HUBDESK_NAVIGATE_TAB', {
+            detail: { tab: 'history', subtab: 'monthly' }
+        }));
+
+        setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('HUBDESK_OPEN_MONTHLY_EVALUATION', {
+                detail: { evaluation: evaluationItem }
+            }));
+        }, 150);
+    };
+
     const openFeedbackInApp = (feedbackItem) => {
         if (typeof window === 'undefined') return;
         
@@ -273,6 +292,81 @@ export const NotificationManager = () => {
         return () => {
             unsubscribe();
         };
+    }, [currentUser, isInactive, notify]);
+
+    
+    // 4.1. Escuta em TEMPO REAL a coleção 'monthly_evaluations' no Firestore
+    useEffect(() => {
+        if (!currentUser || isInactive || currentUser.isInactive) return;
+
+        const currentUserId = currentUser.firestoreId || currentUser.uid;
+        const currentEmail = currentUser.email?.toLowerCase();
+        const currentName = currentUser.name?.trim().toLowerCase();
+
+        const isTargetUser = (item) => {
+            if (!item) return false;
+            if (currentUserId && (item.colabId === currentUserId || item.collaboratorId === currentUserId)) return true;
+            if (currentEmail && (item.colabEmail?.toLowerCase() === currentEmail || item.email?.toLowerCase() === currentEmail)) return true;
+            if (currentName && (item.colabName?.toLowerCase() === currentName || item.collaboratorName?.toLowerCase() === currentName)) return true;
+            return false;
+        };
+
+        const unsubscribe = subscribeSharedCollection('monthly_evaluations', (items) => {
+            if (!Array.isArray(items)) return;
+
+            if (!isMonthlyInitialized.current) {
+                items.forEach(item => {
+                    if (item.id) knownMonthlyIds.current.add(item.id);
+                });
+                isMonthlyInitialized.current = true;
+                return;
+            }
+
+            items.forEach((item) => {
+                if (!item || !item.id) return;
+
+                const isKnown = knownMonthlyIds.current.has(item.id);
+                if (isKnown) return;
+
+                knownMonthlyIds.current.add(item.id);
+
+                if (isTargetUser(item)) {
+                    if (currentEmail && item.evaluatorEmail && item.evaluatorEmail.toLowerCase() === currentEmail) {
+                        return;
+                    }
+
+                    const evaluatorName = item.evaluatorName ? resolveUserName(item.evaluatorName) : 'Liderança';
+                    const refMonth = item.referenceMonth 
+                        ? (item.referenceMonth.includes('-') ? item.referenceMonth.split('-').reverse().join('/') : item.referenceMonth)
+                        : 'recente';
+
+                    notify({
+                        title: '🎯 Novo Feedback 1:1 Disponível!',
+                        body: `Seu alinhamento mensal (${refMonth}) foi registrado por ${evaluatorName}. Abra para ler e confirmar ciência.`,
+                        type: 'feedback',
+                        tag: `monthly-${item.id}`,
+                        data: {
+                            id: item.id,
+                            evaluation: item,
+                            type: 'monthly_evaluation',
+                            tab: 'history',
+                            subtab: 'monthly'
+                        },
+                        action: {
+                            label: 'Ver Feedback 1:1',
+                            onClick: () => openMonthlyInApp(item)
+                        },
+                        onClick: () => openMonthlyInApp(item)
+                    });
+
+                    window.dispatchEvent(new CustomEvent('HUBDESK_TRIGGER_PULSE', {
+                        detail: { target: 'history' }
+                    }));
+                }
+            });
+        });
+
+        return () => unsubscribe();
     }, [currentUser, isInactive, notify]);
 
     // 5. Escuta em TEMPO REAL a coleção 'critical_reports' (Regras v3.8.1)

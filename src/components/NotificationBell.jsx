@@ -95,10 +95,18 @@ export const NotificationBell = () => {
 
         if (item.type === 'feedback') {
             clearPulseHistory();
+            const isMonthly = item.subtab === 'monthly' || item.data?.type === 'monthly_evaluation' || item.data?.evaluation;
+            const subtab = isMonthly ? 'monthly' : 'feedbacks';
             window.dispatchEvent(new CustomEvent('HUBDESK_NAVIGATE_TAB', {
-                detail: { tab: 'history', subtab: 'feedbacks' }
+                detail: { tab: 'history', subtab }
             }));
-            if (item.data?.feedback) {
+            if (item.data?.evaluation) {
+                setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('HUBDESK_OPEN_MONTHLY_EVALUATION', {
+                        detail: { evaluation: item.data.evaluation }
+                    }));
+                }, 150);
+            } else if (item.data?.feedback) {
                 setTimeout(() => {
                     window.dispatchEvent(new CustomEvent('HUBDESK_OPEN_FEEDBACK', {
                         detail: { feedback: item.data.feedback }

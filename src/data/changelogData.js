@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.10.1';
+export const CURRENT_VERSION = 'v3.11.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.10.1',
+    version: 'v3.11.0',
     date: 'Outubro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v3.11.0: Refatoração completa da tela de Feedbacks 1:1 (Análise Mensal). Adoção do modelo consolidado em Markdown rico com tabelas, PDI e alinhamentos de metas, fluxo de confirmação de ciência (Estou Ciente) com auditoria de data/hora/usuário, total retrocompatibilidade em modo somente leitura (Read-only com banner contextual) para os feedbacks legados baseados nos 4 pilares, e novos indicadores visuais na listagem.',
+    items: [
+      {
+        icon: FileText,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Novo Formato de Feedback 1:1 em Markdown Consolidado',
+        category: 'Feedbacks 1:1',
+        description: 'Redação e visualização rica com suporte nativo a títulos, listas, tabelas de metas/PDI, citações e código formatado com sanitização estrita (react-markdown, remark-gfm e rehype-sanitize) e tipografia fluida responsiva.'
+      },
+      {
+        icon: CheckCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Fluxo de Ciência e Auditoria (Estou Ciente / Marcar como Lido)',
+        category: 'Compliance & Auditoria',
+        description: 'Botão de confirmação de leitura ao final do documento com registro permanente no Firestore da data, hora, UID e nome do colaborador, além de exibição de badge de confirmação e rastreamento de pendências.'
+      },
+      {
+        icon: History,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Modo Legado Protegido (4 Pilares)',
+        category: 'Retrocompatibilidade',
+        description: 'Preservação integral dos históricos anteriores dos 4 pilares (Produtividade, Qualidade, Comportamento e Pontualidade) em modo somente leitura (Read-only) com banner visual indicativo no topo.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Indicadores Visuais e Usabilidade Aprimorada na Listagem',
+        category: 'UX / UI',
+        description: 'Badges distintivos de formato (Markdown vs. Legado), status claro de leitura (Confirmado vs. Pendente de Leitura) e filtros por formato, status e mês de referência tanto na gestão quanto em Meu Histórico.'
+      }
+    ]
+  },
+  {
+    version: 'v3.10.1',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v3.10.1: Melhorias completas na tela de Tarefas & Relatórios — suporte a Markdown rico (GFM com tabelas, listas e blocos de código) com sanitização estrita contra XSS, gestão de Responsável (assigned_to) e Visualizadores (watchers somente leitura), destaque do Departamento de Origem no cabeçalho e metadados, políticas refinadas de visibilidade RBAC/RLS e correção de contraste WCAG AA nos cartões de status nos temas Claro e Morno.',
     items: [
       {

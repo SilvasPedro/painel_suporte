@@ -698,3 +698,74 @@ html[data-theme="warm"] body {
 }
 
 
+
+/* ============================================================== */
+/* ESTILIZAÇÃO VISUAL COMPLETA PARA TABELAS E DOCUMENTOS MARKDOWN */
+/* ============================================================== */
+.markdown-content table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin: 1.25rem 0 !important;
+  font-size: 0.8125rem !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.75rem !important;
+  overflow: hidden !important;
+}
+
+.markdown-content th {
+  background-color: #09090b !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  padding: 0.75rem 1rem !important;
+  border-bottom: 2px solid #27272a !important;
+  border-right: 1px solid #27272a !important;
+  text-align: left !important;
+  white-space: nowrap !important;
+}
+
+.markdown-content td {
+  padding: 0.75rem 1rem !important;
+  border-bottom: 1px solid #e5e7eb !important;
+  border-right: 1px solid #f3f4f6 !important;
+  color: #1f2937 !important;
+  vertical-align: top !important;
+  line-height: 1.5 !important;
+}
+
+.markdown-content tr:last-child td {
+  border-bottom: none !important;
+}
+
+.markdown-content tr:nth-child(even) td {
+  background-color: #f9fafb !important;
+}
+
+.markdown-content tr:hover td {
+  background-color: #fef2f2 !important;
+}
+
+[data-theme="dark"] .markdown-content table {
+  border-color: #3f3f46 !important;
+}
+
+[data-theme="dark"] .markdown-content th {
+  background-color: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #fafafa !important;
+}
+
+[data-theme="dark"] .markdown-content td {
+  border-bottom-color: #27272a !important;
+  border-right-color: #27272a !important;
+  color: #e4e4e7 !important;
+}
+
+[data-theme="dark"] .markdown-content tr:nth-child(even) td {
+  background-color: #18181b !important;
+}
+
+[data-theme="dark"] .markdown-content tr:hover td {
+  background-color: #27272a !important;
+}

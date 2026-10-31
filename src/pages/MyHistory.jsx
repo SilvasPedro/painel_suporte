@@ -5,7 +5,7 @@ import {
     CheckCircle2, Phone, ThumbsUp, Minus, ThumbsDown, LayoutGrid, 
     Table, Download, RotateCcw, Sparkles, XCircle, Award, 
     Calendar, ArrowUpDown, ChevronDown, ChevronUp, ChevronLeft, ChevronRight,
-    SlidersHorizontal, Clock, AlertTriangle, Hash, CheckCheck, Tag
+    SlidersHorizontal, Clock, AlertTriangle, Hash, CheckCheck, Tag, Archive
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -17,6 +17,8 @@ import WeeklyMetricDetailModal from '../components/history/WeeklyMetricDetailMod
 import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluationDetailModal';
 import { resolveUserName } from '../utils/userResolvers';
 import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { useAuth } from '../context/AuthContext';
+import { isLegacy4PillarsFeedback, buildMarkAsReadPayload } from '../types/feedback.types';
 
 const getItemDateObj = (item) => {
     if (!item) return null;
@@ -104,6 +106,7 @@ const getClassificationBadge = (classification) => {
 
 const MyHistory = ({ currentUserId }) => {
     const { showToast } = useNotification();
+    const { currentUser } = useAuth();
     const [activeTab, setActiveTab] = useState('feedbacks');
     
     // Filtros e Visualização
@@ -207,17 +210,22 @@ const MyHistory = ({ currentUserId }) => {
         };
     }, [activeTab, currentUserId]);
 
-    const handleMarkAsRead = async (id) => {
+    const handleMarkAsRead = async (id, customPayload = null) => {
         try {
-            await updateDoc(doc(db, "feedbacks", id), { read: true });
-            window.dispatchEvent(new CustomEvent('HUBDESK_FEEDBACK_READ', { detail: { id } }));
-            showToast("Feedback marcado como lido!", "success");
-            setData(prev => prev.map(item => item.id === id ? { ...item, read: true } : item));
-            if (viewingItem && viewingItem.id === id) {
-                setViewingItem(prev => ({ ...prev, read: true }));
+            const isMonthly = activeTab === 'monthly';
+            const col = isMonthly ? 'monthly_evaluations' : 'feedbacks';
+            const payload = customPayload || buildMarkAsReadPayload(currentUser);
+            await updateDoc(doc(db, col, id), payload);
+            if (!isMonthly) {
+                window.dispatchEvent(new CustomEvent('HUBDESK_FEEDBACK_READ', { detail: { id } }));
             }
-        } catch {
-            showToast("Erro ao atualizar status.", "error");
+            showToast("Ciência confirmada com sucesso!", "success");
+            setData(prev => prev.map(item => item.id === id ? { ...item, ...payload } : item));
+            if (viewingItem && viewingItem.id === id) {
+                setViewingItem(prev => ({ ...prev, ...payload }));
+            }
+        } catch (err) {
+            showToast("Erro ao atualizar status: " + err.message, "error");
         }
     };
 
@@ -974,10 +982,21 @@ const MyHistory = ({ currentUserId }) => {
 
                                             {/* ABA: ANÁLISE MENSAL */}
                                             {activeTab === 'monthly' && (
-                                                <div className="flex items-center gap-2.5">
+                                                <div className="flex items-center gap-2 flex-wrap">
                                                     <span className="text-xs text-gray-700">
                                                         Mês: <strong className="text-gray-900 font-mono font-bold">{formatMonth(item.referenceMonth)}</strong>
                                                     </span>
+                                                    {isLegacy4PillarsFeedback(item) ? (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                                            <Archive className="w-3 h-3 text-amber-600" />
+                                                            <span>Legado</span>
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                                            <FileText className="w-3 h-3 text-blue-600" />
+                                                            <span>Markdown</span>
+                                                        </span>
+                                                    )}
                                                     {getClassificationBadge(item.classification)}
                                                 </div>
                                             )}
@@ -1010,7 +1029,7 @@ const MyHistory = ({ currentUserId }) => {
                                         {/* COLUNA: AÇÕES */}
                                         <td className="px-3.5 py-2 text-right">
                                             <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
-                                                {activeTab === 'feedbacks' && !item.read && (
+                                                {(activeTab === 'feedbacks' || activeTab === 'monthly') && !item.read && (
                                                     <button 
                                                         onClick={() => handleMarkAsRead(item.id)} 
                                                         className="text-[10px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase transition-colors cursor-pointer mr-1"
@@ -1163,12 +1182,36 @@ const MyHistory = ({ currentUserId }) => {
                                     )}
 
                                     {activeTab === 'monthly' && (
-                                        <div className="space-y-0.5 text-xs">
-                                            <div className="text-gray-600">
-                                                Mês: <strong className="font-mono font-bold text-gray-900">{formatMonth(item.referenceMonth)}</strong>
+                                        <div className="space-y-1 text-xs">
+                                            <div className="flex items-center justify-between gap-1 flex-wrap">
+                                                <div className="text-gray-600">
+                                                    Mês: <strong className="font-mono font-bold text-gray-900">{formatMonth(item.referenceMonth)}</strong>
+                                                </div>
+                                                {isLegacy4PillarsFeedback(item) ? (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
+                                                        <Archive className="w-3 h-3 text-amber-600" />
+                                                        <span>Legado</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                                                        <FileText className="w-3 h-3 text-blue-600" />
+                                                        <span>Markdown</span>
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="text-gray-500 text-[11px]">
                                                 Avaliador: <strong className="text-gray-700">{item.evaluatorName || 'Gestão'}</strong>
+                                            </div>
+                                            <div className="text-[11px] font-bold mt-1">
+                                                {item.read ? (
+                                                    <span className="text-emerald-600 flex items-center gap-1">
+                                                        <CheckCheck className="w-3.5 h-3.5" /> Confirmado
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-amber-600 flex items-center gap-1">
+                                                        <Clock className="w-3.5 h-3.5" /> Leitura Pendente
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -1281,6 +1324,8 @@ const MyHistory = ({ currentUserId }) => {
                     isOpen={true}
                     onClose={() => setViewingItem(null)}
                     evaluation={viewingItem}
+                    onMarkAsRead={handleMarkAsRead}
+                    currentUser={currentUser}
                 />
             )}
 

@@ -64,3 +64,31 @@ exports.notifyNewAudit = functions.firestore
         // Dispara a notificação
         return admin.messaging().send(message);
     });
+
+// Automação 3: Quando uma nova Avaliação Mensal 1:1 for criada
+exports.notifyNewMonthlyEvaluation = functions.firestore
+    .document('monthly_evaluations/{docId}')
+    .onCreate(async (snap, context) => {
+        const data = snap.data();
+        const colabId = data.colabId || data.collaboratorId;
+        if (!colabId) return null;
+
+        const colabDoc = await admin.firestore().collection('collaborators').doc(colabId).get();
+        if (!colabDoc.exists) return null;
+
+        const colabData = colabDoc.data();
+        if (!colabData.fcmToken) {
+            console.log(`Sem token de notificação para o colaborador: ${colabId}`);
+            return null;
+        }
+
+        const message = {
+            notification: {
+                title: '🎯 Novo Feedback 1:1 Disponível!',
+                body: `Seu alinhamento mensal (${data.referenceMonth || 'recente'}) foi registrado. Abra o Hubdesk para conferir e confirmar ciência.`
+            },
+            token: colabData.fcmToken
+        };
+
+        return admin.messaging().send(message);
+    });

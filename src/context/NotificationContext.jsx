@@ -93,7 +93,7 @@ export const NotificationProvider = ({ children }) => {
     useEffect(() => {
         if (!currentUserId) return;
 
-        const unsub = subscribeSharedCollection('feedbacks', (items) => {
+        const unsubFeedbacks = subscribeSharedCollection('feedbacks', (items) => {
             if (!Array.isArray(items)) return;
             const hasUnread = items.some(f => 
                 (f.colabId === currentUserId || f.collaboratorId === currentUserId) && 
@@ -104,7 +104,21 @@ export const NotificationProvider = ({ children }) => {
             }
         });
 
-        return () => unsub();
+        const unsubMonthly = subscribeSharedCollection('monthly_evaluations', (items) => {
+            if (!Array.isArray(items)) return;
+            const hasUnread = items.some(f => 
+                (f.colabId === currentUserId || f.collaboratorId === currentUserId) && 
+                !f.read
+            );
+            if (hasUnread) {
+                setPulseHistory(true);
+            }
+        });
+
+        return () => {
+            unsubFeedbacks();
+            unsubMonthly();
+        };
     }, [currentUserId]);
 
     // Escuta eventos customizados de trigger e clear da bolinha pulsante
