@@ -5,7 +5,8 @@ import {
     CheckCircle, Clock, Filter, KeyRound, UserX, UserCheck, 
     Search, Shield, Eye, LayoutGrid, List, Table, Layers, 
     Sun, Sunset, Moon, ArrowUpDown, ChevronDown, ChevronRight, 
-    Award, TrendingUp, Sparkles, AlertCircle, Check, Mail, MoreVertical
+    Award, TrendingUp, Sparkles, AlertCircle, Check, Mail, MoreVertical,
+    Crown, Zap, Flame, ShieldCheck
 } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -13,6 +14,9 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { ROLES, normalizeRole } from '../services/rbac';
+import { Card, Badge, Button, Tabs, EmptyState, Input } from '../components/ui';
+import { ShineBorder, BorderBeam, AnimatedShinyText, MagicCard } from '../components/magicui';
+import { cn } from '../utils/cn';
 
 // Sub-componentes modais modernos
 import CreateCollaboratorModal from '../components/collaborators/CreateCollaboratorModal';
@@ -148,7 +152,7 @@ const CollaboratorsHub = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [shiftFilter, setShiftFilter] = useState('');
     const [roleFilter, setRoleFilter] = useState('');
-    const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'active', 'inactive'
+    const [statusFilter, setStatusFilter] = useState('active'); // 'all', 'active', 'inactive' (padrão: ativos)
     const [sortBy, setSortBy] = useState('name_asc'); // 'name_asc', 'name_desc', 'score_desc', 'score_asc'
 
     // --- CONEXÃO COM FIRESTORE VIA CACHE COMPARTILHADO ---
@@ -266,6 +270,24 @@ const CollaboratorsHub = () => {
         return count > 0 ? Math.round(sum / count) : null;
     }, [collaborators, latestEvalMap]);
 
+    // Identificação do MVP / Destaque Atual da Equipe
+    const mvpCollaborator = useMemo(() => {
+        let best = null;
+        let maxScore = -Infinity;
+        collaborators.forEach(c => {
+            if (c.active === false) return;
+            const ev = latestEvalMap[c.id];
+            if (ev) {
+                const s = calcularPontuacao(ev);
+                if (s !== null && s > maxScore) {
+                    maxScore = s;
+                    best = { colab: c, score: s, eval: ev };
+                }
+            }
+        });
+        return best;
+    }, [collaborators, latestEvalMap]);
+
     // Filtragem e Ordenação
     const filteredCollaborators = useMemo(() => {
         return collaborators.filter(colab => {
@@ -320,13 +342,13 @@ const CollaboratorsHub = () => {
         });
     }, [collaborators, searchTerm, statusFilter, shiftFilter, roleFilter, sortBy, latestEvalMap]);
 
-    const hasActiveFilters = searchTerm || shiftFilter || roleFilter || statusFilter !== 'all';
+    const hasActiveFilters = searchTerm || shiftFilter || roleFilter || statusFilter !== 'active';
 
     const clearFilters = () => {
         setSearchTerm('');
         setShiftFilter('');
         setRoleFilter('');
-        setStatusFilter('all');
+        setStatusFilter('active');
     };
 
     if (loading) {
@@ -339,211 +361,308 @@ const CollaboratorsHub = () => {
     }
 
     return (
-        <div className="flex-1 p-6 bg-gray-50 h-full overflow-y-auto">
+        <div className="flex-1 p-6 bg-canvas h-full overflow-y-auto">
             {/* CABEÇALHO EXECUTIVO */}
             <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-red-600 uppercase tracking-wider">
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
                         <Users className="w-3.5 h-3.5" />
                         <span>Gestão de Pessoas & Operação</span>
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Hub da Equipe</h1>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <h1 className="font-brand text-2xl font-bold text-primary-hub tracking-tight">Hub da Equipe</h1>
+                    <p className="text-xs text-secondary-hub mt-0.5">
                         Central de colaboradores, acompanhamento de turnos, perfis de acesso e registros individuais.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
                     {isEditable ? (
-                        <button
+                        <Button
+                            variant="primary"
+                            icon={UserPlus}
                             onClick={() => setIsCreateModalOpen(true)}
-                            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs transition-all shadow-sm cursor-pointer hover:shadow"
                         >
-                            <UserPlus className="w-4 h-4" />
-                            <span>Novo Colaborador</span>
-                        </button>
+                            Novo Colaborador
+                        </Button>
                     ) : (
-                        <div className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-xs font-medium shadow-2xs">
-                            <Eye className="w-4 h-4 text-blue-500" />
+                        <div className="flex items-center gap-2 px-3 py-2 bg-surface border border-subtle text-secondary-hub rounded-xl text-xs font-medium shadow-2xs">
+                            <Eye className="w-4 h-4 text-sky-500" />
                             <span>Modo Leitura ({activeRoleInfo?.label || normalizedRole})</span>
                         </div>
                     )}
                 </div>
             </header>
 
-            {/* CARDS DE RESUMO & PAINEL DE TURNOS */}
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-6">
-                {/* Métricas rápidas */}
-                <div className="lg:col-span-1 grid grid-cols-2 gap-3">
-                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
-                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Ativos</span>
-                        <div className="flex items-baseline gap-2 mt-1">
-                            <span className="text-2xl font-black text-gray-900">{activeCount}</span>
-                            <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">
-                                {totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0}%
+            {/* BENTO GRID EXECUTIVO COM MAGIC UI */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                {/* BENTO 1: MVP / DESTAQUE DA SEMANA (BORDER BEAM + ANIMATED SHINY TEXT) */}
+                <div className="relative rounded-2xl bg-surface border border-subtle p-5 shadow-xs flex flex-col justify-between overflow-hidden group">
+                    <BorderBeam size={130} duration={6} colorFrom="#f43f5e" colorTo="#fbbf24" borderWidth={2} />
+                    
+                    <div>
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-600 dark:text-rose-400 tracking-wider uppercase">
+                                <Crown className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                                <span>Destaque Atual</span>
                             </span>
+                            {mvpCollaborator?.score !== undefined && (
+                                <Badge variant="success" size="sm" icon={Sparkles} className="font-bold tabular-nums">
+                                    {mvpCollaborator.score} pts
+                                </Badge>
+                            )}
                         </div>
-                        <span className="text-[10px] text-gray-400 mt-1">De {totalCount} ({inactiveCount} inat.)</span>
-                    </div>
 
-                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
-                        <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider">Média Score</span>
-                        <div className="flex items-baseline gap-1.5 mt-1">
-                            <span className={`text-2xl font-black ${avgActiveScore !== null && avgActiveScore >= 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
-                                {avgActiveScore !== null ? avgActiveScore : '—'}
-                            </span>
-                            {avgActiveScore !== null && <span className="text-xs font-bold text-gray-400">pts</span>}
-                        </div>
-                        <span className="text-[10px] text-gray-400 mt-1">Última avaliação</span>
-                    </div>
-                </div>
-
-                {/* Distribuição por Turno */}
-                <div className="lg:col-span-3 bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                            <Sun className="w-4 h-4 text-amber-500" />
-                            <h2 className="text-xs font-bold text-gray-800 uppercase tracking-wider">Distribuição por Turno (Equipe Ativa)</h2>
-                        </div>
-                        <span className="text-[11px] font-semibold text-gray-500">
-                            Total Ativo: <strong className="text-gray-900">{activeCount}</strong>
-                        </span>
-                    </div>
-
-                    {/* Barra de progresso multi-cor */}
-                    <div className="w-full h-3.5 bg-gray-100 rounded-full overflow-hidden flex my-2 border border-gray-100">
-                        <div 
-                            style={{ width: `${getPercent(manha1Count)}%` }} 
-                            className="bg-amber-400 transition-all duration-500 hover:brightness-105" 
-                            title={`Manhã I: ${manha1Count} (${getPercent(manha1Count).toFixed(0)}%)`}
-                        />
-                        <div 
-                            style={{ width: `${getPercent(manha2Count)}%` }} 
-                            className="bg-yellow-400 transition-all duration-500 hover:brightness-105" 
-                            title={`Manhã II: ${manha2Count} (${getPercent(manha2Count).toFixed(0)}%)`}
-                        />
-                        <div 
-                            style={{ width: `${getPercent(tardeCount)}%` }} 
-                            className="bg-orange-500 transition-all duration-500 hover:brightness-105" 
-                            title={`Tarde: ${tardeCount} (${getPercent(tardeCount).toFixed(0)}%)`}
-                        />
-                        <div 
-                            style={{ width: `${getPercent(noturnoCount)}%` }} 
-                            className="bg-indigo-600 transition-all duration-500 hover:brightness-125" 
-                            title={`Noturno: ${noturnoCount} (${getPercent(noturnoCount).toFixed(0)}%)`}
-                        />
-                        {outrosCount > 0 && (
-                            <div 
-                                style={{ width: `${getPercent(outrosCount)}%` }} 
-                                className="bg-gray-300 transition-all duration-500 hover:brightness-105" 
-                                title={`Outros: ${outrosCount} (${getPercent(outrosCount).toFixed(0)}%)`}
-                            />
+                        {mvpCollaborator ? (
+                            <div className="flex items-center gap-3 mt-2">
+                                <div className="relative w-12 h-12 rounded-2xl bg-zinc-950 text-white flex items-center justify-center font-brand font-black text-base shrink-0 ring-2 ring-rose-500/30 overflow-hidden shadow-sm">
+                                    {(mvpCollaborator.colab.photoUrl || mvpCollaborator.colab.photoURL) ? (
+                                        <img src={mvpCollaborator.colab.photoUrl || mvpCollaborator.colab.photoURL} alt={mvpCollaborator.colab.name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        mvpCollaborator.colab.name?.charAt(0)?.toUpperCase() || '?'
+                                    )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <h4 className="font-brand font-bold text-sm text-primary-hub truncate leading-tight">
+                                        {mvpCollaborator.colab.name}
+                                    </h4>
+                                    <p className="text-[11px] text-muted-hub truncate mt-0.5">
+                                        {mvpCollaborator.colab.role || 'Colaborador'} • {mvpCollaborator.colab.shift || 'Turno Geral'}
+                                    </p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="py-3 text-center">
+                                <span className="text-xs text-muted-hub font-medium">Aguardando avaliações</span>
+                            </div>
                         )}
                     </div>
 
-                    {/* Legenda clicável para filtrar os 4 horários oficiais */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+                    <div className="mt-4 pt-3 border-t border-subtle flex items-center justify-between text-[11px]">
+                        <span className="text-muted-hub">Maior pontuação ativa</span>
+                        {mvpCollaborator && (
+                            <button
+                                onClick={() => setReportColab(mvpCollaborator.colab)}
+                                className="text-rose-500 hover:text-rose-600 font-bold hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                                Ver ficha
+                                <ChevronRight className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                {/* BENTO 2: FORÇA OPERACIONAL & ENGAJAMENTO */}
+                <div className="rounded-2xl bg-surface border border-subtle p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between text-xs font-semibold text-muted-hub uppercase tracking-wider mb-2">
+                            <span className="flex items-center gap-1.5">
+                                <Users className="w-3.5 h-3.5 text-rose-500" />
+                                Força Operacional
+                            </span>
+                            <Badge variant={activeCount === totalCount ? "success" : "neutral"} size="sm">
+                                {totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0}% ativa
+                            </Badge>
+                        </div>
+
+                        <div className="flex items-baseline gap-2 mt-2">
+                            <span className="font-brand text-3xl font-black text-primary-hub tabular-nums">{activeCount}</span>
+                            <span className="text-xs text-muted-hub font-medium">de {totalCount} colaboradores</span>
+                        </div>
+
+                        {/* Barra de Ativos x Inativos */}
+                        <div className="w-full h-2 bg-subtle rounded-full overflow-hidden flex mt-3 border border-subtle">
+                            <div 
+                                style={{ width: `${totalCount > 0 ? (activeCount / totalCount) * 100 : 0}%` }} 
+                                className="bg-emerald-500 rounded-full transition-all duration-500"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-muted-hub pt-3 border-t border-subtle mt-3">
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter(statusFilter === 'active' ? 'all' : 'active')}
+                            className={cn(
+                                "flex items-center gap-1.5 px-2 py-0.5 rounded-lg transition-all cursor-pointer",
+                                statusFilter === 'active' ? "bg-emerald-500/15 text-emerald-600 font-bold" : "hover:text-primary-hub"
+                            )}
+                            title="Filtrar colaboradores ativos"
+                        >
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            {activeCount} ativos
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setStatusFilter(statusFilter === 'inactive' ? 'all' : 'inactive')}
+                            className={cn(
+                                "flex items-center gap-1.5 px-2 py-0.5 rounded-lg transition-all cursor-pointer",
+                                statusFilter === 'inactive' ? "bg-zinc-500/15 text-zinc-300 font-bold" : "hover:text-primary-hub"
+                            )}
+                            title="Filtrar colaboradores inativos"
+                        >
+                            <span className="w-2 h-2 rounded-full bg-zinc-400" />
+                            {inactiveCount} inativos
+                        </button>
+                    </div>
+                </div>
+
+                {/* BENTO 3: RADAR DE TURNOS INTERATIVO (SPAN 2 COLUNAS) */}
+                <div className="lg:col-span-2 rounded-2xl bg-surface border border-subtle p-5 shadow-xs flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-amber-500" />
+                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
+                                    Radar de Turnos (Equipe Ativa)
+                                </h3>
+                            </div>
+                            {shiftFilter ? (
+                                <button
+                                    onClick={() => setShiftFilter('')}
+                                    className="text-[11px] font-bold text-rose-500 hover:underline cursor-pointer flex items-center gap-1"
+                                >
+                                    Filtro: {shiftFilter} (Limpar ✕)
+                                </button>
+                            ) : (
+                                <span className="text-[11px] text-muted-hub font-medium">Clique no turno para filtrar</span>
+                            )}
+                        </div>
+
+                        {/* Barra multi-cor com distribuição de turnos */}
+                        <div className="w-full h-2.5 bg-subtle rounded-full overflow-hidden flex my-2 border border-subtle">
+                            <div style={{ width: `${getPercent(manha1Count)}%` }} className="bg-amber-400 transition-all duration-500" title={`Manhã I: ${manha1Count}`} />
+                            <div style={{ width: `${getPercent(manha2Count)}%` }} className="bg-yellow-400 transition-all duration-500" title={`Manhã II: ${manha2Count}`} />
+                            <div style={{ width: `${getPercent(tardeCount)}%` }} className="bg-orange-500 transition-all duration-500" title={`Tarde: ${tardeCount}`} />
+                            <div style={{ width: `${getPercent(noturnoCount)}%` }} className="bg-indigo-600 transition-all duration-500" title={`Noturno: ${noturnoCount}`} />
+                            {outrosCount > 0 && (
+                                <div style={{ width: `${getPercent(outrosCount)}%` }} className="bg-zinc-400 transition-all duration-500" title={`Outros: ${outrosCount}`} />
+                            )}
+                        </div>
+                    </div>
+
+                    {/* 4 Cards Interativos de Turno */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+                        {/* Manhã I */}
                         <button
                             type="button"
                             onClick={() => setShiftFilter(shiftFilter === 'Manhã I' ? '' : 'Manhã I')}
-                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Manhã I' ? 'border-amber-400 bg-amber-50/80 ring-1 ring-amber-400' : 'border-gray-200 hover:bg-amber-50/40'
-                            }`}
+                            className={cn(
+                                "p-2 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between",
+                                shiftFilter === 'Manhã I' 
+                                    ? "bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30 shadow-xs" 
+                                    : "bg-subtle/50 border-subtle hover:border-amber-400/50 hover:bg-subtle"
+                            )}
                         >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0" />
-                                <div className="truncate">
-                                    <span className="font-bold text-gray-800 block truncate">Manhã I</span>
-                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">08h às 14h15</span>
-                                </div>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                <span className="text-[10px] font-bold text-muted-hub">{getPercent(manha1Count).toFixed(0)}%</span>
                             </div>
-                            <span className="font-bold text-gray-900 shrink-0 ml-1">{manha1Count} <span className="text-gray-400 font-normal text-[10px]">({getPercent(manha1Count).toFixed(0)}%)</span></span>
+                            <div>
+                                <span className="font-bold text-xs text-primary-hub block truncate">Manhã I</span>
+                                <span className="text-[9px] text-muted-hub block">08h - 14h15</span>
+                            </div>
+                            <span className="font-brand font-black text-sm text-primary-hub mt-1">{manha1Count} <span className="text-[10px] font-normal text-muted-hub">membros</span></span>
                         </button>
 
+                        {/* Manhã II */}
                         <button
                             type="button"
                             onClick={() => setShiftFilter(shiftFilter === 'Manhã II' ? '' : 'Manhã II')}
-                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Manhã II' ? 'border-yellow-400 bg-yellow-50/80 ring-1 ring-yellow-400' : 'border-gray-200 hover:bg-yellow-50/40'
-                            }`}
+                            className={cn(
+                                "p-2 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between",
+                                shiftFilter === 'Manhã II' 
+                                    ? "bg-yellow-500/10 border-yellow-500 ring-2 ring-yellow-500/30 shadow-xs" 
+                                    : "bg-subtle/50 border-subtle hover:border-yellow-400/50 hover:bg-subtle"
+                            )}
                         >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 shrink-0" />
-                                <div className="truncate">
-                                    <span className="font-bold text-gray-800 block truncate">Manhã II</span>
-                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">09h às 15h15</span>
-                                </div>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                                <span className="text-[10px] font-bold text-muted-hub">{getPercent(manha2Count).toFixed(0)}%</span>
                             </div>
-                            <span className="font-bold text-gray-900 shrink-0 ml-1">{manha2Count} <span className="text-gray-400 font-normal text-[10px]">({getPercent(manha2Count).toFixed(0)}%)</span></span>
+                            <div>
+                                <span className="font-bold text-xs text-primary-hub block truncate">Manhã II</span>
+                                <span className="text-[9px] text-muted-hub block">09h - 15h15</span>
+                            </div>
+                            <span className="font-brand font-black text-sm text-primary-hub mt-1">{manha2Count} <span className="text-[10px] font-normal text-muted-hub">membros</span></span>
                         </button>
 
+                        {/* Tarde */}
                         <button
                             type="button"
                             onClick={() => setShiftFilter(shiftFilter === 'Tarde' ? '' : 'Tarde')}
-                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Tarde' ? 'border-orange-400 bg-orange-50/80 ring-1 ring-orange-400' : 'border-gray-200 hover:bg-orange-50/40'
-                            }`}
+                            className={cn(
+                                "p-2 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between",
+                                shiftFilter === 'Tarde' 
+                                    ? "bg-orange-500/10 border-orange-500 ring-2 ring-orange-500/30 shadow-xs" 
+                                    : "bg-subtle/50 border-subtle hover:border-orange-400/50 hover:bg-subtle"
+                            )}
                         >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 shrink-0" />
-                                <div className="truncate">
-                                    <span className="font-bold text-gray-800 block truncate">Tarde</span>
-                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">11h às 17h15</span>
-                                </div>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="w-2 h-2 rounded-full bg-orange-500" />
+                                <span className="text-[10px] font-bold text-muted-hub">{getPercent(tardeCount).toFixed(0)}%</span>
                             </div>
-                            <span className="font-bold text-gray-900 shrink-0 ml-1">{tardeCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(tardeCount).toFixed(0)}%)</span></span>
+                            <div>
+                                <span className="font-bold text-xs text-primary-hub block truncate">Tarde</span>
+                                <span className="text-[9px] text-muted-hub block">11h - 17h15</span>
+                            </div>
+                            <span className="font-brand font-black text-sm text-primary-hub mt-1">{tardeCount} <span className="text-[10px] font-normal text-muted-hub">membros</span></span>
                         </button>
 
+                        {/* Noturno */}
                         <button
                             type="button"
                             onClick={() => setShiftFilter(shiftFilter === 'Noturno' ? '' : 'Noturno')}
-                            className={`p-1.5 rounded-lg border text-left transition-all flex items-center justify-between cursor-pointer ${
-                                shiftFilter === 'Noturno' ? 'border-indigo-400 bg-indigo-50/80 ring-1 ring-indigo-400' : 'border-gray-200 hover:bg-indigo-50/40'
-                            }`}
+                            className={cn(
+                                "p-2 rounded-xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between",
+                                shiftFilter === 'Noturno' 
+                                    ? "bg-indigo-500/10 border-indigo-500 ring-2 ring-indigo-500/30 shadow-xs" 
+                                    : "bg-subtle/50 border-subtle hover:border-indigo-400/50 hover:bg-subtle"
+                            )}
                         >
-                            <div className="flex items-center gap-1.5 min-w-0">
-                                <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 shrink-0" />
-                                <div className="truncate">
-                                    <span className="font-bold text-gray-800 block truncate">Noturno</span>
-                                    <span className="text-[9px] text-gray-400 block font-normal leading-none">13h45 às 20h</span>
-                                </div>
+                            <div className="flex items-center justify-between mb-1">
+                                <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                                <span className="text-[10px] font-bold text-muted-hub">{getPercent(noturnoCount).toFixed(0)}%</span>
                             </div>
-                            <span className="font-bold text-gray-900 shrink-0 ml-1">{noturnoCount} <span className="text-gray-400 font-normal text-[10px]">({getPercent(noturnoCount).toFixed(0)}%)</span></span>
+                            <div>
+                                <span className="font-bold text-xs text-primary-hub block truncate">Noturno</span>
+                                <span className="text-[9px] text-muted-hub block">13h45 - 20h</span>
+                            </div>
+                            <span className="font-brand font-black text-sm text-primary-hub mt-1">{noturnoCount} <span className="text-[10px] font-normal text-muted-hub">membros</span></span>
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* BARRA DE CONTROLE: PESQUISA, FILTROS, ORDENAÇÃO E MODOS DE VISUALIZAÇÃO */}
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs mb-6 space-y-3">
+            {/* PAINEL DE CONTROLE / FILTROS E COMANDOS */}
+            <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs mb-6 space-y-3">
                 <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-3">
-                    {/* Campo de Pesquisa */}
+                    {/* Campo de Pesquisa Inteligente */}
                     <div className="relative flex-1">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                        <Search className="w-4 h-4 text-muted-hub absolute left-3.5 top-3" />
                         <input
                             type="text"
                             placeholder="Buscar por nome, e-mail, cargo ou turno..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-9 pr-9 py-2 bg-gray-50/60 border border-gray-300 rounded-xl outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all text-xs"
+                            className="w-full pl-9 pr-9 py-2.5 bg-subtle/60 border border-subtle rounded-xl outline-none focus:bg-surface focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500 text-primary-hub transition-all text-xs"
                         />
                         {searchTerm && (
                             <button
                                 onClick={() => setSearchTerm('')}
-                                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 p-0.5"
+                                className="absolute right-3 top-3 text-muted-hub hover:text-primary-hub p-0.5"
                             >
                                 <X className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
 
-                    {/* Filtros Dropdowns */}
+                    {/* Filtros Dropdowns Reestilizados */}
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Filtro Turno */}
                         <select 
                             value={shiftFilter} 
                             onChange={e => setShiftFilter(e.target.value)}
-                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                            className="py-2.5 px-3 border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/30 text-xs bg-surface text-primary-hub font-medium cursor-pointer shadow-2xs"
                         >
                             <option value="">Todos os Turnos</option>
                             <option value="Manhã I">Manhã I (08:00 às 14:15)</option>
@@ -556,7 +675,7 @@ const CollaboratorsHub = () => {
                         <select 
                             value={roleFilter} 
                             onChange={e => setRoleFilter(e.target.value)}
-                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                            className="py-2.5 px-3 border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/30 text-xs bg-surface text-primary-hub font-medium cursor-pointer shadow-2xs"
                         >
                             <option value="">Todos os Cargos</option>
                             <option value="Gestor">Gestor</option>
@@ -569,10 +688,10 @@ const CollaboratorsHub = () => {
                         <select 
                             value={statusFilter} 
                             onChange={e => setStatusFilter(e.target.value)}
-                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                            className="py-2.5 px-3 border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/30 text-xs bg-surface text-primary-hub font-medium cursor-pointer shadow-2xs"
                         >
+                            <option value="active">Apenas Ativos (Padrão)</option>
                             <option value="all">Status: Todos</option>
-                            <option value="active">Apenas Ativos</option>
                             <option value="inactive">Apenas Inativos</option>
                         </select>
 
@@ -580,7 +699,7 @@ const CollaboratorsHub = () => {
                         <select 
                             value={sortBy} 
                             onChange={e => setSortBy(e.target.value)}
-                            className="py-2 px-3 border border-gray-300 rounded-xl outline-none focus:ring-2 focus:ring-red-600 text-xs bg-white text-gray-700 font-medium cursor-pointer"
+                            className="py-2.5 px-3 border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/30 text-xs bg-surface text-primary-hub font-medium cursor-pointer shadow-2xs"
                         >
                             <option value="name_asc">Nome (A → Z)</option>
                             <option value="name_desc">Nome (Z → A)</option>
@@ -589,16 +708,17 @@ const CollaboratorsHub = () => {
                         </select>
                     </div>
 
-                    {/* SELETOR DE MODOS DE VISUALIZAÇÃO (O GRANDE DESTAQUE) */}
-                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 self-start xl:self-auto shrink-0">
+                    {/* SELETOR DE MODOS DE VISUALIZAÇÃO COM PÍLULAS */}
+                    <div className="flex items-center bg-subtle p-1 rounded-xl border border-subtle self-start xl:self-auto shrink-0">
                         <button
                             type="button"
                             onClick={() => setViewMode('grid')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                                 viewMode === 'grid' 
-                                    ? 'bg-white text-red-600 shadow-xs' 
-                                    : 'text-gray-500 hover:text-gray-800'
-                            }`}
+                                    ? "bg-surface text-rose-500 shadow-2xs" 
+                                    : "text-secondary-hub hover:text-primary-hub"
+                            )}
                             title="Visualização em Grade de Cards"
                         >
                             <LayoutGrid className="w-3.5 h-3.5" />
@@ -608,11 +728,12 @@ const CollaboratorsHub = () => {
                         <button
                             type="button"
                             onClick={() => setViewMode('table')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                                 viewMode === 'table' 
-                                    ? 'bg-white text-red-600 shadow-xs' 
-                                    : 'text-gray-500 hover:text-gray-800'
-                            }`}
+                                    ? "bg-surface text-rose-500 shadow-2xs" 
+                                    : "text-secondary-hub hover:text-primary-hub"
+                            )}
                             title="Visualização em Tabela Detalhada"
                         >
                             <Table className="w-3.5 h-3.5" />
@@ -622,11 +743,12 @@ const CollaboratorsHub = () => {
                         <button
                             type="button"
                             onClick={() => setViewMode('compact')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                                 viewMode === 'compact' 
-                                    ? 'bg-white text-red-600 shadow-xs' 
-                                    : 'text-gray-500 hover:text-gray-800'
-                            }`}
+                                    ? "bg-surface text-rose-500 shadow-2xs" 
+                                    : "text-secondary-hub hover:text-primary-hub"
+                            )}
                             title="Visualização em Diretório Compacto"
                         >
                             <List className="w-3.5 h-3.5" />
@@ -636,11 +758,12 @@ const CollaboratorsHub = () => {
                         <button
                             type="button"
                             onClick={() => setViewMode('grouped')}
-                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            className={cn(
+                                "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer",
                                 viewMode === 'grouped' 
-                                    ? 'bg-white text-red-600 shadow-xs' 
-                                    : 'text-gray-500 hover:text-gray-800'
-                            }`}
+                                    ? "bg-surface text-rose-500 shadow-2xs" 
+                                    : "text-secondary-hub hover:text-primary-hub"
+                            )}
                             title="Visualização Agrupada por Categoria"
                         >
                             <Layers className="w-3.5 h-3.5" />
@@ -650,36 +773,38 @@ const CollaboratorsHub = () => {
                 </div>
 
                 {/* Sub-barra com contadores e botão de limpar filtros */}
-                <div className="flex items-center justify-between text-xs text-gray-500 pt-1 border-t border-gray-100 flex-wrap gap-2">
+                <div className="flex items-center justify-between text-xs text-muted-hub pt-2 border-t border-subtle flex-wrap gap-2">
                     <div className="flex items-center gap-2">
-                        <span>Exibindo <strong className="text-gray-800">{filteredCollaborators.length}</strong> de {totalCount} colaboradores</span>
+                        <span>Exibindo <strong className="text-primary-hub">{filteredCollaborators.length}</strong> de {totalCount} colaboradores</span>
                         {hasActiveFilters && (
                             <button
                                 onClick={clearFilters}
-                                className="text-red-600 hover:text-red-700 font-bold hover:underline ml-2 cursor-pointer"
+                                className="text-rose-500 hover:text-rose-600 font-bold hover:underline ml-2 cursor-pointer"
                             >
-                                Limpar filtros
+                                Limpar todos os filtros
                             </button>
                         )}
                     </div>
 
                     {viewMode === 'grouped' && (
                         <div className="flex items-center gap-2 text-xs">
-                            <span className="font-semibold text-gray-600">Agrupar por:</span>
-                            <div className="flex gap-1">
+                            <span className="font-semibold text-secondary-hub">Agrupar por:</span>
+                            <div className="flex gap-1 bg-subtle p-0.5 rounded-lg border border-subtle">
                                 <button
                                     onClick={() => setGroupBy('shift')}
-                                    className={`px-2 py-0.5 rounded font-bold text-[11px] cursor-pointer ${
-                                        groupBy === 'shift' ? 'bg-zinc-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md font-bold text-[11px] cursor-pointer transition-all",
+                                        groupBy === 'shift' ? "bg-surface text-primary-hub shadow-2xs" : "text-secondary-hub hover:text-primary-hub"
+                                    )}
                                 >
                                     Turno
                                 </button>
                                 <button
                                     onClick={() => setGroupBy('role')}
-                                    className={`px-2 py-0.5 rounded font-bold text-[11px] cursor-pointer ${
-                                        groupBy === 'role' ? 'bg-zinc-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
+                                    className={cn(
+                                        "px-2.5 py-1 rounded-md font-bold text-[11px] cursor-pointer transition-all",
+                                        groupBy === 'role' ? "bg-surface text-primary-hub shadow-2xs" : "text-secondary-hub hover:text-primary-hub"
+                                    )}
                                 >
                                     Cargo (RBAC)
                                 </button>
@@ -691,21 +816,13 @@ const CollaboratorsHub = () => {
 
             {/* CONTEÚDO PRINCIPAL CONFORME O MODO DE VISUALIZAÇÃO */}
             {filteredCollaborators.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-2xl border border-dashed border-gray-300">
-                    <Search className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <h3 className="text-base font-bold text-gray-700">Nenhum colaborador encontrado</h3>
-                    <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-                        Não encontramos nenhum membro com os filtros atuais. Tente ajustar o termo de busca ou limpar os filtros.
-                    </p>
-                    {hasActiveFilters && (
-                        <button
-                            onClick={clearFilters}
-                            className="mt-4 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
-                        >
-                            Limpar Filtros
-                        </button>
-                    )}
-                </div>
+                <EmptyState
+                    icon={Users}
+                    title="Nenhum colaborador encontrado"
+                    description="Não encontramos nenhum membro com os filtros atuais. Tente ajustar o termo de busca ou limpar os filtros."
+                    actionLabel={hasActiveFilters ? "Limpar Filtros" : undefined}
+                    onAction={hasActiveFilters ? clearFilters : undefined}
+                />
             ) : viewMode === 'grid' ? (
                 /* 1. VISUALIZAÇÃO EM GRADE (CARDS MODERNIZADOS) */
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -793,151 +910,158 @@ const CollaboratorsHub = () => {
 };
 
 // =========================================================================
-// COMPONENTE 1: CARD MODERNO DA GRADE
+// COMPONENTE 1: CARD MODERNO DA GRADE (MAGIC CARD COM SPOTLIGHT)
 // =========================================================================
 const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
     const score = latestEval ? calcularPontuacao(latestEval) : null;
     const roleMeta = getRoleMeta(colab.role);
     const isActive = colab.active !== false;
+    const shiftStyle = getShiftBadgeStyle(colab.shift);
+    const ShiftIcon = shiftStyle.icon;
 
     return (
-        <div className={`bg-white rounded-2xl border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-2xs hover:shadow-md ${
-            isActive ? 'border-gray-200 hover:border-red-300' : 'border-gray-200 opacity-60 bg-gray-50/50'
-        }`}>
-            {/* Topo: Avatar, Nome, Status e Badges */}
-            <div className="p-4">
-                <div className="flex items-start justify-between gap-3 mb-3">
+        <MagicCard
+            gradientColor={isActive ? "rgba(244, 63, 94, 0.16)" : "rgba(148, 163, 184, 0.1)"}
+            className={cn(
+                "group relative rounded-2xl flex flex-col justify-between overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300",
+                isActive 
+                    ? "border-subtle hover:border-rose-500/40" 
+                    : "border-subtle opacity-60 bg-subtle/40"
+            )}
+        >
+            {/* Topo do Crachá Digital */}
+            <div className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-4">
                     <div className="relative">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-black text-base select-none overflow-hidden shrink-0 ${
-                            isActive ? 'bg-zinc-950 text-white shadow-xs' : 'bg-gray-400 text-white'
-                        }`}>
+                        <div className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center font-brand font-black text-base select-none overflow-hidden shrink-0 shadow-sm transition-transform duration-300 group-hover:scale-105",
+                            isActive 
+                                ? "bg-zinc-950 text-white ring-2 ring-rose-500/20" 
+                                : "bg-zinc-700 text-zinc-300"
+                        )}>
                             {(colab.photoUrl || colab.photoURL) ? (
                                 <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
                             ) : (
                                 colab.name?.charAt(0)?.toUpperCase() || '?'
                             )}
                         </div>
-                        <span 
-                            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
-                                isActive ? 'bg-emerald-500' : 'bg-gray-400'
-                            }`}
-                            title={isActive ? 'Ativo' : 'Inativo'}
-                        />
                     </div>
 
-                    <div className="flex flex-col items-end gap-1">
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${roleMeta.badgeColor}`}>
+                    <div className="flex flex-col items-end gap-1.5">
+                        <Badge variant="outline" size="sm" className="font-semibold">
                             {roleMeta.label || colab.role || 'Colaborador'}
-                        </span>
-                        {(() => {
-                            const shiftStyle = getShiftBadgeStyle(colab.shift);
-                            const ShiftIcon = shiftStyle.icon;
-                            return (
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${shiftStyle.badgeClass}`}>
-                                    <ShiftIcon className={`w-3 h-3 ${shiftStyle.iconClass}`} />
-                                    <span>{shiftStyle.label}</span>
-                                </span>
-                            );
-                        })()}
+                        </Badge>
+                        <Badge 
+                            variant="neutral" 
+                            size="sm" 
+                            icon={ShiftIcon}
+                            className={cn(shiftStyle.badgeClass, "text-[10px]")}
+                        >
+                            {shiftStyle.label}
+                        </Badge>
                     </div>
                 </div>
 
                 {/* Nome e E-mail */}
-                <h3 className="font-bold text-sm text-gray-900 truncate leading-snug" title={colab.name}>
+                <h3 className="font-brand font-bold text-base text-primary-hub truncate leading-tight group-hover:text-rose-500 transition-colors" title={colab.name}>
                     {colab.name}
                 </h3>
-                <p className="text-[11px] text-gray-500 truncate flex items-center gap-1 mt-0.5" title={colab.email}>
-                    <Mail className="w-3 h-3 text-gray-400 shrink-0" />
-                    <span>{colab.email}</span>
+                <p className="text-xs text-muted-hub truncate flex items-center gap-1.5 mt-1" title={colab.email}>
+                    <Mail className="w-3.5 h-3.5 shrink-0 opacity-70" />
+                    <span>{colab.email || 'Sem e-mail cadastrado'}</span>
                 </p>
 
-                {/* Métricas e Última Avaliação */}
-                <div className="mt-3.5 pt-3 border-t border-gray-100 flex items-center justify-between text-xs">
-                    <div>
-                        <span className="text-[10px] font-semibold text-gray-400 uppercase block">Última Avaliação</span>
-                        <span className="font-medium text-gray-700 flex items-center gap-1 mt-0.5">
-                            <Calendar className="w-3 h-3 text-gray-400" />
-                            {latestEval?.date || 'Sem registro'}
+                {/* Micro Cockpit do Colaborador (Métricas Recentes) */}
+                <div className="mt-4 p-2.5 rounded-xl bg-subtle/80 border border-subtle grid grid-cols-3 divide-x divide-subtle text-center shadow-2xs">
+                    <div className="px-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-hub block tracking-wider">Finaliz.</span>
+                        <span className="font-brand text-xs font-black text-primary-hub tabular-nums mt-0.5 block">
+                            {latestEval?.Atendimentos_Finalizados ?? latestEval?.finalizados ?? '—'}
                         </span>
                     </div>
-
-                    <div className="text-right">
-                        <span className="text-[10px] font-semibold text-gray-400 uppercase block">Pontuação</span>
-                        {score !== null ? (
-                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${
-                                score < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
-                            }`}>
-                                {score} pts
-                            </span>
-                        ) : (
-                            <span className="text-[11px] text-gray-400 font-medium">—</span>
-                        )}
+                    <div className="px-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-hub block tracking-wider">Voz</span>
+                        <span className="font-brand text-xs font-black text-primary-hub tabular-nums mt-0.5 block">
+                            {latestEval?.Ligacoes_Atendidas ?? latestEval?.ligAtendidas ?? '—'}
+                        </span>
                     </div>
+                    <div className="px-1">
+                        <span className="text-[10px] uppercase font-bold text-muted-hub block tracking-wider">Chat</span>
+                        <span className="font-brand text-xs font-black text-primary-hub tabular-nums mt-0.5 block">
+                            {latestEval?.Atendimentos_Huggy ?? latestEval?.huggyVol ?? '—'}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Pontuação & Data */}
+                <div className="mt-3 flex items-center justify-between text-xs pt-2">
+                    <span className="text-[11px] text-muted-hub flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-muted-hub" />
+                        {latestEval?.date || 'Sem avaliação'}
+                    </span>
+
+                    {score !== null ? (
+                        <Badge 
+                            variant={score >= 0 ? "success" : "danger"} 
+                            size="md"
+                            icon={Sparkles}
+                            className="font-bold tabular-nums"
+                        >
+                            {score} pts
+                        </Badge>
+                    ) : (
+                        <span className="text-[11px] text-muted-hub">—</span>
+                    )}
                 </div>
             </div>
 
-            {/* Rodapé de Ações */}
-            <div className="p-1.5 bg-gray-50 border-t border-gray-100 grid grid-cols-4 gap-1">
-                {isEditable ? (
-                    <button 
-                        onClick={onEdit} 
-                        className="flex flex-col items-center justify-center p-1.5 text-gray-600 hover:text-gray-950 hover:bg-white rounded-lg transition-all cursor-pointer"
-                        title="Editar Informações"
-                    >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-bold mt-0.5">Editar</span>
-                    </button>
-                ) : (
-                    <div className="flex flex-col items-center justify-center p-1.5 text-gray-300 cursor-not-allowed">
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-bold mt-0.5">Editar</span>
-                    </div>
-                )}
+            {/* Barra de Ações Rápidas Ultra-Moderna */}
+            <div className="p-2 bg-subtle/40 border-t border-subtle grid grid-cols-4 gap-1.5">
+                <button
+                    onClick={onEdit}
+                    disabled={!isEditable}
+                    className="flex flex-col items-center justify-center py-1.5 px-1 rounded-lg text-secondary-hub hover:text-primary-hub hover:bg-surface border border-transparent hover:border-subtle transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Editar Informações"
+                >
+                    <Edit3 className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-bold mt-0.5">Editar</span>
+                </button>
 
-                <button 
-                    onClick={onReport} 
-                    className="flex flex-col items-center justify-center p-1.5 text-red-600 hover:text-red-700 hover:bg-white rounded-lg transition-all cursor-pointer"
+                <button
+                    onClick={onReport}
+                    className="flex flex-col items-center justify-center py-1.5 px-1 rounded-lg text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer"
                     title="Ver Relatório de Desempenho"
                 >
                     <FileText className="w-3.5 h-3.5" />
                     <span className="text-[9px] font-bold mt-0.5">Relatório</span>
                 </button>
 
-                {isEditable ? (
-                    <button 
-                        onClick={onFeedback} 
-                        className="flex flex-col items-center justify-center p-1.5 text-amber-700 hover:text-amber-800 hover:bg-white rounded-lg transition-all cursor-pointer"
-                        title="Registrar Feedback"
-                    >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-bold mt-0.5">Feedback</span>
-                    </button>
-                ) : (
-                    <div className="flex flex-col items-center justify-center p-1.5 text-gray-300 cursor-not-allowed">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-bold mt-0.5">Feedback</span>
-                    </div>
-                )}
+                <button
+                    onClick={onFeedback}
+                    disabled={!isEditable}
+                    className="flex flex-col items-center justify-center py-1.5 px-1 rounded-lg text-amber-500 hover:text-amber-600 hover:bg-amber-500/10 border border-transparent hover:border-amber-500/20 transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Registrar Feedback"
+                >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span className="text-[9px] font-bold mt-0.5">Feedback</span>
+                </button>
 
-                {isEditable ? (
-                    <button 
-                        onClick={onToggleActive} 
-                        className={`flex flex-col items-center justify-center p-1.5 ${
-                            isActive ? 'text-gray-500 hover:text-red-600' : 'text-emerald-600 hover:text-emerald-700'
-                        } hover:bg-white rounded-lg transition-all cursor-pointer`}
-                        title={isActive ? 'Inativar Colaborador' : 'Ativar Colaborador'}
-                    >
-                        {isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
-                        <span className="text-[9px] font-bold mt-0.5">{isActive ? 'Inativar' : 'Ativar'}</span>
-                    </button>
-                ) : (
-                    <div className="flex flex-col items-center justify-center p-1.5 text-gray-300 cursor-not-allowed">
-                        <UserX className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-bold mt-0.5">Status</span>
-                    </div>
-                )}
+                <button
+                    onClick={onToggleActive}
+                    disabled={!isEditable}
+                    className={cn(
+                        "flex flex-col items-center justify-center py-1.5 px-1 rounded-lg border border-transparent transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed",
+                        isActive 
+                            ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10 hover:border-red-500/20" 
+                            : "text-emerald-500 hover:text-emerald-600 hover:bg-emerald-500/10 hover:border-emerald-500/20"
+                    )}
+                    title={isActive ? "Inativar Colaborador" : "Ativar Colaborador"}
+                >
+                    {isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                    <span className="text-[9px] font-bold mt-0.5">{isActive ? "Inativar" : "Ativar"}</span>
+                </button>
             </div>
-        </div>
+        </MagicCard>
     );
 };
 
@@ -946,21 +1070,21 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
 // =========================================================================
 const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
     return (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+        <div className="bg-surface rounded-2xl border border-subtle shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
-                    <thead>
-                        <tr className="bg-zinc-950 text-white text-[11px] uppercase tracking-wider font-bold">
-                            <th className="py-3 px-4">Colaborador</th>
-                            <th className="py-3 px-4">Cargo (RBAC)</th>
-                            <th className="py-3 px-4">Turno</th>
-                            <th className="py-3 px-4">Status</th>
-                            <th className="py-3 px-4">Última Avaliação</th>
-                            <th className="py-3 px-4">Pontuação</th>
-                            <th className="py-3 px-4 text-right">Ações Rápidas</th>
+                    <thead className="bg-subtle/80 border-b border-subtle">
+                        <tr className="text-secondary-hub text-[11px] uppercase tracking-wider font-bold">
+                            <th className="py-3.5 px-4">Colaborador</th>
+                            <th className="py-3.5 px-4">Cargo (RBAC)</th>
+                            <th className="py-3.5 px-4">Turno</th>
+                            <th className="py-3.5 px-4">Status</th>
+                            <th className="py-3.5 px-4">Última Avaliação</th>
+                            <th className="py-3.5 px-4">Pontuação</th>
+                            <th className="py-3.5 px-4 text-right">Ações Rápidas</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs">
+                    <tbody className="divide-y divide-subtle text-xs">
                         {collaborators.map(colab => {
                             const evalData = latestEvalMap[colab.id];
                             const score = evalData ? calcularPontuacao(evalData) : null;
@@ -968,13 +1092,14 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                             const isActive = colab.active !== false;
 
                             return (
-                                <tr key={colab.id} className="hover:bg-gray-50/80 transition-colors">
+                                <tr key={colab.id} className="hover:bg-subtle/50 transition-colors">
                                     {/* Nome + Avatar + Email */}
-                                    <td className="py-3 px-4">
+                                    <td className="py-3.5 px-4">
                                         <div className="flex items-center gap-3">
-                                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 overflow-hidden ${
-                                                isActive ? 'bg-zinc-900' : 'bg-gray-400'
-                                            }`}>
+                                            <div className={cn(
+                                                "w-9 h-9 rounded-xl flex items-center justify-center font-brand font-black text-xs text-white shrink-0 overflow-hidden shadow-2xs",
+                                                isActive ? "bg-zinc-950 ring-1 ring-subtle" : "bg-zinc-600"
+                                            )}>
                                                 {(colab.photoUrl || colab.photoURL) ? (
                                                     <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
                                                 ) : (
@@ -982,10 +1107,10 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                                                 )}
                                             </div>
                                             <div className="min-w-0">
-                                                <div className="font-bold text-gray-900 truncate max-w-[200px]" title={colab.name}>
+                                                <div className="font-brand font-bold text-primary-hub truncate max-w-[200px]" title={colab.name}>
                                                     {colab.name}
                                                 </div>
-                                                <div className="text-[11px] text-gray-500 truncate max-w-[200px]" title={colab.email}>
+                                                <div className="text-[11px] text-muted-hub truncate max-w-[200px]" title={colab.email}>
                                                     {colab.email}
                                                 </div>
                                             </div>
@@ -993,60 +1118,64 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                                     </td>
 
                                     {/* Cargo */}
-                                    <td className="py-3 px-4">
-                                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${roleMeta.badgeColor}`}>
-                                            {roleMeta.label}
-                                        </span>
+                                    <td className="py-3.5 px-4">
+                                        <Badge variant="outline" size="sm" className="font-semibold">
+                                            {roleMeta.label || colab.role || 'Colaborador'}
+                                        </Badge>
                                     </td>
 
                                     {/* Turno */}
-                                    <td className="py-3 px-4">
+                                    <td className="py-3.5 px-4">
                                         {(() => {
                                             const shiftStyle = getShiftBadgeStyle(colab.shift);
                                             const ShiftIcon = shiftStyle.icon;
                                             return (
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${shiftStyle.badgeClass}`}>
-                                                    <ShiftIcon className={`w-3.5 h-3.5 ${shiftStyle.iconClass}`} />
-                                                    <span>{shiftStyle.label}</span>
-                                                </span>
+                                                <Badge 
+                                                    variant="neutral" 
+                                                    size="sm" 
+                                                    icon={ShiftIcon}
+                                                    className={shiftStyle.badgeClass}
+                                                >
+                                                    {shiftStyle.label}
+                                                </Badge>
                                             );
                                         })()}
                                     </td>
 
                                     {/* Status */}
-                                    <td className="py-3 px-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${
-                                            isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'
-                                        }`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                    <td className="py-3.5 px-4">
+                                        <Badge variant={isActive ? "success" : "neutral"} size="sm" dot>
                                             {isActive ? 'Ativo' : 'Inativo'}
-                                        </span>
+                                        </Badge>
                                     </td>
 
                                     {/* Data */}
-                                    <td className="py-3 px-4 text-gray-600 font-medium">
-                                        {evalData?.date || <span className="text-gray-400">Sem registro</span>}
+                                    <td className="py-3.5 px-4 text-secondary-hub font-medium">
+                                        {evalData?.date || <span className="text-muted-hub">Sem registro</span>}
                                     </td>
 
                                     {/* Pontuação */}
-                                    <td className="py-3 px-4">
+                                    <td className="py-3.5 px-4">
                                         {score !== null ? (
-                                            <span className={`font-black text-xs px-2 py-0.5 rounded-md ${
-                                                score < 0 ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'
-                                            }`}>
+                                            <Badge 
+                                                variant={score >= 0 ? "success" : "danger"} 
+                                                size="sm"
+                                                icon={Sparkles}
+                                                className="font-bold tabular-nums"
+                                            >
                                                 {score} pts
-                                            </span>
+                                            </Badge>
                                         ) : (
-                                            <span className="text-gray-400 font-medium">—</span>
+                                            <span className="text-muted-hub font-medium">—</span>
                                         )}
                                     </td>
 
                                     {/* Ações */}
-                                    <td className="py-3 px-4 text-right">
+                                    <td className="py-3.5 px-4 text-right">
                                         <div className="flex items-center justify-end gap-1">
                                             <button
                                                 onClick={() => onReport(colab)}
-                                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                                                 title="Relatório"
                                             >
                                                 <FileText className="w-4 h-4" />
@@ -1056,23 +1185,24 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                                                 <>
                                                     <button
                                                         onClick={() => onFeedback(colab)}
-                                                        className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                        className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
                                                         title="Feedback"
                                                     >
                                                         <MessageSquare className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onEdit(colab)}
-                                                        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                                        className="p-1.5 text-secondary-hub hover:bg-subtle rounded-lg transition-colors cursor-pointer"
                                                         title="Editar"
                                                     >
                                                         <Edit3 className="w-4 h-4" />
                                                     </button>
                                                     <button
                                                         onClick={() => onToggleActive(colab)}
-                                                        className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                                            isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
-                                                        }`}
+                                                        className={cn(
+                                                            "p-1.5 rounded-lg transition-colors cursor-pointer",
+                                                            isActive ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-500/10"
+                                                        )}
                                                         title={isActive ? 'Inativar' : 'Ativar'}
                                                     >
                                                         {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
@@ -1100,14 +1230,16 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
     const isActive = colab.active !== false;
 
     return (
-        <div className={`bg-white p-3 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all hover:border-gray-300 shadow-2xs ${
-            isActive ? 'border-gray-200' : 'border-gray-200 opacity-65 bg-gray-50'
-        }`}>
+        <div className={cn(
+            "bg-surface p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all shadow-2xs hover:border-subtle hover:shadow-xs",
+            isActive ? "border-subtle" : "border-subtle opacity-65 bg-subtle/40"
+        )}>
             {/* Informações básicas */}
             <div className="flex items-center gap-3 min-w-0">
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-xs text-white shrink-0 overflow-hidden ${
-                    isActive ? 'bg-zinc-950' : 'bg-gray-400'
-                }`}>
+                <div className={cn(
+                    "w-9 h-9 rounded-xl flex items-center justify-center font-brand font-black text-xs text-white shrink-0 overflow-hidden shadow-2xs",
+                    isActive ? "bg-zinc-950 ring-1 ring-subtle" : "bg-zinc-600"
+                )}>
                     {(colab.photoUrl || colab.photoURL) ? (
                         <img src={colab.photoUrl || colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
                     ) : (
@@ -1116,47 +1248,54 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                 </div>
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="font-bold text-xs text-gray-900 truncate" title={colab.name}>{colab.name}</h4>
-                        <span className={`text-[10px] font-bold px-2 py-0.2 rounded border ${roleMeta.badgeColor}`}>
-                            {roleMeta.label}
-                        </span>
+                        <h4 className="font-brand font-bold text-xs text-primary-hub truncate" title={colab.name}>{colab.name}</h4>
+                        <Badge variant="outline" size="sm">
+                            {roleMeta.label || colab.role || 'Colaborador'}
+                        </Badge>
                         {(() => {
                             const shiftStyle = getShiftBadgeStyle(colab.shift);
                             const ShiftIcon = shiftStyle.icon;
                             return (
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border flex items-center gap-1 ${shiftStyle.badgeClass}`}>
-                                    <ShiftIcon className={`w-3 h-3 ${shiftStyle.iconClass}`} />
-                                    <span>{shiftStyle.label}</span>
-                                </span>
+                                <Badge 
+                                    variant="neutral" 
+                                    size="sm" 
+                                    icon={ShiftIcon}
+                                    className={shiftStyle.badgeClass}
+                                >
+                                    {shiftStyle.label}
+                                </Badge>
                             );
                         })()}
                         {!isActive && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 bg-red-100 text-red-700 rounded">
+                            <Badge variant="danger" size="sm">
                                 Inativo
-                            </span>
+                            </Badge>
                         )}
                     </div>
-                    <p className="text-[11px] text-gray-500 truncate mt-0.5">{colab.email}</p>
+                    <p className="text-[11px] text-muted-hub truncate mt-0.5">{colab.email}</p>
                 </div>
             </div>
 
             {/* Score + Ações Rápidas */}
-            <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+            <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-subtle">
                 <div className="text-left sm:text-right">
-                    <span className="text-[10px] text-gray-400 block font-medium">Último Score</span>
+                    <span className="text-[10px] text-muted-hub block font-medium">Último Score</span>
                     {score !== null ? (
-                        <span className={`font-black text-xs ${score < 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                        <span className={cn(
+                            "font-brand font-black text-xs tabular-nums",
+                            score < 0 ? "text-rose-500" : "text-emerald-500"
+                        )}>
                             {score} pts
                         </span>
                     ) : (
-                        <span className="text-[11px] text-gray-400">—</span>
+                        <span className="text-[11px] text-muted-hub">—</span>
                     )}
                 </div>
 
                 <div className="flex items-center gap-1">
                     <button
                         onClick={onReport}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
+                        className="p-1.5 text-rose-500 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
                         title="Relatório"
                     >
                         <FileText className="w-4 h-4" />
@@ -1167,7 +1306,7 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                         <>
                             <button
                                 onClick={onFeedback}
-                                className="p-1.5 text-amber-700 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
+                                className="p-1.5 text-amber-500 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer text-xs font-semibold flex items-center gap-1"
                                 title="Feedback"
                             >
                                 <MessageSquare className="w-4 h-4" />
@@ -1175,16 +1314,17 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                             </button>
                             <button
                                 onClick={onEdit}
-                                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                className="p-1.5 text-secondary-hub hover:bg-subtle rounded-lg transition-colors cursor-pointer"
                                 title="Editar"
                             >
                                 <Edit3 className="w-4 h-4" />
                             </button>
                             <button
                                 onClick={onToggleActive}
-                                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                                    isActive ? 'text-gray-400 hover:text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'
-                                }`}
+                                className={cn(
+                                    "p-1.5 rounded-lg transition-colors cursor-pointer",
+                                    isActive ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-500/10"
+                                )}
                                 title={isActive ? 'Inativar' : 'Ativar'}
                             >
                                 {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
@@ -1244,39 +1384,39 @@ const CollaboratorGroupedView = ({ collaborators, groupBy, latestEvalMap, isEdit
                 const activeInGroup = groupColabs.filter(c => c.active !== false).length;
 
                 return (
-                    <div key={groupKey} className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs">
+                    <div key={groupKey} className="bg-surface rounded-2xl border border-subtle p-5 shadow-xs">
                         {/* Header do Grupo */}
-                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                        <div className="flex items-center justify-between mb-4 pb-3 border-b border-subtle">
                             <div className="flex items-center gap-2.5">
                                 {groupBy === 'shift' ? (() => {
                                     const ShiftIcon = shiftStyle.icon;
                                     return (
-                                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center border ${shiftStyle.badgeClass}`}>
-                                            <ShiftIcon className={`w-4 h-4 ${shiftStyle.iconClass}`} />
+                                        <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center border", shiftStyle.badgeClass)}>
+                                            <ShiftIcon className={cn("w-4 h-4", shiftStyle.iconClass)} />
                                         </div>
                                     );
                                 })() : (
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${roleMeta?.badgeColor || 'bg-gray-100'}`}>
-                                        <Shield className="w-4 h-4" />
+                                    <div className={cn("w-8 h-8 rounded-xl flex items-center justify-center", roleMeta?.badgeColor || 'bg-subtle')}>
+                                        <Shield className="w-4 h-4 text-primary-hub" />
                                     </div>
                                 )}
                                 <div>
                                     <div className="flex items-center gap-2">
-                                        <h3 className="font-bold text-base text-gray-900">{groupTitle}</h3>
+                                        <h3 className="font-brand font-bold text-base text-primary-hub">{groupTitle}</h3>
                                         {groupBy === 'shift' && shiftStyle && shiftStyle.hours !== '--' && (
-                                            <span className="text-[10px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full border border-gray-200">
+                                            <span className="text-[10px] font-semibold text-secondary-hub bg-subtle px-2 py-0.5 rounded-full border border-subtle">
                                                 {shiftStyle.hours}
                                             </span>
                                         )}
                                     </div>
-                                    <span className="text-[11px] text-gray-500">
+                                    <span className="text-[11px] text-muted-hub">
                                         {activeInGroup} ativos de {groupColabs.length} membros
                                     </span>
                                 </div>
                             </div>
-                            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700">
+                            <Badge variant="neutral" size="sm">
                                 {groupColabs.length} {groupColabs.length === 1 ? 'membro' : 'membros'}
-                            </span>
+                            </Badge>
                         </div>
 
                         {/* Cards do grupo */}

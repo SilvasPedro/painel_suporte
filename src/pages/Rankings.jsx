@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { Tabs, Card, Badge, EmptyState } from '../components/ui';
 
 // --- FUNÇÕES DE CONVERSÃO DE TEMPO ---
 const timeToSeconds = (timeStr) => {
@@ -356,40 +357,37 @@ const Rankings = () => {
     const third = topThree[2];
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col space-y-6">
+        <div className="flex-1 p-6 h-full overflow-y-auto bg-canvas flex flex-col space-y-6">
             
             {/* ========================================== */}
             {/* CABEÇALHO PRINCIPAL                        */}
             {/* ========================================== */}
-            <header className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 shrink-0">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2.5 bg-yellow-50 text-yellow-600 rounded-xl border border-yellow-200">
-                            <Trophy className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                                    Rankings & Reconhecimento da Equipe
-                                </h1>
-                                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200 flex items-center gap-1">
-                                    <Sparkles className="w-3.5 h-3.5 text-yellow-600" /> Gamificação
-                                </span>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                                Classificação geral, volume de atendimentos e eficiência operacional por período.
-                            </p>
-                        </div>
+            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+                        <Trophy className="w-3.5 h-3.5" />
+                        <span>Gamificação & Reconhecimento</span>
                     </div>
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                        <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
+                            Rankings da Equipe
+                        </h1>
+                        <Badge variant="warning" size="sm" icon={Sparkles}>
+                            Gamificação Ativa
+                        </Badge>
+                    </div>
+                    <p className="text-xs text-secondary-hub mt-0.5">
+                        Classificação geral, volume de atendimentos e eficiência operacional por período.
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
                     <button 
                         onClick={exportCSV}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-white hover:bg-gray-50 border border-gray-300 text-gray-700 rounded-xl font-bold text-sm transition-all shadow-2xs cursor-pointer"
+                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-surface hover:bg-subtle border border-subtle text-primary-hub rounded-xl font-bold text-xs transition-all shadow-xs cursor-pointer active:scale-95"
                         title="Exportar dados do ranking em CSV"
                     >
-                        <Download className="w-4 h-4 text-gray-500" /> Exportar CSV
+                        <Download className="w-4 h-4 text-rose-600 dark:text-rose-400" /> Exportar CSV
                     </button>
                 </div>
             </header>
@@ -398,42 +396,42 @@ const Rankings = () => {
             {/* CARDS DE RESUMO OPERACIONAL                */}
             {/* ========================================== */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 shrink-0">
-                <div className="p-4 rounded-xl border bg-white border-gray-200 shadow-2xs">
-                    <span className="text-xs font-bold uppercase tracking-wider block text-gray-400">Analistas Ranqueados</span>
-                    <div className="text-2xl font-black mt-1 text-gray-900 flex items-center justify-between">
+                <Card className="p-4 rounded-xl border border-subtle shadow-2xs">
+                    <span className="text-xs font-bold uppercase tracking-wider block text-muted-hub">Analistas Ranqueados</span>
+                    <div className="text-2xl font-black mt-1 text-primary-hub flex items-center justify-between font-brand tabular-nums">
                         <span>{summaryStats.totalColabs}</span>
-                        <Users className="w-5 h-5 text-gray-300" />
+                        <Users className="w-5 h-5 text-muted-hub" />
                     </div>
-                    <span className="text-[11px] text-gray-500 mt-0.5 block">Com avaliações no período</span>
-                </div>
+                    <span className="text-[11px] text-secondary-hub mt-0.5 block">Com avaliações no período</span>
+                </Card>
 
-                <div className="p-4 rounded-xl border bg-white border-gray-200 shadow-2xs">
-                    <span className="text-xs font-bold uppercase tracking-wider block text-amber-600">Total de Pontos</span>
-                    <div className="text-2xl font-black mt-1 text-gray-900 flex items-center justify-between">
+                <Card className="p-4 rounded-xl border border-subtle shadow-2xs">
+                    <span className="text-xs font-bold uppercase tracking-wider block text-amber-500">Total de Pontos</span>
+                    <div className="text-2xl font-black mt-1 text-primary-hub flex items-center justify-between font-brand tabular-nums">
                         <span>{summaryStats.totalPontos.toLocaleString('pt-BR')}</span>
-                        <Star className="w-5 h-5 text-amber-400" />
+                        <Star className="w-5 h-5 text-amber-500" />
                     </div>
-                    <span className="text-[11px] text-gray-500 mt-0.5 block">Média: {summaryStats.mediaPontos} pts / analista</span>
-                </div>
+                    <span className="text-[11px] text-secondary-hub mt-0.5 block">Média: {summaryStats.mediaPontos} pts / analista</span>
+                </Card>
 
-                <div className="p-4 rounded-xl border bg-white border-gray-200 shadow-2xs">
-                    <span className="text-xs font-bold uppercase tracking-wider block text-emerald-600">Finalizações</span>
-                    <div className="text-2xl font-black mt-1 text-gray-900 flex items-center justify-between">
+                <Card className="p-4 rounded-xl border border-subtle shadow-2xs">
+                    <span className="text-xs font-bold uppercase tracking-wider block text-emerald-500">Finalizações</span>
+                    <div className="text-2xl font-black mt-1 text-primary-hub flex items-center justify-between font-brand tabular-nums">
                         <span>{summaryStats.totalFinalizados.toLocaleString('pt-BR')}</span>
-                        <CheckSquare className="w-5 h-5 text-emerald-400" />
+                        <CheckSquare className="w-5 h-5 text-emerald-500" />
                     </div>
-                    <span className="text-[11px] text-gray-500 mt-0.5 block">Atendimentos concluídos</span>
-                </div>
+                    <span className="text-[11px] text-secondary-hub mt-0.5 block">Atendimentos concluídos</span>
+                </Card>
 
-                <div className="p-4 rounded-xl border bg-gradient-to-br from-yellow-500/10 via-amber-500/5 to-white border-yellow-200/80 shadow-2xs">
-                    <span className="text-xs font-bold uppercase tracking-wider block text-yellow-700">Líder Atual</span>
-                    <div className="text-base font-black mt-1 text-gray-900 truncate">
+                <Card className="p-4 rounded-xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent shadow-2xs">
+                    <span className="text-xs font-bold uppercase tracking-wider block text-amber-500 font-bold">Líder Atual</span>
+                    <div className="text-base font-black mt-1 text-primary-hub truncate font-brand">
                         {leader ? leader.name : 'Nenhum'}
                     </div>
-                    <span className="text-[11px] font-bold text-yellow-800 mt-0.5 block">
+                    <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">
                         {leader ? `${leader.pontuacao} pts • ${leader.shift}` : '--'}
                     </span>
-                </div>
+                </Card>
             </div>
 
             {/* ========================================== */}
@@ -576,72 +574,35 @@ const Rankings = () => {
             {/* ========================================== */}
             {/* SELETOR DE CRITÉRIO DE RANKING (TABS)      */}
             {/* ========================================== */}
-            <div className="bg-white p-1.5 rounded-xl border border-gray-200 shadow-2xs shrink-0 flex flex-wrap gap-1.5">
-                <button 
-                    onClick={() => setActiveTab('pontuacao')} 
-                    className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
-                        activeTab === 'pontuacao' 
-                            ? 'bg-amber-500 text-white shadow-xs' 
-                            : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                    <Star className="w-4 h-4" /> Pontuação Ponderada
-                </button>
-                <button 
-                    onClick={() => setActiveTab('finalizacoes')} 
-                    className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
-                        activeTab === 'finalizacoes' 
-                            ? 'bg-emerald-600 text-white shadow-xs' 
-                            : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                    <CheckSquare className="w-4 h-4" /> Volume de Finalizações
-                </button>
-                <button 
-                    onClick={() => setActiveTab('tma_tel')} 
-                    className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
-                        activeTab === 'tma_tel' 
-                            ? 'bg-blue-600 text-white shadow-xs' 
-                            : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                    <Phone className="w-4 h-4" /> Eficiência TMA Voz
-                </button>
-                <button 
-                    onClick={() => setActiveTab('tma_huggy')} 
-                    className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg font-bold text-xs transition-all cursor-pointer ${
-                        activeTab === 'tma_huggy' 
-                            ? 'bg-purple-600 text-white shadow-xs' 
-                            : 'text-gray-600 hover:bg-gray-100'
-                    }`}
-                >
-                    <MessageSquare className="w-4 h-4" /> Eficiência TMA Chat
-                </button>
+            <div className="shrink-0 flex">
+                <Tabs
+                    className="w-full justify-between"
+                    tabClassName="flex-1 justify-center py-2 text-xs"
+                    tabs={[
+                        { id: 'pontuacao', label: 'Pontuação Ponderada', icon: Star },
+                        { id: 'finalizacoes', label: 'Volume de Finalizações', icon: CheckSquare },
+                        { id: 'tma_tel', label: 'Eficiência TMA Voz', icon: Phone },
+                        { id: 'tma_huggy', label: 'Eficiência TMA Chat', icon: MessageSquare },
+                    ]}
+                    activeTab={activeTab}
+                    onChange={setActiveTab}
+                    id="ranking-criteria-tabs"
+                />
             </div>
 
             {/* ========================================== */}
             {/* CONTEÚDO PRINCIPAL DOS RANKINGS            */}
             {/* ========================================== */}
             {finalRankingData.length === 0 ? (
-                <div className="bg-white rounded-xl border border-gray-200 p-12 text-center flex flex-col items-center justify-center flex-1">
-                    <div className="w-16 h-16 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-center mb-4 text-gray-400">
-                        <Trophy className="w-8 h-8 opacity-40" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900">Nenhum registro encontrado</h3>
-                    <p className="text-sm text-gray-500 max-w-md mt-1 mb-6">
-                        {hasActiveFilters 
-                            ? "Nenhum colaborador corresponde aos filtros selecionados. Tente ajustar os filtros ou redefini-los."
-                            : "Ainda não há avaliações semanais lançadas no sistema."}
-                    </p>
-                    {hasActiveFilters && (
-                        <button 
-                            onClick={clearFilters}
-                            className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-sm rounded-lg transition-colors cursor-pointer"
-                        >
-                            Redefinir Filtros
-                        </button>
-                    )}
-                </div>
+                <EmptyState
+                    icon={Trophy}
+                    title="Nenhum registro encontrado"
+                    description={hasActiveFilters 
+                        ? "Nenhum colaborador corresponde aos filtros selecionados. Tente ajustar os filtros ou redefini-los."
+                        : "Ainda não há avaliações semanais lançadas no sistema."}
+                    actionLabel={hasActiveFilters ? "Redefinir Filtros" : undefined}
+                    onAction={hasActiveFilters ? clearFilters : undefined}
+                />
             ) : (
                 <>
                     {/* -------------------------------------- */}

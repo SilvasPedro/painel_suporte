@@ -13,6 +13,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     BarChart, Bar, AreaChart, Area
 } from 'recharts';
+import { BorderBeam } from '../components/magicui/BorderBeam';
 
 // Dias da semana auxiliares
 const DAYS_OF_WEEK = [
@@ -613,60 +614,64 @@ export default function DailyDemandLaunch() {
         sortBy !== 'date_desc';
 
     return (
-        <div className="h-full overflow-y-auto w-full bg-gray-50">
+        <div className="h-full overflow-y-auto w-full bg-canvas font-sans">
             <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6 pb-16">
                 
-                {/* ======================================================== */}
                 {/* CABEÇALHO PRINCIPAL COM AÇÕES RÁPIDAS */}
-                {/* ======================================================== */}
-                <div className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 p-5 sm:p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                    <div>
+                <div className="relative bg-surface rounded-3xl shadow-xs border border-subtle p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 overflow-hidden">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-rose-500/10 via-transparent to-transparent -mr-20 -mt-20 pointer-events-none rounded-full blur-2xl" />
+                    <div className="relative z-10">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200/70 flex items-center justify-center text-red-600 shrink-0">
+                            <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0">
                                 <Activity className="w-5 h-5" />
                             </div>
                             <div>
-                                <h1 className="text-xl sm:text-2xl font-bold text-zinc-900 tracking-tight flex items-center gap-2">
-                                    Demanda e Fila Diária
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
+                                        <Activity className="w-3.5 h-3.5 text-rose-500" />
+                                        Módulo Operacional • Demanda e Fila Diária
+                                    </span>
+                                </div>
+                                <h1 className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight">
+                                    Demanda & Fila Diária
                                 </h1>
-                                <p className="text-zinc-500 text-xs sm:text-sm mt-0.5">
+                                <p className="text-muted-hub text-xs sm:text-sm mt-0.5">
                                     Monitoramento operacional do fluxo de abertura, acúmulo e resolução de chamados e chats.
                                 </p>
                             </div>
                         </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-                        {/* Botão de Exportar CSV */}
+                    <div className="relative z-10 flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
                         <button
                             id="btn-export-demand-csv"
                             type="button"
                             onClick={handleExportCSV}
                             disabled={sortedTableData.length === 0}
                             title="Exportar dados filtrados para CSV"
-                            className="px-3.5 py-2 bg-white hover:bg-zinc-50 text-zinc-700 border border-zinc-200 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                            className="px-3.5 py-2.5 bg-subtle hover:bg-surface text-secondary-hub hover:text-primary-hub border border-subtle rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
                         >
-                            <Download className="w-3.5 h-3.5 text-zinc-500" />
+                            <Download className="w-3.5 h-3.5 text-muted-hub" />
                             <span className="hidden sm:inline">Exportar CSV</span>
                         </button>
 
-                        {/* Botão de Novo Registro */}
                         <button 
                             id="btn-new-demand-record"
                             type="button"
                             onClick={handleOpenCreate}
-                            className="bg-red-600 hover:bg-red-700 active:bg-red-800 text-white px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-xs cursor-pointer"
+                            className="bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-md shadow-rose-950/20 cursor-pointer active:scale-95"
                         >
                             <Plus className="w-4 h-4" />
                             <span>Novo Lançamento</span>
                         </button>
                     </div>
                 </div>
+                    
 
                 {/* ======================================================== */}
                 {/* BARRA DE FILTROS AVANÇADOS */}
                 {/* ======================================================== */}
-                <div id="demand-filters-container" className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 p-4 sm:p-5 space-y-4">
+                <div id="demand-filters-container" className="bg-surface rounded-3xl shadow-xs border border-subtle p-5 space-y-4">
                     
                     {/* Linha 1: Filtros de Período Preset (Segmented Controls) */}
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b border-zinc-100 pb-3">
@@ -682,9 +687,7 @@ export default function DailyDemandLaunch() {
                                     type="button"
                                     onClick={() => setPeriodPreset(preset.id)}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                                        periodPreset === preset.id
-                                            ? 'bg-red-600 text-white shadow-2xs'
-                                            : 'bg-zinc-100/80 text-zinc-600 hover:bg-zinc-200/70'
+                                        periodPreset === preset.id ? 'bg-primary-hub text-white dark:text-zinc-950 border-transparent shadow-xs' : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle'
                                     }`}
                                 >
                                     {preset.label}
@@ -693,12 +696,12 @@ export default function DailyDemandLaunch() {
                         </div>
 
                         {/* Seletor de Modo de Visualização (1. Gráficos, 2. Extrato, 3. Completo) */}
-                        <div className="flex items-center gap-1 bg-zinc-100/90 p-1 rounded-xl self-end lg:self-auto shrink-0">
+                        <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle self-end lg:self-auto shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setViewMode('charts')}
                                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                                    viewMode === 'charts' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                                    viewMode === 'charts' ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
                                 }`}
                             >
                                 <BarChart2 className="w-3.5 h-3.5 text-blue-500" />
@@ -708,7 +711,7 @@ export default function DailyDemandLaunch() {
                                 type="button"
                                 onClick={() => setViewMode('table')}
                                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                                    viewMode === 'table' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                                    viewMode === 'table' ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
                                 }`}
                             >
                                 <FileText className="w-3.5 h-3.5 text-emerald-500" />
@@ -718,7 +721,7 @@ export default function DailyDemandLaunch() {
                                 type="button"
                                 onClick={() => setViewMode('all')}
                                 className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                                    viewMode === 'all' ? 'bg-white text-zinc-900 shadow-2xs' : 'text-zinc-500 hover:text-zinc-800'
+                                    viewMode === 'all' ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
                                 }`}
                             >
                                 <Activity className="w-3.5 h-3.5 text-red-500" />
@@ -729,7 +732,7 @@ export default function DailyDemandLaunch() {
 
                     {/* Linha 2: Datas Personalizadas se o preset 'custom' estiver ativo */}
                     {periodPreset === 'custom' && (
-                        <div className="bg-red-50/50 border border-red-200/60 rounded-xl p-3 flex flex-wrap items-center gap-3">
+                        <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3.5 flex flex-wrap items-center gap-3">
                             <span className="text-xs font-bold text-red-800 flex items-center gap-1.5">
                                 <Calendar className="w-4 h-4 text-red-600" />
                                 Intervalo de Datas:
@@ -740,7 +743,7 @@ export default function DailyDemandLaunch() {
                                     type="date"
                                     value={customStartDate}
                                     onChange={(e) => setCustomStartDate(e.target.value)}
-                                    className="bg-white border border-zinc-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-zinc-800 outline-none focus:ring-2 focus:ring-red-500"
+                                    className="bg-white border border-zinc-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-secondary-hub outline-none focus:ring-2 focus:ring-red-500"
                                 />
                             </div>
                             <div className="flex items-center gap-2 text-xs">
@@ -749,7 +752,7 @@ export default function DailyDemandLaunch() {
                                     type="date"
                                     value={customEndDate}
                                     onChange={(e) => setCustomEndDate(e.target.value)}
-                                    className="bg-white border border-zinc-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-zinc-800 outline-none focus:ring-2 focus:ring-red-500"
+                                    className="bg-white border border-zinc-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-secondary-hub outline-none focus:ring-2 focus:ring-red-500"
                                 />
                             </div>
                             {(customStartDate || customEndDate) && (
@@ -775,7 +778,7 @@ export default function DailyDemandLaunch() {
                             <select
                                 value={channelFilter}
                                 onChange={(e) => setChannelFilter(e.target.value)}
-                                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-zinc-800 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 cursor-pointer"
+                                className="w-full bg-subtle border border-subtle rounded-xl px-2.5 py-2 text-xs font-semibold text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 cursor-pointer"
                             >
                                 <option value="all">Todos os Canais (Geral)</option>
                                 <option value="tickets">Apenas Chamados (Voz/Tickets)</option>
@@ -791,7 +794,7 @@ export default function DailyDemandLaunch() {
                             <select
                                 value={trendFilter}
                                 onChange={(e) => setTrendFilter(e.target.value)}
-                                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-zinc-800 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 cursor-pointer"
+                                className="w-full bg-subtle border border-subtle rounded-xl px-2.5 py-2 text-xs font-semibold text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 cursor-pointer"
                             >
                                 <option value="all">Todas as Tendências</option>
                                 <option value="reduced">Fila Reduziu (Fim &lt; Início)</option>
@@ -808,7 +811,7 @@ export default function DailyDemandLaunch() {
                             <select
                                 value={dayOfWeekFilter}
                                 onChange={(e) => setDayOfWeekFilter(e.target.value)}
-                                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-zinc-800 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 cursor-pointer"
+                                className="w-full bg-subtle border border-subtle rounded-xl px-2.5 py-2 text-xs font-semibold text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 cursor-pointer"
                             >
                                 {DAYS_OF_WEEK.map(d => (
                                     <option key={d.id} value={d.id}>{d.label}</option>
@@ -824,7 +827,7 @@ export default function DailyDemandLaunch() {
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full bg-zinc-50 border border-zinc-200 rounded-xl px-2.5 py-2 text-xs font-semibold text-zinc-800 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 cursor-pointer"
+                                className="w-full bg-subtle border border-subtle rounded-xl px-2.5 py-2 text-xs font-semibold text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 cursor-pointer"
                             >
                                 <option value="date_desc">Data (Mais Recentes Primeiro)</option>
                                 <option value="date_asc">Data (Mais Antigos Primeiro)</option>
@@ -846,7 +849,7 @@ export default function DailyDemandLaunch() {
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                     placeholder="Ex: 22/09 ou observação..."
-                                    className="w-full bg-zinc-50 border border-zinc-200 rounded-xl pl-8 pr-7 py-2 text-xs font-medium text-zinc-800 outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500"
+                                    className="w-full bg-subtle border border-subtle rounded-xl pl-8 pr-7 py-2 text-xs font-medium text-primary-hub placeholder:text-muted-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                                 />
                                 <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-2.5" />
                                 {searchQuery && (
@@ -863,9 +866,9 @@ export default function DailyDemandLaunch() {
                     </div>
 
                     {/* Barra inferior de status dos filtros */}
-                    <div className="flex items-center justify-between pt-2 border-t border-zinc-100 text-xs text-zinc-500">
+                    <div className="flex items-center justify-between pt-2 border-t border-subtle text-xs text-muted-hub">
                         <div>
-                            Exibindo <strong className="text-zinc-900 font-bold">{filteredData.length}</strong> de <strong className="text-zinc-900 font-bold">{historicalData.length}</strong> dias registrados
+                            Exibindo <strong className="text-primary-hub font-bold">{filteredData.length}</strong> de <strong className="text-primary-hub font-bold">{historicalData.length}</strong> dias registrados
                         </div>
 
                         {hasActiveCustomFilters && (
@@ -886,24 +889,24 @@ export default function DailyDemandLaunch() {
                 <div id="demand-kpis-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                     
                     {/* CARD 1: MÉDIA INÍCIO CHAMADOS */}
-                    <div className="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-2xs flex flex-col justify-between">
+                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                                 <Ticket className="w-3 h-3 text-emerald-500" />
                                 Chamados (Início)
                             </span>
                         </div>
-                        <div className="text-2xl sm:text-3xl font-black text-zinc-900 font-mono tracking-tight">
+                        <div className="text-2xl sm:text-3xl font-black text-primary-hub font-mono tracking-tight">
                             {metrics.avgStartTickets}
                         </div>
-                        <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
+                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
                             <span>Média de abertura</span>
-                            <span className="font-bold text-zinc-700">tot: {metrics.totalStartTickets}</span>
+                            <span className="font-bold text-secondary-hub">tot: {metrics.totalStartTickets}</span>
                         </div>
                     </div>
 
                     {/* CARD 2: MÉDIA FIM CHAMADOS */}
-                    <div className="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-2xs flex flex-col justify-between">
+                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                                 <Ticket className="w-3 h-3 text-emerald-700" />
@@ -923,24 +926,24 @@ export default function DailyDemandLaunch() {
                     </div>
 
                     {/* CARD 3: MÉDIA INÍCIO CHATS */}
-                    <div className="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-2xs flex flex-col justify-between">
+                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                                 <MessageSquare className="w-3 h-3 text-purple-500" />
                                 Chats (Início)
                             </span>
                         </div>
-                        <div className="text-2xl sm:text-3xl font-black text-zinc-900 font-mono tracking-tight">
+                        <div className="text-2xl sm:text-3xl font-black text-primary-hub font-mono tracking-tight">
                             {metrics.avgStartChats}
                         </div>
-                        <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
+                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
                             <span>Média de abertura</span>
-                            <span className="font-bold text-zinc-700">tot: {metrics.totalStartChats}</span>
+                            <span className="font-bold text-secondary-hub">tot: {metrics.totalStartChats}</span>
                         </div>
                     </div>
 
                     {/* CARD 4: MÉDIA FIM CHATS */}
-                    <div className="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-2xs flex flex-col justify-between">
+                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                                 <MessageSquare className="w-3 h-3 text-indigo-600" />
@@ -960,7 +963,7 @@ export default function DailyDemandLaunch() {
                     </div>
 
                     {/* CARD 5: SALDO LÍQUIDO MÉDIO DA FILA */}
-                    <div className="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-2xs flex flex-col justify-between">
+                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                                 <Activity className="w-3 h-3 text-amber-500" />
@@ -970,26 +973,26 @@ export default function DailyDemandLaunch() {
                         <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${metrics.netDeltaTotal <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
                             {metrics.netDeltaTotal > 0 ? `+${metrics.netDeltaTotal}` : metrics.netDeltaTotal}
                         </div>
-                        <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
+                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
                             <span>Fluxo diário:</span>
-                            <span className="font-bold text-zinc-800">
+                            <span className="font-bold text-secondary-hub">
                                 {metrics.netDeltaTotal < 0 ? 'Redução' : (metrics.netDeltaTotal > 0 ? 'Sobrecarga' : 'Equilíbrio')}
                             </span>
                         </div>
                     </div>
 
                     {/* CARD 6: TAXA DE DIAS COM REDUÇÃO / EFICIÊNCIA */}
-                    <div className="bg-white p-4 rounded-2xl border border-zinc-200/80 shadow-2xs flex flex-col justify-between">
+                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
                         <div className="flex items-center justify-between mb-1.5">
                             <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
                                 <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                                 Resolução Diária
                             </span>
                         </div>
-                        <div className="text-2xl sm:text-3xl font-black text-zinc-900 font-mono tracking-tight">
+                        <div className="text-2xl sm:text-3xl font-black text-primary-hub font-mono tracking-tight">
                             {metrics.resolutionRate}%
                         </div>
-                        <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px] text-zinc-500">
+                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
                             <span>Dias c/ fila menor:</span>
                             <span className="font-bold text-emerald-600">Fim &le; Início</span>
                         </div>
@@ -1005,14 +1008,14 @@ export default function DailyDemandLaunch() {
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                             
                             {/* GRÁFICO 1: EVOLUÇÃO DE FILA DE CHAMADOS (INÍCIO VS FIM) */}
-                            <div className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 p-5 sm:p-6">
+                            <div className="bg-surface rounded-3xl shadow-xs border border-subtle p-5 sm:p-6">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                                     <div>
-                                        <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                                        <h3 className="text-sm font-bold text-primary-hub flex items-center gap-2">
                                             <Ticket className="w-4 h-4 text-emerald-600" />
                                             Evolução da Fila de Chamados (Início vs Fim)
                                         </h3>
-                                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                                        <p className="text-[11px] text-muted-hub mt-0.5">
                                             Comparativo diário de volume de chamados na abertura e encerramento.
                                         </p>
                                     </div>
@@ -1094,14 +1097,14 @@ export default function DailyDemandLaunch() {
                             </div>
 
                             {/* GRÁFICO 2: EVOLUÇÃO DE FILA DE CHATS (INÍCIO VS FIM) */}
-                            <div className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 p-5 sm:p-6">
+                            <div className="bg-surface rounded-3xl shadow-xs border border-subtle p-5 sm:p-6">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                                     <div>
-                                        <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                                        <h3 className="text-sm font-bold text-primary-hub flex items-center gap-2">
                                             <MessageSquare className="w-4 h-4 text-purple-600" />
                                             Evolução da Fila de Chats (Início vs Fim)
                                         </h3>
-                                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                                        <p className="text-[11px] text-muted-hub mt-0.5">
                                             Comparativo diário de conversas ativas/em espera no chat na abertura e encerramento.
                                         </p>
                                     </div>
@@ -1187,14 +1190,14 @@ export default function DailyDemandLaunch() {
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                             
                             {/* GRÁFICO 3: COMPARATIVO EMPILHADO DE VOLUME TOTAL (2 COLUNAS) */}
-                            <div className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 p-5 sm:p-6 lg:col-span-2">
+                            <div className="bg-surface rounded-3xl shadow-xs border border-subtle p-5 sm:p-6 lg:col-span-2">
                                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
                                     <div>
-                                        <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                                        <h3 className="text-sm font-bold text-primary-hub flex items-center gap-2">
                                             <BarChart2 className="w-4 h-4 text-zinc-600" />
                                             Comparativo Geral: Início vs Fim do Expediente
                                         </h3>
-                                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                                        <p className="text-[11px] text-muted-hub mt-0.5">
                                             Visualização lado a lado da demanda empilhada (Chamados + Chats) para identificar se a operação limpou a fila no dia.
                                         </p>
                                     </div>
@@ -1252,13 +1255,13 @@ export default function DailyDemandLaunch() {
                             </div>
 
                             {/* GRÁFICO 4: COMPORTAMENTO MÉDIO POR DIA DA SEMANA */}
-                            <div className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 p-5 sm:p-6">
+                            <div className="bg-surface rounded-3xl shadow-xs border border-subtle p-5 sm:p-6">
                                 <div className="mb-4">
-                                    <h3 className="text-sm font-bold text-zinc-900 flex items-center gap-2">
+                                    <h3 className="text-sm font-bold text-primary-hub flex items-center gap-2">
                                         <Calendar className="w-4 h-4 text-indigo-600" />
                                         Média por Dia da Semana
                                     </h3>
-                                    <p className="text-[11px] text-zinc-400 mt-0.5">
+                                    <p className="text-[11px] text-muted-hub mt-0.5">
                                         Média histórica de fila para identificar gargalos operacionais (Seg a Dom).
                                     </p>
                                 </div>
@@ -1315,8 +1318,8 @@ export default function DailyDemandLaunch() {
                 {/* TABELA DE REGISTROS DETALHADA */}
                 {/* ======================================================== */}
                 {(viewMode === 'all' || viewMode === 'table') && (
-                    <div id="demand-table-container" className="bg-white rounded-2xl shadow-xs border border-zinc-200/80 overflow-hidden flex flex-col">
-                        <div className="p-4 sm:p-5 border-b border-zinc-200/80 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white">
+                    <div id="demand-table-container" className="bg-surface rounded-3xl shadow-xs border border-subtle overflow-hidden flex flex-col">
+                        <div className="p-5 border-b border-subtle flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-surface">
                             <div>
                                 <h2 className="text-sm sm:text-base font-bold text-zinc-900 flex items-center gap-2">
                                     <FileText className="w-4 h-4 text-red-600" />
@@ -1334,7 +1337,7 @@ export default function DailyDemandLaunch() {
 
                         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                             <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-10 bg-zinc-900 text-white text-[11px] uppercase tracking-wider font-bold">
+                                <thead className="sticky top-0 z-10 bg-subtle/90 text-muted-hub text-[11px] uppercase tracking-wider font-bold border-b border-subtle backdrop-blur-xs">
                                     <tr>
                                         <th className="p-3.5 pl-5">Data & Dia</th>
                                         <th className="p-3.5 text-center bg-zinc-800/60">
@@ -1366,7 +1369,7 @@ export default function DailyDemandLaunch() {
                                         <th className="p-3.5 pr-5 text-right">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-xs text-zinc-700 divide-y divide-zinc-100 font-medium">
+                                <tbody className="text-xs text-secondary-hub divide-y divide-zinc-100 font-medium">
                                     {sortedTableData.length > 0 ? sortedTableData.map((row) => {
                                         const sTickets = row.startTickets ?? null;
                                         const sChats = row.startChats ?? null;
@@ -1381,23 +1384,23 @@ export default function DailyDemandLaunch() {
                                         const weekday = getWeekdayShort(row.date);
 
                                         return (
-                                            <tr key={row.id} className="hover:bg-zinc-50/80 transition-colors">
+                                            <tr key={row.id} className="border-b border-subtle last:border-b-0 hover:bg-subtle/50 transition-colors">
                                                 <td className="p-3.5 pl-5">
-                                                    <div className="font-bold text-zinc-900 flex items-center gap-1.5">
+                                                    <div className="font-bold text-primary-hub flex items-center gap-1.5">
                                                         <span>{formatDisplayDate(row.date)}</span>
-                                                        <span className="text-[10px] font-semibold text-zinc-600 bg-zinc-100 px-1.5 py-0.5 rounded">
+                                                        <span className="text-[10px] font-semibold text-muted-hub bg-subtle px-1.5 py-0.5 rounded border border-subtle">
                                                             {weekday}
                                                         </span>
                                                     </div>
                                                 </td>
 
                                                 {/* Início Chamados */}
-                                                <td className="p-3.5 text-center font-mono font-bold text-zinc-800">
+                                                <td className="p-3.5 text-center font-mono font-bold text-secondary-hub">
                                                     {sTickets !== null ? sTickets : <span className="text-zinc-300">--</span>}
                                                 </td>
 
                                                 {/* Início Chats */}
-                                                <td className="p-3.5 text-center font-mono font-bold text-zinc-800">
+                                                <td className="p-3.5 text-center font-mono font-bold text-secondary-hub">
                                                     {sChats !== null ? sChats : <span className="text-zinc-300">--</span>}
                                                 </td>
 
@@ -1439,7 +1442,7 @@ export default function DailyDemandLaunch() {
                                                         <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-lg ${
                                                             deltaTotal < 0 
                                                                 ? 'bg-emerald-100/70 text-emerald-800' 
-                                                                : (deltaTotal > 0 ? 'bg-red-100/70 text-red-800' : 'bg-zinc-100 text-zinc-700')
+                                                                : (deltaTotal > 0 ? 'bg-red-100/70 text-red-800' : 'bg-zinc-100 text-secondary-hub')
                                                         }`}>
                                                             {deltaTotal < 0 ? <TrendingDown className="w-3 h-3" /> : (deltaTotal > 0 ? <TrendingUp className="w-3 h-3" /> : <Minus className="w-3 h-3" />)}
                                                             {deltaTotal > 0 ? `+${deltaTotal}` : deltaTotal}
@@ -1452,7 +1455,7 @@ export default function DailyDemandLaunch() {
                                                 {/* Observações */}
                                                 <td className="p-3.5 text-zinc-600 max-w-[200px] truncate" title={row.notes || ''}>
                                                     {row.notes ? (
-                                                        <span className="text-[11px] text-zinc-700 bg-zinc-100 px-2 py-0.5 rounded">
+                                                        <span className="text-[11px] text-secondary-hub bg-zinc-100 px-2 py-0.5 rounded">
                                                             {row.notes}
                                                         </span>
                                                     ) : (
@@ -1490,7 +1493,7 @@ export default function DailyDemandLaunch() {
                                                     <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
                                                         <Activity className="w-5 h-5" />
                                                     </div>
-                                                    <h4 className="text-sm font-bold text-zinc-800">Nenhum registro encontrado</h4>
+                                                    <h4 className="text-sm font-bold text-secondary-hub">Nenhum registro encontrado</h4>
                                                     <p className="text-xs text-zinc-500 text-center">
                                                         Não há lançamentos de demanda para os filtros selecionados. Tente ajustar o período ou adicionar um novo registro.
                                                     </p>
@@ -1518,10 +1521,10 @@ export default function DailyDemandLaunch() {
                 {/* ======================================================== */}
                 {isModalOpen && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-zinc-200">
+                        <div className="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-subtle"><BorderBeam size={180} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
                             
                             {/* Cabeçalho do Modal */}
-                            <div className="p-5 border-b border-zinc-100 flex justify-between items-center bg-zinc-900 text-white">
+                            <div className="p-5 border-b border-subtle flex justify-between items-center bg-surface text-primary-hub">
                                 <div className="flex items-center gap-2.5">
                                     <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400">
                                         <Activity className="w-4 h-4" />
@@ -1566,7 +1569,7 @@ export default function DailyDemandLaunch() {
                                             type="date" 
                                             value={date}
                                             onChange={(e) => handleDateChange(e.target.value)}
-                                            className="w-full px-3 py-2 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-zinc-800 font-semibold text-sm transition-all"
+                                            className="w-full px-3 py-2 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-secondary-hub font-semibold text-sm transition-all"
                                             required
                                         />
                                     </div>
@@ -1584,7 +1587,7 @@ export default function DailyDemandLaunch() {
                                                     min="0" 
                                                     value={startTickets} 
                                                     onChange={e => setStartTickets(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 text-sm font-mono font-bold text-zinc-800" 
+                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 text-sm font-mono font-bold text-secondary-hub" 
                                                     placeholder="0" 
                                                 />
                                             </div>
@@ -1595,7 +1598,7 @@ export default function DailyDemandLaunch() {
                                                     min="0" 
                                                     value={startChats} 
                                                     onChange={e => setStartChats(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 text-sm font-mono font-bold text-zinc-800" 
+                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 text-sm font-mono font-bold text-secondary-hub" 
                                                     placeholder="0" 
                                                 />
                                             </div>
@@ -1615,7 +1618,7 @@ export default function DailyDemandLaunch() {
                                                     min="0" 
                                                     value={endTickets} 
                                                     onChange={e => setEndTickets(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-indigo-500 text-sm font-mono font-bold text-zinc-800" 
+                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-indigo-500 text-sm font-mono font-bold text-secondary-hub" 
                                                     placeholder="0" 
                                                 />
                                             </div>
@@ -1626,7 +1629,7 @@ export default function DailyDemandLaunch() {
                                                     min="0" 
                                                     value={endChats} 
                                                     onChange={e => setEndChats(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-indigo-500 text-sm font-mono font-bold text-zinc-800" 
+                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-indigo-500 text-sm font-mono font-bold text-secondary-hub" 
                                                     placeholder="0" 
                                                 />
                                             </div>
@@ -1643,7 +1646,7 @@ export default function DailyDemandLaunch() {
                                             value={notes}
                                             onChange={e => setNotes(e.target.value)}
                                             placeholder="Ex: Queda de link externa, Feriado municipal, etc."
-                                            className="w-full px-3 py-2 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs text-zinc-800"
+                                            className="w-full px-3 py-2 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs text-secondary-hub"
                                             maxLength={150}
                                         />
                                     </div>
@@ -1689,14 +1692,14 @@ export default function DailyDemandLaunch() {
                 {/* ======================================================== */}
                 {deleteConfirmItem && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-150 border border-zinc-200">
+                        <div className="bg-surface rounded-3xl shadow-xl w-full max-w-sm overflow-hidden p-6 text-center space-y-4 animate-in fade-in zoom-in-95 duration-150 border border-subtle">
                             <div className="w-12 h-12 rounded-full bg-red-50 text-red-600 flex items-center justify-center mx-auto">
                                 <Trash2 className="w-6 h-6" />
                             </div>
                             <div>
                                 <h3 className="text-base font-bold text-zinc-900">Excluir Registro?</h3>
                                 <p className="text-xs text-zinc-500 mt-1">
-                                    Deseja realmente remover os dados do dia <strong className="text-zinc-800">{formatDisplayDate(deleteConfirmItem.date)}</strong>? Esta ação não poderá ser desfeita.
+                                    Deseja realmente remover os dados do dia <strong className="text-secondary-hub">{formatDisplayDate(deleteConfirmItem.date)}</strong>? Esta ação não poderá ser desfeita.
                                 </p>
                             </div>
                             <div className="flex items-center gap-2 pt-2">
@@ -1704,7 +1707,7 @@ export default function DailyDemandLaunch() {
                                     type="button"
                                     onClick={() => setDeleteConfirmItem(null)}
                                     disabled={isDeleting}
-                                    className="flex-1 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold rounded-xl text-xs transition-colors cursor-pointer"
+                                    className="flex-1 px-4 py-2 bg-zinc-100 hover:bg-zinc-200 text-secondary-hub font-bold rounded-xl text-xs transition-colors cursor-pointer"
                                 >
                                     Cancelar
                                 </button>

@@ -3,6 +3,7 @@ import {
     X, TrendingUp, Phone, MessageSquare, AlertTriangle, 
     CheckCircle2, Clock, Calculator, ShieldCheck, Target, Award
 } from 'lucide-react';
+import { BorderBeam } from '../magicui';
 
 export default function WeeklyMetricDetailModal({
     isOpen,
@@ -34,14 +35,18 @@ export default function WeeklyMetricDetailModal({
     return (
         <div 
             id="weekly-metric-detail-backdrop"
-            className="fixed inset-0 bg-zinc-950/80 flex items-center justify-center p-3 sm:p-5 z-[85] backdrop-blur-xs animate-in fade-in duration-150"
+            className="fixed inset-0 bg-black/80 flex items-center justify-center p-3 sm:p-5 z-[85] backdrop-blur-md animate-in fade-in duration-150"
+            onClick={onClose}
         >
             <div 
                 id="weekly-metric-detail-modal"
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] border border-gray-200"
+                onClick={(e) => e.stopPropagation()}
+                className="relative bg-surface rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] border border-subtle"
             >
+                <BorderBeam size={220} duration={8} colorFrom="#f59e0b" colorTo="#e11d48" borderWidth={1.5} />
+
                 {/* CABEÇALHO */}
-                <div className="p-5 sm:p-6 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
+                <div className="p-5 sm:p-6 bg-gradient-to-r from-amber-950 via-zinc-950 to-zinc-900 text-white flex justify-between items-center shrink-0 border-b border-subtle">
                     <div className="flex items-center gap-3.5">
                         <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-inner">
                             <TrendingUp className="w-6 h-6" />
@@ -51,7 +56,7 @@ export default function WeeklyMetricDetailModal({
                                 <h2 className="text-lg font-black tracking-tight text-white">
                                     Desempenho Semanal Detalhado
                                 </h2>
-                                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-950 text-amber-300 border border-amber-700/60 font-mono">
+                                <span className="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
                                     {calculatedScore} pts
                                 </span>
                             </div>
@@ -64,123 +69,114 @@ export default function WeeklyMetricDetailModal({
                     <button
                         type="button"
                         onClick={onClose}
-                        className="p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors cursor-pointer"
+                        className="p-2 text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors cursor-pointer"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* CONTEÚDO COM SCROLL */}
-                <div className="overflow-y-auto flex-1 p-5 sm:p-6 bg-gray-50/70 space-y-6">
+                <div className="overflow-y-auto flex-1 p-5 sm:p-6 bg-canvas space-y-6 text-primary-hub">
                     
                     {/* HERO SCORE BANNER */}
-                    <div className="bg-gradient-to-br from-amber-500/10 via-white to-amber-500/5 rounded-2xl p-5 border-2 border-amber-200/80 shadow-2xs flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div className="bg-surface rounded-3xl p-5 border border-amber-500/30 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-4">
                         <div className="space-y-1 text-center sm:text-left">
-                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-700 bg-amber-100 px-2.5 py-0.5 rounded-full inline-block">
+                            <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2.5 py-0.5 rounded-full inline-block">
                                 Score Consolidado
                             </span>
-                            <h3 className="text-lg font-extrabold text-gray-900">
+                            <h3 className="text-lg font-extrabold text-primary-hub">
                                 Rendimento da Semana
                             </h3>
-                            <p className="text-xs text-gray-500 max-w-md">
+                            <p className="text-xs text-muted-hub max-w-md">
                                 Pontuação calculada através do volume de chamadas telefônicas, atendimentos no Huggy e taxa de perda.
                             </p>
                         </div>
 
                         <div className="text-center sm:text-right shrink-0">
-                            <span className="text-4xl sm:text-5xl font-black font-mono text-amber-600 tracking-tight block">
+                            <span className="text-4xl sm:text-5xl font-black font-mono text-amber-500 tracking-tight block">
                                 {calculatedScore}
                             </span>
-                            <span className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">
-                                Pontos Totais
-                            </span>
+                            <span className="text-xs font-bold text-muted-hub">pontos apurados</span>
                         </div>
                     </div>
 
-                    {/* PILARES OPERACIONAIS */}
+                    {/* GRIDS DE METRICAS OPERACIONAIS */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* PILAR 1: VOZ & TELEFONIA */}
-                        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-2xs space-y-4">
-                            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                    <Phone className="w-4 h-4 text-red-600" />
-                                    Canal de Voz (Telefonia)
+                        
+                        {/* CARD TELEFONIA */}
+                        <div className="bg-surface rounded-2xl p-5 border border-subtle shadow-xs space-y-4">
+                            <div className="flex items-center justify-between border-b border-subtle pb-3">
+                                <h4 className="text-xs font-black text-primary-hub uppercase tracking-wider flex items-center gap-2">
+                                    <Phone className="w-4 h-4 text-rose-500" />
+                                    Métricas de Telefonia
                                 </h4>
-                                <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${
-                                    taxaAtendimentoTelefonia >= 90 
-                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
-                                        : 'bg-amber-50 text-amber-700 border border-amber-200'
-                                }`}>
-                                    {taxaAtendimentoTelefonia}% atendidas
-                                </span>
+                                <span className="text-[10px] font-mono font-bold text-muted-hub">VOIP</span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                                        Ligações Atendidas
+                            <div className="grid grid-cols-2 gap-2.5 text-xs">
+                                <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                        Atendidas
                                     </span>
-                                    <span className="text-xl font-black text-gray-900 mt-1 block">
+                                    <span className="text-xl font-black text-primary-hub mt-1 block">
                                         {ligAtendidas}
                                     </span>
                                 </div>
 
                                 <div className={`rounded-xl p-3 border ${
                                     ligPerdidas > 0 
-                                        ? 'bg-rose-50/70 border-rose-200 text-rose-900' 
-                                        : 'bg-gray-50 border-gray-100 text-gray-900'
+                                        ? 'bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400' 
+                                        : 'bg-subtle border-subtle text-primary-hub'
                                 }`}>
                                     <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
-                                        Ligações Perdidas
+                                        Perdidas
                                     </span>
                                     <span className="text-xl font-black mt-1 block">
                                         {ligPerdidas}
                                     </span>
                                 </div>
 
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                                        TME (Espera Média)
+                                <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                        Taxa de Atendimento
                                     </span>
-                                    <span className="font-mono font-bold text-gray-800 text-sm mt-1 block">
-                                        {metrics.TME_Telefonia || '00:00:00'}
+                                    <span className="font-mono font-bold text-primary-hub text-sm mt-1 block">
+                                        {taxaAtendimentoTelefonia}%
                                     </span>
                                 </div>
 
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                                        TMA (Tempo Médio)
+                                <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                        TMA Telefonia
                                     </span>
-                                    <span className="font-mono font-bold text-gray-800 text-sm mt-1 block">
+                                    <span className="font-mono font-bold text-primary-hub text-sm mt-1 block">
                                         {metrics.TMA_Telefonia || '00:00:00'}
                                     </span>
                                 </div>
                             </div>
                         </div>
 
-                        {/* PILAR 2: CHAT & HUGGY */}
-                        <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-2xs space-y-4">
-                            <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                    <MessageSquare className="w-4 h-4 text-blue-600" />
-                                    Canal Digital (Huggy)
+                        {/* CARD HUGGY / CHAT */}
+                        <div className="bg-surface rounded-2xl p-5 border border-subtle shadow-xs space-y-4">
+                            <div className="flex items-center justify-between border-b border-subtle pb-3">
+                                <h4 className="text-xs font-black text-primary-hub uppercase tracking-wider flex items-center gap-2">
+                                    <MessageSquare className="w-4 h-4 text-blue-500" />
+                                    Métricas de Chat (Huggy)
                                 </h4>
-                                <span className="text-[11px] font-bold px-2 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200">
-                                    Chat & Tickets
-                                </span>
+                                <span className="text-[10px] font-mono font-bold text-muted-hub">DIGITAL</span>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                            <div className="grid grid-cols-2 gap-2.5 text-xs">
+                                <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                         Atendimentos Huggy
                                     </span>
-                                    <span className="text-xl font-black text-gray-900 mt-1 block">
+                                    <span className="text-xl font-black text-primary-hub mt-1 block">
                                         {atendHuggy}
                                     </span>
                                 </div>
 
-                                <div className="bg-emerald-50/70 rounded-xl p-3 border border-emerald-200 text-emerald-900">
+                                <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
                                     <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
                                         Finalizados
                                     </span>
@@ -189,11 +185,11 @@ export default function WeeklyMetricDetailModal({
                                     </span>
                                 </div>
 
-                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100 col-span-2">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                                <div className="bg-subtle rounded-xl p-3 border border-subtle col-span-2">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                         TMA Huggy (Tempo Médio Atendimento)
                                     </span>
-                                    <span className="font-mono font-bold text-gray-800 text-sm mt-1 block">
+                                    <span className="font-mono font-bold text-primary-hub text-sm mt-1 block">
                                         {metrics.TMA_Huggy || '00:00:00'}
                                     </span>
                                 </div>
@@ -202,34 +198,34 @@ export default function WeeklyMetricDetailModal({
                     </div>
 
                     {/* EXTRATO MATEMÁTICO TRANSPARENTE DA PONTUAÇÃO */}
-                    <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-2xs space-y-3">
-                        <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                            <Calculator className="w-4 h-4 text-gray-500" />
+                    <div className="bg-surface rounded-2xl p-5 border border-subtle shadow-xs space-y-3">
+                        <h4 className="text-xs font-black text-primary-hub uppercase tracking-wider flex items-center gap-2">
+                            <Calculator className="w-4 h-4 text-rose-500" />
                             Extrato da Fórmula de Cálculo
                         </h4>
                         
-                        <div className="divide-y divide-gray-100 text-xs">
+                        <div className="divide-y divide-subtle text-xs">
                             <div className="py-2.5 flex justify-between items-center">
-                                <span className="text-gray-600">Ligações Atendidas ({ligAtendidas} &times; 2 pts)</span>
-                                <span className="font-mono font-bold text-emerald-600">+{ligAtendidas * 2} pts</span>
+                                <span className="text-secondary-hub">Ligações Atendidas ({ligAtendidas} &times; 2 pts)</span>
+                                <span className="font-mono font-bold text-emerald-500">+{ligAtendidas * 2} pts</span>
                             </div>
                             <div className="py-2.5 flex justify-between items-center">
-                                <span className="text-gray-600">Atendimentos Huggy ({atendHuggy} &times; 1 pt)</span>
-                                <span className="font-mono font-bold text-emerald-600">+{atendHuggy * 1} pts</span>
+                                <span className="text-secondary-hub">Atendimentos Huggy ({atendHuggy} &times; 1 pt)</span>
+                                <span className="font-mono font-bold text-emerald-500">+{atendHuggy * 1} pts</span>
                             </div>
                             <div className="py-2.5 flex justify-between items-center">
-                                <span className="text-gray-600">Atendimentos Finalizados ({atendFinalizados} &times; 1 pt)</span>
-                                <span className="font-mono font-bold text-emerald-600">+{atendFinalizados * 1} pts</span>
+                                <span className="text-secondary-hub">Atendimentos Finalizados ({atendFinalizados} &times; 1 pt)</span>
+                                <span className="font-mono font-bold text-emerald-500">+{atendFinalizados * 1} pts</span>
                             </div>
                             {ligPerdidas > 0 && (
                                 <div className="py-2.5 flex justify-between items-center">
-                                    <span className="text-rose-700 font-medium">Ligações Perdidas ({ligPerdidas} &times; -5 pts)</span>
-                                    <span className="font-mono font-bold text-rose-600">-{ligPerdidas * 5} pts</span>
+                                    <span className="text-rose-500 font-medium">Ligações Perdidas ({ligPerdidas} &times; -5 pts)</span>
+                                    <span className="font-mono font-bold text-rose-500">-{ligPerdidas * 5} pts</span>
                                 </div>
                             )}
                             <div className="pt-3 flex justify-between items-center font-bold text-sm">
-                                <span className="text-gray-900">Total Apurado</span>
-                                <span className="font-mono font-black text-amber-600 text-base">{calculatedScore} pts</span>
+                                <span className="text-primary-hub">Total Apurado</span>
+                                <span className="font-mono font-black text-amber-500 text-base">{calculatedScore} pts</span>
                             </div>
                         </div>
                     </div>
@@ -237,11 +233,11 @@ export default function WeeklyMetricDetailModal({
                 </div>
 
                 {/* RODAPÉ */}
-                <div className="p-4 bg-white border-t border-gray-200 flex justify-end shrink-0">
+                <div className="p-4 bg-surface border-t border-subtle flex justify-end shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-6 py-2 bg-zinc-950 hover:bg-zinc-800 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                        className="px-6 py-2 bg-subtle hover:bg-surface text-primary-hub border border-subtle rounded-xl font-bold text-xs transition-colors cursor-pointer"
                     >
                         Fechar
                     </button>

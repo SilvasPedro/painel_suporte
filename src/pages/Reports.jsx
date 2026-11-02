@@ -17,7 +17,9 @@ import { resolveUserName } from '../utils/userResolvers';
 import TicketDrawer from '../components/reports/TicketDrawer';
 import MassiveOutageBanner from '../components/reports/MassiveOutageBanner';
 import NewRequestModal from '../components/reports/NewRequestModal';
+import ReportDetailModal from '../components/reports/ReportDetailModal';
 import SafeMarkdown from '../components/reports/SafeMarkdown';
+import { BorderBeam } from '../components/magicui/BorderBeam';
 import { calculateSlaStatus } from '../utils/ispHelpers';
 import { 
     normalizeCategory, 
@@ -228,8 +230,9 @@ const Reports = () => {
         const pending = reports.filter(r => r.status === 'Pendente' || !r.status).length;
         const inProgress = reports.filter(r => r.status === 'Em Andamento').length;
         const resolved = reports.filter(r => r.status === 'Resolvido' || r.status === 'Concluído').length;
+        const suspended = reports.filter(r => r.status === 'Suspenso').length;
         const clientImpact = reports.filter(r => r.affectedClient === 'Sim').length;
-        return { total, pending, inProgress, resolved, clientImpact };
+        return { total, pending, inProgress, resolved, suspended, clientImpact };
     }, [reports]);
 
     const hasActiveFilters = Boolean(searchTerm || statusFilter || categoryFilter || departmentFilter || slaFilter || typeFilter || priorityFilter || clientImpactFilter || creatorFilter || regionFilter);
@@ -752,6 +755,12 @@ ${report.description || 'Sem descrição'}`;
                         Em Andamento
                     </span>
                 );
+            case 'Suspenso':
+                return (
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/25 inline-flex items-center gap-1.5 whitespace-nowrap shadow-xs">
+                        <Hourglass className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" /> Suspenso
+                    </span>
+                );
             case 'Recusado':
             case 'Cancelado':
                 return (
@@ -828,7 +837,7 @@ ${report.description || 'Sem descrição'}`;
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 h-full p-8">
+            <div className="flex-1 flex flex-col items-center justify-center bg-canvas text-primary-hub h-full p-8">
                 <Loader2 className="w-10 h-10 text-red-600 animate-spin mb-3" />
                 <p className="text-sm font-medium text-gray-600">Carregando tarefas e relatórios...</p>
             </div>
@@ -836,94 +845,93 @@ ${report.description || 'Sem descrição'}`;
     }
 
     return (
-        <div className="flex-1 p-2 sm:p-4 h-full flex flex-col bg-gray-50 font-sans overflow-hidden">
+        <div className="flex-1 p-2 sm:p-4 h-full flex flex-col bg-canvas text-primary-hub font-sans overflow-hidden">
             
-            {/* ========================================================================= */}
-            {/* CABEÇALHO COMPACTO DA PÁGINA (OTIMIZADO NO EIXO VERTICAL - REF: MEU HISTÓRICO) */}
-            {/* ========================================================================= */}
-            <header className="mb-2 bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200/90 shadow-2xs shrink-0 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center shrink-0 shadow-2xs">
-                        <Lightbulb className="w-4 h-4" />
+            {/* CABEÇALHO EXECUTIVO (NO FUNDO DA PÁGINA) */}
+            <header className="mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+                <div>
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+                        <Lightbulb className="w-3.5 h-3.5" />
+                        <span>Central de Demandas & O.S.</span>
                     </div>
-                    <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-sm sm:text-base font-black text-gray-900 tracking-tight">
-                                Tarefas & Relatórios
-                            </h1>
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
-                                {filteredReports.length} {filteredReports.length === 1 ? 'ticket' : 'tickets'}
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
+                            Tarefas & Relatórios
+                        </h1>
+                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-subtle text-secondary-hub border border-subtle">
+                            {filteredReports.length} {filteredReports.length === 1 ? 'ticket' : 'tickets'}
+                        </span>
+                        {canViewAllReports ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20 inline-flex items-center gap-1">
+                                <ShieldCheck className="w-3 h-3 text-purple-500" /> Visão Operacional
                             </span>
-                            {canViewAllReports ? (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200 hidden sm:inline-flex items-center gap-1">
-                                    <ShieldCheck className="w-3 h-3 text-purple-600" /> Visão Operacional
-                                </span>
-                            ) : (
-                                <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 hidden sm:inline-flex items-center gap-1">
-                                    <User className="w-3 h-3 text-blue-600" /> Meus Chamados
-                                </span>
-                            )}
-                        </div>
+                        ) : (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20 inline-flex items-center gap-1">
+                                <User className="w-3 h-3 text-blue-500" /> Meus Chamados
+                            </span>
+                        )}
                     </div>
+                    <p className="text-xs text-secondary-hub mt-0.5">
+                        Acompanhamento de chamados críticos, ordens de serviço, melhorias e tratativas com SLAs automatizados.
+                    </p>
                 </div>
 
-                {/* Ações do Topo: Toggle de Resumo, Alternância de Modo e Nova Solicitação */}
-                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
-                    {/* Toggle do Resumo Estatístico */}
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                    {/* Toggle do Resumo */}
                     <button
                         type="button"
                         onClick={() => setShowSummary(prev => !prev)}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200/80"
-                        title={showSummary ? "Ocultar cards de resumo para focar no histórico de tickets" : "Exibir cards de resumo"}
+                        className="px-3 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-surface hover:bg-subtle text-secondary-hub hover:text-primary-hub border border-subtle shadow-xs active:scale-95"
+                        title={showSummary ? "Ocultar cards de resumo" : "Exibir cards de resumo"}
                     >
-                        {showSummary ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                        {showSummary ? <ChevronUp className="w-3.5 h-3.5 text-muted-hub" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-hub" />}
                         <span className="hidden sm:inline">{showSummary ? 'Ocultar Resumo' : 'Ver Resumo'}</span>
                     </button>
 
-                    {/* Modos de Visualização Compactos */}
-                    <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 shrink-0">
+                    {/* Modos de Visualização */}
+                    <div className="flex items-center bg-subtle p-1 rounded-xl border border-subtle shrink-0 gap-1">
                         <button
                             type="button"
                             onClick={() => setViewMode('table')}
-                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                viewMode === 'table' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                viewMode === 'table' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
-                            title="Tabela (Foco no histórico detalhado)"
+                            title="Tabela"
                         >
-                            <Table className="w-3 h-3 text-red-600" />
+                            <Table className="w-3.5 h-3.5 text-rose-500" />
                             <span className="hidden sm:inline">Tabela</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setViewMode('kanban')}
-                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                viewMode === 'kanban' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                viewMode === 'kanban' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
-                            title="Quadro Kanban (Por fases)"
+                            title="Kanban"
                         >
-                            <Columns3 className="w-3 h-3 text-red-600" />
+                            <Columns3 className="w-3.5 h-3.5 text-rose-500" />
                             <span className="hidden sm:inline">Kanban</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setViewMode('cards')}
-                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                viewMode === 'cards' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                viewMode === 'cards' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Cards"
                         >
-                            <LayoutGrid className="w-3 h-3 text-red-600" />
+                            <LayoutGrid className="w-3.5 h-3.5 text-rose-500" />
                             <span className="hidden sm:inline">Cards</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setViewMode('compact')}
-                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                                viewMode === 'compact' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                                viewMode === 'compact' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Lista Compacta"
                         >
-                            <List className="w-3 h-3 text-red-600" />
+                            <List className="w-3.5 h-3.5 text-rose-500" />
                             <span className="hidden sm:inline">Compacta</span>
                         </button>
                     </div>
@@ -932,147 +940,154 @@ ${report.description || 'Sem descrição'}`;
                     <button
                         type="button"
                         onClick={openNewReportModal}
-                        className="px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-red-600 hover:bg-red-700 text-white shadow-2xs"
-                        title="Abrir novo chamado / solicitação crítica"
+                        className="px-4 py-2.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-rose-950/20 flex items-center gap-1.5 cursor-pointer active:scale-95"
                     >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Nova Solicitação</span>
+                        <Plus className="w-4 h-4" />
+                        <span>Novo Chamado</span>
                     </button>
                 </div>
             </header>
 
             {/* ========================================================================= */}
-            {/* FAIXA RESUMO ESTATÍSTICO COMPACTO (COLAPSÁVEL - REF: MEU HISTÓRICO)       */}
+            {/* CARTÕES EXECUTIVOS DE STATUS & QUANTIDADE (6 CARDS BENTO FLUIDO)          */}
             {/* ========================================================================= */}
             {showSummary && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-2 shrink-0 animate-in fade-in duration-150">
+                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-2 shrink-0 animate-in fade-in duration-150">
+                    {/* Card 1: Total Geral */}
                     <button 
-                        onClick={() => setStatusFilter('')}
-                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        onClick={() => { setStatusFilter(''); setClientImpactFilter(''); }}
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
                             statusFilter === '' && clientImpactFilter === ''
-                                ? 'bg-zinc-200/80 border-zinc-700 text-neutral-900 ring-2 ring-zinc-700/25 shadow-xs' 
-                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-gray-300'
+                                ? 'bg-surface border-rose-500 ring-2 ring-rose-500/30' 
+                                : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
-                        title="Mostrar todas as solicitações"
+                        title="Ver todas as solicitações"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === '' && clientImpactFilter === '' ? 'text-neutral-800' : 'text-gray-500'}`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider block truncate text-muted-hub">
                                 Total Registrado
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === '' && clientImpactFilter === '' ? 'text-neutral-950' : 'text-gray-900'}`}>
+                            <span className="text-xl sm:text-2xl font-black mt-0.5 block truncate leading-tight font-brand text-primary-hub">
                                 {metricsSummary.total}
                             </span>
                         </div>
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
-                            statusFilter === '' && clientImpactFilter === ''
-                                ? 'bg-zinc-800 text-white border-zinc-700'
-                                : 'bg-gray-50 text-gray-700 border-gray-100'
-                        }`}>
-                            <Sparkles className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-subtle text-primary-hub border-subtle shadow-xs">
+                            <Sparkles className="w-4 h-4 text-rose-500" />
                         </div>
                     </button>
 
+                    {/* Card 2: Pendentes */}
                     <button 
                         onClick={() => { setStatusFilter('Pendente'); setClientImpactFilter(''); }}
-                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
                             statusFilter === 'Pendente' 
-                                ? 'bg-amber-100 border-amber-600 text-amber-950 ring-2 ring-amber-500/30 shadow-xs' 
-                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-amber-300'
+                                ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30' 
+                                : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por solicitações pendentes"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Pendente' ? 'text-amber-900' : 'text-amber-700'}`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider block truncate text-amber-600 dark:text-amber-400">
                                 Pendentes
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Pendente' ? 'text-amber-950' : 'text-amber-800'}`}>
+                            <span className="text-xl sm:text-2xl font-black mt-0.5 block truncate leading-tight font-brand text-amber-700 dark:text-amber-400">
                                 {metricsSummary.pending}
                             </span>
                         </div>
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
-                            statusFilter === 'Pendente' 
-                                ? 'bg-amber-600 text-white border-amber-700' 
-                                : 'bg-amber-50 text-amber-700 border-amber-100'
-                        }`}>
-                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 shadow-xs">
+                            <Clock className="w-4 h-4" />
                         </div>
                     </button>
 
+                    {/* Card 3: Em Andamento */}
                     <button 
                         onClick={() => { setStatusFilter('Em Andamento'); setClientImpactFilter(''); }}
-                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
                             statusFilter === 'Em Andamento' 
-                                ? 'bg-blue-100 border-blue-600 text-blue-950 ring-2 ring-blue-500/30 shadow-xs' 
-                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-blue-300'
+                                ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30' 
+                                : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por solicitações em andamento"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Em Andamento' ? 'text-blue-900' : 'text-blue-700'}`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider block truncate text-blue-600 dark:text-blue-400">
                                 Em Andamento
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Em Andamento' ? 'text-blue-950' : 'text-blue-800'}`}>
+                            <span className="text-xl sm:text-2xl font-black mt-0.5 block truncate leading-tight font-brand text-blue-700 dark:text-blue-400">
                                 {metricsSummary.inProgress}
                             </span>
                         </div>
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
-                            statusFilter === 'Em Andamento' 
-                                ? 'bg-blue-600 text-white border-blue-700' 
-                                : 'bg-blue-50 text-blue-700 border-blue-100'
-                        }`}>
-                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 shadow-xs">
+                            <Clock className="w-4 h-4" />
                         </div>
                     </button>
 
+                    {/* Card 4: Suspensos (NOVO STATUS) */}
+                    <button 
+                        onClick={() => { setStatusFilter('Suspenso'); setClientImpactFilter(''); }}
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                            statusFilter === 'Suspenso' 
+                                ? 'bg-purple-500/10 border-purple-500 ring-2 ring-purple-500/30' 
+                                : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
+                        }`}
+                        title="Filtrar por chamados suspensos (aguardando terceiro / cliente)"
+                    >
+                        <div className="min-w-0 flex-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider block truncate text-purple-600 dark:text-purple-400">
+                                Suspensos
+                            </span>
+                            <span className="text-xl sm:text-2xl font-black mt-0.5 block truncate leading-tight font-brand text-purple-700 dark:text-purple-400">
+                                {metricsSummary.suspended || 0}
+                            </span>
+                        </div>
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 shadow-xs">
+                            <Hourglass className="w-4 h-4" />
+                        </div>
+                    </button>
+
+                    {/* Card 5: Resolvidos */}
                     <button 
                         onClick={() => { setStatusFilter('Resolvido'); setClientImpactFilter(''); }}
-                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
                             statusFilter === 'Resolvido' 
-                                ? 'bg-emerald-100 border-emerald-600 text-emerald-950 ring-2 ring-emerald-500/30 shadow-xs' 
-                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-emerald-300'
+                                ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30' 
+                                : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por solicitações resolvidas"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${statusFilter === 'Resolvido' ? 'text-emerald-900' : 'text-emerald-700'}`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider block truncate text-emerald-600 dark:text-emerald-400">
                                 Resolvidos
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${statusFilter === 'Resolvido' ? 'text-emerald-950' : 'text-emerald-800'}`}>
+                            <span className="text-xl sm:text-2xl font-black mt-0.5 block truncate leading-tight font-brand text-emerald-700 dark:text-emerald-400">
                                 {metricsSummary.resolved}
                             </span>
                         </div>
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
-                            statusFilter === 'Resolvido' 
-                                ? 'bg-emerald-600 text-white border-emerald-700' 
-                                : 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                        }`}>
-                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-xs">
+                            <CheckCircle className="w-4 h-4" />
                         </div>
                     </button>
 
+                    {/* Card 6: Afeta Cliente */}
                     <button 
                         onClick={() => { setClientImpactFilter('Sim'); setStatusFilter(''); }}
-                        className={`rounded-xl px-3 py-1.5 sm:py-2 border shadow-2xs flex items-center justify-between gap-2 min-w-0 transition-all text-left cursor-pointer col-span-2 sm:col-span-1 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
                             clientImpactFilter === 'Sim' 
-                                ? 'bg-red-100 border-red-600 text-red-950 ring-2 ring-red-500/30 shadow-xs' 
-                                : 'bg-white border-gray-200/90 text-gray-700 hover:border-red-300'
+                                ? 'bg-rose-500/10 border-rose-500 ring-2 ring-rose-500/30' 
+                                : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
-                        title="Filtrar por casos que impactaram o cliente"
+                        title="Filtrar por chamados que impactaram o cliente"
                     >
                         <div className="min-w-0 flex-1">
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block truncate ${clientImpactFilter === 'Sim' ? 'text-red-900' : 'text-red-700'}`}>
-                                Afetou Cliente
+                            <span className="text-[10px] font-bold uppercase tracking-wider block truncate text-rose-600 dark:text-rose-400">
+                                Afeta Cliente
                             </span>
-                            <span className={`text-sm sm:text-base font-black mt-0.5 block truncate leading-none ${clientImpactFilter === 'Sim' ? 'text-red-950' : 'text-red-800'}`}>
+                            <span className="text-xl sm:text-2xl font-black mt-0.5 block truncate leading-tight font-brand text-rose-700 dark:text-rose-400">
                                 {metricsSummary.clientImpact}
                             </span>
                         </div>
-                        <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 border shadow-2xs ${
-                            clientImpactFilter === 'Sim' 
-                                ? 'bg-red-600 text-white border-red-700' 
-                                : 'bg-red-50 text-red-700 border-red-100'
-                        }`}>
-                            <AlertTriangle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 shadow-xs">
+                            <AlertTriangle className="w-4 h-4" />
                         </div>
                     </button>
                 </div>
@@ -1081,7 +1096,7 @@ ${report.description || 'Sem descrição'}`;
             {/* ========================================================================= */}
             {/* TOOLBAR INTEGRADA E COMPACTA (REF: MEU HISTÓRICO)                          */}
             {/* ========================================================================= */}
-            <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-gray-200 shadow-2xs mb-2 shrink-0">
+            <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs mb-4 shrink-0">
                 <div className="flex flex-col md:flex-row gap-2 items-stretch md:items-center justify-between">
                     
                     {/* Campo de Busca Compacto */}
@@ -1092,7 +1107,7 @@ ${report.description || 'Sem descrição'}`;
                             placeholder="Buscar por título, descrição, protocolo, autor ou resposta..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-8 pr-7 py-1.5 border border-gray-200 rounded-lg text-xs text-gray-800 placeholder-gray-400 focus:ring-1 focus:ring-red-500 outline-none transition-all bg-gray-50/50 focus:bg-white"
+                            className="w-full pl-9 pr-7 py-2 bg-subtle border border-subtle rounded-xl text-xs text-primary-hub placeholder:text-muted-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 outline-none transition-all focus:bg-surface font-medium"
                         />
                         {searchTerm && (
                             <button 
@@ -1144,6 +1159,7 @@ ${report.description || 'Sem descrição'}`;
                             <option value="">Status: Todos</option>
                             <option value="Pendente">Pendente</option>
                             <option value="Em Andamento">Em Andamento</option>
+                            <option value="Suspenso">Suspenso</option>
                             <option value="Resolvido">Resolvido</option>
                             <option value="Cancelado">Cancelado</option>
                         </select>
@@ -1251,7 +1267,7 @@ ${report.description || 'Sem descrição'}`;
                         <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden flex-1 min-h-0 flex flex-col">
                             <div className="overflow-x-auto overflow-y-auto flex-1">
                                 <table className="min-w-full divide-y divide-gray-200 text-sm">
-                                    <thead className="bg-zinc-950 text-white sticky top-0 z-10">
+                                    <thead className="bg-subtle/90 text-muted-hub border-b border-subtle sticky top-0 z-10 backdrop-blur-xs">
                                         <tr>
                                             <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Ticket</th>
                                             <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">SLA ISP</th>
@@ -1373,10 +1389,11 @@ ${report.description || 'Sem descrição'}`;
                     {/* MODO 2: QUADRO KANBAN POR STATUS       */}
                     {/* -------------------------------------- */}
                     {viewMode === 'kanban' && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 flex-1 min-h-0 overflow-y-auto">
+                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3.5 flex-1 min-h-0 overflow-y-auto">
                             {[
                                 { status: 'Pendente', title: 'Triagem / Pendentes', color: 'border-amber-300 bg-amber-50/40 text-amber-900', badge: 'bg-amber-100 text-amber-800' },
                                 { status: 'Em Andamento', title: 'Em Andamento', color: 'border-blue-300 bg-blue-50/40 text-blue-900', badge: 'bg-blue-100 text-blue-800' },
+                                { status: 'Suspenso', title: 'Suspensos (Aguardando)', color: 'border-purple-300 bg-purple-50/40 text-purple-900', badge: 'bg-purple-100 text-purple-800' },
                                 { status: 'Resolvido', title: 'Concluídos / Resolvidos', color: 'border-emerald-300 bg-emerald-50/40 text-emerald-900', badge: 'bg-emerald-100 text-emerald-800' },
                                 { status: 'Cancelado', title: 'Recusados / Cancelados', color: 'border-gray-300 bg-gray-50/60 text-gray-800', badge: 'bg-gray-200 text-gray-700' }
                             ].map(col => {
@@ -1623,875 +1640,40 @@ ${report.description || 'Sem descrição'}`;
             />
 
             {/* ========================================================================= */}
-            {/* MODAL DE VISUALIZAÇÃO EVOLUÍDO E COMPLETO (EXPANDIDO)                     */}
+            {/* MODAL DE VISUALIZAÇÃO EVOLUÍDO E COMPLETO (EXPANDIDO v4.0.0)             */}
             {/* ========================================================================= */}
-            {viewingReport && isFullModalOpen && canUserViewTask(viewingReport, effectiveUser) && (
-                <div className="fixed inset-0 bg-zinc-950/75 flex items-center justify-center p-3 sm:p-6 z-[80] backdrop-blur-xs">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl xl:max-w-6xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
-                        
-                        {/* CABEÇALHO DO MODAL */}
-                        <div className="p-5 bg-zinc-950 text-white flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shrink-0 border-b border-zinc-800">
-                            <div className="flex items-center gap-3 min-w-0">
-                                <div className="p-3 bg-zinc-900 rounded-xl border border-zinc-800 text-red-500">
-                                    {getTypeIcon(viewingReport.type, "w-6 h-6")}
-                                </div>
-                                <div className="min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                                        <span className="px-2.5 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono text-xs font-bold">
-                                            #{viewingReport.id.slice(0, 8).toUpperCase()}
-                                        </span>
-                                        <span className="text-xs text-zinc-400 font-medium">
-                                            {viewingReport.type || 'Análise de Erro'}
-                                        </span>
-                                        {getPriorityBadge(viewingReport.priority || 'Normal')}
-                                        {/* Badge em Destaque do Departamento de Origem */}
-                                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-950/80 text-indigo-200 border border-indigo-500/40 inline-flex items-center gap-1">
-                                            <Building className="w-3 h-3 text-indigo-400" />
-                                            Departamento: {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
-                                        </span>
-                                        {viewingReport.affectedClient === 'Sim' ? (
-                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-950/80 text-rose-200 border border-rose-500/40 inline-flex items-center gap-1">
-                                                <AlertTriangle className="w-3 h-3 text-rose-400" />
-                                                Afetou Cliente: Sim
-                                            </span>
-                                        ) : (
-                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-zinc-800 text-zinc-400 border border-zinc-700 inline-flex items-center gap-1">
-                                                Afetou Cliente: Não
-                                            </span>
-                                        )}
-                                        {isUserWatcherOnly(viewingReport, effectiveUser) && (
-                                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-950/80 text-amber-200 border border-amber-500/40 inline-flex items-center gap-1">
-                                                <Eye className="w-3 h-3 text-amber-400" />
-                                                Visualizador (Somente Leitura)
-                                            </span>
-                                        )}
-                                    </div>
-                                    <h3 className="text-lg font-bold text-white leading-tight truncate max-w-xl" title={getDisplayTitle(viewingReport)}>
-                                        {getDisplayTitle(viewingReport)}
-                                    </h3>
-                                </div>
-                            </div>
-
-                            {/* Controles de Navegação e Fechar */}
-                            <div className="flex items-center gap-2 self-end sm:self-auto">
-                                <div className="flex items-center bg-zinc-900 rounded-lg border border-zinc-800 p-0.5">
-                                    <button 
-                                        onClick={() => navigateReport('prev')}
-                                        disabled={!hasPrevReport}
-                                        className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors cursor-pointer"
-                                        title="Solicitação Anterior"
-                                    >
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-                                    <span className="text-[11px] font-mono text-zinc-500 px-2">
-                                        {currentViewingIndex + 1}/{filteredReports.length}
-                                    </span>
-                                    <button 
-                                        onClick={() => navigateReport('next')}
-                                        disabled={!hasNextReport}
-                                        className="p-1.5 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors cursor-pointer"
-                                        title="Próxima Solicitação"
-                                    >
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                                <button 
-                                    onClick={() => {
-                                        setViewingReport(null);
-                                        setIsFullModalOpen(false);
-                                    }} 
-                                    className="p-2 hover:bg-zinc-800 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* LINHA DO TEMPO / STEPPER DE STATUS */}
-                        <div className="bg-gray-100/70 border-b border-gray-200 px-6 py-3 shrink-0">
-                            <div className="flex items-center justify-between max-w-3xl mx-auto text-xs font-bold">
-                                
-                                {/* Passo 1: Registrado */}
-                                <div className="flex items-center gap-2 text-emerald-700">
-                                    <div className="w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-[10px]">
-                                        ✓
-                                    </div>
-                                    <span>1. Registrado</span>
-                                </div>
-
-                                <div className={`flex-1 h-0.5 mx-3 ${
-                                    viewingReport.status === 'Em Andamento' || viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído'
-                                        ? 'bg-blue-600' : 'bg-gray-300'
-                                }`} />
-
-                                {/* Passo 2: Em Andamento */}
-                                <div className={`flex items-center gap-2 ${
-                                    viewingReport.status === 'Em Andamento' 
-                                        ? 'text-blue-700 font-extrabold' 
-                                        : (viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? 'text-emerald-700' : 'text-gray-400')
-                                }`}>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
-                                        viewingReport.status === 'Em Andamento' 
-                                            ? 'bg-blue-600 text-white' 
-                                            : (viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? 'bg-emerald-600 text-white' : 'bg-gray-200 text-gray-500')
-                                    }`}>
-                                        2
-                                    </div>
-                                    <span>2. Em Análise</span>
-                                </div>
-
-                                <div className={`flex-1 h-0.5 mx-3 ${
-                                    viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído'
-                                        ? 'bg-emerald-600' : 'bg-gray-300'
-                                }`} />
-
-                                {/* Passo 3: Finalizado */}
-                                <div className={`flex items-center gap-2 ${
-                                    viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído'
-                                        ? 'text-emerald-700 font-extrabold' 
-                                        : (viewingReport.status === 'Cancelado' || viewingReport.status === 'Recusado' ? 'text-gray-700' : 'text-gray-400')
-                                }`}>
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] ${
-                                        viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído'
-                                            ? 'bg-emerald-600 text-white' 
-                                            : (viewingReport.status === 'Cancelado' || viewingReport.status === 'Recusado' ? 'bg-gray-600 text-white' : 'bg-gray-200 text-gray-500')
-                                    }`}>
-                                        3
-                                    </div>
-                                    <span>
-                                        {viewingReport.status === 'Cancelado' || viewingReport.status === 'Recusado' ? '3. Encerrado' : '3. Resolvido'}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        {/* CORPO DO MODAL */}
-                        <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-gray-50">
-                            
-                            {/* ========================================================================= */}
-                            {/* PARTE DE CIMA: VISUALIZAÇÃO ESTENDIDA DOS DADOS DO TICKET                 */}
-                            {/* ========================================================================= */}
-                            <div className="space-y-4">
-                                {/* Aviso de Modo Visualizador (Somente Leitura) */}
-                                {isUserWatcherOnly(viewingReport, effectiveUser) && (
-                                    <div className="p-3.5 rounded-2xl bg-indigo-50 border border-indigo-200 text-indigo-950 text-xs flex items-center gap-2.5 shadow-2xs">
-                                        <Eye className="w-4 h-4 text-indigo-600 shrink-0" />
-                                        <span>
-                                            <strong>Modo Visualizador (Somente Leitura):</strong> Você consta na lista de visualizadores deste chamado e pode acompanhar o status e todas as interações, sem permissão para editar campos, encerrar o chamado ou gerenciar visualizadores.
-                                        </span>
-                                    </div>
-                                )}
-
-                                {/* Painel Unificado de Metadados e Solicitante */}
-                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-                                    <div className="grid grid-cols-2 sm:grid-cols-6 gap-4 pb-4 border-b border-gray-100">
-                                        <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Tipo de O.S.</span>
-                                            {getTypeBadge(viewingReport.category || viewingReport.type)}
-                                        </div>
-                                        <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Status Atual</span>
-                                            {getStatusBadge(viewingReport.status)}
-                                        </div>
-                                        <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Prioridade</span>
-                                            {getPriorityBadge(viewingReport.priority || 'Normal')}
-                                        </div>
-                                        <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Departamento</span>
-                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-bold mt-0.5">
-                                                <Building className="w-3 h-3 text-indigo-600" />
-                                                {getTaskOriginDepartment(viewingReport) || 'Geral / Suporte'}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Data / Prazo</span>
-                                            <span className="text-xs font-bold text-gray-900 block mt-0.5">
-                                                {formatDate(viewingReport.due_date || viewingReport.date)}
-                                            </span>
-                                        </div>
-                                        <div>
-                                            <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Afetou Cliente?</span>
-                                            {viewingReport.affectedClient === 'Sim' ? (
-                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200 mt-0.5">
-                                                    <AlertTriangle className="w-3 h-3 text-rose-600" /> Sim
-                                                </span>
-                                            ) : (
-                                                <span className="text-xs text-gray-500 font-medium block mt-1">Não</span>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    {/* Informação Breve de Como Afetou o Cliente */}
-                                    {viewingReport.affectedClient === 'Sim' && (
-                                        <div className="p-3.5 bg-rose-50/80 rounded-xl border border-rose-200 space-y-1">
-                                            <span className="text-xs font-bold text-rose-900 uppercase tracking-wider flex items-center gap-1.5">
-                                                <AlertOctagon className="w-3.5 h-3.5 text-rose-600" />
-                                                Impacto no Atendimento ao Cliente:
-                                            </span>
-                                            <p className="text-xs text-rose-800 leading-relaxed font-medium">
-                                                {viewingReport.howAffected || 'Impacto confirmado pelo solicitante.'}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Solicitante e Data de Criação */}
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-0.5 pb-4 border-b border-gray-100">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-red-100 text-red-700 font-bold flex items-center justify-center text-sm border border-red-200 shrink-0">
-                                                {(viewingReport.creatorName || 'U').charAt(0).toUpperCase()}
-                                            </div>
-                                            <div>
-                                                <span className="text-xs font-bold text-gray-900 block">
-                                                    {viewingReport.creatorName || 'Desconhecido'}
-                                                </span>
-                                                <span className="text-[11px] text-gray-500">
-                                                    Solicitante / Analista responsável pelo registro
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        {viewingReport.createdAt?.toDate && (
-                                            <span className="text-[11px] text-gray-400 font-medium">
-                                                Registrado em: {viewingReport.createdAt.toDate().toLocaleString('pt-BR')}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* CONTROLE DE RESPONSÁVEL (ASSIGNED_TO) E VISUALIZADORES (WATCHERS) */}
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                                        {/* Coluna 1: Responsável Atribuído */}
-                                        <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                                                    Responsável pela Tarefa
-                                                </span>
-                                                {!getTaskAssignee(viewingReport) && (
-                                                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-amber-100 text-amber-900 border border-amber-200">
-                                                        Fila Gestor / Supervisor
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {canUserAssignResponsible(viewingReport, effectiveUser) ? (
-                                                <select
-                                                    value={getTaskAssignee(viewingReport)?.id || ''}
-                                                    onChange={(e) => handleAssignResponsible(viewingReport, e.target.value)}
-                                                    className="w-full p-2 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 bg-white focus:ring-2 focus:ring-blue-500 outline-none cursor-pointer"
-                                                >
-                                                    <option value="">
-                                                        Sem responsável (Visível p/ Gestores e Supervisores)
-                                                    </option>
-                                                    {collaborators.map((c) => {
-                                                        const cid = String(c.id || c.uid || c.email || c.name);
-                                                        return (
-                                                            <option key={cid} value={cid}>
-                                                                {c.name} {c.role ? `(${c.role})` : ''}
-                                                            </option>
-                                                        );
-                                                    })}
-                                                </select>
-                                            ) : (
-                                                <div className="text-xs font-semibold text-gray-800 py-1">
-                                                    {getTaskAssignee(viewingReport) ? (
-                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-900 border border-blue-200">
-                                                            <UserCheck className="w-3.5 h-3.5 text-blue-600" />
-                                                            {getTaskAssignee(viewingReport).name}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-gray-600">
-                                                            Sem responsável atribuído (Direcionado a Gestores e Supervisores)
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        {/* Coluna 2: Visualizadores (Watchers) */}
-                                        <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
-                                            <div className="flex items-center justify-between">
-                                                <span className="text-[11px] font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <Eye className="w-3.5 h-3.5 text-indigo-600" />
-                                                    Visualizadores ({getTaskWatchers(viewingReport).length})
-                                                </span>
-                                                <span className="text-[10px] text-gray-400">
-                                                    Somente leitura
-                                                </span>
-                                            </div>
-
-                                            {canUserManageWatchers(viewingReport, effectiveUser) && (
-                                                <div className="flex gap-1.5">
-                                                    <select
-                                                        value={modalWatcherToAdd}
-                                                        onChange={(e) => {
-                                                            const val = e.target.value;
-                                                            setModalWatcherToAdd(val);
-                                                            if (val) {
-                                                                handleAddWatcherToReport(viewingReport, val);
-                                                            }
-                                                        }}
-                                                        className="flex-1 p-2 border border-gray-300 rounded-lg text-xs text-gray-800 bg-white focus:ring-2 focus:ring-indigo-500 outline-none cursor-pointer"
-                                                    >
-                                                        <option value="">Adicionar visualizador...</option>
-                                                        {collaborators.map((c) => {
-                                                            const cid = String(c.id || c.uid || c.email || c.name);
-                                                            return (
-                                                                <option key={cid} value={cid}>
-                                                                    {c.name} {c.role ? `(${c.role})` : ''}
-                                                                </option>
-                                                            );
-                                                        })}
-                                                    </select>
-                                                </div>
-                                            )}
-
-                                            {getTaskWatchers(viewingReport).length > 0 ? (
-                                                <div className="flex flex-wrap gap-1.5 pt-0.5">
-                                                    {getTaskWatchers(viewingReport).map((w) => (
-                                                        <span
-                                                            key={w.id}
-                                                            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-900 border border-indigo-200 text-xs font-semibold"
-                                                        >
-                                                            <span>{w.name}</span>
-                                                            {canUserManageWatchers(viewingReport, effectiveUser) && (
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={() => handleRemoveWatcherFromReport(viewingReport, w.id)}
-                                                                    className="text-indigo-500 hover:text-red-600 cursor-pointer ml-0.5"
-                                                                    title="Remover visualizador"
-                                                                >
-                                                                    <X className="w-3 h-3" />
-                                                                </button>
-                                                            )}
-                                                        </span>
-                                                    ))}
-                                                </div>
-                                            ) : (
-                                                <p className="text-[11px] text-gray-400 italic">
-                                                    Nenhum visualizador adicionado.
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Descrição Completa Estendida (Renderização Markdown GFM Segura + Tabelas) */}
-                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
-                                            Descrição Completa da Demanda
-                                        </span>
-                                        <button 
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(viewingReport.description || '');
-                                                showToast("Descrição copiada!", "success");
-                                            }}
-                                            className="text-xs text-gray-500 hover:text-gray-900 flex items-center gap-1 cursor-pointer transition-colors"
-                                        >
-                                            <Copy className="w-3.5 h-3.5" /> Copiar texto
-                                        </button>
-                                    </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                        <SafeMarkdown content={viewingReport.description || 'Sem descrição informada.'} />
-                                    </div>
-                                </div>
-
-                                {/* Alerta de Impacto no Cliente (se houver) */}
-                                {viewingReport.affectedClient === 'Sim' && (
-                                    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 shadow-2xs space-y-1.5">
-                                        <div className="flex items-center gap-2 text-red-800 font-black text-xs uppercase tracking-wider">
-                                            <AlertOctagon className="w-4 h-4 text-red-600" />
-                                            Impacto Identificado no Atendimento ao Cliente
-                                        </div>
-                                        <p className="text-xs text-red-900 leading-relaxed bg-white/80 p-3 rounded-xl border border-red-200/60 font-medium">
-                                            {viewingReport.howAffected || 'Impacto confirmado, porém sem descrição adicional.'}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Ações Rápidas no Rodapé da Solicitação Estendida */}
-                                <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={() => handleCopyReportSummary(viewingReport)}
-                                            className="px-4 py-2 bg-white hover:bg-gray-100 border border-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                        >
-                                            {copiedText ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                                            Copiar Resumo Formatado
-                                        </button>
-                                    </div>
-
-                                    {canEditOrDelete(viewingReport) && (
-                                        <div className="flex items-center gap-2">
-                                            <button 
-                                                onClick={() => {
-                                                    const rep = viewingReport;
-                                                    setViewingReport(null);
-                                                    openEditModal(rep);
-                                                }}
-                                                className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                            >
-                                                <Edit2 className="w-3.5 h-3.5" /> Editar Solicitação
-                                            </button>
-                                            <button 
-                                                onClick={() => setDeletingReport(viewingReport)}
-                                                className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 text-xs font-bold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" /> Excluir
-                                            </button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* ========================================================================= */}
-                            {/* PARTE DE BAIXO: LADO A LADO - COMENTÁRIOS E DESPACHO / GESTÃO              */}
-                            {/* ========================================================================= */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start pt-1">
-                                
-                                {/* LADO ESQUERDO: INTERAÇÕES & COMENTÁRIOS DO CHAMADO */}
-                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4 flex flex-col">
-                                    <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                        <div className="flex items-center gap-2.5">
-                                            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg border border-blue-100">
-                                                <MessageSquare className="w-4 h-4" />
-                                            </div>
-                                            <div>
-                                                <h4 className="text-xs font-black text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                                    Interações & Comentários
-                                                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700">
-                                                        {Array.isArray(viewingReport.comments) ? viewingReport.comments.length : 0}
-                                                    </span>
-                                                </h4>
-                                                <p className="text-[11px] text-gray-400">
-                                                    Canal direto de comunicação entre o solicitante e a liderança
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Parecer / Solução Histórica Legada (se existir adminComment fora do array de comentários) */}
-                                    {(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution) && (!Array.isArray(viewingReport.comments) || !viewingReport.comments.some(c => c.content?.includes(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution))) && (
-                                        <div className="p-3.5 rounded-xl bg-blue-50/80 border border-blue-200/80 text-xs text-blue-950 space-y-1">
-                                            <div className="flex items-center justify-between">
-                                                <span className="font-bold text-[11px] text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                                                    <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
-                                                    Posicionamento / Resolução Registrada:
-                                                </span>
-                                                {viewingReport.lastUpdatedBy && (
-                                                    <span className="text-[10px] text-blue-600 font-medium">
-                                                        Por: {viewingReport.lastUpdatedBy}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <p className="whitespace-pre-wrap leading-relaxed">
-                                                {viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {/* Lista de Comentários / Timeline */}
-                                    <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-                                        {Array.isArray(viewingReport.comments) && viewingReport.comments.length > 0 ? (
-                                            viewingReport.comments.map((comment, idx) => {
-                                                const isAuthor = comment.authorId === (currentUser?.firestoreId || currentUser?.uid);
-                                                const isTicketCreator = comment.authorId === viewingReport.creatorId;
-                                                const isLeader = comment.isStaff || (comment.authorRole && ['gestor', 'supervisor', 'admin', 'gerente', 'coordenador'].some(r => String(comment.authorRole).toLowerCase().includes(r)));
-
-                                                return (
-                                                    <div 
-                                                        key={comment.id || idx}
-                                                        className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all ${
-                                                            isLeader 
-                                                                ? 'bg-blue-50/50 border-blue-200/80' 
-                                                                : isTicketCreator
-                                                                    ? 'bg-amber-50/40 border-amber-200/70'
-                                                                    : 'bg-gray-50 border-gray-200'
-                                                        }`}
-                                                    >
-                                                        {/* Avatar com inicial */}
-                                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 border ${
-                                                            isLeader 
-                                                                ? 'bg-blue-600 text-white border-blue-700' 
-                                                                : isTicketCreator
-                                                                    ? 'bg-amber-500 text-white border-amber-600'
-                                                                    : 'bg-gray-700 text-white border-gray-800'
-                                                        }`}>
-                                                            {(comment.authorName || 'U').charAt(0).toUpperCase()}
-                                                        </div>
-
-                                                        {/* Conteúdo da Mensagem */}
-                                                        <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-                                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                                    <span className="text-xs font-bold text-gray-900">
-                                                                        {comment.authorName}
-                                                                    </span>
-                                                                    {isAuthor && (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-zinc-200/80 text-zinc-800">
-                                                                            Você
-                                                                        </span>
-                                                                    )}
-                                                                    {isLeader ? (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800 border border-blue-200">
-                                                                            {comment.authorRole || 'Liderança / Gestão'}
-                                                                        </span>
-                                                                    ) : isTicketCreator ? (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200">
-                                                                            Autor do Chamado
-                                                                        </span>
-                                                                    ) : (
-                                                                        <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-gray-200 text-gray-700">
-                                                                            {comment.authorRole || 'Colaborador'}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                                <span className="text-[10px] text-gray-400 font-medium">
-                                                                    {formatCommentDate(comment.createdAt)}
-                                                                </span>
-                                                            </div>
-
-                                                            <p className="text-xs text-gray-800 leading-relaxed whitespace-pre-wrap break-words font-normal">
-                                                                {comment.content}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            })
-                                        ) : (
-                                            <div className="p-4 rounded-xl border border-dashed border-gray-200 bg-gray-50/50 text-center space-y-1">
-                                                <MessageSquare className="w-5 h-5 text-gray-400 mx-auto" />
-                                                <p className="text-xs font-medium text-gray-500">
-                                                    Nenhum comentário registrado ainda.
-                                                </p>
-                                                <p className="text-[11px] text-gray-400">
-                                                    Tire dúvidas, informe detalhes que faltaram ou complemente o chamado no campo abaixo.
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Formulário Interativo de Envio de Comentário (Bloqueado para Visualizadores somente leitura) */}
-                                    {!isUserWatcherOnly(viewingReport, effectiveUser) && (
-                                        <div className="pt-2 border-t border-gray-100 space-y-2.5">
-                                            {/* Sugestões Rápidas (Chips de 1 clique) */}
-                                            <div>
-                                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                                                    Respostas Rápidas / Atalhos
-                                                </span>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {(canManageTickets ? [
-                                                        "⚠️ Faltam dados ou protocolo para análise.",
-                                                        "⏳ Em análise pela equipe técnica.",
-                                                        "✅ Ajuste aplicado com sucesso.",
-                                                        "🔄 Aguardando retorno do solicitante."
-                                                    ] : [
-                                                        "ℹ️ Informações adicionadas conforme solicitado.",
-                                                        "📌 Segue protocolo de atendimento.",
-                                                        "👍 Testado e confirmado o funcionamento.",
-                                                        "❓ Gostaria de um retorno sobre o andamento."
-                                                    ]).map((chip, idx) => (
-                                                        <button
-                                                            key={idx}
-                                                            type="button"
-                                                            onClick={() => setNewCommentText(prev => prev ? `${prev} ${chip}` : chip)}
-                                                            className="text-[10px] font-medium bg-gray-100 hover:bg-blue-50 text-gray-600 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2 py-0.5 rounded-lg transition-colors cursor-pointer"
-                                                        >
-                                                            {chip}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Campo de Texto para Comentar */}
-                                            <div className="space-y-2">
-                                                <textarea
-                                                    rows={3}
-                                                    value={newCommentText}
-                                                    onChange={(e) => setNewCommentText(e.target.value)}
-                                                    placeholder={canManageTickets 
-                                                        ? "Escreva um comentário, solicite informações faltantes ou responda ao colaborador..." 
-                                                        : "Escreva sua atualização, responda às dúvidas da liderança ou anexe o protocolo..."}
-                                                    className="w-full p-3 border border-gray-300 rounded-xl text-xs text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-blue-600 outline-none bg-white resize-none shadow-2xs leading-relaxed"
-                                                />
-
-                                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-                                                    {/* Se for gestor/supervisor ou responsável, pode alterar o status do ticket no próprio envio do comentário */}
-                                                    {canUserDispatchOrCloseTask(viewingReport, effectiveUser) ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[11px] font-bold text-gray-600 whitespace-nowrap">
-                                                                Status ao comentar:
-                                                            </span>
-                                                            <select
-                                                                value={newCommentStatus}
-                                                                onChange={(e) => setNewCommentStatus(e.target.value)}
-                                                                className="text-xs p-1.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-800 font-bold focus:ring-1 focus:ring-blue-500 outline-none cursor-pointer"
-                                                            >
-                                                                <option value={viewingReport.status}>Manter atual ({viewingReport.status})</option>
-                                                                <option value="Pendente">Pendente</option>
-                                                                <option value="Em Andamento">Em Andamento</option>
-                                                                <option value="Resolvido">Resolvido</option>
-                                                                <option value="Cancelado">Cancelado</option>
-                                                            </select>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="text-[11px] text-gray-500 flex items-center gap-1">
-                                                            <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                                                            Sua resposta atualiza o chamado sem precisar editar o original.
-                                                        </div>
-                                                    )}
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAddComment}
-                                                        disabled={sendingComment || !newCommentText.trim()}
-                                                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm hover:shadow flex items-center justify-center gap-1.5 cursor-pointer disabled:cursor-not-allowed"
-                                                    >
-                                                        {sendingComment ? (
-                                                            <>
-                                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                                                                <span>Enviando...</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Send className="w-3.5 h-3.5" />
-                                                                <span>Enviar Comentário</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* LADO DIREITO: DESPACHO & GESTÃO DO TICKET (OU VISÃO DA GESTÃO) */}
-                                <div className="flex flex-col gap-4">
-                                    {canUserDispatchOrCloseTask(viewingReport, effectiveUser) ? (
-                                        /* PAINEL DE GESTÃO DO TICKET (GESTOR / SUPERVISOR / RESPONSÁVEL) */
-                                        <div className="bg-white p-5 rounded-2xl border border-blue-200 shadow-sm flex flex-col gap-4">
-                                            <div className="border-b border-blue-100 pb-3">
-                                                <h4 className="text-xs font-black text-blue-900 uppercase tracking-wider flex items-center gap-2">
-                                                    <ShieldCheck className="w-4 h-4 text-blue-600"/>
-                                                    Despacho & Gestão do Ticket
-                                                </h4>
-                                                <p className="text-[11px] text-gray-500 mt-1">
-                                                    Atualize a fase do chamado e registre a resolução visível ao colaborador.
-                                                </p>
-                                            </div>
-
-                                            {/* Mudança de Status */}
-                                            <div>
-                                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                                                    Atualizar Status
-                                                </label>
-                                                <select 
-                                                    value={quickStatus} 
-                                                    onChange={(e) => setQuickStatus(e.target.value)} 
-                                                    className="w-full p-2.5 border border-blue-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-blue-50/40 font-bold text-blue-950 text-sm cursor-pointer shadow-2xs"
-                                                >
-                                                    <option value="Pendente">Pendente (Na fila de triagem)</option>
-                                                    <option value="Em Andamento">Em Andamento (Em análise/resolução)</option>
-                                                    <option value="Resolvido">Resolvido (Demanda solucionada)</option>
-                                                    <option value="Cancelado">Cancelado / Recusado</option>
-                                                </select>
-                                            </div>
-
-                                            {/* Modelos Rápidos de Resposta */}
-                                            <div>
-                                                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                                    Modelos Rápidos de Parecer
-                                                </label>
-                                                <div className="flex flex-wrap gap-1.5">
-                                                    {[
-                                                        "Em análise pela equipe técnica.",
-                                                        "Ajuste aplicado com sucesso.",
-                                                        "Solicitamos mais detalhes para reprodução.",
-                                                        "Resolvido na versão atual."
-                                                    ].map((tmpl, idx) => (
-                                                        <button 
-                                                            key={idx}
-                                                            type="button"
-                                                            onClick={() => setQuickComment(tmpl)}
-                                                            className="text-[10px] font-medium bg-gray-100 hover:bg-blue-100 text-gray-700 hover:text-blue-800 px-2 py-1 rounded-lg transition-colors cursor-pointer text-left border border-gray-200 hover:border-blue-200"
-                                                        >
-                                                            {tmpl}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-
-                                            {/* Campo de Comentário / Parecer */}
-                                            <div className="flex-1 flex flex-col">
-                                                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                                                    Parecer da Liderança / Resolução
-                                                </label>
-                                                <textarea 
-                                                    rows="5" 
-                                                    placeholder="Descreva a ação tomada, orientações ao colaborador ou justificativa do encerramento..." 
-                                                    value={quickComment} 
-                                                    onChange={(e) => setQuickComment(e.target.value)} 
-                                                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none bg-white text-gray-800 text-xs shadow-2xs resize-none leading-relaxed" 
-                                                />
-                                            </div>
-
-                                            <button 
-                                                onClick={handleQuickUpdate} 
-                                                disabled={quickSaving}
-                                                className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all disabled:opacity-70 flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-                                            >
-                                                {quickSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                                Salvar Andamento & Parecer
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        /* PAINEL DE FEEDBACK E RESOLUÇÃO VISÍVEL AO COLABORADOR / VISUALIZADOR */
-                                        <div className="space-y-4">
-                                            <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-4">
-                                                <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                                    <div className="flex items-center gap-2">
-                                                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-                                                            <ShieldCheck className="w-4 h-4" />
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider">
-                                                                Status & Resolução Oficial
-                                                            </h4>
-                                                            <p className="text-[10px] text-gray-400">
-                                                                Posicionamento da Supervisão e Gestão
-                                                            </p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
-                                                        <Lock className="w-3 h-3 text-amber-600" />
-                                                        Gestão Exclusiva
-                                                    </div>
-                                                </div>
-
-                                                {/* Status em Destaque com Descrição Operacional */}
-                                                <div className="p-3 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                                                            Fase Atual do Ticket
-                                                        </span>
-                                                        <div className="mt-1">
-                                                            {getStatusBadge(viewingReport.status)}
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <span className="text-[11px] font-medium text-gray-500 block">
-                                                            {viewingReport.status === 'Resolvido' || viewingReport.status === 'Concluído' ? (
-                                                                'Demanda concluída'
-                                                            ) : viewingReport.status === 'Em Andamento' ? (
-                                                                'Análise técnica em curso'
-                                                            ) : (
-                                                                'Na fila de triagem'
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Solução Técnica ou Parecer da Liderança */}
-                                                {(viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution) ? (
-                                                    <div className="space-y-2 pt-1">
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider flex items-center gap-1.5">
-                                                                <MessageSquare className="w-3.5 h-3.5 text-blue-600" />
-                                                                Parecer / Solução da Gestão:
-                                                            </span>
-                                                            <button 
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    const solText = viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution || '';
-                                                                    navigator.clipboard.writeText(solText);
-                                                                    showToast("Parecer copiado com sucesso!", "success");
-                                                                }}
-                                                                className="text-[10px] text-blue-600 hover:text-blue-800 font-bold flex items-center gap-1 cursor-pointer"
-                                                            >
-                                                                <Copy className="w-3 h-3" /> Copiar Solução
-                                                            </button>
-                                                        </div>
-
-                                                        <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 text-xs text-blue-950 leading-relaxed font-normal whitespace-pre-wrap shadow-2xs">
-                                                            {viewingReport.adminComment || viewingReport.closingComment || viewingReport.solution}
-                                                        </div>
-
-                                                        {viewingReport.lastUpdatedBy && (
-                                                            <div className="flex items-center justify-end gap-1 text-[10px] text-gray-400 font-medium pt-1">
-                                                                <span>Atendido por:</span>
-                                                                <strong className="text-gray-600">{viewingReport.lastUpdatedBy}</strong>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="p-4 rounded-xl border border-dashed border-gray-300 bg-amber-50/30 text-center space-y-1.5">
-                                                        <Clock className="w-6 h-6 text-amber-500 mx-auto" />
-                                                        <h5 className="font-bold text-xs text-gray-800">
-                                                            Aguardando Solução da Liderança
-                                                        </h5>
-                                                        <p className="text-[11px] text-gray-500 leading-relaxed">
-                                                            Sua solicitação está registrada e aguardando despacho de um supervisor ou gestor. Assim que houver um parecer, ele será exibido aqui.
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Bloco de Instrução da Nova Interação */}
-                                                {!isUserWatcherOnly(viewingReport, effectiveUser) && (
-                                                    <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200/80 text-[11px] text-blue-900 space-y-1.5">
-                                                        <div className="flex items-center gap-1.5 font-bold text-blue-950 text-xs">
-                                                            <MessageSquare className="w-4 h-4 text-blue-600" />
-                                                            Interação Contínua
-                                                        </div>
-                                                        <p className="leading-relaxed text-[11px] text-blue-800">
-                                                            Precisa complementar informações, anexar protocolos ou responder dúvidas da gestão? Utilize o campo de comentários ao lado para dialogar em sequência sem precisar recriar ou editar o chamado original.
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Botão de Edição Rápida do Relato pelo Autor */}
-                                                {canEditOrDelete(viewingReport) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => {
-                                                            const rep = viewingReport;
-                                                            setViewingReport(null);
-                                                            openEditModal(rep);
-                                                        }}
-                                                        className="w-full py-2.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
-                                                    >
-                                                        <Edit2 className="w-3.5 h-3.5 text-amber-700" />
-                                                        <span>Editar Meu Relato / Solicitação</span>
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                            </div>
-
-                        </div>
-                        
-                        {/* RODAPÉ DO MODAL */}
-                        <div className="p-4 bg-white border-t border-gray-200 flex justify-between items-center">
-                            <span className="text-xs text-gray-400">
-                                Pressione Esc ou clique fora para fechar
-                            </span>
-                            <button 
-                                onClick={() => {
-                                    setViewingReport(null);
-                                    setIsFullModalOpen(false);
-                                }} 
-                                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold text-sm transition-colors cursor-pointer"
-                            >
-                                Fechar Janela
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <ReportDetailModal
+                report={viewingReport}
+                isOpen={isFullModalOpen && Boolean(viewingReport) && canUserViewTask(viewingReport, effectiveUser)}
+                onClose={() => {
+                    setViewingReport(null);
+                    setIsFullModalOpen(false);
+                }}
+                onReportUpdate={(updatedReport) => {
+                    setViewingReport(updatedReport);
+                }}
+                user={effectiveUser}
+                currentUser={currentUser}
+                collaborators={collaborators}
+                canManageTickets={canManageTickets}
+                canEditOrDelete={canEditOrDelete}
+                onEdit={(rep) => {
+                    setViewingReport(null);
+                    setIsFullModalOpen(false);
+                    openEditModal(rep);
+                }}
+                onDelete={(rep) => {
+                    setViewingReport(null);
+                    setIsFullModalOpen(false);
+                    setDeletingReport(rep);
+                }}
+                onNavigate={navigateReport}
+                hasPrev={hasPrevReport}
+                hasNext={hasNextReport}
+                currentIndex={currentViewingIndex}
+                totalCount={filteredReports.length}
+                showToast={showToast}
+            />
 
             {/* ========================================================================= */}
             {/* MODAL DE CONFIRMAÇÃO DE EXCLUSÃO                                         */}

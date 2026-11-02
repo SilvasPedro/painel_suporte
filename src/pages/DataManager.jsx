@@ -23,6 +23,7 @@ import { resolveUserName } from '../utils/userResolvers';
 import { usePermissions } from '../context/PermissionsContext';
 import { calculatePerformanceScore as calculateScore } from '../utils/scoringCalculations';
 import { executeDataExport } from '../utils/dataExport';
+import { BorderBeam } from '../components/magicui/BorderBeam';
 
 // --- DICIONÁRIO DE TRADUÇÃO (BANCO DE DADOS -> TELA) ---
 const translateKey = (key) => {
@@ -522,19 +523,18 @@ const DataManager = () => {
     };
 
     return (
-        <div className="flex-1 p-4 sm:p-6 bg-gray-50 h-full overflow-y-auto flex flex-col space-y-4">
-            {/* CABEÇALHO DA PÁGINA */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-5 rounded-2xl border border-gray-200/90 shadow-2xs shrink-0">
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 border border-red-100 flex items-center justify-center shrink-0">
-                        <Database className="w-5 h-5" />
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-canvas h-full overflow-y-auto flex flex-col space-y-6 font-sans">
+            {/* CABEÇALHO EXECUTIVO (NO FUNDO DA PÁGINA) */}
+            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+                        <Database className="w-3.5 h-3.5" />
+                        <span>Auditoria & Governança de Registros</span>
                     </div>
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-2">
-                            Gerenciador de Dados
-                        </h1>
-                        <p className="text-xs sm:text-sm text-gray-500">Auditoria, visualização avançada, edição e exclusão de registros do sistema.</p>
-                    </div>
+                    <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">Gerenciador de Dados</h1>
+                    <p className="text-xs text-secondary-hub mt-0.5">
+                        Consulta avançada, auditoria de integridade, exportação estruturada e histórico corporativo.
+                    </p>
                 </div>
 
                 <div className="flex items-center gap-3 self-stretch sm:self-auto justify-between sm:justify-end">
@@ -544,12 +544,12 @@ const DataManager = () => {
                             id="btn-export-datamanager-menu"
                             type="button"
                             onClick={() => setIsExportDropdownOpen(prev => !prev)}
-                            className="flex items-center gap-2 px-3.5 py-2 bg-white hover:bg-gray-50 text-gray-800 border border-gray-300 rounded-xl text-xs font-bold shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                            className="flex items-center gap-2 px-3.5 py-2.5 bg-surface hover:bg-subtle text-primary-hub border border-subtle rounded-xl text-xs font-bold shadow-xs transition-all cursor-pointer active:scale-95"
                             title="Exportar dados do sistema (.csv ou .md para IA)"
                         >
-                            <Download className="w-4 h-4 text-red-600" />
+                            <Download className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                             <span>Exportar Dados</span>
-                            <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${isExportDropdownOpen ? 'rotate-180' : ''}`} />
+                            <ChevronDown className={`w-3.5 h-3.5 text-muted-hub transition-transform ${isExportDropdownOpen ? 'rotate-180' : ''}`} />
                         </button>
 
                         {isExportDropdownOpen && (
@@ -558,27 +558,27 @@ const DataManager = () => {
                                     className="fixed inset-0 z-30" 
                                     onClick={() => setIsExportDropdownOpen(false)} 
                                 />
-                                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl border border-gray-200 shadow-xl z-40 p-2 text-xs divide-y divide-gray-100 animate-in fade-in zoom-in-95 duration-100">
-                                    <div className="p-2">
-                                        <p className="text-[10px] font-black uppercase tracking-wider text-gray-400 mb-1">Exportação Rápida (Filtros Atuais)</p>
+                                <div className="absolute right-0 mt-2 w-72 bg-surface rounded-2xl border border-subtle shadow-xl z-40 p-2 text-xs divide-y divide-subtle animate-in fade-in zoom-in-95 duration-100">
+                                    <div className="p-2 space-y-1">
+                                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-hub mb-1.5 px-1">Exportação Rápida</p>
                                         <button
                                             type="button"
                                             onClick={() => {
                                                 setIsExportDropdownOpen(false);
                                                 handleExportData('md', 'filtered');
                                             }}
-                                            className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-red-50/70 text-left transition-colors cursor-pointer group"
+                                            className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-subtle text-left transition-colors cursor-pointer group"
                                         >
-                                            <div className="p-1.5 rounded-lg bg-red-100 text-red-700 group-hover:bg-red-200 shrink-0">
+                                            <div className="p-1.5 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
                                                 <Sparkles className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-gray-900 group-hover:text-red-700 flex items-center gap-1.5">
+                                                <div className="font-bold text-primary-hub group-hover:text-rose-600 dark:group-hover:text-rose-400 flex items-center gap-1.5">
                                                     <span>Markdown (.md) para IA</span>
-                                                    <span className="text-[9px] bg-red-100 text-red-800 px-1.5 py-0.5 rounded font-black">IA</span>
+                                                    <span className="text-[9px] bg-rose-500/15 text-rose-700 dark:text-rose-400 px-1.5 py-0.5 rounded font-black">IA</span>
                                                 </div>
-                                                <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
-                                                    Para a pasta <code className="text-red-600 bg-red-50 px-1 rounded font-mono font-semibold">__dados_colaboradores</code> e análises mensais.
+                                                <p className="text-[11px] text-secondary-hub mt-0.5 leading-tight">
+                                                    Relatórios estruturados para ingestão analítica e histórico.
                                                 </p>
                                             </div>
                                         </button>
@@ -589,15 +589,15 @@ const DataManager = () => {
                                                 setIsExportDropdownOpen(false);
                                                 handleExportData('csv', 'filtered');
                                             }}
-                                            className="w-full flex items-start gap-2.5 p-2 mt-1 rounded-xl hover:bg-emerald-50/70 text-left transition-colors cursor-pointer group"
+                                            className="w-full flex items-start gap-2.5 p-2 rounded-xl hover:bg-subtle text-left transition-colors cursor-pointer group"
                                         >
-                                            <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-700 group-hover:bg-emerald-200 shrink-0">
+                                            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
                                                 <FileSpreadsheet className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <div className="font-bold text-gray-900 group-hover:text-emerald-700">Planilha Excel (.csv)</div>
-                                                <p className="text-[11px] text-gray-500 mt-0.5 leading-tight">
-                                                    Formato padrão com delimitador ponto-e-vírgula (;) e UTF-8 BOM.
+                                                <div className="font-bold text-primary-hub group-hover:text-emerald-600 dark:group-hover:text-emerald-400">Planilha Excel (.csv)</div>
+                                                <p className="text-[11px] text-secondary-hub mt-0.5 leading-tight">
+                                                    Formato universal com delimitador ponto-e-vírgula e UTF-8 BOM.
                                                 </p>
                                             </div>
                                         </button>
@@ -610,13 +610,13 @@ const DataManager = () => {
                                                 setIsExportDropdownOpen(false);
                                                 setIsExportModalOpen(true);
                                             }}
-                                            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-gray-100 text-gray-700 font-bold transition-colors cursor-pointer"
+                                            className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-subtle text-secondary-hub hover:text-primary-hub font-bold transition-colors cursor-pointer"
                                         >
                                             <span className="flex items-center gap-2">
-                                                <SlidersHorizontal className="w-3.5 h-3.5 text-gray-500" />
+                                                <SlidersHorizontal className="w-3.5 h-3.5 text-muted-hub" />
                                                 Opções Avançadas de Exportação...
                                             </span>
-                                            <ChevronRight className="w-3.5 h-3.5 text-gray-400" />
+                                            <ChevronRight className="w-3.5 h-3.5 text-muted-hub" />
                                         </button>
                                     </div>
                                 </div>
@@ -625,23 +625,23 @@ const DataManager = () => {
                     </div>
 
                     {!isEditable ? (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold">
-                            <ShieldAlert className="w-4 h-4 text-amber-600" />
-                            Modo Leitura ({activeRoleInfo?.label || normalizedRole})
+                        <div className="flex items-center gap-2 px-3.5 py-2 bg-surface border border-subtle text-secondary-hub rounded-xl text-xs font-semibold shadow-xs">
+                            <ShieldAlert className="w-4 h-4 text-amber-500" />
+                            <span>Modo Leitura ({activeRoleInfo?.label || normalizedRole})</span>
                         </div>
                     ) : (
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-semibold">
-                            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                            Modo Editor Ativo
+                        <div className="flex items-center gap-2 px-3.5 py-2 bg-surface border border-subtle text-secondary-hub rounded-xl text-xs font-semibold shadow-xs">
+                            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                            <span>Editor Master</span>
                         </div>
                     )}
                 </div>
             </header>
 
             {/* PAINEL DE CONTROLE DE FILTROS E ABAS */}
-            <div className="bg-white p-4 sm:p-5 rounded-2xl border border-gray-200/90 shadow-2xs shrink-0 space-y-4">
+            <div className="bg-surface p-5 sm:p-6 rounded-3xl border border-subtle shadow-xs shrink-0 space-y-4">
                 {/* LINHA 1: SELEÇÃO DE ABAS & SELETOR DE MODO DE VISUALIZAÇÃO */}
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-subtle pb-4">
                     {/* Abas */}
                     <div className="flex space-x-1.5 overflow-x-auto no-scrollbar py-0.5">
                         <TabButton 
@@ -675,14 +675,12 @@ const DataManager = () => {
                     </div>
 
                     {/* Modos de Visualização */}
-                    <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl self-start lg:self-auto border border-gray-200/60 shrink-0">
+                    <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl self-start lg:self-auto border border-subtle shrink-0">
                         <button
                             id="view-mode-table"
                             onClick={() => setViewMode('table')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'table'
-                                    ? 'bg-white text-gray-900 shadow-2xs font-black'
-                                    : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'table' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Visualização em Tabela detalhada"
                         >
@@ -693,9 +691,7 @@ const DataManager = () => {
                             id="view-mode-cards"
                             onClick={() => setViewMode('cards')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'cards'
-                                    ? 'bg-white text-gray-900 shadow-2xs font-black'
-                                    : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'cards' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Visualização em Grade de Cards"
                         >
@@ -706,9 +702,7 @@ const DataManager = () => {
                             id="view-mode-compact"
                             onClick={() => setViewMode('compact')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'compact'
-                                    ? 'bg-white text-gray-900 shadow-2xs font-black'
-                                    : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'compact' ? 'bg-surface text-primary-hub shadow-xs font-black border border-subtle' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Visualização em Lista Compacta"
                         >
@@ -729,7 +723,7 @@ const DataManager = () => {
                             placeholder={activeTab === 'kpis' ? "Buscar por valores ou data..." : "Buscar colaborador, tipo, protocolo..."}
                             value={searchTerm}
                             onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                            className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs"
+                            className="w-full pl-9 pr-8 py-2 bg-subtle border border-subtle rounded-xl text-xs text-primary-hub focus:bg-surface placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs"
                         />
                         {searchTerm && (
                             <button
@@ -750,7 +744,7 @@ const DataManager = () => {
                                 id="filter-colab-select"
                                 value={colabFilter}
                                 onChange={(e) => { setColabFilter(e.target.value); setCurrentPage(1); }}
-                                className="w-full pl-9 pr-7 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs cursor-pointer appearance-none truncate"
+                                className="w-full pl-9 pr-7 py-2 bg-subtle border border-subtle rounded-xl text-xs text-primary-hub focus:bg-surface focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs cursor-pointer appearance-none truncate"
                             >
                                 <option value="all">Todos os Colaboradores</option>
                                 {uniqueCollaborators.map(c => (
@@ -767,7 +761,7 @@ const DataManager = () => {
                             id="filter-status-type-select"
                             value={statusTypeFilter}
                             onChange={(e) => { setStatusTypeFilter(e.target.value); setCurrentPage(1); }}
-                            className="w-full pl-9 pr-7 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs cursor-pointer appearance-none truncate"
+                            className="w-full pl-9 pr-7 py-2 bg-subtle border border-subtle rounded-xl text-xs text-primary-hub focus:bg-surface focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs cursor-pointer appearance-none truncate"
                         >
                             {statusTypeOptions.map(opt => (
                                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -782,7 +776,7 @@ const DataManager = () => {
                             id="sort-select-datamanager"
                             value={sortBy}
                             onChange={(e) => setSortBy(e.target.value)}
-                            className="w-full pl-9 pr-7 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-900 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs cursor-pointer appearance-none truncate"
+                            className="w-full pl-9 pr-7 py-2 bg-subtle border border-subtle rounded-xl text-xs text-primary-hub focus:bg-surface focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs cursor-pointer appearance-none truncate"
                             title="Ordenar registros"
                         >
                             <option value="date_desc">Mais Recentes</option>
@@ -812,9 +806,7 @@ const DataManager = () => {
                                 key={p.key}
                                 onClick={() => { setPeriodFilter(p.key); setCurrentPage(1); }}
                                 className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                                    periodFilter === p.key
-                                        ? 'bg-red-600 text-white shadow-2xs'
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    periodFilter === p.key ? 'bg-rose-600 text-white shadow-xs font-bold' : 'bg-surface text-secondary-hub hover:bg-subtle border border-subtle'
                                 }`}
                             >
                                 {p.label}
@@ -831,7 +823,7 @@ const DataManager = () => {
                             placeholder="Data exata (ex: 13/04)"
                             value={dateFilter}
                             onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
-                            className="w-full pl-8 pr-7 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-900 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                            className="w-full pl-8 pr-7 py-2 bg-surface border border-subtle rounded-xl text-xs text-primary-hub placeholder:text-muted-hub focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all font-medium"
                         />
                         {dateFilter && (
                             <button
@@ -959,7 +951,7 @@ const DataManager = () => {
             </div>
 
             {/* ÁREA PRINCIPAL DE EXIBIÇÃO DE DADOS */}
-            <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs flex-1 flex flex-col overflow-hidden">
+            <div className="bg-surface rounded-3xl border border-subtle shadow-xs flex-1 flex flex-col overflow-hidden">
                 {loading ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-12 text-gray-400">
                         <Loader2 className="w-9 h-9 text-red-600 animate-spin mb-3" />
@@ -991,7 +983,7 @@ const DataManager = () => {
                         {viewMode === 'table' && (
                             <div className="overflow-x-auto flex-1">
                                 <table className="min-w-full divide-y divide-gray-200 text-sm whitespace-nowrap">
-                                    <thead className="bg-zinc-950 text-white sticky top-0 z-10">
+                                    <thead className="bg-subtle/90 text-muted-hub text-[11px] uppercase tracking-wider font-bold border-b border-subtle sticky top-0 z-10 backdrop-blur-xs">
                                         <tr>
                                             <th 
                                                 onClick={() => setSortBy(prev => prev === 'date_desc' ? 'date_asc' : 'date_desc')}
@@ -1025,7 +1017,7 @@ const DataManager = () => {
                                             <th className="px-5 py-3.5 text-right font-semibold">Ações</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="bg-white divide-y divide-gray-100">
+                                    <tbody className="bg-surface">
                                         {paginatedData.map((item) => {
                                             const colabName = collaboratorsMap[item.colabId || item.collaboratorId] || item.colabName || 'Colaborador';
                                             const score = activeTab === 'metrics' ? calculateScore(item) : 0;
@@ -1052,60 +1044,62 @@ const DataManager = () => {
 
                                                     <td className="px-5 py-3.5">
                                                         {activeTab === 'feedbacks' && (
-                                                            <div className="flex flex-col gap-1.5 max-w-[340px]">
-                                                                <div className="flex items-center gap-2 flex-wrap">
-                                                                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                                                                        item.type === 'Elogio' ? 'bg-emerald-100 text-emerald-800' : 
-                                                                        item.type === 'Ponto de Melhoria' ? 'bg-amber-100 text-amber-800' : 
-                                                                        'bg-blue-100 text-blue-800'
-                                                                    }`}>
-                                                                        {item.type}
-                                                                    </span>
-                                                                    {item.method && (
-                                                                        <span className="text-xs text-gray-600 bg-gray-100 px-2 py-0.5 rounded-md font-medium border border-gray-200">
-                                                                            {item.method}
-                                                                        </span>
-                                                                    )}
-                                                                    {item.protocol && item.protocol !== 'N/A' && (
-                                                                        <span className="text-xs font-mono font-bold text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md border border-gray-200">
-                                                                            ID: {item.protocol}
-                                                                        </span>
-                                                                    )}
-                                                                </div>
+                                                            <div className="flex items-center gap-2.5 max-w-[420px]">
+                                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold shrink-0 border ${
+                                                                    item.type === 'Elogio' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25' : 
+                                                                    item.type === 'Ponto de Melhoria' ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25' : 
+                                                                    'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/25'
+                                                                }`}>
+                                                                    <span className={`w-1.5 h-1.5 rounded-full ${
+                                                                        item.type === 'Elogio' ? 'bg-emerald-500' : 
+                                                                        item.type === 'Ponto de Melhoria' ? 'bg-amber-500' : 'bg-blue-500'
+                                                                    }`} />
+                                                                    {item.type}
+                                                                </span>
 
-                                                                {/* Tags associadas */}
                                                                 {Array.isArray(item.tags) && item.tags.length > 0 && (
-                                                                    <div className="flex items-center gap-1 flex-wrap">
-                                                                        {item.tags.map(t => (
-                                                                            <span key={t} className="text-[10px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
-                                                                                {t}
+                                                                    <div className="flex items-center gap-1 shrink-0">
+                                                                        <span className="text-[11px] font-medium bg-subtle text-secondary-hub px-2 py-0.5 rounded-md border border-subtle">
+                                                                            {item.tags[0]}
+                                                                        </span>
+                                                                        {item.tags.length > 1 && (
+                                                                            <span 
+                                                                                className="text-[10px] font-bold text-muted-hub bg-subtle px-1.5 py-0.5 rounded border border-subtle cursor-help"
+                                                                                title={item.tags.join(', ')}
+                                                                            >
+                                                                                +{item.tags.length - 1}
                                                                             </span>
-                                                                        ))}
+                                                                        )}
                                                                     </div>
                                                                 )}
 
-                                                                {item.comment && (
-                                                                    <span className="text-xs text-gray-600 truncate">
-                                                                        &quot;{item.comment}&quot;
+                                                                {item.comment ? (
+                                                                    <span 
+                                                                        className="text-xs text-secondary-hub truncate min-w-0 font-normal"
+                                                                        title={item.comment}
+                                                                    >
+                                                                        {item.comment}
                                                                     </span>
+                                                                ) : (
+                                                                    <span className="text-xs text-muted-hub italic">Sem comentário adicional</span>
                                                                 )}
                                                             </div>
                                                         )}
 
                                                         {activeTab === 'metrics' && (
                                                             <div className="flex items-center gap-3 text-xs">
-                                                                <span className="text-gray-600">
-                                                                    Finalizados: <strong className="text-gray-900">{item.Atendimentos_Finalizados || 0}</strong>
+                                                                <span className="text-secondary-hub">
+                                                                    Finalizados: <strong className="text-primary-hub">{item.Atendimentos_Finalizados || 0}</strong>
                                                                 </span>
-                                                                <span className="text-gray-400">•</span>
-                                                                <span className="text-gray-600">
-                                                                    Huggy: <strong className="text-gray-900">{item.Atendimentos_Huggy || 0}</strong>
+                                                                <span className="text-muted-hub">•</span>
+                                                                <span className="text-secondary-hub">
+                                                                    Huggy: <strong className="text-primary-hub">{item.Atendimentos_Huggy || 0}</strong>
                                                                 </span>
-                                                                <span className="text-gray-400">•</span>
-                                                                <span className="text-gray-600">
-                                                                    Voz: <strong className="text-gray-900">{item.Ligacoes_Atendidas || 0}</strong>
+                                                                <span className="text-muted-hub">•</span>
+                                                                <span className="text-secondary-hub">
+                                                                    Voz: <strong className="text-primary-hub">{item.Ligacoes_Atendidas || 0}</strong>
                                                                 </span>
-                                                                <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-md font-bold font-mono">
+                                                                <span className="px-2.5 py-0.5 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 rounded-md font-bold font-mono">
                                                                     {score} pts
                                                                 </span>
                                                             </div>
@@ -1114,31 +1108,31 @@ const DataManager = () => {
                                                         {activeTab === 'kpis' && (
                                                             <div className="flex items-center gap-3 text-xs">
                                                                 <span className="inline-flex items-center gap-1">
-                                                                    FCR: <strong className={Number(item.fcr) >= 80 ? "text-emerald-700 font-bold" : "text-amber-700 font-bold"}>{item.fcr}%</strong>
+                                                                    FCR: <strong className={Number(item.fcr) >= 80 ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-amber-600 dark:text-amber-400 font-bold"}>{item.fcr}%</strong>
                                                                 </span>
-                                                                <span className="text-gray-400">•</span>
+                                                                <span className="text-muted-hub">•</span>
                                                                 <span>
-                                                                    TMR: <strong className="text-gray-900 font-mono font-bold">{item.tmr}</strong>
+                                                                    TMR: <strong className="text-primary-hub font-mono font-bold">{item.tmr}</strong>
                                                                 </span>
-                                                                <span className="text-gray-400">•</span>
+                                                                <span className="text-muted-hub">•</span>
                                                                 <span>
-                                                                    Reincidência: <strong className={Number(item.recurrence) <= 20 ? "text-emerald-700 font-bold" : "text-rose-700 font-bold"}>{item.recurrence}%</strong>
+                                                                    Reincidência: <strong className={Number(item.recurrence) <= 20 ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-rose-600 dark:text-rose-400 font-bold"}>{item.recurrence}%</strong>
                                                                 </span>
                                                             </div>
                                                         )}
 
                                                         {activeTab === 'audits' && (
                                                             <div className="flex items-center gap-2.5 text-xs">
-                                                                <span className={`px-2 py-0.5 rounded-full font-bold ${
-                                                                    item.status === 'Conforme' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                                                <span className={`px-2.5 py-0.5 rounded-full font-bold border ${
+                                                                    item.status === 'Conforme' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25' : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25'
                                                                 }`}>
                                                                     {item.status}
                                                                 </span>
-                                                                <span className="text-gray-600">
-                                                                    Protocolo: <strong className="text-gray-900 font-mono">{item.protocol || '--'}</strong>
+                                                                <span className="text-secondary-hub">
+                                                                    Protocolo: <strong className="text-primary-hub font-mono">{item.protocol || '--'}</strong>
                                                                 </span>
                                                                 {item.evaluatorName && (
-                                                                    <span className="text-gray-400 hidden lg:inline">
+                                                                    <span className="text-muted-hub hidden lg:inline">
                                                                         Auditor: {item.evaluatorName}
                                                                     </span>
                                                                 )}
@@ -1287,48 +1281,46 @@ const DataManager = () => {
                                                             {/* Status de Leitura no Card */}
                                                             <div className="flex items-center justify-between gap-1 text-[11px]">
                                                                 {item.read ? (
-                                                                    <span className="inline-flex items-center gap-1 font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                                                    <span className="inline-flex items-center gap-1 font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2 py-0.5 rounded-md">
+                                                                        <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                                                                         Lido pelo Colaborador
                                                                     </span>
                                                                 ) : (
-                                                                    <span className="inline-flex items-center gap-1 font-bold text-amber-900 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-md">
-                                                                        <Clock className="w-3 h-3 text-amber-600 animate-pulse" />
+                                                                    <span className="inline-flex items-center gap-1 font-bold text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-md">
+                                                                        <Clock className="w-3 h-3 text-amber-500 animate-pulse" />
                                                                         Pendente (Não Lido)
                                                                     </span>
                                                                 )}
                                                                 {item.readAt && (
-                                                                    <span className="text-[10px] text-gray-400 font-medium">
+                                                                    <span className="text-[10px] text-muted-hub font-medium">
                                                                         {new Date(item.readAt).toLocaleDateString('pt-BR')}
                                                                     </span>
                                                                 )}
                                                             </div>
 
-                                                            {/* Tags */}
+                                                            {/* Tags discretas */}
                                                             {Array.isArray(item.tags) && item.tags.length > 0 && (
                                                                 <div className="flex items-center gap-1 flex-wrap">
-                                                                    {item.tags.map(t => (
-                                                                        <span key={t} className="text-[10px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
-                                                                            {t}
+                                                                    <span className="text-[10px] font-medium bg-subtle text-secondary-hub px-2 py-0.5 rounded-md border border-subtle">
+                                                                        {item.tags[0]}
+                                                                    </span>
+                                                                    {item.tags.length > 1 && (
+                                                                        <span 
+                                                                            className="text-[10px] font-bold text-muted-hub bg-subtle px-1.5 py-0.5 rounded border border-subtle"
+                                                                            title={item.tags.join(', ')}
+                                                                        >
+                                                                            +{item.tags.length - 1}
                                                                         </span>
-                                                                    ))}
+                                                                    )}
                                                                 </div>
                                                             )}
 
-                                                            {item.comment ? (
-                                                                <p className="text-xs text-gray-600 line-clamp-3 bg-gray-50/80 p-2.5 rounded-xl border border-gray-100 italic">
-                                                                    &quot;{item.comment}&quot;
+                                                            {/* Comentário limpo */}
+                                                            {item.comment && (
+                                                                <p className="text-xs text-secondary-hub line-clamp-2 leading-relaxed font-normal">
+                                                                    {item.comment}
                                                                 </p>
-                                                            ) : (
-                                                                <p className="text-xs text-gray-400 italic">Sem comentário adicional.</p>
                                                             )}
-
-                                                            <div className="flex items-center justify-between text-[11px] text-gray-500 pt-1 border-t border-gray-100">
-                                                                <span>Canal: <strong className="text-gray-800">{item.method || 'Geral'}</strong></span>
-                                                                {item.protocol && item.protocol !== 'N/A' && (
-                                                                    <span>Protocolo: <strong className="font-mono text-gray-800">{item.protocol}</strong></span>
-                                                                )}
-                                                            </div>
                                                         </div>
                                                     )}
 
@@ -1541,7 +1533,7 @@ const DataManager = () => {
                                             setItemsPerPage(e.target.value === 'all' ? 'all' : Number(e.target.value));
                                             setCurrentPage(1);
                                         }}
-                                        className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs text-gray-800 focus:outline-hidden focus:ring-1 focus:ring-red-500"
+                                        className="bg-surface border border-subtle rounded-xl px-2.5 py-1 text-xs text-primary-hub focus:outline-hidden focus:ring-2 focus:ring-rose-500/20"
                                     >
                                         <option value={10}>10</option>
                                         <option value={25}>25</option>
@@ -1558,7 +1550,7 @@ const DataManager = () => {
                                         id="pagination-prev-btn"
                                         onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                         disabled={safeCurrentPage === 1}
-                                        className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                                        className="p-1.5 rounded-xl border border-subtle bg-surface text-secondary-hub hover:bg-subtle hover:text-primary-hub disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                                         title="Página anterior"
                                     >
                                         <ChevronLeft className="w-4 h-4" />
@@ -1572,7 +1564,7 @@ const DataManager = () => {
                                         id="pagination-next-btn"
                                         onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                         disabled={safeCurrentPage === totalPages}
-                                        className="p-1.5 rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
+                                        className="p-1.5 rounded-xl border border-subtle bg-surface text-secondary-hub hover:bg-subtle hover:text-primary-hub disabled:opacity-40 disabled:pointer-events-none cursor-pointer"
                                         title="Próxima página"
                                     >
                                         <ChevronRight className="w-4 h-4" />
@@ -1630,8 +1622,8 @@ const TabButton = ({ active, onClick, icon, text, id }) => (
     <button 
         id={id}
         onClick={onClick}
-        className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all whitespace-nowrap cursor-pointer ${
-            active ? 'bg-red-600 text-white shadow-2xs' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+        className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+            active ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' : 'bg-surface text-secondary-hub hover:bg-subtle border border-subtle font-medium'
         }`}
     >
         {icon}
@@ -1674,10 +1666,10 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
 
     return (
         <div className="fixed inset-0 bg-zinc-950/75 flex items-center justify-center p-4 z-[80] backdrop-blur-sm animate-in fade-in duration-200">
-            <div className={`bg-white rounded-2xl shadow-2xl w-full ${activeTab === 'metrics' || activeTab === 'audits' || activeTab === 'feedbacks' ? 'max-w-2xl' : 'max-w-xl'} overflow-hidden flex flex-col max-h-[92vh] border border-gray-100`}>
+            <div className={`relative bg-surface rounded-3xl shadow-2xl w-full ${activeTab === 'metrics' || activeTab === 'audits' || activeTab === 'feedbacks' ? 'max-w-2xl' : 'max-w-xl'} overflow-hidden flex flex-col max-h-[92vh] border border-subtle`}><BorderBeam size={200} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
                 
                 {/* CABEÇALHO DO MODAL */}
-                <div className="p-4 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
+                <div className="p-5 bg-surface text-primary-hub flex justify-between items-center shrink-0 border-b border-subtle">
                     <div className="flex items-center gap-2.5">
                         <div className="w-8 h-8 rounded-lg bg-red-600/20 text-red-500 border border-red-500/30 flex items-center justify-center">
                             {activeTab === 'metrics' && <TrendingUp className="w-4 h-4" />}

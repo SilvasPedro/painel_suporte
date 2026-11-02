@@ -2,13 +2,16 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, Users, CheckCircle,
-    CheckCircle2, TrendingUp, CalendarDays, Coffee, Calendar, 
-    ChevronRight, LifeBuoy, Activity
+    CheckCircle2, TrendingUp, TrendingDown, CalendarDays, Coffee, Calendar, 
+    ChevronRight, LifeBuoy, Activity, Sparkles, Layers, Shield, FileText
 } from 'lucide-react';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { timeToDecimal, formatTime } from '../utils/timeCalculations';
 import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { Card, Badge, StatCard, EmptyState } from '../components/ui';
+import { BorderBeam } from '../components/magicui';
+import { cn } from '../utils/cn';
 
 const formatNextDateInfo = (dateStr, fallbackType = 'folga') => {
     if (!dateStr) {
@@ -100,26 +103,28 @@ const TrendIndicator = ({ type, current, previous }) => {
         isUp = curVal > prevVal;
         isGood = curVal < prevVal;
     }
-    const colorClass = isGood ? "fill-emerald-500" : "fill-red-500";
-    const pathObj = isUp ? "M12 4l8 16H4z" : "M12 20l8-16H4z";
-    return <svg className={`w-4 h-4 mb-1.5 ${colorClass}`} viewBox="0 0 24 24"><path d={pathObj} /></svg>;
+    return (
+        <Badge variant={isGood ? "success" : "danger"} size="sm" icon={isUp ? TrendingUp : TrendingDown}>
+            {isGood ? 'Positivo' : 'Atenção'}
+        </Badge>
+    );
 };
 
 const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
-    <div className="bg-white rounded-2xl shadow-2xs p-5 border border-gray-200 hover:border-gray-300 transition-all flex flex-col justify-between relative overflow-hidden h-full">
+    <div className="bg-surface rounded-2xl shadow-xs p-5 border border-subtle hover:border-subtle/80 hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden h-full group">
         <div>
             <div className="flex justify-between items-start mb-2">
-                <h3 className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
-                <div className="p-2 bg-gray-50 rounded-xl border border-gray-100">{icon}</div>
+                <h3 className="text-[11px] font-bold text-muted-hub uppercase tracking-wider">{title}</h3>
+                <div className="p-2 bg-subtle rounded-xl border border-subtle text-primary-hub transition-transform group-hover:scale-105">{icon}</div>
             </div>
-            <div className="flex items-end gap-2 mt-1">
-                <div className="text-2xl lg:text-3xl font-black tracking-tight text-gray-900">{value}</div>
+            <div className="flex items-baseline gap-2 mt-1">
+                <div className="text-2xl lg:text-3xl font-brand font-black tracking-tight text-primary-hub tabular-nums">{value}</div>
                 {trend}
             </div>
         </div>
-        <div className="mt-3 pt-3 border-t border-gray-100 flex justify-between items-center text-xs">
-            <div className="text-gray-500 font-medium">{subtitle}</div>
-            {goalText && <div className="text-gray-600 font-bold bg-gray-50 px-2 py-0.5 rounded-lg border border-gray-100 text-[11px]">{goalText}</div>}
+        <div className="mt-3 pt-3 border-t border-subtle flex justify-between items-center text-xs">
+            <div className="text-secondary-hub font-medium">{subtitle}</div>
+            {goalText && <div className="text-primary-hub font-bold bg-subtle px-2 py-0.5 rounded-lg border border-subtle text-[11px]">{goalText}</div>}
         </div>
     </div>
 );
@@ -365,121 +370,119 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
     if (loading) {
         return (
-            <div className="flex-1 flex items-center justify-center bg-gray-50 h-full">
-                <Hourglass className="w-8 h-8 text-red-600 animate-spin" />
+            <div className="flex-1 flex flex-col items-center justify-center p-12 bg-canvas h-full">
+                <div className="w-9 h-9 border-3 border-rose-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                <span className="text-xs font-semibold text-secondary-hub">Carregando Meu Desempenho...</span>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50">
-            {/* Header de Boas-Vindas e Resumo Rápido */}
-            <div className="mb-6 bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4">
+        <div className="flex-1 p-6 h-full overflow-y-auto bg-canvas">
+            {/* Header Executivo de Boas-Vindas e Resumo Rápido */}
+            <div className="mb-6 bg-surface p-6 rounded-3xl border border-subtle shadow-xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-5">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                        <User className="w-6 h-6 text-red-600" /> Meu Desempenho
+                    <div className="flex items-center gap-2 mb-1.5 text-xs font-bold text-rose-500 uppercase tracking-wider">
+                        <Activity className="w-4 h-4 text-rose-500" />
+                        <span>Espaço Individual • Cockpit de Desempenho</span>
+                    </div>
+                    <h1 className="font-brand text-2xl font-black text-primary-hub tracking-tight flex items-center gap-2">
+                        Meu Desempenho
                     </h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        Olá, <strong className="text-gray-800">{currentUser?.name || 'Colaborador'}</strong>. Acompanhe suas métricas individuais, tarefas e escalas.
+                    <p className="text-xs text-secondary-hub mt-1">
+                        Olá, <strong className="text-primary-hub">{currentUser?.name || 'Colaborador'}</strong>. Acompanhe suas métricas individuais, tarefas alocadas e escalas da semana.
                     </p>
                 </div>
 
-                {/* Cartões de Informações Principais do Topo */}
-                <div className="flex flex-wrap gap-3 w-full xl:w-auto">
-                    {/* Feedbacks Novos (Ícone no canto superior direito) */}
-                    <div className={`flex justify-between items-start gap-4 px-4 py-3 rounded-2xl border min-w-[155px] transition-all ${
+                {/* Pílulas de Ação & Notificações Rápidas do Topo */}
+                <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
+                    {/* Feedbacks Novos */}
+                    <div className={cn(
+                        "flex items-center gap-3.5 px-4 py-3 rounded-2xl border transition-all",
                         unreadFeedbacks > 0
-                            ? 'bg-zinc-950 text-white border-zinc-800 shadow-sm'
-                            : 'bg-white border-gray-200 text-gray-700 shadow-2xs'
-                    }`}>
+                            ? "bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 shadow-xs"
+                            : "bg-subtle/60 border-subtle text-secondary-hub"
+                    )}>
+                        <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
+                            unreadFeedbacks > 0
+                                ? "bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-300 border-fuchsia-500/30"
+                                : "bg-surface text-muted-hub border-subtle"
+                        )}>
+                            <MessageSquare className="w-4 h-4" />
+                        </div>
                         <div>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
-                                unreadFeedbacks > 0 ? 'text-fuchsia-400' : 'text-gray-500'
-                            }`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider block text-muted-hub">
                                 Feedbacks Novos
                             </span>
-                            <span className={`text-2xl font-black leading-none ${
-                                unreadFeedbacks > 0 ? 'text-white' : 'text-gray-900'
-                            }`}>
+                            <span className="font-brand text-2xl font-black text-primary-hub leading-none">
                                 {unreadFeedbacks}
                             </span>
                         </div>
-                        <div className={`p-2 rounded-xl shrink-0 ${
-                            unreadFeedbacks > 0
-                                ? 'bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/30'
-                                : 'bg-fuchsia-50 text-fuchsia-600 border border-fuchsia-100'
-                        }`}>
-                            <MessageSquare className="w-4 h-4" />
-                        </div>
                     </div>
 
-                    {/* Relatos Pendentes (Ícone no canto superior direito) */}
-                    <div className={`flex justify-between items-start gap-4 px-4 py-3 rounded-2xl border min-w-[155px] transition-all ${
+                    {/* Relatos Pendentes */}
+                    <div className={cn(
+                        "flex items-center gap-3.5 px-4 py-3 rounded-2xl border transition-all",
                         reportStats.pending > 0
-                            ? 'bg-zinc-950 text-white border-zinc-800 shadow-sm'
-                            : 'bg-white border-gray-200 text-gray-700 shadow-2xs'
-                    }`}>
+                            ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-xs"
+                            : "bg-subtle/60 border-subtle text-secondary-hub"
+                    )}>
+                        <div className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
+                            reportStats.pending > 0
+                                ? "bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30"
+                                : "bg-surface text-muted-hub border-subtle"
+                        )}>
+                            <Clock className="w-4 h-4" />
+                        </div>
                         <div>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider block mb-1 ${
-                                reportStats.pending > 0 ? 'text-amber-400' : 'text-gray-500'
-                            }`}>
+                            <span className="text-[10px] font-bold uppercase tracking-wider block text-muted-hub">
                                 Relatos Pendentes
                             </span>
-                            <span className={`text-2xl font-black leading-none ${
-                                reportStats.pending > 0 ? 'text-white' : 'text-gray-900'
-                            }`}>
+                            <span className="font-brand text-2xl font-black text-primary-hub leading-none">
                                 {reportStats.pending}
                             </span>
                         </div>
-                        <div className={`p-2 rounded-xl shrink-0 ${
-                            reportStats.pending > 0
-                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                                : 'bg-amber-50 text-amber-600 border border-amber-100'
-                        }`}>
-                            <Clock className="w-4 h-4" />
-                        </div>
                     </div>
 
-                    {/* Relatos Concluídos (Ícone no canto superior direito) */}
-                    <div className="flex justify-between items-start gap-4 bg-white border border-gray-200 px-4 py-3 rounded-2xl shadow-2xs min-w-[155px]">
+                    {/* Relatos Concluídos */}
+                    <div className="flex items-center gap-3.5 px-4 py-3 rounded-2xl border border-subtle bg-subtle/60 text-secondary-hub">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            <CheckCircle2 className="w-4 h-4" />
+                        </div>
                         <div>
-                            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mb-1">
-                                Relatos Concluídos
+                            <span className="text-[10px] font-bold uppercase tracking-wider block text-muted-hub">
+                                Relatos Resolvidos
                             </span>
-                            <span className="text-2xl font-black text-emerald-600 leading-none">
+                            <span className="font-brand text-2xl font-black text-emerald-600 leading-none">
                                 {reportStats.resolved}
                             </span>
-                        </div>
-                        <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl border border-emerald-100 shrink-0">
-                            <CheckCircle2 className="w-4 h-4" />
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* CARDS DE OPERAÇÃO: TAREFA HOJE, PLANTÃO E PRÓXIMA FOLGA NA MESMA LINHA */}
+            {/* BENTO TRIO: TAREFA HOJE, PRÓXIMO PLANTÃO E PRÓXIMA FOLGA */}
             <div className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* 1. Minha Tarefa Hoje (Escala Fixa - Ícone no canto superior direito) */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-blue-500/50 transition-all group">
+                {/* 1. Minha Tarefa Hoje */}
+                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between hover:border-blue-500/40 hover:shadow-md transition-all group">
                     <div>
                         <div className="flex items-start justify-between mb-3">
                             <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 block">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-500 block">
                                     Minha Tarefa Hoje
                                 </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    myTaskToday 
-                                        ? 'bg-blue-500/20 text-blue-300 border-blue-500/30' 
-                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                                }`}>
+                                <Badge variant={myTaskToday ? "primary" : "neutral"} size="sm">
                                     {myTaskToday ? 'Escala Ativa' : 'Sem Escala'}
-                                </span>
+                                </Badge>
                             </div>
-                            <div className={`p-2.5 rounded-xl border shrink-0 ${
+                            <div className={cn(
+                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
                                 myTaskToday 
-                                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
-                                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
-                            }`}>
+                                    ? "bg-blue-500/10 text-blue-500 border-blue-500/20" 
+                                    : "bg-subtle text-muted-hub border-subtle"
+                            )}>
                                 {myTaskToday === 'Telefonia' ? (
                                     <Phone className="w-5 h-5" />
                                 ) : myTaskToday === 'Huggy' ? (
@@ -491,102 +494,96 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                 )}
                             </div>
                         </div>
-                        <div className="mt-1">
-                            <h3 className="text-2xl font-black text-white tracking-tight">
-                                {myTaskToday ? (myTaskToday.startsWith('Fila') ? myTaskToday : `Fila de ${myTaskToday}`) : "Sem escala para hoje"}
+                        <div className="mt-2">
+                            <h3 className="font-brand text-2xl font-black text-primary-hub tracking-tight">
+                                {myTaskToday ? (myTaskToday.startsWith('Fila') ? myTaskToday : `Fila de ${myTaskToday}`) : "Sem escala alocada"}
                             </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
+                            <p className="text-xs text-secondary-hub mt-1 leading-relaxed">
                                 {myTaskToday 
                                     ? (myTaskToday === 'Telefonia' ? 'Atendimento receptivo de chamadas de voz' : myTaskToday === 'Huggy' ? 'Atendimento via chat e multicanais' : 'Suporte e apoio operacional às filas')
                                     : 'Nenhum posto fixo alocado para o dia de hoje'}
                             </p>
                         </div>
                     </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                    <div className="pt-3 mt-4 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub font-medium">
                         <span>Escala Semanal Operacional</span>
-                        <span className="text-blue-400 font-bold flex items-center gap-1">
-                            {myTaskToday ? 'Ativo' : 'Livre'}
+                        <span className="text-blue-500 font-bold">
+                            {myTaskToday ? 'Ativo' : 'Disponível'}
                         </span>
                     </div>
                 </div>
 
-                {/* 2. Próximo Plantão (Domingos - Ícone no canto superior direito) */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-amber-500/50 transition-all group">
+                {/* 2. Próximo Plantão */}
+                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between hover:border-amber-500/40 hover:shadow-md transition-all group">
                     <div>
                         <div className="flex items-start justify-between mb-3">
                             <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 block">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-500 block">
                                     Próximo Plantão
                                 </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    nextSundayShift 
-                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' 
-                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                                }`}>
+                                <Badge variant={nextSundayShift ? "warning" : "neutral"} size="sm">
                                     {nextSundayShift ? 'Domingo' : 'Disponível'}
-                                </span>
+                                </Badge>
                             </div>
-                            <div className={`p-2.5 rounded-xl border shrink-0 ${
+                            <div className={cn(
+                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
                                 nextSundayShift 
-                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' 
-                                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
-                            }`}>
+                                    ? "bg-amber-500/10 text-amber-500 border-amber-500/20" 
+                                    : "bg-subtle text-muted-hub border-subtle"
+                            )}>
                                 <Users className="w-5 h-5" />
                             </div>
                         </div>
-                        <div className="mt-1">
-                            <h3 className="text-2xl font-black text-white tracking-tight">
+                        <div className="mt-2">
+                            <h3 className="font-brand text-2xl font-black text-primary-hub tracking-tight">
                                 {nextSundayInfo.label}
                             </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
+                            <p className="text-xs text-secondary-hub mt-1 leading-relaxed">
                                 {nextSundayInfo.detail}
                             </p>
                         </div>
                     </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                    <div className="pt-3 mt-4 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub font-medium">
                         <span>Escalação de Domingo</span>
-                        <span className="text-amber-400 font-bold flex items-center gap-1">
+                        <span className="text-amber-500 font-bold">
                             {nextSundayShift ? 'Escalado' : 'Sem plantão'}
                         </span>
                     </div>
                 </div>
 
-                {/* 3. Próxima Folga (Tela de Folgas - Ícone no canto superior direito) */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
+                {/* 3. Próxima Folga */}
+                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between hover:border-emerald-500/40 hover:shadow-md transition-all group">
                     <div>
                         <div className="flex items-start justify-between mb-3">
                             <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-500 block">
                                     Próxima Folga
                                 </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    nextDayOff 
-                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
-                                        : 'bg-zinc-800 text-zinc-400 border-zinc-700'
-                                }`}>
+                                <Badge variant={nextDayOff ? "success" : "neutral"} size="sm">
                                     {nextDayOff ? (nextDayOffInfo.isToday ? 'Hoje!' : nextDayOffInfo.isTomorrow ? 'Amanhã' : 'Descanso') : 'A Definir'}
-                                </span>
+                                </Badge>
                             </div>
-                            <div className={`p-2.5 rounded-xl border shrink-0 ${
+                            <div className={cn(
+                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
                                 nextDayOff 
-                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
-                                    : 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
-                            }`}>
+                                    ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
+                                    : "bg-subtle text-muted-hub border-subtle"
+                            )}>
                                 <Coffee className="w-5 h-5" />
                             </div>
                         </div>
-                        <div className="mt-1">
-                            <h3 className="text-2xl font-black text-white tracking-tight">
+                        <div className="mt-2">
+                            <h3 className="font-brand text-2xl font-black text-primary-hub tracking-tight">
                                 {nextDayOffInfo.label}
                             </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
+                            <p className="text-xs text-secondary-hub mt-1 leading-relaxed">
                                 {nextDayOffInfo.detail}
                             </p>
                         </div>
                     </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400 font-medium">
+                    <div className="pt-3 mt-4 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub font-medium">
                         <span>Grade Mensal de Folgas</span>
-                        <span className="text-emerald-400 font-bold flex items-center gap-1">
+                        <span className="text-emerald-500 font-bold">
                             {nextDayOff ? 'Folga programada' : 'Aguardando escala'}
                         </span>
                     </div>
@@ -595,9 +592,12 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
             {/* MINHAS MÉDIAS INDIVIDUAIS */}
             <div className="mb-6">
-                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-3">
-                    <User className="w-4 h-4 text-red-600" /> Minhas Médias e Indicadores de Qualidade
-                </h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <User className="w-4 h-4 text-rose-500" />
+                    <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
+                        Minhas Médias & Indicadores Pessoais
+                    </h2>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     <DashboardCard 
                         title="Pontuação Total" 
@@ -632,18 +632,21 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                 </div>
             </div>
 
-            {/* KPIS GLOBAIS DO SETOR */}
+            {/* KPIS GLOBAIS DE REFERÊNCIA */}
             <div className="mb-6">
-                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-3">
-                    <Rocket className="w-4 h-4 text-purple-600" /> KPIs Globais de Referência do Setor
-                </h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <Rocket className="w-4 h-4 text-indigo-500" />
+                    <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
+                        KPIs Globais de Referência do Setor
+                    </h2>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <DashboardCard 
                         title="TMR Global" 
                         value={globalKpi.tmr || '00:00:00'} 
                         subtitle="Tempo Médio Resolução" 
                         goalText={`Meta: ≤ ${goals.tmr}`} 
-                        icon={<Clock className="w-5 h-5 text-purple-500" />} 
+                        icon={<Clock className="w-5 h-5 text-indigo-500" />} 
                         trend={<TrendIndicator type="tmr" current={globalKpi.tmr} previous={prevGlobalKpi?.tmr} />} 
                     />
                     <DashboardCard 
@@ -667,17 +670,21 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
             {/* GRÁFICOS DE EVOLUÇÃO TEMPORAL */}
             <div>
-                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2 mb-3">
-                    <TrendingUp className="w-4 h-4 text-emerald-600" /> Minha Evolução nas Avaliações Semanais
-                </h2>
+                <div className="flex items-center gap-2 mb-3">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
+                        Minha Evolução nas Avaliações Semanais
+                    </h2>
+                </div>
+
                 {chartData.length === 0 ? (
-                    <div className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm text-center text-gray-400">
+                    <div className="bg-surface p-12 rounded-2xl border border-subtle shadow-xs text-center text-muted-hub">
                         Nenhuma avaliação registrada ainda para desenhar o gráfico temporal.
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72 flex flex-col">
-                            <h3 className="text-sm font-bold text-gray-800 mb-2 shrink-0">Produtividade (Pontos)</h3>
+                        <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
+                            <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">Produtividade (Pontos)</h3>
                             <div className="flex-1 min-h-0">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -687,18 +694,18 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                                 <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} />
-                                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                                        <Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2} fill="url(#colorPts)" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', color: 'var(--text-primary)' }} />
+                                        <Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2.5} fill="url(#colorPts)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72 flex flex-col">
-                            <h3 className="text-sm font-bold text-gray-800 mb-2 shrink-0">TMA Telefonia (Minutos)</h3>
+                        <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
+                            <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">TMA Telefonia (Minutos)</h3>
                             <div className="flex-1 min-h-0">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -708,18 +715,18 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                                 <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} />
-                                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Tel"]} />
-                                        <Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2} fill="url(#colorTel)" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={formatTime} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', color: 'var(--text-primary)' }} formatter={val => [formatTime(val), "TMA Tel"]} />
+                                        <Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2.5} fill="url(#colorTel)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>
                         </div>
 
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm h-72 flex flex-col">
-                            <h3 className="text-sm font-bold text-gray-800 mb-2 shrink-0">TMA Huggy (Minutos)</h3>
+                        <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
+                            <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">TMA Huggy (Minutos)</h3>
                             <div className="flex-1 min-h-0">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
@@ -729,11 +736,11 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                                 <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                                             </linearGradient>
                                         </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 11 }} tickFormatter={formatTime} />
-                                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none' }} formatter={val => [formatTime(val), "TMA Huggy"]} />
-                                        <Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2} fill="url(#colorHuggy)" />
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} dy={10} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={formatTime} />
+                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', color: 'var(--text-primary)' }} formatter={val => [formatTime(val), "TMA Huggy"]} />
+                                        <Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#colorHuggy)" />
                                     </AreaChart>
                                 </ResponsiveContainer>
                             </div>

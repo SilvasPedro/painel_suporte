@@ -25,8 +25,9 @@ import {
     calculateUserLevel,
     evaluateCollaboratorBadges
 } from '../services/userProfile';
+import { BorderBeam } from '../components/magicui';
 
-// Mapeamento de ícones dos emblemas oficiais da v3.9
+// Mapeamento de icones dos emblemas oficiais da v4.0.0
 const BADGE_ICONS = {
     TrendingUp,
     ShieldCheck,
@@ -72,7 +73,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const [selectedColabId, setSelectedColabId] = useState(null);
     const [colabSearchQuery, setColabSearchQuery] = useState('');
 
-    // Coleções necessárias para cálculo automático dos 3 emblemas oficiais
+    // Coleções necessárias para cálculo automático dos 6 emblemas oficiais
     const [weeklyEvals, setWeeklyEvals] = useState([]);
     const [qaAuditsList, setQaAuditsList] = useState([]);
     const [thirdPartyAuditsList, setThirdPartyAuditsList] = useState([]);
@@ -364,8 +365,8 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
     };
 
-    // Lista para exibição no quadrado estilo amigos do Facebook (até 12 colegas ativos)
-    const facebookFriendsPreview = useMemo(() => {
+    // Lista para exibição nos colegas de equipe (até 12 colegas ativos)
+    const teamPreviewList = useMemo(() => {
         const myId = myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId;
         const others = activeCollaboratorsList.filter(c => {
             const cId = c.id || c.firestoreId || c.uid;
@@ -387,32 +388,32 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         });
     }, [activeCollaboratorsList, colabSearchQuery]);
 
-    // Status operacional formatado
+    // Status operacional cadastral (SEM PING ONLINE FALSO)
     const userOperationalStatus = user?.status || (user?.active !== false ? 'Ativo' : 'Inativo');
     const getStatusStyle = (st) => {
         switch (st) {
             case 'Ativo':
-                return { badge: 'bg-emerald-50 text-emerald-800 border-emerald-300', dot: 'bg-emerald-500', ping: true };
+                return { badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20', dot: 'bg-emerald-500' };
             case 'Férias':
-                return { badge: 'bg-amber-50 text-amber-800 border-amber-300', dot: 'bg-amber-500', ping: false };
+                return { badge: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20', dot: 'bg-amber-500' };
             case 'Afastado':
-                return { badge: 'bg-purple-50 text-purple-800 border-purple-300', dot: 'bg-purple-500', ping: false };
+                return { badge: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20', dot: 'bg-purple-500' };
             case 'Inativo':
             default:
-                return { badge: 'bg-rose-50 text-rose-800 border-rose-300', dot: 'bg-rose-500', ping: false };
+                return { badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20', dot: 'bg-rose-500' };
         }
     };
     const currentStatusStyle = getStatusStyle(userOperationalStatus);
 
     return (
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-gray-50 h-full overflow-y-auto font-sans">
-            <div className="w-full space-y-6">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-canvas text-primary-hub min-h-full overflow-y-auto font-sans space-y-6">
+            <div className="max-w-7xl mx-auto space-y-6">
 
                 {/* AVISO DE VISUALIZAÇÃO DE OUTRO COLABORADOR */}
                 {isViewingOther && (
-                    <div className="bg-gradient-to-r from-red-600 via-rose-700 to-red-800 border border-red-500/40 p-4 rounded-2xl shadow-md flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-white animate-in fade-in duration-150">
+                    <div className="bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 border border-rose-500/40 p-4 rounded-2xl shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-white animate-in fade-in duration-150">
                         <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0">
                                 <Eye className="w-5 h-5" />
                             </div>
                             <div>
@@ -420,7 +421,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     <span>Visualizando Perfil Público:</span>
                                     <span className="text-amber-300 font-extrabold">{user?.name || user?.displayName}</span>
                                 </h3>
-                                <p className="text-[11px] text-red-100">
+                                <p className="text-[11px] text-rose-100">
                                     Você está consultando os contatos, turnos e habilidades deste colega de equipe.
                                 </p>
                             </div>
@@ -428,7 +429,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <button
                             type="button"
                             onClick={() => setSelectedColabId(null)}
-                            className="px-3.5 py-1.5 bg-white hover:bg-gray-100 text-gray-900 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
+                            className="px-3.5 py-1.5 bg-white hover:bg-rose-50 text-rose-900 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer shrink-0"
                         >
                             <ArrowLeft className="w-3.5 h-3.5" />
                             <span>Voltar ao Meu Perfil</span>
@@ -436,18 +437,18 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     </div>
                 )}
 
-                {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO) */}
-                <div className="bg-white rounded-2xl sm:rounded-3xl border border-gray-200/90 shadow-xs overflow-hidden relative">
+                {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO BENTO) */}
+                <div className="bg-surface rounded-3xl border border-subtle shadow-sm overflow-hidden relative">
                     {/* Fundo Personalizável (8 Cores ou Imagem HTTPS) com Textura Elegante */}
                     <div 
-                        className={`h-44 sm:h-52 bg-gradient-to-r ${selectedBannerPreset.gradient} p-6 relative flex items-start justify-between bg-cover bg-center transition-all duration-300`}
+                        className={`h-48 sm:h-56 bg-gradient-to-r ${selectedBannerPreset.gradient} p-6 relative flex items-start justify-between bg-cover bg-center transition-all duration-300`}
                         style={formData.bannerUrl && formData.bannerUrl.startsWith('https://') ? { backgroundImage: `url(${formData.bannerUrl})` } : {}}
                     >
                         {/* Overlay para contraste quando houver imagem */}
                         {formData.bannerUrl && formData.bannerUrl.startsWith('https://') && (
-                            <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]"></div>
+                            <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px]"></div>
                         )}
-                        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                        <div className="absolute inset-0 opacity-15 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
                         
                         {/* Botão de Personalização da Capa (Apenas Dono do Perfil ou Gestor) */}
                         <div className="relative z-10 flex items-center gap-2">
@@ -455,7 +456,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 <button
                                     type="button"
                                     onClick={handleOpenBannerModal}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-black/30 hover:bg-black/50 text-white backdrop-blur-md border border-white/25 shadow-xs cursor-pointer transition-all active:scale-95"
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-black/35 hover:bg-black/55 text-white backdrop-blur-md border border-white/20 shadow-xs cursor-pointer transition-all active:scale-95"
                                     title="Personalizar cor ou imagem de capa do seu perfil"
                                 >
                                     <Palette className="w-3.5 h-3.5 text-amber-300" />
@@ -468,7 +469,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <div className="relative z-10">
                             {isViewingOther && !isGestor ? (
                                 <div className="px-3.5 py-1.5 bg-black/40 backdrop-blur-md border border-white/20 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm">
-                                    <Eye className="w-3.5 h-3.5 text-red-200" />
+                                    <Eye className="w-3.5 h-3.5 text-rose-200" />
                                     <span>Modo Consulta</span>
                                 </div>
                             ) : (
@@ -476,7 +477,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     type="button"
                                     onClick={handleSaveProfile}
                                     disabled={saving}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-red-900/30 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                                    className="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-rose-950/30 flex items-center gap-2 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
                                 >
                                     {saving ? (
                                         <>
@@ -496,11 +497,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                     {/* Informações Centrais do Usuário (Sobrepostas ao Banner) */}
                     <div className="px-6 pb-6 pt-0 relative">
-                        <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-4">
+                        <div className="flex flex-col sm:flex-row items-center sm:items-end justify-between gap-4 -mt-16 sm:-mt-20 mb-5">
                             
                             {/* Avatar com Badge de Edição PhotoUrl */}
                             <div className="relative group">
-                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl border-4 border-white shadow-xl bg-gray-100 overflow-hidden flex items-center justify-center shrink-0 relative transition-transform group-hover:scale-[1.02]">
+                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl border-4 border-white dark:border-[#111319] shadow-xl bg-surface overflow-hidden flex items-center justify-center shrink-0 relative transition-transform group-hover:scale-[1.02] ring-1 ring-subtle">
                                     {formData.photoURL ? (
                                         <img
                                             src={formData.photoURL}
@@ -512,11 +513,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             }}
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-red-600 via-rose-600 to-red-700 text-white select-none">
+                                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-rose-600 via-rose-700 to-red-800 text-white select-none">
                                             <span className="text-3xl sm:text-4xl font-black">
                                                 {formData.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
                                             </span>
-                                            <span className="text-[10px] font-mono text-red-100 mt-0.5">Sem Foto</span>
+                                            <span className="text-[10px] font-mono text-rose-100 mt-0.5">Sem Foto</span>
                                         </div>
                                     )}
 
@@ -533,20 +534,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         </button>
                                     )}
                                 </div>
-
-                                {/* Status Pulsante Online/Ativo */}
-                                <div 
-                                    className="absolute bottom-2 right-2 w-5 h-5 rounded-full border-2 border-white bg-white shadow-md flex items-center justify-center"
-                                    title={`Status: ${userOperationalStatus}`}
-                                >
-                                    <span className={`w-2.5 h-2.5 rounded-full ${currentStatusStyle.dot}`}></span>
-                                </div>
                             </div>
 
                             {/* Badges de Destaque no Topo Direito (Com Nível de 1 a 6) */}
                             <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 text-xs">
                                 
-                                {/* Badge de Status Operacional */}
+                                {/* Badge de Status Cadastral (Estático - Sem fake ping) */}
                                 <div className={`px-3 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 shadow-2xs ${currentStatusStyle.badge}`}>
                                     <span className={`w-2 h-2 rounded-full ${currentStatusStyle.dot}`}></span>
                                     <span>Status: {userOperationalStatus}</span>
@@ -554,12 +547,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                                 {/* Badge de Nível (1 a 6) */}
                                 <div 
-                                    className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-amber-500/10 border-amber-500/40 text-amber-900 shadow-2xs"
+                                    className="px-3.5 py-1.5 rounded-xl border font-bold flex items-center gap-1.5 bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400 shadow-2xs"
                                     title={`Nível do Colaborador: ${userLevel} de 6 (${activeBadgeList.length} de 6 emblemas conquistados)`}
                                 >
-                                    <Sparkles className="w-4 h-4 text-amber-600 animate-spin-slow" />
-                                    <span className="font-black text-amber-800">Nível {userLevel}</span>
-                                    <span className="text-[10px] font-mono text-amber-700 bg-amber-200/60 px-1.5 py-0.2 rounded-md">
+                                    <Sparkles className="w-4 h-4 text-amber-500" />
+                                    <span className="font-black">Nível {userLevel}</span>
+                                    <span className="text-[10px] font-mono opacity-80 bg-amber-500/20 px-1.5 py-0.5 rounded-md">
                                         {activeBadgeList.length}/6
                                     </span>
                                 </div>
@@ -583,40 +576,40 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <div className="space-y-3">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <div>
-                                    <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+                                    <h1 className="text-xl sm:text-2xl font-black text-primary-hub tracking-tight flex items-center gap-2">
                                         <span>{formData.name || 'Seu Nome'}</span>
                                         {(!isViewingOther || isGestor) && (
-                                             <button
+                                            <button
                                                 type="button"
                                                 onClick={handleOpenPhotoModal}
-                                                className="text-xs font-semibold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded-md border border-red-200 transition-colors inline-flex items-center gap-1 cursor-pointer"
+                                                className="text-xs font-semibold text-rose-600 dark:text-rose-400 hover:text-rose-500 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-0.5 rounded-md border border-rose-500/20 transition-colors inline-flex items-center gap-1 cursor-pointer"
                                             >
                                                 <Camera className="w-3 h-3" /> Trocar foto
                                             </button>
                                         )}
                                     </h1>
-                                    <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5 font-medium">
-                                        <Mail className="w-3.5 h-3.5 text-gray-400" />
+                                    <p className="text-xs text-muted-hub flex items-center gap-1.5 mt-0.5 font-medium">
+                                        <Mail className="w-3.5 h-3.5 opacity-70" />
                                         <span>{user?.email || 'email@empresa.com'}</span>
-                                        <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
+                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-1.5 py-0.5 rounded font-bold border border-emerald-500/20">
                                             Conta Principal (Auth)
                                         </span>
                                     </p>
                                 </div>
 
-                                <div className="text-xs text-gray-500 sm:text-right font-mono">
+                                <div className="text-xs text-muted-hub sm:text-right font-mono">
                                     <span>ID: {user?.firestoreId || user?.uid || 'USR-001'}</span>
                                 </div>
                             </div>
 
                             {/* Campo de Bio / Legenda do Usuário */}
-                            <div className="bg-gray-50/80 rounded-xl p-3 border border-gray-200 focus-within:border-red-500 focus-within:bg-white transition-all">
-                                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider flex items-center justify-between mb-1">
+                            <div className="bg-subtle rounded-2xl p-3.5 border border-subtle focus-within:border-rose-500/50 transition-all">
+                                <label className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center justify-between mb-1.5">
                                     <span className="flex items-center gap-1.5">
-                                        <Edit3 className="w-3.5 h-3.5 text-red-600" />
+                                        <Edit3 className="w-3.5 h-3.5 text-rose-500" />
                                         Legenda / Bio Profissional
                                     </span>
-                                    <span className="text-[10px] text-gray-400 font-mono">
+                                    <span className="text-[10px] text-muted-hub font-mono">
                                         {formData.bio.length}/180 caracteres
                                     </span>
                                 </label>
@@ -624,9 +617,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     value={formData.bio}
                                     maxLength={180}
                                     onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                                    placeholder="Ex: Especialista em redes FTTH, diagnóstico ágil e suporte consultivo. Foco em soluções de primeiro contato com alta satisfação."
+                                    placeholder="Ex: Especialista em redes FTTH, diagnóstico ágil e suporte consultivo. Foco em resoluções de primeiro contato com alta satisfação."
                                     rows={2}
-                                    className="w-full text-xs text-gray-800 bg-transparent border-0 outline-none resize-none leading-relaxed placeholder:text-gray-400"
+                                    className="w-full text-xs text-primary-hub bg-transparent border-0 outline-none resize-none leading-relaxed placeholder:text-muted-hub"
                                 />
                             </div>
                         </div>
@@ -639,35 +632,58 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                     {/* COLUNA ESQUERDA: EMBLEMAS DE FEITOS (100% AUTOMATIZADOS) */}
                     <div className="space-y-6">
 
-                        {/* CARD 2.1: EMBLEMAS & INSÍGNIAS DE FEITOS (SISTEMA 100% AUTOMATIZADO) */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 sm:p-6 space-y-4">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                        {/* CARD 2.1: EMBLEMAS & INSÍGNIAS DE FEITOS */}
+                        <div className="bg-surface rounded-3xl border border-subtle shadow-sm p-5 sm:p-6 space-y-5">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-subtle pb-4">
                                 <div>
-                                    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                    <h2 className="text-sm font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
                                         <Trophy className="w-4 h-4 text-amber-500" />
                                         Insígnias & Emblemas de Feitos
                                     </h2>
-                                    <p className="text-xs text-gray-500 mt-0.5">
+                                    <p className="text-xs text-muted-hub mt-0.5">
                                         Conquistas calculadas e desbloqueadas em tempo real pelas métricas reais da operação.
                                     </p>
                                 </div>
 
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-mono font-bold bg-amber-50 text-amber-800 border border-amber-200 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
+                                    <span className="text-xs font-mono font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-full flex items-center gap-1 shadow-2xs">
                                         <Sparkles className="w-3.5 h-3.5 text-amber-500" />
                                         {activeBadgeList.length} de {BADGES_CATALOG.length} Conquistados
                                     </span>
                                 </div>
                             </div>
 
+                            {/* Barra de Progresso de Nível de Conquistas */}
+                            <div className="p-4 rounded-2xl bg-subtle border border-subtle space-y-2">
+                                <div className="flex items-center justify-between text-xs font-bold">
+                                    <span className="text-primary-hub flex items-center gap-1.5">
+                                        <Award className="w-4 h-4 text-rose-500" />
+                                        Progresso do Nível Operacional
+                                    </span>
+                                    <span className="text-rose-500 font-mono">
+                                        {Math.round((activeBadgeList.length / BADGES_CATALOG.length) * 100)}%
+                                    </span>
+                                </div>
+                                <div className="w-full h-2 rounded-full bg-surface border border-subtle overflow-hidden">
+                                    <div 
+                                        className="h-full bg-gradient-to-r from-rose-500 to-amber-500 rounded-full transition-all duration-500"
+                                        style={{ width: `${(activeBadgeList.length / BADGES_CATALOG.length) * 100}%` }}
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between text-[11px] text-muted-hub">
+                                    <span>Nível Atual: <strong>Nível {userLevel}</strong></span>
+                                    <span>{BADGES_CATALOG.length - activeBadgeList.length === 0 ? 'Parabéns! Nível Máximo alcançado' : `Faltam ${BADGES_CATALOG.length - activeBadgeList.length} conquistas para Nível 6`}</span>
+                                </div>
+                            </div>
+
                             {/* Banner Informativo do Sistema Automatizado */}
-                            <div className="p-3 bg-gradient-to-r from-amber-50 via-rose-50/40 to-blue-50/30 border border-amber-200/80 rounded-xl flex items-start gap-3 text-xs text-gray-800">
-                                <Sparkles className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                            <div className="p-3.5 bg-gradient-to-r from-amber-500/5 via-rose-500/5 to-blue-500/5 border border-amber-500/20 rounded-2xl flex items-start gap-3 text-xs">
+                                <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
                                 <div className="space-y-0.5">
-                                    <span className="font-bold text-gray-900 block">
+                                    <span className="font-bold text-primary-hub block">
                                         6 Emblemas Oficiais Calculados Automaticamente:
                                     </span>
-                                    <p className="text-[11px] text-gray-600 leading-relaxed">
+                                    <p className="text-[11px] text-secondary-hub leading-relaxed">
                                         As insígnias são desbloqueadas diretamente a partir das avaliações semanais e auditorias QA: 
                                         <strong> Desempenho</strong> (&ge; 95% do turno), 
                                         <strong> Auditorias QA</strong> (&ge; 85% conformidade), 
@@ -689,21 +705,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     return (
                                         <div
                                             key={badge.id}
-                                            className={`p-3.5 rounded-xl border transition-all relative overflow-hidden flex flex-col justify-between select-none ${
+                                            className={`p-3.5 rounded-2xl border transition-all relative overflow-hidden flex flex-col justify-between select-none ${
                                                 isUnlocked
-                                                    ? 'border-amber-300 bg-amber-50/70 shadow-xs'
-                                                    : 'border-gray-200 bg-gray-50/60 opacity-75'
+                                                    ? 'border-amber-500/40 bg-amber-500/5 shadow-xs'
+                                                    : 'border-subtle bg-subtle/50 opacity-70'
                                             }`}
                                             title={`Critério: ${badge.requirement}`}
                                         >
                                             <div className="flex items-start gap-3">
                                                 {/* Ícone do Emblema */}
                                                 <div className={`w-11 h-11 rounded-xl flex items-center justify-center shrink-0 border shadow-xs relative ${
-                                                    isUnlocked ? badge.bgColor : 'bg-gray-100 border-gray-200 text-gray-400'
+                                                    isUnlocked ? 'bg-amber-500/10 border-amber-500/30' : 'bg-surface border-subtle text-muted-hub'
                                                 }`}>
-                                                    <IconComponent className={`w-5 h-5 ${isUnlocked ? badge.textColor : 'text-gray-400'}`} />
+                                                    <IconComponent className={`w-5 h-5 ${isUnlocked ? 'text-amber-500' : 'text-muted-hub'}`} />
                                                     {isUnlocked && (
-                                                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-white flex items-center justify-center shadow-xs">
+                                                        <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-amber-500 rounded-full border-2 border-surface flex items-center justify-center shadow-xs">
                                                             <Check className="w-2 h-2 text-white stroke-[3]" />
                                                         </span>
                                                     )}
@@ -711,36 +727,36 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center justify-between gap-1">
-                                                        <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-gray-900' : 'text-gray-600'}`}>
+                                                        <h3 className={`text-xs font-bold truncate ${isUnlocked ? 'text-primary-hub' : 'text-secondary-hub'}`}>
                                                             {badge.title}
                                                         </h3>
                                                         <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${
-                                                            isUnlocked ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-gray-200 text-gray-600'
+                                                            isUnlocked ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30' : 'bg-surface border border-subtle text-muted-hub'
                                                         }`}>
                                                             {isUnlocked ? 'Conquistado' : 'Em Progresso'}
                                                         </span>
                                                     </div>
 
-                                                    <p className="text-[11px] text-gray-500 mt-0.5 leading-snug">
+                                                    <p className="text-[11px] text-muted-hub mt-0.5 leading-snug">
                                                         {badge.description}
                                                     </p>
                                                 </div>
                                             </div>
 
                                             {/* Detalhe da Regra e Métrica Atual */}
-                                            <div className="mt-3 pt-2 border-t border-gray-100/80 space-y-1">
+                                            <div className="mt-3 pt-2 border-t border-subtle space-y-1">
                                                 <div className="flex items-center justify-between text-[10px]">
-                                                    <span className="text-gray-500 font-semibold truncate">
+                                                    <span className="text-muted-hub font-semibold truncate">
                                                         Meta: {badge.requirement}
                                                     </span>
                                                     {detail?.currentValue && (
-                                                        <span className="font-mono font-bold text-gray-700">
+                                                        <span className="font-mono font-bold text-primary-hub">
                                                             {detail.currentValue}
                                                         </span>
                                                     )}
                                                 </div>
                                                 {detail?.feedback && (
-                                                    <p className={`text-[10px] leading-tight ${isUnlocked ? 'text-emerald-700 font-medium' : 'text-gray-500'}`}>
+                                                    <p className={`text-[10px] leading-tight ${isUnlocked ? 'text-emerald-600 dark:text-emerald-400 font-medium' : 'text-muted-hub'}`}>
                                                         {detail.feedback}
                                                     </p>
                                                 )}
@@ -752,30 +768,30 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         </div>
                     </div>
 
-                    {/* COLUNA DIREITA: CONTATOS (ACIMA) E HORÁRIO DE EXPEDIENTE (ABAIXO) */}
+                    {/* COLUNA DIREITA: CONTATOS (ACIMA), COLEGAS & HORÁRIO DE EXPEDIENTE (ABAIXO) */}
                     <div className="space-y-6">
 
                         {/* CARD 2.2: CANAIS DE CONTATO & COMUNICAÇÃO */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
-                            <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
-                                <Phone className="w-4 h-4 text-red-600" />
+                        <div className="bg-surface rounded-3xl border border-subtle shadow-sm p-5 sm:p-6 space-y-4">
+                            <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2 border-b border-subtle pb-3">
+                                <Phone className="w-4 h-4 text-rose-500" />
                                 Contatos & Comunicação
                             </h2>
 
                             {/* Número de Telefone / WhatsApp */}
                             <div>
-                                <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                                <label className="text-[11px] font-bold text-secondary-hub block mb-1.5">
                                     Telefone / WhatsApp de Contato:
                                 </label>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <Phone className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+                                        <Phone className="w-3.5 h-3.5 text-muted-hub absolute left-3 top-3" />
                                         <input
                                             type="text"
                                             value={formData.phone}
                                             onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                                             placeholder="(11) 98765-4321"
-                                            className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
+                                            className="w-full pl-8 pr-3 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub transition-all"
                                         />
                                     </div>
                                     {formData.phone && (
@@ -783,16 +799,16 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             <button
                                                 type="button"
                                                 onClick={handleCopyPhone}
-                                                className="p-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors cursor-pointer"
+                                                className="p-2 bg-subtle hover:bg-surface text-secondary-hub border border-subtle rounded-xl transition-colors cursor-pointer"
                                                 title="Copiar Telefone"
                                             >
-                                                {copiedPhone ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                                                {copiedPhone ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                                             </button>
                                             <a
                                                 href={`https://wa.me/55${formData.phone.replace(/\D/g, '')}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-colors flex items-center justify-center"
+                                                className="p-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-colors flex items-center justify-center shadow-xs"
                                                 title="Abrir WhatsApp"
                                             >
                                                 <ExternalLink className="w-4 h-4" />
@@ -804,38 +820,38 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                             {/* Ramal de Atendimento */}
                             <div>
-                                <label className="text-[11px] font-bold text-gray-700 block mb-1">
+                                <label className="text-[11px] font-bold text-secondary-hub block mb-1.5">
                                     Número do Ramal:
                                 </label>
                                 <div className="relative">
-                                    <Headphones className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+                                    <Headphones className="w-3.5 h-3.5 text-muted-hub absolute left-3 top-3" />
                                     <input
                                         type="text"
                                         value={formData.ramal}
                                         onChange={(e) => setFormData(prev => ({ ...prev, ramal: e.target.value, slackOrTeams: e.target.value }))}
                                         placeholder="Ex: 2045 ou 20"
-                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
+                                        className="w-full pl-8 pr-3 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub transition-all"
                                     />
                                 </div>
                             </div>
 
                             {/* E-mails Adicionais */}
-                            <div className="pt-2 border-t border-gray-100">
-                                <label className="text-[11px] font-bold text-gray-700 block mb-1.5">
+                            <div className="pt-3 border-t border-subtle">
+                                <label className="text-[11px] font-bold text-secondary-hub block mb-2">
                                     E-mails Adicionais:
                                 </label>
 
-                                <div className="space-y-1.5 mb-2">
+                                <div className="space-y-1.5 mb-2.5">
                                     {formData.additionalEmails.map(email => (
                                         <div
                                             key={email}
-                                            className="flex items-center justify-between p-2 rounded-lg bg-gray-50 border border-gray-200 text-xs text-gray-700"
+                                            className="flex items-center justify-between p-2 rounded-xl bg-subtle border border-subtle text-xs text-primary-hub"
                                         >
-                                            <span className="truncate" title={email}>{email}</span>
+                                            <span className="truncate font-mono text-[11px]" title={email}>{email}</span>
                                             <button
                                                 type="button"
                                                 onClick={() => handleRemoveEmail(email)}
-                                                className="text-gray-400 hover:text-red-600 p-1 transition-colors cursor-pointer"
+                                                className="text-muted-hub hover:text-rose-500 p-1 transition-colors cursor-pointer"
                                                 title="Remover e-mail"
                                             >
                                                 <Trash2 className="w-3.5 h-3.5" />
@@ -843,7 +859,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         </div>
                                     ))}
                                     {formData.additionalEmails.length === 0 && (
-                                        <p className="text-[11px] text-gray-400 italic">
+                                        <p className="text-[11px] text-muted-hub italic">
                                             Nenhum e-mail adicional registrado.
                                         </p>
                                     )}
@@ -856,12 +872,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         onChange={(e) => setNewEmailInput(e.target.value)}
                                         onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddEmail())}
                                         placeholder="Adicionar e-mail secundário..."
-                                        className="flex-1 px-3 py-1.5 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900"
+                                        className="flex-1 px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub transition-all"
                                     />
                                     <button
                                         type="button"
                                         onClick={handleAddEmail}
-                                        className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs"
+                                        className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl transition-colors cursor-pointer shadow-xs"
                                     >
                                         + Add
                                     </button>
@@ -869,31 +885,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* CARD 2.4: BOX DE AMIGOS / COLEGAS DE EQUIPE (ESTILO COMPACTO & ERGONÔMICO) */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-4 sm:p-5 space-y-3.5">
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-2.5">
-                                <div>
-                                    <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
-                                        <Users className="w-4 h-4 text-red-600" />
-                                        Colegas de Equipe
-                                    </h2>
-                                    <p className="text-[11px] text-gray-500 mt-0.5">
-                                        {activeCollaboratorsList.length} colegas ativos no time
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={() => setIsTeamModalOpen(true)}
-                                    className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline cursor-pointer flex items-center gap-1"
-                                >
-                                    <span>Ver mais</span>
-                                    <ChevronRight className="w-3.5 h-3.5" />
-                                </button>
+                        {/* CARD 2.3: BOX DE COLEGAS DE EQUIPE (ESTILO COMPACTO & ERGONÔMICO) */}
+                        <div className="bg-surface rounded-3xl border border-subtle shadow-sm p-5 sm:p-6 space-y-4">
+                            <div className="flex items-center justify-between border-b border-subtle pb-3">
+                                <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
+                                    <Users className="w-4 h-4 text-rose-500" />
+                                    Colegas de Equipe
+                                </h2>
+                                <span className="text-[10px] font-mono text-muted-hub">
+                                    {activeCollaboratorsList.length} Ativos
+                                </span>
                             </div>
 
-                            {/* Grade Compacta de 5 a 6 Colunas (Fotos Menores e Proporcionais) */}
-                            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 gap-2">
-                                {facebookFriendsPreview.map((colab) => {
+                            {/* Mini Grade com Colegas */}
+                            <div className="grid grid-cols-4 sm:grid-cols-6 gap-2.5">
+                                {teamPreviewList.map((colab) => {
                                     const cId = colab.id || colab.firestoreId || colab.uid;
                                     const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
                                     const st = colab.status || 'Ativo';
@@ -907,14 +913,14 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             key={cId}
                                             type="button"
                                             onClick={() => setSelectedColabId(cId)}
-                                            className="flex flex-col items-center sm:items-start text-center sm:text-left group cursor-pointer transition-all hover:scale-[1.03] focus:outline-none p-1 rounded-xl hover:bg-gray-50/80"
-                                            title={`${displayName} • ${colab.shift || colab.role || st}`}
+                                            className="flex flex-col items-center text-center group cursor-pointer transition-all hover:scale-[1.03] focus:outline-none p-1.5 rounded-xl hover:bg-subtle"
+                                            title={`${displayName} - ${colab.shift || colab.role || st}`}
                                         >
                                             {/* Foto Quadrada Compacta */}
-                                            <div className={`w-full aspect-square rounded-xl overflow-hidden bg-gray-100 border relative shadow-2xs group-hover:shadow-xs transition-all ${
+                                            <div className={`w-full aspect-square rounded-xl overflow-hidden bg-subtle border relative shadow-2xs transition-all ${
                                                 isSelected 
-                                                    ? 'border-red-600 ring-2 ring-red-500/50' 
-                                                    : 'border-gray-200 group-hover:border-red-300'
+                                                    ? 'border-rose-500 ring-2 ring-rose-500/40' 
+                                                    : 'border-subtle group-hover:border-rose-400'
                                             }`}>
                                                 {photo ? (
                                                     <img
@@ -923,24 +929,24 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                                                     />
                                                 ) : (
-                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-100 to-rose-200 text-red-800 font-bold text-xs select-none">
+                                                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-rose-500/20 to-rose-700/30 text-rose-600 dark:text-rose-300 font-bold text-xs select-none">
                                                         {firstName.slice(0, 2).toUpperCase()}
                                                     </div>
                                                 )}
-                                                {/* Ponto indicador de status operacional */}
+                                                {/* Ponto indicador de status operacional cadastral (estático) */}
                                                 <span 
-                                                    className={`absolute bottom-0.5 right-0.5 w-2 h-2 rounded-full border border-white shadow-2xs ${dotColor}`} 
+                                                    className={`absolute bottom-1 right-1 w-2 h-2 rounded-full border border-surface shadow-2xs ${dotColor}`} 
                                                     title={`Status: ${st}`}
                                                 />
                                             </div>
 
                                             {/* Nome abaixo do minicard quadrado */}
-                                            <span className={`text-[10px] font-bold mt-1 truncate w-full text-center sm:text-left transition-colors leading-tight ${
-                                                isSelected ? 'text-red-700' : 'text-gray-900 group-hover:text-red-600'
+                                            <span className={`text-[10px] font-bold mt-1.5 truncate w-full text-center transition-colors leading-tight ${
+                                                isSelected ? 'text-rose-600 dark:text-rose-400' : 'text-primary-hub group-hover:text-rose-500'
                                             }`}>
                                                 {firstName}
                                             </span>
-                                            <span className="text-[9px] text-gray-400 truncate w-full text-center sm:text-left leading-tight">
+                                            <span className="text-[9px] text-muted-hub truncate w-full text-center leading-tight">
                                                 {colab.shift || colab.role || 'Suporte'}
                                             </span>
                                         </button>
@@ -952,23 +958,23 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             <button
                                 type="button"
                                 onClick={() => setIsTeamModalOpen(true)}
-                                className="w-full py-2 bg-gray-50 hover:bg-gray-100 text-gray-700 text-xs font-bold rounded-xl border border-gray-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                                className="w-full py-2.5 bg-subtle hover:bg-surface text-secondary-hub text-xs font-bold rounded-xl border border-subtle transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                             >
-                                <Users className="w-3.5 h-3.5 text-gray-500" />
-                                <span>Ver mais ({activeCollaboratorsList.length} colegas)</span>
+                                <Users className="w-3.5 h-3.5 text-muted-hub" />
+                                <span>Ver todos ({activeCollaboratorsList.length} colegas)</span>
                             </button>
                         </div>
 
-                        {/* CARD 2.5: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
-                        <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-5 space-y-4">
-                            <h2 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2 border-b border-gray-100 pb-2.5">
-                                <Clock className="w-4 h-4 text-red-600" />
+                        {/* CARD 2.4: HORÁRIO DE OPERAÇÃO ATUAL & ESCALA OFICIAL */}
+                        <div className="bg-surface rounded-3xl border border-subtle shadow-sm p-5 sm:p-6 space-y-4">
+                            <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2 border-b border-subtle pb-3">
+                                <Clock className="w-4 h-4 text-rose-500" />
                                 Horário de Expediente Oficial
                             </h2>
 
                             {/* Seletor dos 4 Turnos Oficiais */}
                             <div>
-                                <label className="text-[11px] font-bold text-gray-600 block mb-1.5">
+                                <label className="text-[11px] font-bold text-secondary-hub block mb-2">
                                     Turno de Atuação:
                                 </label>
                                 <div className="space-y-2">
@@ -979,17 +985,17 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 key={shiftItem.id}
                                                 type="button"
                                                 onClick={() => handleChangeShift(shiftItem.id)}
-                                                className={`w-full p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
+                                                className={`w-full p-3 rounded-2xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                                                     isSelected
-                                                        ? 'bg-red-50/70 border-red-500 ring-1 ring-red-300 text-red-950 font-bold'
-                                                        : 'bg-gray-50/50 hover:bg-gray-100/70 border-gray-200 text-gray-700'
+                                                        ? 'bg-rose-500/10 border-rose-500/40 text-rose-600 dark:text-rose-400 font-bold'
+                                                        : 'bg-subtle hover:bg-surface border-subtle text-secondary-hub'
                                                 }`}
                                             >
-                                                <div className="flex items-center gap-2">
-                                                    <Clock className={`w-3.5 h-3.5 ${isSelected ? 'text-red-600' : 'text-gray-400'}`} />
+                                                <div className="flex items-center gap-2.5">
+                                                    <Clock className={`w-4 h-4 ${isSelected ? 'text-rose-500' : 'text-muted-hub'}`} />
                                                     <span className="text-xs">{shiftItem.label}</span>
                                                 </div>
-                                                <span className="text-xs font-mono font-bold text-gray-600">
+                                                <span className="text-xs font-mono font-bold text-muted-hub">
                                                     {shiftItem.hours}
                                                 </span>
                                             </button>
@@ -999,17 +1005,17 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
 
                             {/* Caixa Informativa sobre a Operação Terceirizada (20:00 até 08:00) */}
-                            <div className="p-3.5 rounded-xl bg-gray-50 border border-gray-200 space-y-1.5 shadow-2xs">
+                            <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 space-y-1.5 shadow-2xs">
                                 <div className="flex items-center gap-2">
-                                    <Headphones className="w-4 h-4 text-amber-600" />
-                                    <span className="text-xs font-bold text-gray-900 tracking-wide">
+                                    <Headphones className="w-4 h-4 text-amber-500" />
+                                    <span className="text-xs font-bold text-primary-hub tracking-wide">
                                         {THIRD_PARTY_SCHEDULE_INFO.title}
                                     </span>
                                 </div>
-                                <div className="text-[11px] font-mono font-bold text-amber-700">
+                                <div className="text-[11px] font-mono font-bold text-amber-600 dark:text-amber-400">
                                     Horário: {THIRD_PARTY_SCHEDULE_INFO.hours}
                                 </div>
-                                <p className="text-[11px] text-gray-600 leading-relaxed">
+                                <p className="text-[11px] text-secondary-hub leading-relaxed">
                                     {THIRD_PARTY_SCHEDULE_INFO.description}
                                 </p>
                             </div>
@@ -1021,8 +1027,8 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 {/* BOTÃO FIXO/FINAL DE SALVAR */}
                 <div className="pt-4 flex items-center justify-end">
                     {isViewingOther && !isGestor ? (
-                        <div className="p-3 bg-gray-100 border border-gray-200 text-gray-500 rounded-xl text-xs font-semibold flex items-center gap-2">
-                            <Eye className="w-4 h-4 text-gray-400" />
+                        <div className="p-3 bg-subtle border border-subtle text-muted-hub rounded-xl text-xs font-semibold flex items-center gap-2">
+                            <Eye className="w-4 h-4 opacity-70" />
                             <span>Modo de visualização pública ativo. Para editar, acesse seu próprio perfil.</span>
                         </div>
                     ) : (
@@ -1030,7 +1036,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             type="button"
                             onClick={handleSaveProfile}
                             disabled={saving}
-                            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-lg shadow-red-950/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                            className="px-6 py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-sm font-bold rounded-xl shadow-lg shadow-rose-950/20 flex items-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
                         >
                             {saving ? (
                                 <>
@@ -1054,22 +1060,24 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             {/* ========================================================================= */}
             {isPhotoModalOpen && (
                 <div 
-                    className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
                     onClick={() => setIsPhotoModalOpen(false)}
                 >
                     <div 
-                        className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 animate-in zoom-in-95 duration-200"
+                        className="relative bg-surface rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-subtle animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        {/* Header Modal com Gradiente Oficial HubDesk */}
-                        <div className="p-5 bg-gradient-to-r from-red-600 to-rose-700 text-white flex items-center justify-between shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
+                        <BorderBeam size={200} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
+
+                        {/* Header Modal */}
+                        <div className="p-5 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between shadow-xs">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
                                     <Camera className="w-5 h-5" />
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-bold text-white">Alterar Foto de Perfil</h3>
-                                    <p className="text-[11px] text-red-100">Recurso Oficial PhotoUrl do Firebase</p>
+                                    <p className="text-[11px] text-rose-100">Recurso Oficial PhotoUrl do Firebase</p>
                                 </div>
                             </div>
                             <button
@@ -1083,10 +1091,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                         {/* Conteúdo do Modal */}
                         <div className="p-6 space-y-6">
-
                             {/* Preview Circular / Quadrado Arredondado */}
                             <div className="flex flex-col items-center justify-center">
-                                <div className="w-28 h-28 rounded-3xl border-4 border-red-500/20 shadow-md bg-gray-100 overflow-hidden flex items-center justify-center mb-2 relative">
+                                <div className="w-28 h-28 rounded-3xl border-4 border-rose-500/20 shadow-md bg-subtle overflow-hidden flex items-center justify-center mb-2 relative">
                                     {photoPreview ? (
                                         <img
                                             src={photoPreview}
@@ -1098,22 +1105,22 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             }}
                                         />
                                     ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-2xl bg-gray-100">
+                                        <div className="w-full h-full flex items-center justify-center text-muted-hub font-bold text-2xl bg-subtle">
                                             {formData.name?.charAt(0) || 'U'}
                                         </div>
                                     )}
                                 </div>
-                                <span className="text-xs text-gray-500 font-medium">Pré-visualização do Avatar</span>
+                                <span className="text-xs text-muted-hub font-medium">Pré-visualização do Avatar</span>
                             </div>
 
                             {/* Opção 1: Inserir URL Direta */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1.5">
+                                <label className="text-xs font-bold text-primary-hub block mb-1.5">
                                     Opção 1: Inserir Link / URL da Imagem (PhotoUrl)
                                 </label>
                                 <div className="flex gap-2">
                                     <div className="relative flex-1">
-                                        <LinkIcon className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-3" />
+                                        <LinkIcon className="w-3.5 h-3.5 text-muted-hub absolute left-3 top-3" />
                                         <input
                                             type="url"
                                             value={photoUrlInput}
@@ -1121,29 +1128,28 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 setPhotoUrlInput(e.target.value);
                                                 setPhotoPreview(e.target.value);
                                             }}
-                                            placeholder="https://exemplo.com/minha-foto.jpg"
-                                            className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900 placeholder:text-gray-400"
+                                            placeholder="https://exemplo.com/sua-foto.jpg"
+                                            className="w-full pl-8 pr-3 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub"
                                         />
                                     </div>
                                     <button
                                         type="button"
                                         onClick={() => setPhotoPreview(photoUrlInput)}
-                                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer border border-gray-200"
+                                        className="px-3.5 py-2 bg-subtle hover:bg-surface border border-subtle text-primary-hub text-xs font-bold rounded-xl transition-colors cursor-pointer"
                                     >
-                                        Testar
+                                        Carregar
                                     </button>
                                 </div>
                             </div>
 
-                            {/* Opção 2: Upload de Arquivo Local */}
+                            {/* Opção 2: Carregar do Dispositivo */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1.5">
-                                    Opção 2: Fazer Upload do Computador / Dispositivo
+                                <label className="text-xs font-bold text-primary-hub block mb-1.5">
+                                    Opção 2: Enviar do seu Computador (Máx. 3MB)
                                 </label>
-                                <label className="w-full border-2 border-dashed border-gray-300 hover:border-red-400 rounded-2xl p-4 flex flex-col items-center justify-center cursor-pointer bg-gray-50/50 hover:bg-red-50/20 transition-all">
-                                    <Upload className="w-6 h-6 text-gray-400 mb-1" />
-                                    <span className="text-xs font-bold text-gray-700">Clique para selecionar imagem</span>
-                                    <span className="text-[10px] text-gray-400 mt-0.5">PNG, JPG, WEBP (máx. 3MB)</span>
+                                <label className="w-full py-2.5 px-3 border border-dashed border-subtle hover:border-rose-500 rounded-xl flex items-center justify-center gap-2 cursor-pointer bg-subtle hover:bg-surface text-secondary-hub text-xs font-semibold transition-all">
+                                    <Upload className="w-4 h-4 text-rose-500" />
+                                    <span>Escolher arquivo de imagem</span>
                                     <input
                                         type="file"
                                         accept="image/*"
@@ -1155,7 +1161,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
                             {/* Opção 3: Avatares Profissionais em 1 Clique */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-2">
+                                <label className="text-xs font-bold text-primary-hub block mb-2">
                                     Opção 3: Escolher Avatar Profissional (1 Clique)
                                 </label>
                                 <div className="grid grid-cols-4 gap-2">
@@ -1167,7 +1173,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 type="button"
                                                 onClick={() => handleSelectPresetAvatar(avatar.url)}
                                                 className={`p-1 rounded-xl border-2 transition-all cursor-pointer relative overflow-hidden group ${
-                                                    isSelected ? 'border-red-600 ring-2 ring-red-200' : 'border-gray-200 hover:border-gray-400'
+                                                    isSelected ? 'border-rose-500 ring-2 ring-rose-500/20' : 'border-subtle hover:border-rose-400'
                                                 }`}
                                                 title={avatar.name}
                                             >
@@ -1177,7 +1183,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                     className="w-full h-12 object-cover rounded-lg group-hover:scale-105 transition-transform"
                                                 />
                                                 {isSelected && (
-                                                    <div className="absolute inset-0 bg-red-600/30 flex items-center justify-center">
+                                                    <div className="absolute inset-0 bg-rose-600/30 flex items-center justify-center">
                                                         <Check className="w-4 h-4 text-white drop-shadow" />
                                                     </div>
                                                 )}
@@ -1186,15 +1192,14 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     })}
                                 </div>
                             </div>
-
                         </div>
 
                         {/* Footer Modal */}
-                        <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-between">
+                        <div className="p-4 bg-subtle border-t border-subtle flex items-center justify-between">
                             <button
                                 type="button"
                                 onClick={handleRemovePhoto}
-                                className="px-3 py-2 text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                                className="px-3 py-2 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 rounded-xl transition-colors cursor-pointer"
                             >
                                 Remover Foto
                             </button>
@@ -1203,20 +1208,19 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 <button
                                     type="button"
                                     onClick={() => setIsPhotoModalOpen(false)}
-                                    className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                                    className="px-4 py-2 bg-surface hover:bg-subtle text-secondary-hub text-xs font-bold rounded-xl border border-subtle transition-colors cursor-pointer"
                                 >
                                     Cancelar
                                 </button>
                                 <button
                                     type="button"
                                     onClick={handleConfirmPhoto}
-                                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+                                    className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
                                 >
                                     Confirmar Foto
                                 </button>
                             </div>
                         </div>
-
                     </div>
                 </div>
             )}
@@ -1226,22 +1230,24 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             {/* ========================================================================= */}
             {isBannerModalOpen && (
                 <div 
-                    className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200"
+                    className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
                     onClick={() => setIsBannerModalOpen(false)}
                 >
                     <div 
-                        className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-gray-200 animate-in zoom-in-95 duration-200"
+                        className="relative bg-surface rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden border border-subtle animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        <BorderBeam size={200} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
+
                         {/* Header Modal com Gradiente Oficial */}
-                        <div className="p-5 bg-gradient-to-r from-red-600 to-rose-700 text-white flex items-center justify-between shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-9 h-9 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
+                        <div className="p-5 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between shadow-xs">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
                                     <Palette className="w-5 h-5" />
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-bold text-white">Personalizar Capa do Perfil</h3>
-                                    <p className="text-[11px] text-red-100">Escolha uma das 8 cores ou informe um link HTTPS de imagem</p>
+                                    <p className="text-[11px] text-rose-100">Escolha uma das 8 cores ou informe um link HTTPS de imagem</p>
                                 </div>
                             </div>
                             <button
@@ -1257,7 +1263,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         <div className="p-6 space-y-5">
                             {/* Pré-visualização ao Vivo */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-2">
+                                <label className="text-xs font-bold text-primary-hub block mb-2">
                                     Pré-visualização da Capa:
                                 </label>
                                 {(() => {
@@ -1265,10 +1271,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     const hasValidImg = Boolean(bannerUrlDraft && bannerUrlDraft.trim().startsWith('https://'));
                                     return (
                                         <div 
-                                            className={`h-28 rounded-2xl bg-gradient-to-r ${previewPreset.gradient} relative overflow-hidden flex items-end p-3.5 border border-gray-200 shadow-inner transition-all bg-cover bg-center`}
+                                            className={`h-28 rounded-2xl bg-gradient-to-r ${previewPreset.gradient} relative overflow-hidden flex items-end p-3.5 border border-subtle shadow-inner transition-all bg-cover bg-center`}
                                             style={hasValidImg ? { backgroundImage: `url(${bannerUrlDraft.trim()})` } : {}}
                                         >
-                                            <div className="absolute inset-0 bg-black/25"></div>
+                                            <div className="absolute inset-0 bg-black/30"></div>
                                             <div className="relative z-10 text-white flex items-center justify-between w-full">
                                                 <div>
                                                     <span className="text-xs font-black drop-shadow-sm">{previewPreset.name}</span>
@@ -1285,12 +1291,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 })()}
                             </div>
 
-                            {/* Seletor de Cores (8 Opções) */}
+                            {/* 8 Cores Predefinidas */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-2">
-                                    Selecione uma Cor de Fundo (8 Opções):
+                                <label className="text-xs font-bold text-primary-hub block mb-2">
+                                    Escolha uma Paleta Oficial (8 Opções):
                                 </label>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <div className="grid grid-cols-4 gap-2">
                                     {BANNER_COLOR_PRESETS.map(preset => {
                                         const isSelected = bannerColorDraft === preset.id;
                                         return (
@@ -1298,16 +1304,15 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                 key={preset.id}
                                                 type="button"
                                                 onClick={() => setBannerColorDraft(preset.id)}
-                                                className={`p-2 rounded-xl border text-left transition-all flex flex-col gap-1.5 cursor-pointer ${
-                                                    isSelected
-                                                        ? 'border-red-600 ring-2 ring-red-300 bg-red-50/50 shadow-xs'
-                                                        : 'border-gray-200 hover:border-gray-300 bg-gray-50/50'
+                                                className={`p-2 rounded-xl border flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                                                    isSelected ? 'border-rose-500 ring-2 ring-rose-500/20 bg-subtle' : 'border-subtle hover:border-rose-400 bg-surface'
                                                 }`}
                                             >
-                                                <div className={`h-8 w-full rounded-lg bg-gradient-to-r ${preset.gradient} flex items-center justify-center shadow-2xs`}>
-                                                    {isSelected && <Check className="w-4 h-4 text-white stroke-[3] drop-shadow" />}
-                                                </div>
-                                                <span className="text-[11px] font-bold text-gray-800 truncate block">
+                                                <div 
+                                                    className="w-7 h-7 rounded-lg shadow-xs border border-white/20" 
+                                                    style={{ backgroundColor: preset.preview }}
+                                                />
+                                                <span className="text-[10px] font-bold text-secondary-hub truncate max-w-full">
                                                     {preset.name.split(' ')[0]}
                                                 </span>
                                             </button>
@@ -1316,49 +1321,40 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
                             </div>
 
-                            {/* Opção Imagem HTTPS */}
+                            {/* Link HTTPS para Capa Personalizada */}
                             <div>
-                                <label className="text-xs font-bold text-gray-700 block mb-1.5">
-                                    Imagem de Capa Personalizada via Link HTTPS (Opcional):
+                                <label className="text-xs font-bold text-primary-hub block mb-1.5">
+                                    Ou use Imagem Própria (Link HTTPS):
                                 </label>
                                 <div className="relative">
-                                    <LinkIcon className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-3" />
+                                    <ImageIcon className="w-3.5 h-3.5 text-muted-hub absolute left-3 top-3" />
                                     <input
                                         type="url"
                                         value={bannerUrlDraft}
                                         onChange={(e) => setBannerUrlDraft(e.target.value)}
-                                        placeholder="https://exemplo.com/minha-capa.jpg"
-                                        className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 text-gray-900 placeholder:text-gray-400"
+                                        placeholder="https://exemplo.com/banner-profissional.jpg"
+                                        className="w-full pl-8 pr-3 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub"
                                     />
                                 </div>
-                                <div className="flex items-center justify-between mt-1 text-[10px] text-gray-500">
-                                    <span>Cole um link direto seguro (deve iniciar com https://).</span>
-                                    {bannerUrlDraft && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setBannerUrlDraft('')}
-                                            className="text-red-600 hover:underline font-bold cursor-pointer"
-                                        >
-                                            Remover Imagem
-                                        </button>
-                                    )}
-                                </div>
+                                <p className="text-[10px] text-muted-hub mt-1">
+                                    Deixe em branco para usar apenas o gradiente de cor selecionado acima.
+                                </p>
                             </div>
                         </div>
 
                         {/* Footer Modal */}
-                        <div className="p-4 bg-gray-50 border-t border-gray-200 flex items-center justify-end gap-2">
+                        <div className="p-4 bg-subtle border-t border-subtle flex items-center justify-end gap-2">
                             <button
                                 type="button"
                                 onClick={() => setIsBannerModalOpen(false)}
-                                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                                className="px-4 py-2 bg-surface hover:bg-subtle text-secondary-hub text-xs font-bold rounded-xl border border-subtle transition-colors cursor-pointer"
                             >
                                 Cancelar
                             </button>
                             <button
                                 type="button"
                                 onClick={handleConfirmBanner}
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
+                                className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold rounded-xl shadow-md transition-colors cursor-pointer"
                             >
                                 Confirmar Capa
                             </button>
@@ -1368,93 +1364,92 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             )}
 
             {/* ========================================================================= */}
-            {/* MODAL DE LISTA COMPLETA DE COLEGAS DE EQUIPE (VER MAIS)                   */}
+            {/* MODAL DE LISTA COMPLETA DE COLEGAS DA EQUIPE                              */}
             {/* ========================================================================= */}
             {isTeamModalOpen && (
                 <div 
+                    className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
                     onClick={() => setIsTeamModalOpen(false)}
-                    className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[80] backdrop-blur-xs animate-in fade-in duration-150"
                 >
                     <div 
+                        className="relative bg-surface rounded-3xl shadow-2xl max-w-xl w-full overflow-hidden border border-subtle flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] border border-gray-200 animate-in zoom-in-95 duration-150"
                     >
-                        <div className="p-4 bg-gradient-to-r from-red-600 to-rose-700 text-white flex justify-between items-center shrink-0 shadow-xs">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
-                                    <Users className="w-4 h-4" />
+                        {/* Header Modal com Gradiente Oficial */}
+                        <div className="p-5 bg-gradient-to-r from-rose-600 to-red-700 text-white flex items-center justify-between shadow-xs shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-white/15 border border-white/20 flex items-center justify-center text-white">
+                                    <Users className="w-5 h-5" />
                                 </div>
                                 <div>
-                                    <h3 className="text-sm font-bold text-white">Colegas de Equipe</h3>
-                                    <p className="text-[11px] text-red-100">
-                                        {activeCollaboratorsList.length} colaboradores ativos no time
-                                    </p>
+                                    <h3 className="text-sm font-bold text-white">Diretório da Equipe</h3>
+                                    <p className="text-[11px] text-rose-100">{activeCollaboratorsList.length} colaboradores ativos na operação</p>
                                 </div>
                             </div>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 onClick={() => setIsTeamModalOpen(false)}
                                 className="p-1.5 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
                             >
-                                <X className="w-4 h-4" />
+                                <X className="w-5 h-5" />
                             </button>
                         </div>
 
                         {/* Barra de Busca no Modal */}
-                        <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                        <div className="p-4 border-b border-subtle bg-subtle shrink-0">
                             <div className="relative">
-                                <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                                <Search className="w-4 h-4 text-muted-hub absolute left-3 top-3" />
                                 <input
                                     type="text"
                                     value={colabSearchQuery}
                                     onChange={(e) => setColabSearchQuery(e.target.value)}
-                                    placeholder="Buscar por nome, cargo ou turno..."
-                                    className="w-full pl-9 pr-3 py-2 bg-white border border-gray-300 rounded-xl text-xs outline-none focus:ring-2 focus:ring-red-500 text-gray-900 placeholder:text-gray-400"
+                                    placeholder="Buscar por nome, função, turno ou e-mail..."
+                                    className="w-full pl-9 pr-4 py-2 bg-surface border border-subtle rounded-xl text-xs text-primary-hub placeholder:text-muted-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500"
                                     autoFocus
                                 />
                             </div>
                         </div>
 
-                        {/* Grid Completo de Colegas */}
-                        <div className="p-4 overflow-y-auto flex-1 space-y-2">
+                        {/* Lista com Rolagem */}
+                        <div className="p-4 overflow-y-auto space-y-2 flex-1">
                             {filteredColabsList.length === 0 ? (
-                                <div className="py-12 text-center text-xs text-gray-400 italic">
-                                    Nenhum colega encontrado com o termo "{colabSearchQuery}".
+                                <div className="text-center py-12 text-muted-hub text-xs">
+                                    Nenhum colega encontrado com o termo informado.
                                 </div>
                             ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                                <div className="grid grid-cols-1 gap-2">
                                     {filteredColabsList.map(c => {
                                         const cId = c.id || c.firestoreId || c.uid;
                                         const isSelected = activeSelectedColab && (activeSelectedColab.id === cId || activeSelectedColab.firestoreId === cId || activeSelectedColab.uid === cId);
                                         const photo = c.photoURL || c.photoUrl;
-                                        const name = c.name || c.displayName || c.email?.split('@')[0];
+                                        const name = c.name || c.displayName || c.email?.split('@')[0] || 'Colega';
                                         const st = c.status || 'Ativo';
                                         const dotColor = st === 'Ativo' ? 'bg-emerald-500' : st === 'Férias' ? 'bg-amber-500' : 'bg-purple-500';
 
                                         return (
                                             <div
                                                 key={cId}
-                                                className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
-                                                    isSelected ? 'bg-red-50 border-red-300 ring-1 ring-red-200' : 'bg-white border-gray-200 hover:border-gray-300'
+                                                className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
+                                                    isSelected ? 'bg-rose-500/10 border-rose-500/30' : 'bg-subtle/50 border-subtle hover:bg-subtle'
                                                 }`}
                                             >
                                                 <div className="flex items-center gap-3 min-w-0">
                                                     <div className="relative shrink-0">
-                                                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-gradient-to-br from-red-100 to-rose-200 border border-red-200 flex items-center justify-center font-bold text-red-800 text-xs">
+                                                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-rose-500/10 border border-rose-500/20 flex items-center justify-center font-bold text-rose-600 dark:text-rose-400 text-xs">
                                                             {photo ? (
                                                                 <img src={photo} alt={name} className="w-full h-full object-cover" />
                                                             ) : (
                                                                 <span>{name.slice(0, 2).toUpperCase()}</span>
                                                             )}
                                                         </div>
-                                                        <span className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white shadow-2xs ${dotColor}`} />
+                                                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-surface ${dotColor}`} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <h4 className="text-xs font-bold text-gray-900 truncate" title={name}>
+                                                        <h4 className="text-xs font-bold text-primary-hub truncate" title={name}>
                                                             {name}
                                                         </h4>
-                                                        <p className="text-[10px] text-gray-500 truncate">
-                                                            {c.role || 'Colaborador'} &bull; <strong className="text-gray-700">{c.shift || 'Geral'}</strong>
+                                                        <p className="text-[10px] text-muted-hub truncate">
+                                                            {c.role || 'Colaborador'} &bull; <strong className="text-secondary-hub">{c.shift || 'Geral'}</strong>
                                                         </p>
                                                     </div>
                                                 </div>
@@ -1465,7 +1460,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                                         setSelectedColabId(cId);
                                                         setIsTeamModalOpen(false);
                                                     }}
-                                                    className="px-2.5 py-1.5 bg-red-50 hover:bg-red-600 hover:text-white text-red-700 rounded-lg text-xs font-bold border border-red-200 transition-all cursor-pointer shrink-0"
+                                                    className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-600 dark:text-rose-400 rounded-xl text-xs font-bold border border-rose-500/20 transition-all cursor-pointer shrink-0"
                                                 >
                                                     Ver Perfil
                                                 </button>
@@ -1476,14 +1471,14 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             )}
                         </div>
 
-                        <div className="p-3 bg-gray-50 border-t border-gray-200 flex justify-between items-center text-xs">
-                            <span className="text-gray-400">
+                        <div className="p-3.5 bg-subtle border-t border-subtle flex justify-between items-center text-xs shrink-0">
+                            <span className="text-muted-hub font-mono text-[11px]">
                                 Mostrando {filteredColabsList.length} de {activeCollaboratorsList.length} colegas
                             </span>
                             <button
                                 type="button"
                                 onClick={() => setIsTeamModalOpen(false)}
-                                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl font-bold transition-colors cursor-pointer"
+                                className="px-4 py-1.5 bg-surface hover:bg-subtle text-primary-hub rounded-xl font-bold border border-subtle transition-colors cursor-pointer"
                             >
                                 Fechar
                             </button>

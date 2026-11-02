@@ -1,12 +1,14 @@
 import React, { useState, useMemo, useEffect, useCallback, Suspense, lazy } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users, BarChart2, Settings as SettingsIcon, LogOut, ShieldAlert,
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search
 } from 'lucide-react';
+import { cn } from '../utils/cn';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -37,14 +39,15 @@ import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
 import NotificationBell from '../components/NotificationBell';
+import { CommandPalette } from '../components/ui';
 import { CURRENT_VERSION } from '../data/changelogData';
 import { calculateUserLevel } from '../services/userProfile';
 
 // Loader visual suave durante a troca de abas
 const PageLoader = () => (
-    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-gray-50 h-full">
-        <div className="w-9 h-9 border-4 border-red-600 border-t-transparent rounded-full animate-spin"></div>
-        <span className="text-xs font-semibold text-gray-500 mt-3 animate-pulse">Carregando módulo...</span>
+    <div className="flex-1 flex flex-col items-center justify-center p-8 bg-canvas h-full">
+        <div className="w-8 h-8 border-3 border-rose-500 border-t-transparent rounded-full animate-spin"></div>
+        <span className="text-xs font-medium text-secondary-hub mt-3 animate-pulse">Carregando módulo...</span>
     </div>
 );
 
@@ -98,6 +101,19 @@ const AdminDashboard = () => {
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
+    const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+
+    // Atalho global Ctrl+K / Cmd+K para abrir a Command Palette (Quick Search)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+                e.preventDefault();
+                setIsCommandPaletteOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     const [expandedMenus, setExpandedMenus] = useState({
         individual: true,
@@ -273,90 +289,160 @@ const AdminDashboard = () => {
 
     return (
         <div className="h-screen bg-gray-50 flex overflow-hidden">
-            <aside className={`${isSidebarCollapsed ? 'w-20' : 'w-64'} bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800 transition-all duration-300 relative z-20`}>
-                <div className={`p-4 flex items-center ${isSidebarCollapsed ? 'justify-center flex-col gap-1' : 'justify-between'} border-b border-zinc-800 shrink-0 h-20`}>
+            {/* BARRA LATERAL ULTRA-MODERNA (MAGIC DESIGN SYSTEM) */}
+            <aside className={cn(
+                "bg-zinc-950/95 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800/80 transition-all duration-300 relative z-20 backdrop-blur-xl select-none overflow-hidden",
+                isSidebarCollapsed ? "w-20" : "w-64"
+            )}>
+                {/* Iluminação Ambiente Volumétrica Carmesim */}
+                <div className="pointer-events-none absolute -top-24 -left-24 w-56 h-56 bg-rose-500/10 rounded-full blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-24 -right-24 w-48 h-48 bg-rose-500/5 rounded-full blur-3xl" />
+
+                {/* Topo: Logo & Botão de Recolher */}
+                <div className={cn(
+                    "p-4 flex items-center shrink-0 h-20 border-b border-zinc-800/80 relative z-10",
+                    isSidebarCollapsed ? "justify-center flex-col gap-1" : "justify-between"
+                )}>
                     {!isSidebarCollapsed ? (
-                        <div className="flex items-center gap-3 overflow-hidden">
-                            <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center shrink-0 p-1.5 shadow-2xs">
-                                <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
+                        <div className="flex items-center gap-3 overflow-hidden group">
+                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-2 shadow-lg shadow-rose-950/40 relative">
+                                <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain filter drop-shadow" />
                             </div>
-                            <span className="font-brand text-xl font-extrabold tracking-tight text-white flex items-center select-none truncate">
-                                HUB<span className="text-red-500 font-black ml-0.5">DESK</span>
-                            </span>
+                            <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="font-brand text-lg font-black tracking-tight text-white select-none">
+                                        HUB<span className="text-rose-500">DESK</span>
+                                    </span>
+                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-[9px] font-bold text-rose-400 font-mono">
+                                        v3.11
+                                    </span>
+                                </div>
+                                <p className="text-[10px] text-zinc-500 font-medium truncate uppercase tracking-widest mt-0.5">
+                                    Central de Operações
+                                </p>
+                            </div>
                         </div>
                     ) : (
-                        <button onClick={() => setIsSidebarCollapsed(false)} className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-xl transition-colors shrink-0 flex items-center justify-center cursor-pointer" title="Expandir menu">
-                            <div className="w-9 h-9 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center shrink-0 p-1.5 shadow-2xs">
-                                <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
-                            </div>
+                        <button 
+                            onClick={() => setIsSidebarCollapsed(false)} 
+                            className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-2 shadow-lg shadow-rose-950/40 cursor-pointer hover:scale-105 transition-transform" 
+                            title="Expandir menu lateral"
+                        >
+                            <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
                         </button>
                     )}
-                    <button onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} className={`p-2 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors shrink-0 ${isSidebarCollapsed ? 'hidden' : ''}`} title="Recolher menu">
-                        <Menu className="w-5 h-5" />
+
+                    <button 
+                        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
+                        className={cn(
+                            "p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors cursor-pointer shrink-0 border border-transparent hover:border-zinc-700/50",
+                            isSidebarCollapsed && "hidden"
+                        )} 
+                        title="Recolher menu lateral"
+                    >
+                        <Menu className="w-4 h-4" />
                     </button>
                 </div>
 
-                {/* Badge do Usuário, Cargo RBAC e Nível com Acesso Rápido ao Perfil */}
+                {/* Quick Launcher: Busca & Command Palette (Ctrl+K) */}
                 {!isSidebarCollapsed ? (
-                    <button 
-                        type="button"
-                        onClick={() => setActiveTab('my_profile')}
-                        className={`mx-3 mt-3 p-3 rounded-xl flex items-center gap-3 transition-all text-left cursor-pointer group relative ${
-                            isProfileActive 
-                                ? 'bg-gradient-to-r from-red-950/70 via-zinc-900 to-zinc-900 border-2 border-red-500 shadow-lg shadow-red-950/60 ring-2 ring-red-500/25' 
-                                : 'bg-zinc-900 hover:bg-zinc-800/80 border border-zinc-800/80'
-                        }`}
-                        title={`Ver e Editar Meu Perfil (v3.6) • Nível ${userLevel}${isProfileActive ? ' (Tela Atual)' : ''}`}
-                    >
-                        {isProfileActive && (
-                            <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-red-500 rounded-r-full shadow-sm shadow-red-500" />
-                        )}
+                    <div className="px-3 pt-3 relative z-10">
+                        <button
+                            type="button"
+                            onClick={() => setIsCommandPaletteOpen(true)}
+                            className="w-full flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 hover:border-zinc-700 text-xs text-zinc-400 hover:text-zinc-200 transition-all cursor-pointer group shadow-2xs"
+                            title="Buscar módulos e comandos rápidos (Ctrl + K)"
+                        >
+                            <span className="flex items-center gap-2">
+                                <Search className="w-3.5 h-3.5 text-zinc-500 group-hover:text-rose-400 transition-colors" />
+                                <span className="text-[11px] font-medium">Buscar módulo...</span>
+                            </span>
+                            <kbd className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700/80 text-[10px] font-mono font-bold text-zinc-400">
+                                ⌘K
+                            </kbd>
+                        </button>
+                    </div>
+                ) : (
+                    <div className="flex justify-center pt-3 relative z-10">
+                        <button
+                            type="button"
+                            onClick={() => setIsCommandPaletteOpen(true)}
+                            className="w-10 h-10 rounded-xl bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80 hover:border-rose-500/30 flex items-center justify-center text-zinc-400 hover:text-rose-400 transition-all cursor-pointer shadow-2xs"
+                            title="Buscar módulo (Ctrl + K)"
+                        >
+                            <Search className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
 
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden relative shadow-2xs transition-all bg-red-600/20 text-red-500 border border-red-500/30">
-                            {(currentUser?.photoURL || currentUser?.photoUrl) ? (
-                                <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                                activeRoleInfo?.label?.charAt(0) || 'U'
+                {/* Crachá Digital do Usuário com Nível & Perfil */}
+                {!isSidebarCollapsed ? (
+                    <div className="px-3 pt-2 relative z-10">
+                        <button 
+                            type="button"
+                            onClick={() => setActiveTab('my_profile')}
+                            className={cn(
+                                "w-full p-2.5 rounded-2xl flex items-center gap-3 transition-all text-left cursor-pointer group relative overflow-hidden",
+                                isProfileActive 
+                                    ? "bg-gradient-to-r from-rose-500/15 via-zinc-900 to-zinc-900 border border-rose-500/40 shadow-lg shadow-rose-950/30" 
+                                    : "bg-zinc-900/50 hover:bg-zinc-900/80 border border-zinc-800/80 hover:border-zinc-700"
                             )}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between gap-1">
-                                <p className={`text-xs truncate transition-colors ${
-                                    isProfileActive ? 'font-black text-white' : 'font-bold text-white group-hover:text-red-400'
-                                }`}>
+                            title={`Meu Perfil • Nível ${userLevel} (${activeRoleInfo?.label || normalizedRole})`}
+                        >
+                            {isProfileActive && (
+                                <span className="absolute left-0 top-2 bottom-2 w-1 bg-rose-500 rounded-r-full shadow-sm shadow-rose-500" />
+                            )}
+
+                            <div className="relative">
+                                <div className={cn(
+                                    "w-10 h-10 rounded-xl flex items-center justify-center font-brand font-black text-xs shrink-0 overflow-hidden shadow-sm transition-transform group-hover:scale-105",
+                                    isProfileActive 
+                                        ? "bg-zinc-950 text-white ring-2 ring-rose-500/40" 
+                                        : "bg-zinc-950 text-zinc-300 ring-1 ring-zinc-800"
+                                    )}>
+                                    {(currentUser?.photoURL || currentUser?.photoUrl) ? (
+                                        <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        activeRoleInfo?.label?.charAt(0) || 'U'
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                                <p className={cn(
+                                    "font-brand text-xs font-bold truncate leading-tight transition-colors",
+                                    isProfileActive ? "text-rose-400" : "text-white group-hover:text-rose-300"
+                                )}>
                                     {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
                                 </p>
+                                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700/60">
+                                        {activeRoleInfo?.label || normalizedRole}
+                                    </span>
+                                    <span 
+                                        className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30"
+                                        title={`Nível ${userLevel} de 8`}
+                                    >
+                                        <Sparkles className="w-2.5 h-2.5 text-amber-400" />
+                                        Nv.{userLevel}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                                    isProfileActive 
-                                        ? 'bg-red-500/20 text-red-200 border-red-500/40' 
-                                        : (activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300')
-                                }`}>
-                                    {activeRoleInfo?.label || normalizedRole}
-                                </span>
-                                <span 
-                                    className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-2xs"
-                                    title={`Nível ${userLevel} de 8 com base nos emblemas ativos`}
-                                >
-                                    <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-                                    Nível {userLevel}
-                                </span>
-                            </div>
-                        </div>
-                    </button>
+                        </button>
+                    </div>
                 ) : (
-                    <div className="flex justify-center mt-3">
+                    <div className="flex justify-center pt-2 relative z-10">
                         <div className="relative">
                             <button 
                                 type="button"
                                 onClick={() => setActiveTab('my_profile')}
-                                className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs overflow-hidden cursor-pointer transition-all ${
+                                className={cn(
+                                    "w-10 h-10 rounded-xl flex items-center justify-center font-brand font-black text-xs overflow-hidden cursor-pointer transition-all",
                                     isProfileActive
-                                        ? 'bg-red-600 text-white ring-2 ring-red-500 border-2 border-white shadow-lg shadow-red-500/40 scale-105'
-                                        : 'bg-red-600/20 hover:bg-red-600/30 text-red-500 border border-red-500/30'
-                                }`}
-                                title={`Meu Perfil: ${currentUser?.name || 'Usuário'} • Nível ${userLevel} (${activeRoleInfo?.label || normalizedRole})${isProfileActive ? ' (Tela Atual)' : ''}`}
+                                        ? "bg-rose-500 text-white ring-2 ring-rose-500/40 shadow-lg shadow-rose-500/30 scale-105"
+                                        : "bg-zinc-900 hover:bg-zinc-800 text-zinc-300 border border-zinc-800"
+                                )}
+                                title={`Meu Perfil: ${currentUser?.name || 'Usuário'} • Nível ${userLevel}`}
                             >
                                 {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                     <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
@@ -365,7 +451,7 @@ const AdminDashboard = () => {
                                 )}
                             </button>
                             <span 
-                                className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-black text-[9px] font-mono font-black flex items-center justify-center border border-zinc-950 shadow-xs"
+                                className="absolute -bottom-1 -right-1 px-1 py-0.2 rounded-full bg-amber-500 text-zinc-950 text-[9px] font-mono font-black border border-zinc-950 shadow-xs"
                                 title={`Nível ${userLevel}`}
                             >
                                 {userLevel}
@@ -374,27 +460,33 @@ const AdminDashboard = () => {
                     </div>
                 )}
 
-                <nav className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-hide">
+                {/* Navegação Hierárquica em Categorias */}
+                <nav className="flex-1 p-3 space-y-4 overflow-y-auto scrollbar-hide relative z-10">
                     {visibleMenus.map(menu => (
                         <div key={menu.id} className="space-y-1">
-                            {/* Header do Menu */}
+                            {/* Header da Categoria */}
                             {!isSidebarCollapsed ? (
                                 <button 
                                     onClick={() => toggleMenu(menu.id)}
-                                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors"
+                                    className="w-full flex items-center justify-between px-3 py-1.5 text-[10px] font-extrabold text-zinc-500 uppercase tracking-wider hover:text-zinc-300 transition-colors cursor-pointer group"
                                 >
-                                    <span>{menu.title}</span>
-                                    {expandedMenus[menu.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="w-1 h-1 rounded-full bg-zinc-600 group-hover:bg-rose-400 transition-colors" />
+                                        <span>{menu.title}</span>
+                                    </span>
+                                    <span className="text-zinc-600 group-hover:text-zinc-400 transition-transform">
+                                        {expandedMenus[menu.id] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                                    </span>
                                 </button>
                             ) : (
-                                <div className="flex justify-center py-2 mb-1 border-b border-zinc-800/50">
-                                    <menu.icon className="w-4 h-4 text-zinc-600" title={menu.title} />
+                                <div className="flex justify-center py-2 mb-1 border-b border-zinc-800/40">
+                                    <menu.icon className="w-3.5 h-3.5 text-zinc-600" title={menu.title} />
                                 </div>
                             )}
 
-                            {/* Itens do Menu */}
+                            {/* Itens da Categoria */}
                             {(expandedMenus[menu.id] || isSidebarCollapsed) && (
-                                <div className="space-y-1">
+                                <div className="space-y-0.5">
                                     {menu.items.map(item => {
                                         const Icon = item.icon;
                                         const isActive = effectiveActiveTab === item.id;
@@ -411,36 +503,52 @@ const AdminDashboard = () => {
                                                     if (isReports) clearPulseReports();
                                                 }} 
                                                 title={isSidebarCollapsed ? item.label : ""}
-                                                className={`w-full flex items-center rounded-lg transition-colors ${
-                                                    isSidebarCollapsed ? 'justify-center p-3' : 'px-4 py-2.5 gap-3'
-                                                } ${
+                                                className={cn(
+                                                    "w-full flex items-center rounded-xl transition-all cursor-pointer relative group",
+                                                    isSidebarCollapsed ? "justify-center p-2.5" : "px-3 py-2 gap-3",
                                                     isActive 
-                                                    ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600' 
-                                                    : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'
-                                                }`}
+                                                        ? "text-rose-400 font-bold" 
+                                                        : "text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900/60"
+                                                )}
                                             >
-                                                <div className="relative shrink-0 flex items-center justify-center">
-                                                    <Icon className={isSidebarCollapsed ? 'w-6 h-6' : 'w-5 h-5'} />
+                                                {/* Pílula Ativa com Framer Motion */}
+                                                {isActive && (
+                                                    <motion.div
+                                                        layoutId="active-sidebar-pill"
+                                                        className="absolute inset-0 bg-gradient-to-r from-rose-500/20 via-rose-500/10 to-transparent rounded-xl border-l-2 border-rose-500 shadow-xs z-0"
+                                                        transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                                                    />
+                                                )}
+
+                                                <div className="relative shrink-0 flex items-center justify-center z-10">
+                                                    <Icon className={cn(
+                                                        "transition-transform duration-200 group-hover:scale-110",
+                                                        isSidebarCollapsed ? "w-5 h-5" : "w-4 h-4",
+                                                        isActive ? "text-rose-400" : "text-zinc-400 group-hover:text-zinc-200"
+                                                    )} />
                                                     {isSidebarCollapsed && showPulse && (
-                                                        <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                                                         </span>
                                                     )}
                                                 </div>
+
                                                 {!isSidebarCollapsed && (
-                                                    <>
-                                                        <span className="font-medium text-sm whitespace-nowrap">{item.label}</span>
+                                                    <div className="flex items-center justify-between flex-1 min-w-0 z-10">
+                                                        <span className="text-xs truncate tracking-tight select-none">
+                                                            {item.label}
+                                                        </span>
                                                         {showPulse && (
                                                             <span 
-                                                                className="relative flex h-2.5 w-2.5 shrink-0 ml-auto"
-                                                                title={isHistory ? "Novo feedback recebido!" : "Novas demandas ou atualizações de chamados!"}
+                                                                className="relative flex h-2 w-2 shrink-0 ml-1.5"
+                                                                title={isHistory ? "Novo feedback recebido!" : "Novas demandas ou atualizações!"}
                                                             >
-                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                                                             </span>
                                                         )}
-                                                    </>
+                                                    </div>
                                                 )}
                                             </button>
                                         );
@@ -451,99 +559,115 @@ const AdminDashboard = () => {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50 space-y-1">
-                    <button 
-                        id="btn-sidebar-change-password"
-                        onClick={() => setIsPasswordModalOpen(true)} 
-                        className={`w-full flex items-center py-2 text-zinc-400 hover:text-white hover:bg-zinc-900 rounded-lg transition-colors cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`} 
-                        title={isSidebarCollapsed ? "Alterar Senha" : ""}
-                    >
-                        <Lock className="w-5 h-5 shrink-0" />
-                        {!isSidebarCollapsed && <span className="text-sm font-medium">Alterar Senha</span>}
-                    </button>
-                    <button 
-                        id="btn-sidebar-logout"
-                        onClick={() => setIsLogoutModalOpen(true)} 
-                        className={`w-full flex items-center py-2 text-zinc-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer ${isSidebarCollapsed ? 'justify-center px-0' : 'px-4 gap-3'}`} 
-                        title={isSidebarCollapsed ? "Sair do sistema" : ""}
-                    >
-                        <LogOut className="w-5 h-5 shrink-0" />
-                        {!isSidebarCollapsed && <span className="text-sm font-medium">Sair do sistema</span>}
-                    </button>
+                {/* Rodapé Executivo da Barra Lateral */}
+                <div className="p-3 border-t border-zinc-800/80 shrink-0 bg-zinc-950/80 space-y-1 relative z-10">
+                    <div className={cn("grid gap-1", isSidebarCollapsed ? "grid-cols-1" : "grid-cols-2")}>
+                        <button 
+                            id="btn-sidebar-change-password"
+                            onClick={() => setIsPasswordModalOpen(true)} 
+                            className={cn(
+                                "flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                                isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                            )} 
+                            title="Alterar Senha de Acesso"
+                        >
+                            <Lock className="w-3.5 h-3.5 shrink-0" />
+                            {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Senha</span>}
+                        </button>
 
-                    {/* Rodapé com a versão do projeto e trigger do Changelog */}
+                        <button 
+                            id="btn-sidebar-logout"
+                            onClick={() => setIsLogoutModalOpen(true)} 
+                            className={cn(
+                                "flex items-center rounded-xl text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 border border-transparent hover:border-rose-500/20 transition-all cursor-pointer py-2",
+                                isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                            )} 
+                            title="Sair do sistema"
+                        >
+                            <LogOut className="w-3.5 h-3.5 shrink-0" />
+                            {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Sair</span>}
+                        </button>
+                    </div>
+
+                    {/* Versão do Sistema & Trigger do Changelog */}
                     <button
                         type="button"
                         id="system-version-card"
                         onClick={() => setIsChangelogModalOpen(true)}
-                        className={`w-full pt-2.5 mt-1 border-t border-zinc-800/80 flex items-center group transition-colors cursor-pointer text-left ${isSidebarCollapsed ? 'justify-center' : 'justify-between px-1'}`}
-                        title={`Versão do Sistema: ${CURRENT_VERSION} • Clique para ver o Changelog`}
+                        className={cn(
+                            "w-full pt-2.5 mt-1 border-t border-zinc-800/60 flex items-center group transition-colors cursor-pointer text-left",
+                            isSidebarCollapsed ? "justify-center" : "justify-between px-1"
+                        )}
+                        title={`HubDesk Suporte ${CURRENT_VERSION} • Ver Changelog`}
                     >
                         {!isSidebarCollapsed && (
-                            <span className="text-[11px] font-medium text-zinc-500 group-hover:text-zinc-300 transition-colors tracking-wide">
+                            <span className="text-[10px] font-medium text-zinc-400 group-hover:text-zinc-200 transition-colors">
                                 HubDesk Suporte
                             </span>
                         )}
                         <span 
                             id="system-version-badge"
-                            className="px-2 py-0.5 rounded-md bg-zinc-900 group-hover:bg-red-950/60 border border-zinc-800 group-hover:border-red-800/60 text-[10px] font-mono font-bold text-zinc-400 group-hover:text-red-400 shadow-2xs transition-all flex items-center gap-1.5"
+                            className="px-2 py-0.5 rounded-md bg-zinc-900 group-hover:bg-rose-950/60 border border-zinc-800 group-hover:border-rose-800/60 text-[10px] font-mono font-bold text-zinc-400 group-hover:text-rose-400 shadow-2xs transition-all"
                         >
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                             {CURRENT_VERSION}
                         </span>
                     </button>
                 </div>
             </aside>
 
-            {/* Menu Drawer Lateral no Mobile */}
+            {/* Menu Drawer Lateral no Mobile com Efeito Blur */}
             {isMobileMenuOpen && (
                 <div 
-                    className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 md:hidden flex animate-in fade-in duration-200"
+                    className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 md:hidden flex animate-in fade-in duration-200"
                     onClick={() => setIsMobileMenuOpen(false)}
                 >
                     <div 
-                        className="mobile-drawer-sidebar w-72 bg-zinc-950 text-white h-full flex flex-col shadow-2xl border-r border-zinc-800 animate-in slide-in-from-left duration-200"
+                        className="mobile-drawer-sidebar w-72 bg-zinc-950 text-white h-full flex flex-col shadow-2xl border-r border-zinc-800/80 animate-in slide-in-from-left duration-200 relative overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                     >
-                        <div className="p-4 flex items-center justify-between border-b border-zinc-800 h-16 shrink-0">
+                        <div className="pointer-events-none absolute -top-20 -left-20 w-48 h-48 bg-rose-500/10 rounded-full blur-2xl" />
+
+                        <div className="p-4 flex items-center justify-between border-b border-zinc-800/80 h-16 shrink-0 relative z-10">
                             <div className="flex items-center gap-2.5">
-                                <div className="w-8 h-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center p-1 shadow-2xs">
+                                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center p-1.5 shadow-2xs">
                                     <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
                                 </div>
-                                <span className="font-brand text-lg font-extrabold tracking-tight text-white flex items-center select-none">
-                                    HUB<span className="text-red-500 font-black ml-0.5">DESK</span>
+                                <span className="font-brand text-lg font-black tracking-tight text-white flex items-center select-none">
+                                    HUB<span className="text-rose-500 ml-0.5">DESK</span>
                                 </span>
                             </div>
                             <button 
                                 onClick={() => setIsMobileMenuOpen(false)}
-                                className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors"
+                                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-900 transition-colors border border-transparent hover:border-zinc-800"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
 
-                        {/* Informações do usuário logado com clique para Perfil e Nível */}
+                        {/* Crachá do Usuário Mobile */}
                         <button 
                             type="button"
                             onClick={() => {
                                 setActiveTab('my_profile');
                                 setIsMobileMenuOpen(false);
                             }}
-                            className={`p-3 mx-3 mt-3 rounded-xl flex items-center gap-3 shrink-0 text-left cursor-pointer transition-all relative ${
+                            className={cn(
+                                "p-3 mx-3 mt-3 rounded-2xl flex items-center gap-3 shrink-0 text-left cursor-pointer transition-all relative overflow-hidden",
                                 isProfileActive
-                                    ? 'bg-gradient-to-r from-red-950/70 via-zinc-900 to-zinc-900 border-2 border-red-500 shadow-lg shadow-red-950/60 ring-2 ring-red-500/25'
-                                    : 'bg-zinc-900 hover:bg-zinc-800 border border-zinc-800/80'
-                            }`}
-                            title={`Ir para Meu Perfil • Nível ${userLevel}${isProfileActive ? ' (Tela Atual)' : ''}`}
+                                    ? "bg-gradient-to-r from-rose-500/15 via-zinc-900 to-zinc-900 border border-rose-500/40 shadow-lg shadow-rose-950/30"
+                                    : "bg-zinc-900/60 hover:bg-zinc-900 border border-zinc-800/80"
+                            )}
+                            title={`Ir para Meu Perfil • Nível ${userLevel}`}
                         >
                             {isProfileActive && (
-                                <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-1.5 h-7 bg-red-500 rounded-r-full shadow-sm shadow-red-500" />
+                                <span className="absolute left-0 top-2 bottom-2 w-1 bg-rose-500 rounded-r-full shadow-sm shadow-rose-500" />
                             )}
-                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden shadow-2xs transition-all ${
+                            <div className={cn(
+                                "w-10 h-10 rounded-xl flex items-center justify-center font-brand font-black text-xs shrink-0 overflow-hidden shadow-2xs transition-all",
                                 isProfileActive
-                                    ? 'bg-red-600 text-white ring-2 ring-red-500 border border-white/20 shadow-md shadow-red-500/30'
-                                    : 'bg-red-600/20 text-red-500 border border-red-500/30'
-                            }`}>
+                                    ? "bg-rose-500 text-white ring-2 ring-rose-500/40 shadow-md shadow-rose-500/30"
+                                    : "bg-zinc-950 text-zinc-300 ring-1 ring-zinc-800"
+                            )}>
                                 {(currentUser?.photoURL || currentUser?.photoUrl) ? (
                                     <img src={currentUser.photoURL || currentUser.photoUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
@@ -552,28 +676,22 @@ const AdminDashboard = () => {
                             </div>
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center justify-between gap-1">
-                                    <p className={`text-xs truncate transition-colors ${
-                                        isProfileActive ? 'font-black text-white' : 'font-bold text-white'
-                                    }`}>
+                                    <p className="font-brand font-bold text-xs truncate text-white">
                                         {currentUser?.name || currentUser?.email?.split('@')[0] || 'Usuário'}
                                     </p>
                                     {isProfileActive && (
-                                        <span className="text-[9px] font-black uppercase tracking-wider text-red-300 bg-red-950 border border-red-500/50 px-1.5 py-0.5 rounded-md shrink-0 shadow-2xs animate-pulse">
-                                            Tela Atual
+                                        <span className="text-[9px] font-black uppercase tracking-wider text-rose-300 bg-rose-950 border border-rose-500/40 px-1.5 py-0.5 rounded-md shrink-0">
+                                            Atual
                                         </span>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                    <span className={`inline-block text-[10px] px-2 py-0.5 rounded-full font-bold border ${
-                                        isProfileActive 
-                                            ? 'bg-red-500/20 text-red-200 border-red-500/40' 
-                                            : (activeRoleInfo?.badgeColor || 'bg-zinc-800 text-zinc-300')
-                                    }`}>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700/60">
                                         {activeRoleInfo?.label || normalizedRole}
                                     </span>
-                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                                    <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold bg-amber-500/10 text-amber-300 border border-amber-500/30">
                                         <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-                                        Nível {userLevel}
+                                        Nv.{userLevel}
                                     </span>
                                 </div>
                             </div>
@@ -583,10 +701,10 @@ const AdminDashboard = () => {
                         <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
                             {visibleMenus.map(menu => (
                                 <div key={menu.id} className="space-y-1">
-                                    <div className="px-3 py-1.5 text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">
+                                    <div className="px-3 py-1 text-[10px] font-extrabold text-zinc-500 uppercase tracking-wider">
                                         {menu.title}
                                     </div>
-                                    <div className="space-y-1">
+                                    <div className="space-y-0.5">
                                         {menu.items.map(item => {
                                             const Icon = item.icon;
                                             const isActive = effectiveActiveTab === item.id;
@@ -603,21 +721,19 @@ const AdminDashboard = () => {
                                                         if (isReports) clearPulseReports();
                                                         setIsMobileMenuOpen(false);
                                                     }}
-                                                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                                                    className={cn(
+                                                        "w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs transition-colors text-left",
                                                         isActive 
-                                                            ? 'bg-red-600/10 text-red-500 border-l-4 border-red-600 font-bold' 
-                                                            : 'text-zinc-400 hover:bg-zinc-900 hover:text-white border-l-4 border-transparent'
-                                                    }`}
+                                                            ? "bg-rose-500/15 text-rose-400 font-bold border border-rose-500/30" 
+                                                            : "text-zinc-400 hover:bg-zinc-900/60 hover:text-white"
+                                                    )}
                                                 >
-                                                    <Icon className="w-5 h-5 shrink-0" />
-                                                    <span>{item.label}</span>
+                                                    <Icon className={cn("w-4 h-4 shrink-0", isActive ? "text-rose-400" : "text-zinc-400")} />
+                                                    <span className="truncate">{item.label}</span>
                                                     {showPulse && (
-                                                        <span 
-                                                            className="relative flex h-2.5 w-2.5 shrink-0 ml-auto"
-                                                            title={isHistory ? "Novo feedback recebido!" : "Novas demandas ou atualizações de chamados!"}
-                                                        >
-                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-600 shadow-xs shadow-red-500"></span>
+                                                        <span className="relative flex h-2 w-2 shrink-0 ml-auto">
+                                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
+                                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
                                                         </span>
                                                     )}
                                                 </button>
@@ -629,14 +745,14 @@ const AdminDashboard = () => {
                         </nav>
 
                         {/* Rodapé mobile */}
-                        <div className="p-4 border-t border-zinc-800 shrink-0 bg-zinc-950/50">
+                        <div className="p-3 border-t border-zinc-800/80 shrink-0 bg-zinc-950/80">
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);
                                         setIsPasswordModalOpen(true);
                                     }}
-                                    className="flex-1 py-2 text-xs font-semibold text-zinc-400 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                    className="flex-1 py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
                                 >
                                     <Lock className="w-3.5 h-3.5" /> Senha
                                 </button>
@@ -645,7 +761,7 @@ const AdminDashboard = () => {
                                         setIsMobileMenuOpen(false);
                                         setIsLogoutModalOpen(true);
                                     }}
-                                    className="flex-1 py-2 text-xs font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 rounded-lg flex items-center justify-center gap-1.5 transition-colors"
+                                    className="flex-1 py-2 text-xs font-semibold text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-rose-500/20"
                                 >
                                     <LogOut className="w-3.5 h-3.5" /> Sair
                                 </button>
@@ -655,28 +771,50 @@ const AdminDashboard = () => {
                 </div>
             )}
 
-            <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
+            <main className="flex-1 flex flex-col overflow-hidden bg-canvas relative">
                 {/* Barra de Topo Unificada com Seletor Rápido de Tema (z-50 para sobrepor cabeçalhos sticky de tabelas) */}
-                <header className="h-14 border-b border-gray-200 bg-white px-4 sm:px-6 flex items-center justify-between shrink-0 z-50 relative shadow-2xs">
+                <header className="h-14 border-b border-subtle bg-surface px-4 sm:px-6 flex items-center justify-between shrink-0 z-50 relative shadow-2xs">
                     <div className="flex items-center gap-3 min-w-0">
                         <button 
                             type="button"
                             onClick={() => setIsMobileMenuOpen(true)} 
-                            className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 md:hidden transition-colors cursor-pointer shrink-0" 
+                            className="p-2 rounded-lg text-secondary-hub hover:text-primary-hub hover:bg-subtle md:hidden transition-colors cursor-pointer shrink-0" 
                             title="Abrir Menu de Navegação"
                         >
                             <Menu className="w-5 h-5" />
                         </button>
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 min-w-0">
-                            <span className="text-gray-400 hidden sm:inline">HubDesk</span>
-                            <span className="text-gray-300 hidden sm:inline">/</span>
-                            <span className="text-gray-900 font-bold truncate">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-secondary-hub min-w-0">
+                            <span className="text-muted-hub hidden sm:inline">HubDesk</span>
+                            <span className="text-muted-hub hidden sm:inline">/</span>
+                            <span className="text-primary-hub font-bold truncate">
                                 {currentMenuLabel}
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                        {/* Botão de Busca Rápida / Command Palette (Ctrl+K) */}
+                        <button
+                            type="button"
+                            onClick={() => setIsCommandPaletteOpen(true)}
+                            className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-subtle hover:bg-surface border border-subtle text-xs text-secondary-hub hover:text-primary-hub transition-all cursor-pointer shadow-2xs"
+                            title="Buscar ou navegar (Ctrl + K)"
+                        >
+                            <Search className="w-3.5 h-3.5 text-muted-hub" />
+                            <span>Buscar...</span>
+                            <kbd className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-subtle text-muted-hub ml-1">
+                                Ctrl K
+                            </kbd>
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setIsCommandPaletteOpen(true)}
+                            className="sm:hidden p-2 rounded-lg text-secondary-hub hover:text-primary-hub hover:bg-subtle transition-colors cursor-pointer"
+                            title="Buscar (Ctrl + K)"
+                        >
+                            <Search className="w-4 h-4" />
+                        </button>
+
                         <NotificationBell />
                         <ThemeSelector variant="compact" />
                     </div>
@@ -688,6 +826,17 @@ const AdminDashboard = () => {
                     </Suspense>
                 </div>
             </main>
+
+            {/* Command Palette Global (Ctrl + K) */}
+            <CommandPalette
+                isOpen={isCommandPaletteOpen}
+                onClose={() => setIsCommandPaletteOpen(false)}
+                menus={visibleMenus}
+                onSelectTab={setActiveTab}
+                onOpenPasswordModal={() => setIsPasswordModalOpen(true)}
+                onOpenChangelogModal={() => setIsChangelogModalOpen(true)}
+                onOpenLogoutModal={() => setIsLogoutModalOpen(true)}
+            />
 
             {/* Modal de Alteração de Senha com Indicador Visual (Fraca, Média, Forte) */}
             <ChangePasswordModal 

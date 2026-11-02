@@ -79,26 +79,26 @@ const getClassificationBadge = (classification) => {
     switch (classification) {
         case 'Positiva': 
             return (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 flex items-center gap-1 w-max shadow-2xs">
-                    <ThumbsUp className="w-3 h-3 text-emerald-600"/> Positiva
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1 w-max shadow-2xs">
+                    <ThumbsUp className="w-3 h-3 text-emerald-500"/> Positiva
                 </span>
             );
         case 'Neutra': 
             return (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-100 text-amber-800 border border-amber-300 flex items-center gap-1 w-max shadow-2xs">
-                    <Minus className="w-3 h-3 text-amber-600"/> Neutra
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1 w-max shadow-2xs">
+                    <Minus className="w-3 h-3 text-amber-500"/> Neutra
                 </span>
             );
         case 'Negativa': 
             return (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-rose-100 text-rose-800 border border-rose-300 flex items-center gap-1 w-max shadow-2xs">
-                    <ThumbsDown className="w-3 h-3 text-rose-600"/> Negativa
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1 w-max shadow-2xs">
+                    <ThumbsDown className="w-3 h-3 text-rose-500"/> Negativa
                 </span>
             );
         default: 
             return (
-                <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-gray-100 text-gray-700 border border-gray-200 flex items-center gap-1 w-max">
-                    <Minus className="w-3 h-3 text-gray-500"/> {classification || 'N/A'}
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-subtle text-muted-hub border border-subtle flex items-center gap-1 w-max">
+                    <Minus className="w-3 h-3 opacity-70"/> {classification || 'N/A'}
                 </span>
             );
     }
@@ -262,11 +262,9 @@ const MyHistory = ({ currentUserId }) => {
         if (activeTab !== 'audits') return [];
         const procMap = new Map();
         data.forEach(item => {
-            const pId = item.processId;
-            const pName = item.processName || qaProcesses[pId]?.name || 'Procedimento Padrão';
-            if (pId && !procMap.has(pId)) {
-                procMap.set(pId, pName);
-            }
+            const name = item.processName || qaProcesses[item.processId]?.name || 'Procedimento Padrão';
+            const id = item.processId || name;
+            procMap.set(id, name);
         });
         return Array.from(procMap.entries()).map(([id, name]) => ({ id, name }));
     }, [data, activeTab, qaProcesses]);
@@ -279,10 +277,10 @@ const MyHistory = ({ currentUserId }) => {
             const improvements = data.filter(i => i.type === 'Ponto de Melhoria').length;
             const unread = data.filter(i => !i.read).length;
             return [
-                { label: 'Total Feedbacks', value: total, icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50' },
-                { label: 'Elogios', value: praises, icon: Award, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Melhorias', value: improvements, icon: AlertTriangle, color: 'text-amber-600', bg: 'bg-amber-50' },
-                { label: 'Não Lidos', value: unread, icon: Clock, color: 'text-fuchsia-600', bg: 'bg-fuchsia-50' }
+                { label: 'Total Feedbacks', value: total, icon: MessageSquare, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { label: 'Elogios', value: praises, icon: Award, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Melhorias', value: improvements, icon: AlertTriangle, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                { label: 'Não Lidos', value: unread, icon: Clock, color: 'text-rose-500', bg: 'bg-rose-500/10' }
             ];
         }
 
@@ -299,10 +297,10 @@ const MyHistory = ({ currentUserId }) => {
             });
             const avgScore = total > 0 ? Math.round(totalScore / total) : 0;
             return [
-                { label: 'Avaliações', value: total, icon: TrendingUp, color: 'text-amber-600', bg: 'bg-amber-50' },
-                { label: 'Média Score', value: `${avgScore} pts`, icon: Sparkles, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Maior Score', value: `${maxScore} pts`, icon: Award, color: 'text-blue-600', bg: 'bg-blue-50' },
-                { label: 'Ligações', value: totalCalls, icon: Phone, color: 'text-indigo-600', bg: 'bg-indigo-50' }
+                { label: 'Avaliações', value: total, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                { label: 'Média Score', value: `${avgScore} pts`, icon: Sparkles, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Maior Score', value: `${maxScore} pts`, icon: Award, color: 'text-blue-500', bg: 'bg-blue-500/10' },
+                { label: 'Ligações', value: totalCalls, icon: Phone, color: 'text-rose-500', bg: 'bg-rose-500/10' }
             ];
         }
 
@@ -312,10 +310,10 @@ const MyHistory = ({ currentUserId }) => {
             const neutrals = data.filter(i => i.classification === 'Neutra').length;
             const negatives = data.filter(i => i.classification === 'Negativa').length;
             return [
-                { label: 'Avaliações 1:1', value: total, icon: CalendarDays, color: 'text-red-600', bg: 'bg-red-50' },
-                { label: 'Positivas', value: positives, icon: ThumbsUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Neutras', value: neutrals, icon: Minus, color: 'text-amber-600', bg: 'bg-amber-50' },
-                { label: 'Em Desenv.', value: negatives, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50' }
+                { label: 'Avaliações 1:1', value: total, icon: CalendarDays, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                { label: 'Positivas', value: positives, icon: ThumbsUp, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Neutras', value: neutrals, icon: Minus, color: 'text-amber-500', bg: 'bg-amber-500/10' },
+                { label: 'Em Desenv.', value: negatives, icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-500/10' }
             ];
         }
 
@@ -325,10 +323,10 @@ const MyHistory = ({ currentUserId }) => {
             const naoConformes = data.filter(i => i.status !== 'Conforme').length;
             const taxa = total > 0 ? Math.round((conformes / total) * 100) : 100;
             return [
-                { label: 'Auditorias', value: total, icon: ShieldCheck, color: 'text-red-600', bg: 'bg-red-50' },
-                { label: 'Aprovadas', value: conformes, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-                { label: 'Reprovadas', value: naoConformes, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
-                { label: 'Conformidade', value: `${taxa}%`, icon: Sparkles, color: taxa >= 80 ? 'text-emerald-600' : 'text-amber-600', bg: taxa >= 80 ? 'bg-emerald-50' : 'bg-amber-50' }
+                { label: 'Auditorias', value: total, icon: ShieldCheck, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                { label: 'Aprovadas', value: conformes, icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
+                { label: 'Reprovadas', value: naoConformes, icon: XCircle, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                { label: 'Conformidade', value: `${taxa}%`, icon: Sparkles, color: taxa >= 80 ? 'text-emerald-500' : 'text-amber-500', bg: taxa >= 80 ? 'bg-emerald-500/10' : 'bg-amber-500/10' }
             ];
         }
 
@@ -339,114 +337,131 @@ const MyHistory = ({ currentUserId }) => {
     const filteredData = useMemo(() => {
         const now = new Date();
         const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        const sevenDaysAgo = startOfToday - (7 * 24 * 60 * 60 * 1000);
-        const thirtyDaysAgo = startOfToday - (30 * 24 * 60 * 60 * 1000);
+        const startOf7d = startOfToday - (7 * 24 * 60 * 60 * 1000);
+        const startOf30d = startOfToday - (30 * 24 * 60 * 60 * 1000);
+        const currentMonthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        
+        const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const lastMonthPrefix = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth() + 1).padStart(2, '0')}`;
 
         return data.filter(item => {
-            const itemDate = getItemDateObj(item);
-
-            // 1. Busca por texto
+            // 1. Busca textual
             if (searchTerm.trim()) {
                 const term = searchTerm.toLowerCase();
-                const matchType = (item.type || '').toLowerCase().includes(term);
-                const matchComment = (item.comment || '').toLowerCase().includes(term);
-                const matchNotes = (item.notes || '').toLowerCase().includes(term);
-                const matchProtocol = String(item.protocol || '').toLowerCase().includes(term);
-                const matchEvaluator = (item.evaluatorName || resolveUserName(item.createdBy) || '').toLowerCase().includes(term);
-                const matchProcess = (item.processName || qaProcesses[item.processId]?.name || '').toLowerCase().includes(term);
-                const matchChannel = (item.channel || item.method || '').toLowerCase().includes(term);
-                const dateBr = itemDate ? itemDate.toLocaleDateString('pt-BR') : '';
-                const dateIso = typeof item.date === 'string' ? item.date : '';
+                const comment = (item.comment || '').toLowerCase();
+                const protocol = (item.protocol || '').toLowerCase();
+                const processName = (item.processName || qaProcesses[item.processId]?.name || '').toLowerCase();
+                const evaluator = (item.evaluatorName || item.createdBy || '').toLowerCase();
+                const generalComments = (item.generalComments || '').toLowerCase();
+                const title = (item.title || '').toLowerCase();
 
-                if (!matchType && !matchComment && !matchNotes && !matchProtocol && !matchEvaluator && !matchProcess && !matchChannel && !dateBr.includes(term) && !dateIso.includes(term)) {
-                    return false;
-                }
+                const match = comment.includes(term) ||
+                              protocol.includes(term) ||
+                              processName.includes(term) ||
+                              evaluator.includes(term) ||
+                              generalComments.includes(term) ||
+                              title.includes(term);
+
+                if (!match) return false;
             }
 
             // 2. Filtro de Período Rápido
             if (periodFilter !== 'all') {
-                if (!itemDate) return false;
+                const dateObj = getItemDateObj(item);
+                const itemTime = dateObj ? dateObj.getTime() : (item.createdAt?.toMillis ? item.createdAt.toMillis() : 0);
+
                 if (periodFilter === 'today') {
-                    const isSameDay = 
-                        itemDate.getFullYear() === now.getFullYear() &&
-                        itemDate.getMonth() === now.getMonth() &&
-                        itemDate.getDate() === now.getDate();
-                    if (!isSameDay) return false;
-                } else if (periodFilter === '7d' && itemDate.getTime() < sevenDaysAgo) {
-                    return false;
-                } else if (periodFilter === '30d' && itemDate.getTime() < thirtyDaysAgo) {
-                    return false;
-                } else if (periodFilter === 'this_month' && (itemDate.getFullYear() !== now.getFullYear() || itemDate.getMonth() !== now.getMonth())) {
-                    return false;
+                    if (itemTime < startOfToday) return false;
+                } else if (periodFilter === '7d') {
+                    if (itemTime < startOf7d) return false;
+                } else if (periodFilter === '30d') {
+                    if (itemTime < startOf30d) return false;
+                } else if (periodFilter === 'this_month') {
+                    if (item.referenceMonth) {
+                        if (item.referenceMonth !== currentMonthPrefix) return false;
+                    } else if (dateObj) {
+                        const mStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        if (mStr !== currentMonthPrefix) return false;
+                    }
                 } else if (periodFilter === 'last_month') {
-                    const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                    if (itemDate.getFullYear() !== lastMonthDate.getFullYear() || itemDate.getMonth() !== lastMonthDate.getMonth()) {
-                        return false;
+                    if (item.referenceMonth) {
+                        if (item.referenceMonth !== lastMonthPrefix) return false;
+                    } else if (dateObj) {
+                        const mStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                        if (mStr !== lastMonthPrefix) return false;
                     }
                 }
             }
 
-            // 3. Filtro de Data Específica / Mês
+            // 3. Filtro de Mês / Data Específica
             if (dateFilter) {
-                const q = dateFilter.trim().toLowerCase();
-                const safeDate = getSafeDateString(item).toLowerCase();
-                const matchMonth = item.referenceMonth && formatMonth(item.referenceMonth).toLowerCase().includes(q);
-                const isoDate = itemDate ? `${itemDate.getFullYear()}-${String(itemDate.getMonth() + 1).padStart(2, '0')}-${String(itemDate.getDate()).padStart(2, '0')}` : '';
-                const rawDate = typeof item.date === 'string' ? item.date.toLowerCase() : '';
-
-                if (!safeDate.includes(q) && !matchMonth && !isoDate.includes(q) && !rawDate.includes(q)) {
+                const safeDate = getSafeDateString(item);
+                const refMonthFormatted = item.referenceMonth ? formatMonth(item.referenceMonth) : '';
+                if (dateFilter.includes('/')) {
+                    if (dateFilter.length === 5) {
+                        // MM/YYYY
+                        if (refMonthFormatted !== dateFilter && !safeDate.endsWith(dateFilter)) return false;
+                    } else {
+                        // DD/MM/YYYY
+                        if (safeDate !== dateFilter) return false;
+                    }
+                } else if (safeDate !== dateFilter) {
                     return false;
                 }
             }
 
-            // 4. Filtro de Status Contextual por Aba
+            // 4. Filtro por Status
             if (statusFilter !== 'all') {
                 if (activeTab === 'feedbacks') {
                     if (statusFilter === 'unread' && item.read) return false;
                     if (statusFilter === 'read' && !item.read) return false;
-                    if (statusFilter !== 'unread' && statusFilter !== 'read' && item.type !== statusFilter) return false;
+                    if (statusFilter === 'elogio' && item.type !== 'Elogio') return false;
+                    if (statusFilter === 'melhoria' && item.type !== 'Ponto de Melhoria') return false;
+                    if (statusFilter === 'orientacao' && item.type !== 'Orientação') return false;
                 } else if (activeTab === 'audits') {
-                    if (item.status !== statusFilter) return false;
+                    if (statusFilter === 'conforme' && item.status !== 'Conforme') return false;
+                    if (statusFilter === 'nao_conforme' && item.status === 'Conforme') return false;
                 } else if (activeTab === 'monthly') {
                     if (item.classification !== statusFilter) return false;
-                } else if (activeTab === 'metrics') {
-                    const score = Number(item.pontuacao !== undefined ? item.pontuacao : calculatePerformanceScore(item));
-                    if (statusFilter === 'high' && score < 100) return false;
-                    if (statusFilter === 'medium' && (score < 50 || score >= 100)) return false;
-                    if (statusFilter === 'low' && score >= 50) return false;
                 }
             }
 
             // 5. Filtro por Processo QA
-            if (activeTab === 'audits' && processFilter !== 'all') {
-                if (item.processId !== processFilter) return false;
+            if (processFilter !== 'all' && activeTab === 'audits') {
+                const itemProcId = item.processId || item.processName;
+                if (itemProcId !== processFilter) return false;
             }
 
             return true;
         }).sort((a, b) => {
+            if (sortBy === 'oldest') {
+                const dateA = getItemDateObj(a);
+                const dateB = getItemDateObj(b);
+                const timeA = dateA ? dateA.getTime() : 0;
+                const timeB = dateB ? dateB.getTime() : 0;
+                return timeA - timeB;
+            }
+            if (sortBy === 'score_high') {
+                const sA = a.score !== undefined ? Number(a.score) : (a.pontuacao || 0);
+                const sB = b.score !== undefined ? Number(b.score) : (b.pontuacao || 0);
+                return sB - sA;
+            }
+            if (sortBy === 'score_low') {
+                const sA = a.score !== undefined ? Number(a.score) : (a.pontuacao || 0);
+                const sB = b.score !== undefined ? Number(b.score) : (b.pontuacao || 0);
+                return sA - sB;
+            }
+            // Padrão: mais recentes primeiro
             const dateA = getItemDateObj(a);
             const dateB = getItemDateObj(b);
             const timeA = dateA ? dateA.getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
             const timeB = dateB ? dateB.getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
-
-            if (sortBy === 'recent') return timeB - timeA;
-            if (sortBy === 'oldest') return timeA - timeB;
-            if (sortBy === 'score_high') {
-                const sA = a.score || a.pontuacao || (a.status === 'Conforme' ? 100 : 0);
-                const sB = b.score || b.pontuacao || (b.status === 'Conforme' ? 100 : 0);
-                return sB - sA;
-            }
-            if (sortBy === 'score_low') {
-                const sA = a.score || a.pontuacao || (a.status === 'Conforme' ? 100 : 0);
-                const sB = b.score || b.pontuacao || (b.status === 'Conforme' ? 100 : 0);
-                return sA - sB;
-            }
-            return 0;
+            return timeB - timeA;
         });
     }, [data, searchTerm, periodFilter, dateFilter, statusFilter, processFilter, sortBy, activeTab, qaProcesses]);
 
     // Paginação
-    const totalPages = Math.max(1, Math.ceil(filteredData.length / itemsPerPage));
+    const totalPages = Math.ceil(filteredData.length / itemsPerPage) || 1;
     const paginatedData = useMemo(() => {
         const start = (currentPage - 1) * itemsPerPage;
         return filteredData.slice(start, start + itemsPerPage);
@@ -533,65 +548,65 @@ const MyHistory = ({ currentUserId }) => {
     };
 
     return (
-        <div className="flex-1 p-2 sm:p-4 h-full flex flex-col bg-gray-50 font-sans overflow-hidden">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 h-full flex flex-col bg-canvas text-primary-hub font-sans overflow-hidden space-y-4">
             
-            {/* CABEÇALHO COMPACTO DA PÁGINA (OTIMIZADO NO EIXO VERTICAL) */}
-            <header className="mb-2 bg-white px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl border border-gray-200/90 shadow-2xs shrink-0 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-red-50 text-red-600 border border-red-200 flex items-center justify-center shrink-0 shadow-2xs">
-                        <History className="w-4 h-4" />
+            {/* CABEÇALHO DA PÁGINA (OTIMIZADO NO EIXO VERTICAL) */}
+            <header className="bg-surface px-4 sm:px-5 py-3 rounded-2xl sm:rounded-3xl border border-subtle shadow-xs shrink-0 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center shrink-0 shadow-2xs">
+                        <History className="w-5 h-5" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h1 className="text-sm sm:text-base font-black text-gray-900 tracking-tight">
+                            <h1 className="text-base sm:text-lg font-black tracking-tight text-primary-hub">
                                 Meu Histórico & Performance
                             </h1>
-                            <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-subtle text-secondary-hub border border-subtle">
                                 {filteredData.length} {filteredData.length === 1 ? 'registro' : 'registros'}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                {/* Botões de Ação do Topo (Resumo, Visualização e Exportação) */}
-                <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+                {/* Botões de Ação do Topo */}
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     {/* Botão de Toggle do Resumo Estatístico */}
                     <button
                         type="button"
                         onClick={() => setShowSummary(prev => !prev)}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200/80"
-                        title={showSummary ? "Ocultar resumo estatístico para ampliar visão vertical" : "Exibir resumo estatístico"}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-subtle hover:bg-surface text-secondary-hub border border-subtle"
+                        title={showSummary ? "Ocultar resumo estatístico" : "Exibir resumo estatístico"}
                     >
-                        {showSummary ? <ChevronUp className="w-3.5 h-3.5 text-gray-500" /> : <ChevronDown className="w-3.5 h-3.5 text-gray-500" />}
+                        {showSummary ? <ChevronUp className="w-3.5 h-3.5 text-muted-hub" /> : <ChevronDown className="w-3.5 h-3.5 text-muted-hub" />}
                         <span className="hidden sm:inline">{showSummary ? 'Ocultar Resumo' : 'Ver Resumo'}</span>
                     </button>
 
                     {/* Alternância de Modo: Tabela vs Cards */}
-                    <div className="flex items-center bg-gray-100 p-0.5 rounded-lg border border-gray-200 shrink-0">
+                    <div className="flex items-center bg-subtle p-0.5 rounded-xl border border-subtle shrink-0">
                         <button
                             type="button"
                             onClick={() => setViewMode('table')}
-                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                                 viewMode === 'table'
-                                    ? 'bg-white text-gray-900 shadow-2xs'
-                                    : 'text-gray-500 hover:text-gray-800'
+                                    ? 'bg-surface text-primary-hub shadow-xs'
+                                    : 'text-muted-hub hover:text-primary-hub'
                             }`}
-                            title="Modo Tabela (maior densidade)"
+                            title="Modo Tabela"
                         >
-                            <Table className="w-3 h-3" />
+                            <Table className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Tabela</span>
                         </button>
                         <button
                             type="button"
                             onClick={() => setViewMode('cards')}
-                            className={`px-2 py-1 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                                 viewMode === 'cards'
-                                    ? 'bg-white text-gray-900 shadow-2xs'
-                                    : 'text-gray-500 hover:text-gray-800'
+                                    ? 'bg-surface text-primary-hub shadow-xs'
+                                    : 'text-muted-hub hover:text-primary-hub'
                             }`}
                             title="Modo Cards"
                         >
-                            <LayoutGrid className="w-3 h-3" />
+                            <LayoutGrid className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Cards</span>
                         </button>
                     </div>
@@ -600,10 +615,10 @@ const MyHistory = ({ currentUserId }) => {
                     <button
                         type="button"
                         onClick={handleExportCsv}
-                        className="px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 shadow-2xs"
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-surface hover:bg-subtle text-secondary-hub border border-subtle shadow-2xs"
                         title="Exportar registros filtrados para CSV"
                     >
-                        <Download className="w-3.5 h-3.5 text-gray-500" />
+                        <Download className="w-3.5 h-3.5 text-muted-hub" />
                         <span className="hidden md:inline">CSV</span>
                     </button>
                 </div>
@@ -611,21 +626,21 @@ const MyHistory = ({ currentUserId }) => {
 
             {/* FAIXA RESUMO ESTATÍSTICO COMPACTO (COLAPSÁVEL) */}
             {showSummary && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-2 shrink-0 animate-in fade-in duration-150">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 animate-in fade-in duration-150">
                     {summaryStats.map((stat, idx) => {
                         const IconComponent = stat.icon;
                         return (
-                            <div key={idx} className="bg-white rounded-xl px-3 py-1.5 sm:py-2 border border-gray-200/90 shadow-2xs flex items-center justify-between gap-2 min-w-0">
+                            <div key={idx} className="bg-surface rounded-2xl px-4 py-3 border border-subtle shadow-xs flex items-center justify-between gap-3 min-w-0">
                                 <div className="min-w-0 flex-1">
-                                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block truncate">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block truncate">
                                         {stat.label}
                                     </span>
-                                    <span className="text-sm sm:text-base font-black text-gray-900 mt-0.5 block truncate leading-none">
+                                    <span className="text-base sm:text-lg font-black text-primary-hub mt-0.5 block truncate leading-none">
                                         {stat.value}
                                     </span>
                                 </div>
-                                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg ${stat.bg} ${stat.color} flex items-center justify-center shrink-0 border border-gray-100 shadow-2xs`}>
-                                    <IconComponent className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                <div className={`w-9 h-9 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0 border border-subtle shadow-2xs`}>
+                                    <IconComponent className="w-4 h-4" />
                                 </div>
                             </div>
                         );
@@ -633,297 +648,274 @@ const MyHistory = ({ currentUserId }) => {
                 </div>
             )}
 
-            {/* SELEÇÃO DE ABAS & TOOLBAR INTEGRADA E COMPACTA */}
-            <div className="bg-white p-2 sm:p-2.5 rounded-xl border border-gray-200 shadow-2xs mb-2 shrink-0 space-y-2">
+            {/* SELEÇÃO DE ABAS & TOOLBAR INTEGRADA */}
+            <div className="bg-surface p-3 sm:p-4 rounded-2xl sm:rounded-3xl border border-subtle shadow-xs shrink-0 space-y-3">
                 
-                {/* Linha 1: Abas de Navegação Compactas */}
-                <div className="flex items-center space-x-1.5 border-b border-gray-100 pb-2 overflow-x-auto scrollbar-none">
+                {/* Linha 1: Abas de Navegação */}
+                <div className="flex items-center space-x-2 border-b border-subtle pb-3 overflow-x-auto scrollbar-none">
                     <button 
                         onClick={() => handleTabChange('feedbacks')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                             activeTab === 'feedbacks' 
-                                ? 'bg-zinc-950 text-white shadow-2xs' 
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-xs' 
+                                : 'text-secondary-hub hover:bg-subtle'
                         }`}
                     >
-                        <MessageSquare className="w-3.5 h-3.5 text-red-500" />
+                        <MessageSquare className="w-3.5 h-3.5" />
                         <span>Feedbacks</span>
                     </button>
                     <button 
                         onClick={() => handleTabChange('audits')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                             activeTab === 'audits' 
-                                ? 'bg-zinc-950 text-white shadow-2xs' 
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-xs' 
+                                : 'text-secondary-hub hover:bg-subtle'
                         }`}
                     >
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+                        <ShieldCheck className="w-3.5 h-3.5" />
                         <span>Auditorias QA</span>
                     </button>
                     <button 
                         onClick={() => handleTabChange('metrics')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                             activeTab === 'metrics' 
-                                ? 'bg-zinc-950 text-white shadow-2xs' 
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-xs' 
+                                : 'text-secondary-hub hover:bg-subtle'
                         }`}
                     >
-                        <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
+                        <TrendingUp className="w-3.5 h-3.5" />
                         <span>Avaliações Semanais</span>
                     </button>
                     <button 
                         onClick={() => handleTabChange('monthly')} 
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                             activeTab === 'monthly' 
-                                ? 'bg-zinc-950 text-white shadow-2xs' 
-                                : 'text-gray-600 hover:bg-gray-100'
+                                ? 'bg-gradient-to-r from-rose-600 to-red-600 text-white shadow-xs' 
+                                : 'text-secondary-hub hover:bg-subtle'
                         }`}
                     >
-                        <FileText className="w-3.5 h-3.5 text-blue-500" />
+                        <FileText className="w-3.5 h-3.5" />
                         <span>Análise Mensal (1:1)</span>
                     </button>
                 </div>
 
-                {/* Linha 2: Filtros Compactos */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-2 items-center text-xs">
+                {/* Linha 2: Filtros Integrados */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-12 gap-2.5 items-center text-xs">
                     
                     {/* Campo de Busca */}
                     <div className="md:col-span-4 relative">
-                        <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <Search className="w-3.5 h-3.5 text-muted-hub absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                         <input 
                             type="text" 
                             placeholder={activeTab === 'audits' ? "Buscar protocolo, processo, auditor..." : "Buscar nos registros..."}
                             value={searchTerm} 
                             onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} 
-                            className="w-full pl-8 pr-6 py-1.5 border border-gray-200 rounded-lg outline-none text-xs focus:ring-1 focus:ring-red-500 focus:border-red-500 bg-gray-50/60 focus:bg-white transition-all font-medium" 
+                            className="w-full pl-8 pr-7 py-2 border border-subtle rounded-xl outline-none text-xs focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 bg-subtle text-primary-hub placeholder:text-muted-hub transition-all font-medium" 
                         />
                         {searchTerm && (
                             <button
                                 type="button"
                                 onClick={() => { setSearchTerm(''); setCurrentPage(1); }}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-hub hover:text-rose-500 cursor-pointer"
                             >
-                                ✕
+                                <XCircle className="w-3.5 h-3.5" />
                             </button>
                         )}
                     </div>
 
-                    {/* Filtro Rápido de Período (Incluindo Hoje / Mesmo Dia) */}
-                    <div className="md:col-span-2 relative">
+                    {/* Filtro de Período Rápido */}
+                    <div className="md:col-span-2">
                         <select
                             value={periodFilter}
-                            onChange={(e) => { setPeriodFilter(e.target.value); setCurrentPage(1); }}
-                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-xs bg-gray-50/60 hover:bg-white cursor-pointer text-gray-700 font-semibold"
+                            onChange={e => { setPeriodFilter(e.target.value); setCurrentPage(1); }}
+                            className="w-full py-2 px-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer"
                         >
-                            <option value="all">Todo o Período</option>
-                            <option value="today">Hoje (Mesmo dia)</option>
+                            <option value="all">Todo o período</option>
+                            <option value="today">Hoje</option>
                             <option value="7d">Últimos 7 dias</option>
                             <option value="30d">Últimos 30 dias</option>
                             <option value="this_month">Este Mês</option>
-                            <option value="last_month">Mês Anterior</option>
+                            <option value="last_month">Mês Passado</option>
                         </select>
                     </div>
 
-                    {/* Filtro de Data / Mês Específico */}
-                    <div className="md:col-span-2 relative">
-                        <select
-                            value={dateFilter}
-                            onChange={(e) => { setDateFilter(e.target.value); setCurrentPage(1); }}
-                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-xs bg-gray-50/60 hover:bg-white cursor-pointer text-gray-700 font-semibold"
-                        >
-                            <option value="">Data Específica</option>
-                            {filterOptions.months.length > 0 && (
-                                <optgroup label="Por Mês">
-                                    {filterOptions.months.map(m => <option key={m} value={m}>{m}</option>)}
-                                </optgroup>
-                            )}
-                            {filterOptions.dates.length > 0 && (
-                                <optgroup label="Por Data">
-                                    {filterOptions.dates.map(d => <option key={d} value={d}>{d}</option>)}
-                                </optgroup>
-                            )}
-                        </select>
-                    </div>
-
-                    {/* Filtro Contextual de Status / Categoria */}
-                    <div className="md:col-span-2 relative">
+                    {/* Filtro de Status Específico por Aba */}
+                    <div className="md:col-span-2">
                         <select
                             value={statusFilter}
-                            onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-xs bg-gray-50/60 hover:bg-white cursor-pointer text-gray-700 font-semibold"
+                            onChange={e => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+                            className="w-full py-2 px-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer"
                         >
-                            <option value="all">
-                                {activeTab === 'feedbacks' ? 'Todos os Tipos' : 
-                                 activeTab === 'audits' ? 'Todos os Status' : 
-                                 activeTab === 'monthly' ? 'Todas Classificações' : 
-                                 'Todas as Notas'}
-                            </option>
+                            <option value="all">Todos os status</option>
                             {activeTab === 'feedbacks' && (
                                 <>
-                                    <option value="Elogio">Elogio</option>
-                                    <option value="Ponto de Melhoria">Ponto de Melhoria</option>
                                     <option value="unread">Não Lidos</option>
                                     <option value="read">Lidos</option>
+                                    <option value="elogio">Elogios</option>
+                                    <option value="melhoria">Melhorias</option>
+                                    <option value="orientacao">Orientações</option>
                                 </>
                             )}
                             {activeTab === 'audits' && (
                                 <>
-                                    <option value="Conforme">Conforme</option>
-                                    <option value="Não Conforme">Não Conforme</option>
+                                    <option value="conforme">Conformes</option>
+                                    <option value="nao_conforme">Não Conformes</option>
                                 </>
                             )}
                             {activeTab === 'monthly' && (
                                 <>
-                                    <option value="Positiva">Positiva</option>
-                                    <option value="Neutra">Neutra</option>
-                                    <option value="Negativa">Negativa</option>
-                                </>
-                            )}
-                            {activeTab === 'metrics' && (
-                                <>
-                                    <option value="high">Pontuação Alta (≥ 100)</option>
-                                    <option value="medium">Média (50 a 99)</option>
-                                    <option value="low">Baixa (&lt; 50)</option>
+                                    <option value="Positiva">Positivas</option>
+                                    <option value="Neutra">Neutras</option>
+                                    <option value="Negativa">Negativas</option>
                                 </>
                             )}
                         </select>
                     </div>
 
-                    {/* Filtro por Processo QA ou Ordenação */}
-                    <div className="md:col-span-2 relative flex items-center gap-1.5">
-                        {activeTab === 'audits' && availableProcesses.length > 0 ? (
+                    {/* Filtro por Processo QA (apenas se audits) ou Ordenação */}
+                    {activeTab === 'audits' && availableProcesses.length > 0 ? (
+                        <div className="md:col-span-2">
                             <select
                                 value={processFilter}
-                                onChange={(e) => { setProcessFilter(e.target.value); setCurrentPage(1); }}
-                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-xs bg-gray-50/60 hover:bg-white cursor-pointer text-gray-700 font-semibold truncate"
+                                onChange={e => { setProcessFilter(e.target.value); setCurrentPage(1); }}
+                                className="w-full py-2 px-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer truncate"
                             >
-                                <option value="all">Todos os Processos</option>
+                                <option value="all">Todos os processos</option>
                                 {availableProcesses.map(p => (
                                     <option key={p.id} value={p.id}>{p.name}</option>
                                 ))}
                             </select>
-                        ) : (
+                        </div>
+                    ) : (
+                        <div className="md:col-span-2">
                             <select
                                 value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg focus:ring-1 focus:ring-red-500 focus:border-red-500 outline-none text-xs bg-gray-50/60 hover:bg-white cursor-pointer text-gray-700 font-semibold"
+                                onChange={e => setSortBy(e.target.value)}
+                                className="w-full py-2 px-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none focus:ring-2 focus:ring-rose-500/20 cursor-pointer"
                             >
-                                <option value="recent">Mais Recentes</option>
-                                <option value="oldest">Mais Antigos</option>
-                                <option value="score_high">Maior Score</option>
-                                <option value="score_low">Menor Score</option>
+                                <option value="recent">Mais recentes</option>
+                                <option value="oldest">Mais antigos</option>
+                                <option value="score_high">Maior pontuação</option>
+                                <option value="score_low">Menor pontuação</option>
                             </select>
-                        )}
+                        </div>
+                    )}
 
-                        {hasActiveFilters && (
+                    {/* Botão Reset Filtros */}
+                    <div className="md:col-span-2 flex items-center justify-end">
+                        {hasActiveFilters ? (
                             <button
                                 type="button"
                                 onClick={handleResetFilters}
-                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg border border-red-200 cursor-pointer shrink-0 transition-colors"
-                                title="Limpar todos os filtros"
+                                className="w-full py-2 px-2.5 rounded-xl text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                             >
                                 <RotateCcw className="w-3.5 h-3.5" />
+                                <span>Limpar</span>
                             </button>
+                        ) : (
+                            <div className="text-[11px] text-muted-hub text-right w-full font-mono">
+                                {filteredData.length} registros
+                            </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            {/* CONTAINER DE CONTEÚDO PRINCIPAL (MAXIMIZADO NO EIXO VERTICAL) */}
-            <div className="bg-white rounded-xl border border-gray-200 shadow-2xs flex-1 flex flex-col min-h-0 overflow-hidden">
+            {/* TABELA / CARDS VIEW */}
+            <div className="flex-1 bg-surface rounded-2xl sm:rounded-3xl border border-subtle shadow-xs overflow-hidden flex flex-col">
                 {loading ? (
                     <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
-                        <Hourglass className="w-7 h-7 text-red-600 animate-spin mb-2.5" />
-                        <span className="text-xs text-gray-400 font-medium">Carregando seus registros...</span>
+                        <div className="w-8 h-8 border-2 border-rose-500 border-t-transparent rounded-full animate-spin mb-3" />
+                        <span className="text-xs font-bold text-muted-hub">Carregando histórico operacional...</span>
                     </div>
                 ) : filteredData.length === 0 ? (
-                    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-8 text-center">
-                        <Database className="w-10 h-10 mb-2 opacity-30 text-gray-400" />
-                        <p className="text-sm font-bold text-gray-700">Nenhum registro encontrado.</p>
-                        <p className="text-xs text-gray-400 mt-0.5 max-w-sm">
-                            {hasActiveFilters 
-                                ? 'Tente ajustar ou limpar os filtros aplicados para ver mais resultados.' 
-                                : 'Seus lançamentos futuros aparecerão aqui automaticamente.'}
-                        </p>
+                    <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-muted-hub space-y-3">
+                        <Archive className="w-10 h-10 opacity-30 text-muted-hub" />
+                        <div>
+                            <h3 className="text-sm font-bold text-primary-hub">Nenhum registro encontrado</h3>
+                            <p className="text-xs text-muted-hub mt-1 max-w-sm">
+                                Não localizamos dados com os filtros selecionados ou ainda não há lançamentos para este módulo.
+                            </p>
+                        </div>
                         {hasActiveFilters && (
                             <button
                                 type="button"
                                 onClick={handleResetFilters}
-                                className="mt-3 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                                className="mt-2 px-3.5 py-1.5 bg-subtle hover:bg-surface text-secondary-hub border border-subtle rounded-xl text-xs font-bold transition-colors cursor-pointer"
                             >
                                 Redefinir Filtros
                             </button>
                         )}
                     </div>
                 ) : viewMode === 'table' ? (
-                    /* VISUALIZAÇÃO EM TABELA DE ALTA DENSIDADE VERTICAL */
+                    /* VISUALIZAÇÃO EM TABELA */
                     <div className="flex-1 overflow-auto">
-                        <table className="min-w-full divide-y divide-gray-200 text-xs whitespace-nowrap">
-                            <thead className="bg-zinc-950 text-white sticky top-0 z-10 shadow-xs">
+                        <table className="min-w-full text-xs whitespace-nowrap border-collapse">
+                            <thead className="bg-subtle text-muted-hub sticky top-0 z-10 border-b border-subtle">
                                 <tr>
-                                    <th className="px-3.5 py-2.5 text-left font-bold text-[11px] uppercase tracking-wider">Data</th>
-                                    <th className="px-3.5 py-2.5 text-left font-bold text-[11px] uppercase tracking-wider">
+                                    <th className="px-4 py-3 text-left font-bold text-[11px] uppercase tracking-wider">Data</th>
+                                    <th className="px-4 py-3 text-left font-bold text-[11px] uppercase tracking-wider">
                                         {activeTab === 'feedbacks' ? 'Tipo & Mensagem' :
                                          activeTab === 'audits' ? 'Auditoria QA (Status & Processo)' :
                                          activeTab === 'metrics' ? 'Score & Volumes de Atendimento' :
                                          'Classificação & Mês de Referência'}
                                     </th>
-                                    <th className="px-3.5 py-2.5 text-center font-bold text-[11px] uppercase tracking-wider">
+                                    <th className="px-4 py-3 text-center font-bold text-[11px] uppercase tracking-wider">
                                         {activeTab === 'audits' ? 'Protocolo' : 'Detalhe Adicional'}
                                     </th>
-                                    <th className="px-3.5 py-2.5 text-right font-bold text-[11px] uppercase tracking-wider">Ações</th>
+                                    <th className="px-4 py-3 text-right font-bold text-[11px] uppercase tracking-wider">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-100">
+                            <tbody className="bg-surface">
                                 {paginatedData.map(item => (
                                     <tr 
                                         key={item.id} 
                                         onClick={() => handleViewItem(item)}
-                                        className={`hover:bg-gray-50/80 transition-colors cursor-pointer ${
-                                            activeTab === 'feedbacks' && !item.read ? 'bg-fuchsia-50/30' : ''
+                                        className={`border-b border-subtle last:border-b-0 hover:bg-subtle/60 transition-colors cursor-pointer ${
+                                            activeTab === 'feedbacks' && !item.read ? 'bg-rose-500/5' : ''
                                         }`}
                                     >
-                                        <td className="px-3.5 py-2 text-gray-600 font-medium">
+                                        <td className="px-4 py-3 text-secondary-hub font-medium">
                                             <div className="flex items-center gap-1.5">
-                                                <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                                <Calendar className="w-3.5 h-3.5 text-muted-hub shrink-0" />
                                                 <span className="font-semibold">{getSafeDateString(item)}</span>
                                             </div>
                                         </td>
                                         
-                                        <td className="px-3.5 py-2">
+                                        <td className="px-4 py-3">
                                             {/* ABA: FEEDBACKS */}
                                             {activeTab === 'feedbacks' && (
                                                 <div className="flex flex-col gap-1 max-w-xl py-0.5">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                         {!item.read ? (
-                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300 animate-pulse">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-600" />
+                                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                                                                 Novo
                                                             </span>
                                                         ) : (
-                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200">
-                                                                <CheckCheck className="w-3 h-3 text-emerald-600" />
+                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                                                                <CheckCheck className="w-3 h-3 text-emerald-500" />
                                                                 Lido
                                                             </span>
                                                         )}
 
-                                                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${
-                                                            item.type === 'Elogio' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
-                                                            item.type === 'Ponto de Melhoria' ? 'bg-amber-50 text-amber-800 border-amber-200' : 
-                                                            'bg-blue-50 text-blue-800 border-blue-200'
+                                                        <span className={`px-2 py-0.5 rounded-lg text-[11px] font-bold border ${
+                                                            item.type === 'Elogio' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 
+                                                            item.type === 'Ponto de Melhoria' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 
+                                                            'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                                                         }`}>
                                                             {item.type}
                                                         </span>
 
                                                         {item.method && (
-                                                            <span className="text-[10px] font-medium text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">
+                                                            <span className="text-[10px] font-medium text-secondary-hub bg-subtle border border-subtle px-1.5 py-0.5 rounded">
                                                                 {item.method}
                                                             </span>
                                                         )}
 
                                                         {item.protocol && item.protocol !== 'N/A' && (
-                                                            <span className="text-[10px] font-mono font-bold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
-                                                                <Hash className="w-2.5 h-2.5 text-red-500" />
+                                                            <span className="text-[10px] font-mono font-bold text-primary-hub bg-subtle border border-subtle px-1.5 py-0.5 rounded inline-flex items-center gap-0.5">
+                                                                <Hash className="w-2.5 h-2.5 text-rose-500" />
                                                                 {item.protocol}
                                                             </span>
                                                         )}
@@ -933,14 +925,14 @@ const MyHistory = ({ currentUserId }) => {
                                                     {Array.isArray(item.tags) && item.tags.length > 0 && (
                                                         <div className="flex items-center gap-1 flex-wrap">
                                                             {item.tags.map(t => (
-                                                                <span key={t} className="text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                                                                <span key={t} className="text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/20">
                                                                     {t}
                                                                 </span>
                                                             ))}
                                                         </div>
                                                     )}
 
-                                                    <span className="text-xs text-gray-700 line-clamp-1 font-medium">
+                                                    <span className="text-xs text-secondary-hub line-clamp-1 font-medium">
                                                         {item.comment || 'Sem mensagem descritiva.'}
                                                     </span>
                                                 </div>
@@ -949,19 +941,19 @@ const MyHistory = ({ currentUserId }) => {
                                             {/* ABA: AUDITORIAS QA */}
                                             {activeTab === 'audits' && (
                                                 <div className="flex items-center gap-2.5 max-w-lg">
-                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-bold border shrink-0 ${
+                                                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border shrink-0 ${
                                                         item.status === 'Conforme' 
-                                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                            : 'bg-red-50 text-red-700 border-red-200'
+                                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                                                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                                                     }`}>
-                                                        {item.status === 'Conforme' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-red-600" />}
+                                                        {item.status === 'Conforme' ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-rose-500" />}
                                                         <span>{item.status}</span>
                                                     </span>
-                                                    <span className="text-xs font-bold text-gray-900 truncate">
+                                                    <span className="text-xs font-bold text-primary-hub truncate">
                                                         {item.processName || qaProcesses[item.processId]?.name || 'Procedimento Padrão'}
                                                     </span>
                                                     {item.score !== undefined && (
-                                                        <span className="text-[11px] font-mono font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded shrink-0">
+                                                        <span className="text-[11px] font-mono font-bold text-muted-hub bg-subtle px-1.5 py-0.5 rounded border border-subtle shrink-0">
                                                             {item.score}%
                                                         </span>
                                                     )}
@@ -971,11 +963,11 @@ const MyHistory = ({ currentUserId }) => {
                                             {/* ABA: MÉTRICAS SEMANAIS */}
                                             {activeTab === 'metrics' && (
                                                 <div className="flex items-center gap-2.5">
-                                                    <span className="text-xs text-gray-700">
-                                                        Pontuação: <strong className="text-gray-900 font-mono font-black text-xs">{item.pontuacao || 0} pts</strong>
+                                                    <span className="text-xs text-secondary-hub">
+                                                        Pontuação: <strong className="text-primary-hub font-mono font-black text-xs">{item.pontuacao || 0} pts</strong>
                                                     </span>
-                                                    <span className="text-xs text-gray-400">
-                                                        &bull; Ligações: <strong className="text-gray-700">{item.Ligacoes_Atendidas || 0}</strong> | Huggy: <strong className="text-gray-700">{item.Atendimentos_Huggy || 0}</strong>
+                                                    <span className="text-xs text-muted-hub">
+                                                        &bull; Ligações: <strong className="text-secondary-hub">{item.Ligacoes_Atendidas || 0}</strong> | Huggy: <strong className="text-secondary-hub">{item.Atendimentos_Huggy || 0}</strong>
                                                     </span>
                                                 </div>
                                             )}
@@ -983,17 +975,17 @@ const MyHistory = ({ currentUserId }) => {
                                             {/* ABA: ANÁLISE MENSAL */}
                                             {activeTab === 'monthly' && (
                                                 <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="text-xs text-gray-700">
-                                                        Mês: <strong className="text-gray-900 font-mono font-bold">{formatMonth(item.referenceMonth)}</strong>
+                                                    <span className="text-xs font-black font-mono text-primary-hub">
+                                                        {formatMonth(item.referenceMonth)}
                                                     </span>
                                                     {isLegacy4PillarsFeedback(item) ? (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                                            <Archive className="w-3 h-3 text-amber-600" />
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                                            <Archive className="w-3 h-3 text-amber-500" />
                                                             <span>Legado</span>
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                                            <FileText className="w-3 h-3 text-blue-600" />
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                                            <FileText className="w-3 h-3 text-rose-500" />
                                                             <span>Markdown</span>
                                                         </span>
                                                     )}
@@ -1003,45 +995,45 @@ const MyHistory = ({ currentUserId }) => {
                                         </td>
 
                                         {/* COLUNA: DETALHE ADICIONAL */}
-                                        <td className="px-3.5 py-2 text-center">
+                                        <td className="px-4 py-3 text-center">
                                             {activeTab === 'audits' && (
-                                                <span className="font-mono font-bold text-[11px] text-gray-700 bg-gray-50 border border-gray-200 px-2 py-0.5 rounded">
+                                                <span className="font-mono font-bold text-[11px] text-secondary-hub bg-subtle border border-subtle px-2 py-0.5 rounded-lg">
                                                     {item.protocol || '--'}
                                                 </span>
                                             )}
                                             {activeTab === 'feedbacks' && (
-                                                <span className="text-[11px] text-gray-500 font-medium">
+                                                <span className="text-[11px] text-muted-hub font-medium">
                                                     {resolveUserName(item.createdBy)}
                                                 </span>
                                             )}
                                             {activeTab === 'metrics' && (
-                                                <span className="text-[11px] text-gray-500 font-medium">
-                                                    TMA: <strong className="text-gray-700 font-mono">{item.TMA_Telefonia || '--'}</strong>
+                                                <span className="text-[11px] text-muted-hub font-medium">
+                                                    TMA: <strong className="text-secondary-hub font-mono">{item.TMA_Telefonia || '--'}</strong>
                                                 </span>
                                             )}
                                             {activeTab === 'monthly' && (
-                                                <span className="text-[11px] text-gray-500 font-medium">
+                                                <span className="text-[11px] text-muted-hub font-medium">
                                                     {item.evaluatorName || 'Gestão'}
                                                 </span>
                                             )}
                                         </td>
 
                                         {/* COLUNA: AÇÕES */}
-                                        <td className="px-3.5 py-2 text-right">
-                                            <div className="flex items-center justify-end gap-1.5" onClick={e => e.stopPropagation()}>
+                                        <td className="px-4 py-3 text-right">
+                                            <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                                                 {(activeTab === 'feedbacks' || activeTab === 'monthly') && !item.read && (
                                                     <button 
                                                         onClick={() => handleMarkAsRead(item.id)} 
-                                                        className="text-[10px] font-bold text-fuchsia-600 hover:text-fuchsia-700 uppercase transition-colors cursor-pointer mr-1"
+                                                        className="text-[10px] font-bold text-rose-500 hover:text-rose-600 uppercase transition-colors cursor-pointer mr-1"
                                                     >
                                                         Marcar Lido
                                                     </button>
                                                 )}
                                                 <button 
                                                     onClick={() => handleViewItem(item)} 
-                                                    className="px-2.5 py-1 bg-gray-50 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-lg flex items-center gap-1 transition-colors border border-gray-200 cursor-pointer font-bold text-xs shadow-2xs"
+                                                    className="px-3 py-1.5 bg-subtle hover:bg-rose-500/10 text-secondary-hub hover:text-rose-500 rounded-xl flex items-center gap-1.5 transition-colors border border-subtle cursor-pointer font-bold text-xs shadow-2xs"
                                                 >
-                                                    <Eye className="w-3 h-3 text-red-600" />
+                                                    <Eye className="w-3.5 h-3.5 text-rose-500" />
                                                     <span>Detalhes</span>
                                                 </button>
                                             </div>
@@ -1052,48 +1044,48 @@ const MyHistory = ({ currentUserId }) => {
                         </table>
                     </div>
                 ) : (
-                    /* VISUALIZAÇÃO EM GRADE DE CARDS COMPACTOS */
-                    <div className="p-3 sm:p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 overflow-y-auto flex-1">
+                    /* VISUALIZAÇÃO EM GRADE DE CARDS */
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 overflow-y-auto flex-1">
                         {paginatedData.map(item => (
                             <div 
                                 key={item.id}
                                 onClick={() => handleViewItem(item)}
-                                className={`bg-white rounded-xl p-3 border transition-all hover:shadow-xs cursor-pointer flex flex-col justify-between ${
+                                className={`bg-surface rounded-2xl p-4 border transition-all hover:shadow-xs cursor-pointer flex flex-col justify-between ${
                                     activeTab === 'feedbacks' && !item.read 
-                                        ? 'border-fuchsia-300 bg-fuchsia-50/20' 
-                                        : 'border-gray-200 hover:border-red-300'
+                                        ? 'border-rose-500/40 bg-rose-500/5' 
+                                        : 'border-subtle hover:border-rose-500/30'
                                 }`}
                             >
-                                <div className="space-y-2">
+                                <div className="space-y-3">
                                     {/* Topo do Card */}
                                     <div className="flex justify-between items-center gap-2">
-                                        <span className="text-[11px] text-gray-500 font-semibold flex items-center gap-1">
-                                            <Calendar className="w-3 h-3 text-gray-400" />
+                                        <span className="text-[11px] text-muted-hub font-semibold flex items-center gap-1">
+                                            <Calendar className="w-3.5 h-3.5 opacity-70" />
                                             {getSafeDateString(item)}
                                         </span>
 
                                         {/* Badge Principal */}
                                         {activeTab === 'feedbacks' && (
-                                            <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                                                item.type === 'Elogio' ? 'bg-emerald-50 text-emerald-800 border-emerald-200' : 
-                                                item.type === 'Ponto de Melhoria' ? 'bg-amber-50 text-amber-800 border-amber-200' : 
-                                                'bg-blue-50 text-blue-800 border-blue-200'
+                                            <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+                                                item.type === 'Elogio' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 
+                                                item.type === 'Ponto de Melhoria' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' : 
+                                                'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
                                             }`}>
                                                 {item.type}
                                             </span>
                                         )}
                                         {activeTab === 'audits' && (
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
                                                 item.status === 'Conforme' 
-                                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                                    : 'bg-red-50 text-red-700 border-red-200'
+                                                    ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                                                    : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
                                             }`}>
-                                                {item.status === 'Conforme' ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <XCircle className="w-3 h-3 text-red-600" />}
+                                                {item.status === 'Conforme' ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <XCircle className="w-3 h-3 text-rose-500" />}
                                                 {item.status}
                                             </span>
                                         )}
                                         {activeTab === 'metrics' && (
-                                            <span className="font-mono font-black text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                                            <span className="font-mono font-black text-xs text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-lg border border-amber-500/20">
                                                 {item.pontuacao || 0} pts
                                             </span>
                                         )}
@@ -1102,29 +1094,29 @@ const MyHistory = ({ currentUserId }) => {
 
                                     {/* Corpo do Card */}
                                     {activeTab === 'feedbacks' && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-2.5">
                                             {/* Status de Leitura & Canal */}
                                             <div className="flex items-center justify-between text-[11px] gap-1">
                                                 {!item.read ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-300 animate-pulse">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-fuchsia-600" />
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                                                         Novo
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200">
-                                                        <CheckCheck className="w-3 h-3 text-emerald-600" />
+                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20">
+                                                        <CheckCheck className="w-3 h-3 text-emerald-500" />
                                                         Lido
                                                     </span>
                                                 )}
 
                                                 <div className="flex items-center gap-1">
                                                     {item.method && (
-                                                        <span className="text-[10px] text-gray-600 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded font-medium">
+                                                        <span className="text-[10px] text-secondary-hub bg-subtle border border-subtle px-1.5 py-0.5 rounded font-medium">
                                                             {item.method}
                                                         </span>
                                                     )}
                                                     {item.protocol && item.protocol !== 'N/A' && (
-                                                        <span className="text-[10px] font-mono font-bold text-gray-700 bg-gray-100 border border-gray-200 px-1.5 py-0.5 rounded">
+                                                        <span className="text-[10px] font-mono font-bold text-primary-hub bg-subtle border border-subtle px-1.5 py-0.5 rounded">
                                                             ID: {item.protocol}
                                                         </span>
                                                     )}
@@ -1135,33 +1127,33 @@ const MyHistory = ({ currentUserId }) => {
                                             {Array.isArray(item.tags) && item.tags.length > 0 && (
                                                 <div className="flex items-center gap-1 flex-wrap">
                                                     {item.tags.map(t => (
-                                                        <span key={t} className="text-[9px] font-bold bg-red-50 text-red-700 px-1.5 py-0.5 rounded border border-red-200">
+                                                        <span key={t} className="text-[9px] font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 px-1.5 py-0.5 rounded border border-rose-500/20">
                                                             {t}
                                                         </span>
                                                     ))}
                                                 </div>
                                             )}
 
-                                            <p className="text-xs text-gray-700 line-clamp-3 leading-snug bg-gray-50/70 p-2 rounded-lg border border-gray-100 italic">
+                                            <p className="text-xs text-secondary-hub line-clamp-3 leading-snug bg-subtle p-2.5 rounded-xl border border-subtle italic">
                                                 &quot;{item.comment || 'Sem mensagem descritiva.'}&quot;
                                             </p>
 
                                             {item.createdBy && (
-                                                <div className="text-[10px] text-gray-400">
-                                                    Líder: <strong className="text-gray-700">{resolveUserName(item.createdBy)}</strong>
+                                                <div className="text-[10px] text-muted-hub">
+                                                    Líder: <strong className="text-secondary-hub">{resolveUserName(item.createdBy)}</strong>
                                                 </div>
                                             )}
                                         </div>
                                     )}
 
                                     {activeTab === 'audits' && (
-                                        <div className="space-y-1">
-                                            <h4 className="text-xs font-bold text-gray-900 leading-snug truncate">
+                                        <div className="space-y-1.5">
+                                            <h4 className="text-xs font-bold text-primary-hub leading-snug truncate">
                                                 {item.processName || qaProcesses[item.processId]?.name || 'Procedimento de Suporte'}
                                             </h4>
-                                            <div className="flex items-center justify-between text-[11px] text-gray-500 pt-0.5">
+                                            <div className="flex items-center justify-between text-[11px] text-muted-hub pt-1">
                                                 <span>Protocolo:</span>
-                                                <span className="font-mono font-bold text-gray-800 bg-gray-50 px-1.5 py-0.5 rounded border border-gray-200/60">
+                                                <span className="font-mono font-bold text-primary-hub bg-subtle px-1.5 py-0.5 rounded border border-subtle">
                                                     {item.protocol || 'N/A'}
                                                 </span>
                                             </div>
@@ -1169,59 +1161,40 @@ const MyHistory = ({ currentUserId }) => {
                                     )}
 
                                     {activeTab === 'metrics' && (
-                                        <div className="grid grid-cols-2 gap-1.5 text-xs pt-0.5">
-                                            <div className="bg-gray-50 p-1.5 rounded-lg border border-gray-100">
-                                                <span className="text-[9px] text-gray-400 block font-bold uppercase">Ligações</span>
-                                                <span className="font-black text-gray-800 text-xs">{item.Ligacoes_Atendidas || 0}</span>
+                                        <div className="space-y-1.5 text-xs text-secondary-hub">
+                                            <div className="flex justify-between">
+                                                <span>Ligações Atendidas:</span>
+                                                <strong className="text-primary-hub font-mono">{item.Ligacoes_Atendidas || 0}</strong>
                                             </div>
-                                            <div className="bg-gray-50 p-1.5 rounded-lg border border-gray-100">
-                                                <span className="text-[9px] text-gray-400 block font-bold uppercase">Huggy</span>
-                                                <span className="font-black text-gray-800 text-xs">{item.Atendimentos_Huggy || 0}</span>
+                                            <div className="flex justify-between">
+                                                <span>Atendimentos Huggy:</span>
+                                                <strong className="text-primary-hub font-mono">{item.Atendimentos_Huggy || 0}</strong>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>TMA Telefonia:</span>
+                                                <strong className="text-primary-hub font-mono">{item.TMA_Telefonia || '--'}</strong>
                                             </div>
                                         </div>
                                     )}
 
                                     {activeTab === 'monthly' && (
-                                        <div className="space-y-1 text-xs">
-                                            <div className="flex items-center justify-between gap-1 flex-wrap">
-                                                <div className="text-gray-600">
-                                                    Mês: <strong className="font-mono font-bold text-gray-900">{formatMonth(item.referenceMonth)}</strong>
-                                                </div>
-                                                {isLegacy4PillarsFeedback(item) ? (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200">
-                                                        <Archive className="w-3 h-3 text-amber-600" />
-                                                        <span>Legado</span>
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                                        <FileText className="w-3 h-3 text-blue-600" />
-                                                        <span>Markdown</span>
-                                                    </span>
-                                                )}
+                                        <div className="space-y-1.5 text-xs text-secondary-hub">
+                                            <div className="flex justify-between">
+                                                <span>Mês de Referência:</span>
+                                                <strong className="text-primary-hub font-mono">{formatMonth(item.referenceMonth)}</strong>
                                             </div>
-                                            <div className="text-gray-500 text-[11px]">
-                                                Avaliador: <strong className="text-gray-700">{item.evaluatorName || 'Gestão'}</strong>
-                                            </div>
-                                            <div className="text-[11px] font-bold mt-1">
-                                                {item.read ? (
-                                                    <span className="text-emerald-600 flex items-center gap-1">
-                                                        <CheckCheck className="w-3.5 h-3.5" /> Confirmado
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-amber-600 flex items-center gap-1">
-                                                        <Clock className="w-3.5 h-3.5" /> Leitura Pendente
-                                                    </span>
-                                                )}
+                                            <div className="flex justify-between">
+                                                <span>Avaliador:</span>
+                                                <strong className="text-primary-hub">{item.evaluatorName || 'Gestão'}</strong>
                                             </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Rodapé do Card com Ação */}
-                                <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
-                                    <span className="text-[10px] text-gray-400 font-medium">Ver completo</span>
-                                    <span className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1">
-                                        <Eye className="w-3 h-3" /> Detalhes
+                                <div className="mt-3 pt-2.5 border-t border-subtle flex items-center justify-between">
+                                    <span className="text-[10px] text-muted-hub font-medium">Ver completo</span>
+                                    <span className="text-xs font-bold text-rose-500 hover:text-rose-600 flex items-center gap-1">
+                                        <Eye className="w-3.5 h-3.5" /> Detalhes
                                     </span>
                                 </div>
                             </div>
@@ -1229,23 +1202,23 @@ const MyHistory = ({ currentUserId }) => {
                     </div>
                 )}
 
-                {/* BARRA DE PAGINAÇÃO COMPACTA */}
+                {/* BARRA DE PAGINAÇÃO */}
                 {filteredData.length > 0 && (
-                    <footer className="px-3 py-1.5 sm:py-2 bg-gray-50 border-t border-gray-200 flex flex-wrap items-center justify-between gap-2 text-xs text-gray-600 shrink-0">
+                    <footer className="px-4 py-3 bg-subtle border-t border-subtle flex flex-wrap items-center justify-between gap-2 text-xs text-secondary-hub shrink-0">
                         <div className="flex items-center gap-2">
                             <span>
-                                Exibindo <strong className="text-gray-900 font-bold">{Math.min(filteredData.length, (currentPage - 1) * itemsPerPage + 1)}</strong>-
-                                <strong className="text-gray-900 font-bold">{Math.min(filteredData.length, currentPage * itemsPerPage)}</strong> de <strong className="text-gray-900 font-bold">{filteredData.length}</strong>
+                                Exibindo <strong className="text-primary-hub font-bold">{Math.min(filteredData.length, (currentPage - 1) * itemsPerPage + 1)}</strong>-
+                                <strong className="text-primary-hub font-bold">{Math.min(filteredData.length, currentPage * itemsPerPage)}</strong> de <strong className="text-primary-hub font-bold">{filteredData.length}</strong>
                             </span>
                             <div className="flex items-center gap-1 ml-2 text-[11px]">
-                                <span className="text-gray-400 hidden sm:inline">Por pág:</span>
+                                <span className="text-muted-hub hidden sm:inline">Por pág:</span>
                                 <select
                                     value={itemsPerPage}
                                     onChange={(e) => {
                                         setItemsPerPage(Number(e.target.value));
                                         setCurrentPage(1);
                                     }}
-                                    className="bg-white border border-gray-200 rounded px-1.5 py-0.5 font-semibold text-gray-700 outline-none cursor-pointer"
+                                    className="bg-surface border border-subtle rounded-lg px-2 py-0.5 font-semibold text-primary-hub outline-none cursor-pointer"
                                 >
                                     <option value={10}>10</option>
                                     <option value={15}>15</option>
@@ -1261,19 +1234,19 @@ const MyHistory = ({ currentUserId }) => {
                                     type="button"
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="p-1 rounded-md bg-white border border-gray-200 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                                    className="p-1.5 rounded-lg bg-surface border border-subtle hover:bg-subtle disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                                     title="Página anterior"
                                 >
                                     <ChevronLeft className="w-3.5 h-3.5" />
                                 </button>
-                                <span className="px-2 font-bold text-gray-700 text-[11px]">
+                                <span className="px-2 font-bold text-primary-hub text-[11px]">
                                     {currentPage} / {totalPages}
                                 </span>
                                 <button
                                     type="button"
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="p-1 rounded-md bg-white border border-gray-200 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                                    className="p-1.5 rounded-lg bg-surface border border-subtle hover:bg-subtle disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
                                     title="Próxima página"
                                 >
                                     <ChevronRight className="w-3.5 h-3.5" />
@@ -1284,11 +1257,9 @@ const MyHistory = ({ currentUserId }) => {
                 )}
             </div>
 
-            {/* ========================================================================= */}
-            {/* MODAIS REFATORADOS DE VISUALIZAÇÃO DETALHADA                               */}
-            {/* ========================================================================= */}
+            {/* MODAIS DE VISUALIZAÇÃO DETALHADA */}
 
-            {/* 1. Modal de Análise Detalhada da Auditoria QA (com etapas e critérios) */}
+            {/* 1. Modal de Análise Detalhada da Auditoria QA */}
             {viewingItem && activeTab === 'audits' && (
                 <AuditDetailModal
                     isOpen={true}
@@ -1299,7 +1270,7 @@ const MyHistory = ({ currentUserId }) => {
                 />
             )}
 
-            {/* 2. Modal Refatorado de Feedback */}
+            {/* 2. Modal de Feedback */}
             {viewingItem && activeTab === 'feedbacks' && (
                 <FeedbackDetailModal
                     isOpen={true}
@@ -1309,7 +1280,7 @@ const MyHistory = ({ currentUserId }) => {
                 />
             )}
 
-            {/* 3. Modal Refatorado de Desempenho Semanal */}
+            {/* 3. Modal de Desempenho Semanal */}
             {viewingItem && activeTab === 'metrics' && (
                 <WeeklyMetricDetailModal
                     isOpen={true}
@@ -1318,7 +1289,7 @@ const MyHistory = ({ currentUserId }) => {
                 />
             )}
 
-            {/* 4. Modal Refatorado de Avaliação Mensal 1:1 */}
+            {/* 4. Modal de Avaliação Mensal 1:1 */}
             {viewingItem && activeTab === 'monthly' && (
                 <MonthlyEvaluationDetailModal
                     isOpen={true}

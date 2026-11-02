@@ -43,7 +43,7 @@ export default function MassiveOutageBanner({ reports = [], onFilterByRegion, ac
     const isFilteringThis = activeRegionFilter === primaryOutage.region;
 
     return (
-        <div className="mb-4 rounded-xl border border-rose-500/30 bg-gradient-to-r from-rose-950/60 via-slate-900 to-slate-900 p-4 text-slate-100 shadow-lg shadow-rose-950/20 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="mb-4 rounded-2xl border border-rose-500/30 bg-surface p-5 text-primary-hub shadow-md shadow-rose-950/5 relative overflow-hidden animate-in fade-in duration-200">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                 <div className="flex items-start gap-3">
                     <div className="p-2 rounded-lg bg-rose-500/20 text-rose-400 border border-rose-500/30 shrink-0">

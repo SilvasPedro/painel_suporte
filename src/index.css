@@ -2,6 +2,136 @@
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
+/* ========================================================================== */
+/* DESIGN TOKENS & VARIÁVEIS SEMÂNTICAS DO HUBDESK 4.0                        */
+/* ========================================================================== */
+:root, [data-theme="light"] {
+  --bg-canvas: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #f1f5f9;
+  --bg-subtle: #f8fafc;
+  --border-subtle: #e2e8f0;
+  --border-strong: #cbd5e1;
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+  --text-muted: #94a3b8;
+  --brand-primary: #e11d48;
+  --brand-primary-hover: #be123c;
+  --brand-surface: #fff1f2;
+  --brand-border: #fecdd3;
+  --card-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05);
+  --card-shadow-hover: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+  --glass-bg: rgba(255, 255, 255, 0.85);
+  --glass-border: rgba(226, 232, 240, 0.8);
+}
+
+[data-theme="warm"] {
+  --bg-canvas: #dfd7ca;
+  --bg-surface: #ede6dc;
+  --bg-surface-hover: #e5ded3;
+  --bg-subtle: #e2d9cd;
+  --border-subtle: #cdbfae;
+  --border-strong: #bdae9c;
+  --text-primary: #261f1c;
+  --text-secondary: #574a43;
+  --text-muted: #88786f;
+  --brand-primary: #c2410c;
+  --brand-primary-hover: #9a3412;
+  --brand-surface: #faebe2;
+  --brand-border: #f4cfbe;
+  --card-shadow: 0 1px 3px 0 rgb(60 40 20 / 0.08);
+  --card-shadow-hover: 0 8px 16px -2px rgb(60 40 20 / 0.12);
+  --glass-bg: rgba(237, 230, 220, 0.85);
+  --glass-border: rgba(205, 191, 174, 0.8);
+}
+
+[data-theme="dark"] {
+  --bg-canvas: #090a0f;
+  --bg-surface: #111319;
+  --bg-surface-hover: #171a22;
+  --bg-subtle: #181b24;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+  --brand-primary: #f43f5e;
+  --brand-primary-hover: #fb7185;
+  --brand-surface: rgba(244, 63, 94, 0.1);
+  --brand-border: rgba(244, 63, 94, 0.25);
+  --card-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 20px -2px rgba(0, 0, 0, 0.5);
+  --card-shadow-hover: 0 0 0 1px rgba(244, 63, 94, 0.2), 0 8px 30px -4px rgba(0, 0, 0, 0.7);
+  --glass-bg: rgba(17, 19, 25, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.1);
+}
+
+/* ========================================================================== */
+/* UTILITÁRIOS SEMÂNTICOS & MAGIC UI                                         */
+/* ========================================================================== */
+.bg-canvas { background-color: var(--bg-canvas); }
+.bg-surface { background-color: var(--bg-surface); }
+.bg-surface-hover:hover { background-color: var(--bg-surface-hover); }
+.bg-subtle { background-color: var(--bg-subtle); }
+
+.border-canvas { border-color: var(--bg-canvas) !important; }
+.border-surface { border-color: var(--bg-surface) !important; }
+.border-subtle { border-color: var(--border-subtle) !important; }
+.border-strong { border-color: var(--border-strong) !important; }
+
+/* Proteção universal de divisores contra fallback preto (currentColor) */
+.divide-subtle > :not([hidden]) ~ :not([hidden]),
+.divide-subtle {
+  border-color: var(--border-subtle) !important;
+}
+
+.divide-surface > :not([hidden]) ~ :not([hidden]),
+.divide-surface {
+  border-color: var(--bg-surface) !important;
+}
+
+.divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-top-color: var(--border-subtle);
+}
+
+.divide-x > :not([hidden]) ~ :not([hidden]) {
+  border-left-color: var(--border-subtle);
+}
+
+/* Linhas e bordas de tabelas em todos os temas */
+table tr,
+table td,
+table th {
+  border-color: var(--border-subtle);
+}
+
+.text-primary-hub { color: var(--text-primary); }
+.text-secondary-hub { color: var(--text-secondary); }
+.text-muted-hub { color: var(--text-muted); }
+
+.glass-panel {
+  background-color: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* Shimmer Animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite linear;
+}
+
+/* Border Beam */
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
 .font-brand {
     font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
 }

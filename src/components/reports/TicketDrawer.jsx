@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { 
+    Hourglass,
     X, Clock, User, CheckCircle2, AlertTriangle, ShieldCheck, 
     Copy, Check, MessageSquare, Send, ExternalLink, Network,
     Terminal, ArrowRight, CornerDownRight, Sparkles, Bug,
@@ -82,10 +83,10 @@ export default function TicketDrawer({
             />
 
             <div className="fixed inset-y-0 right-0 max-w-full flex pl-8 sm:pl-10">
-                <div className="w-screen max-w-xl bg-slate-900 border-l border-slate-800 text-slate-100 shadow-2xl flex flex-col h-full transform transition ease-in-out duration-300">
+                <div className="w-screen max-w-xl bg-surface border-l border-subtle text-primary-hub shadow-2xl flex flex-col h-full transform transition ease-in-out duration-300">
                     
                     {/* Header do Drawer */}
-                    <div className="px-6 py-4 border-b border-slate-800/80 bg-slate-900/95 flex items-center justify-between shrink-0">
+                    <div className="px-6 py-4 border-b border-subtle bg-surface/95 backdrop-blur-xs flex items-center justify-between shrink-0">
                         <div className="flex items-center gap-2.5 overflow-hidden">
                             {/* Badge Compacto de SLA */}
                             <span className={`text-[11px] font-mono font-bold px-2 py-0.5 rounded-md border shrink-0 ${sla.badgeClass}`}>
@@ -140,6 +141,8 @@ export default function TicketDrawer({
                                         ? 'bg-emerald-950/50 text-emerald-300 border-emerald-500/30' 
                                         : report.status === 'Em Andamento'
                                         ? 'bg-sky-950/50 text-sky-300 border-sky-500/30'
+                                        : report.status === 'Suspenso'
+                                        ? 'bg-purple-950/50 text-purple-300 border-purple-500/30'
                                         : 'bg-amber-950/50 text-amber-300 border-amber-500/30'
                                 }`}>
                                     {report.status || 'Pendente'}
@@ -216,7 +219,7 @@ export default function TicketDrawer({
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                                     Atualizar Fila / Status
                                 </div>
-                                <div className="grid grid-cols-3 gap-2">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                     <button
                                         type="button"
                                         onClick={() => onUpdateStatus(report.id, 'Pendente')}
@@ -238,6 +241,17 @@ export default function TicketDrawer({
                                         }`}
                                     >
                                         Em Andamento
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => onUpdateStatus(report.id, 'Suspenso')}
+                                        className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
+                                            report.status === 'Suspenso'
+                                                ? 'bg-purple-600 text-white border-purple-500'
+                                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
+                                        }`}
+                                    >
+                                        Suspenso
                                     </button>
                                     <button
                                         type="button"

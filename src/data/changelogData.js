@@ -1,6 +1,6 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v3.11.0';
+export const CURRENT_VERSION = 'v4.0.0';
 
 export const CHANGELOG_VERSIONS = [
   {

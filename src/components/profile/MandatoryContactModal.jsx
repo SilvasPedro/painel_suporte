@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Phone, Headphones, Save, Loader2, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import { Phone, Headphones, Save, Loader2, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
 import { useNotification } from '../../context/NotificationContext';
+import { BorderBeam } from '../magicui/BorderBeam';
 
 const formatPhoneNumber = (val) => {
     if (!val) return '';
@@ -80,7 +81,7 @@ export const MandatoryContactModal = () => {
             const colabRef = doc(db, 'collaborators', firestoreId);
             await setDoc(colabRef, payload, { merge: true });
 
-            // Tenta também sincronizar na coleção 'users' se houver documento
+            // Sincroniza também na coleção 'users' se houver documento
             try {
                 const userRef = doc(db, 'users', firestoreId);
                 await setDoc(userRef, payload, { merge: true });
@@ -101,94 +102,101 @@ export const MandatoryContactModal = () => {
     return (
         <div className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div 
-                className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-red-200 animate-in zoom-in-95 duration-200"
+                className="relative bg-surface rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-subtle animate-in zoom-in-95 duration-200"
                 onClick={(e) => e.stopPropagation()}
             >
-                {/* Cabeçalho de Destaque */}
-                <div className="p-6 bg-gradient-to-r from-red-600 via-red-700 to-rose-700 text-white relative overflow-hidden">
+                {/* BorderBeam sutil destacando a obrigatoriedade com elegância */}
+                <BorderBeam size={220} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
+
+                {/* Cabeçalho de Destaque com visual corporativo */}
+                <div className="p-6 bg-gradient-to-r from-rose-600 via-rose-700 to-red-800 text-white relative overflow-hidden">
                     <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
                     <div className="relative z-10 flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-xs">
-                            <Phone className="w-6 h-6 animate-pulse" />
+                        <div className="w-12 h-12 rounded-2xl bg-white/20 border border-white/30 flex items-center justify-center text-white shrink-0 shadow-sm">
+                            <ShieldCheck className="w-6 h-6" />
                         </div>
                         <div>
-                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full text-white/90 mb-1">
-                                <Sparkles className="w-3 h-3 text-amber-300" />
-                                Cadastro Obrigatório • v3.9
-                            </span>
-                            <h2 className="text-base font-black text-white leading-tight">
-                                Informações de Contato
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-black tracking-widest uppercase bg-white/20 text-white px-2 py-0.5 rounded-full border border-white/25">
+                                    Segurança & Comunicação
+                                </span>
+                            </div>
+                            <h2 className="text-base sm:text-lg font-black tracking-tight text-white mt-1">
+                                Cadastro de Contatos
                             </h2>
+                            <p className="text-xs text-rose-100">
+                                Preencha seus dados de comunicação interna
+                            </p>
                         </div>
                     </div>
                 </div>
 
-                {/* Corpo do Modal */}
+                {/* Formulário com design de alta fidelidade */}
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 leading-relaxed flex items-start gap-2.5">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="p-3.5 bg-subtle border border-subtle rounded-2xl text-xs text-secondary-hub leading-relaxed flex items-start gap-3">
+                        <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                         <div>
-                            <strong className="block font-bold">Atualização de Segurança e Comunicação</strong>
-                            Para continuar utilizando a plataforma, preencha o seu telefone/WhatsApp e o seu ramal. Esses dados são indispensáveis para a comunicação entre a equipe.
+                            <strong className="block font-bold text-primary-hub mb-0.5">Atualização Obrigatória</strong>
+                            Para navegar no HubDesk, informe seu WhatsApp/Telefone e Ramal. Esses dados são indispensáveis para os fluxos da equipe e plantões.
                         </div>
                     </div>
 
                     {errorMsg && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 font-semibold flex items-center gap-2 animate-in fade-in">
-                            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                        <div className="p-3 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-600 dark:text-rose-400 font-semibold flex items-center gap-2 animate-in fade-in">
+                            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
                             <span>{errorMsg}</span>
                         </div>
                     )}
 
                     {/* Telefone / WhatsApp */}
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-800 flex items-center justify-between">
+                        <label className="text-xs font-bold text-primary-hub flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
-                                <Phone className="w-3.5 h-3.5 text-red-600" />
+                                <Phone className="w-3.5 h-3.5 text-rose-500" />
                                 Telefone / WhatsApp de Contato
                             </span>
-                            <span className="text-[10px] text-red-600 font-bold uppercase">*Obrigatório</span>
+                            <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">*Obrigatório</span>
                         </label>
                         <input
                             type="tel"
                             value={phone}
                             onChange={handlePhoneChange}
                             placeholder="(11) 98765-4321"
-                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-gray-400"
+                            className="w-full px-3.5 py-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-muted-hub"
                             autoFocus
                         />
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-[10px] text-muted-hub">
                             Número com DDD para contato direto e integração com WhatsApp.
                         </p>
                     </div>
 
                     {/* Ramal */}
                     <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-gray-800 flex items-center justify-between">
+                        <label className="text-xs font-bold text-primary-hub flex items-center justify-between">
                             <span className="flex items-center gap-1.5">
-                                <Headphones className="w-3.5 h-3.5 text-red-600" />
+                                <Headphones className="w-3.5 h-3.5 text-rose-500" />
                                 Número do seu Ramal
                             </span>
-                            <span className="text-[10px] text-red-600 font-bold uppercase">*Obrigatório</span>
+                            <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">*Obrigatório</span>
                         </label>
                         <input
                             type="text"
                             value={ramal}
                             onChange={handleRamalChange}
                             placeholder="Ex: 2045 ou 20"
-                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl text-xs font-medium text-gray-900 outline-none focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-red-600 transition-all placeholder:text-gray-400"
+                            className="w-full px-3.5 py-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-muted-hub"
                         />
-                        <p className="text-[10px] text-gray-500">
+                        <p className="text-[10px] text-muted-hub">
                             Número do seu ramal VoIP interno para ligações entre operadores.
                         </p>
                     </div>
 
-                    {/* Botão de Salvar Obrigatório */}
+                    {/* Botão de Salvar */}
                     <div className="pt-2">
                         <button
                             type="submit"
                             disabled={saving}
-                            className="w-full py-3 bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-red-950/20 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-[0.99]"
+                            className="w-full py-3 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white text-xs sm:text-sm font-bold rounded-xl shadow-lg shadow-rose-900/25 flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 active:scale-[0.99]"
                         >
                             {saving ? (
                                 <>

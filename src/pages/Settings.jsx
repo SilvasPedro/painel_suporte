@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, Clock, Headphones, CheckCircle2, Sparkles, Bell, Volume2, VolumeX, Send, AlertTriangle, XCircle, Info, Tag, Activity, RotateCcw } from 'lucide-react';
+import { 
+    Settings as SettingsIcon, Target, ShieldCheck, Loader2, Save, Shield, Eye, 
+    Clock, Headphones, CheckCircle2, Sparkles, Bell, Volume2, VolumeX, Send, 
+    AlertTriangle, XCircle, Info, Tag, Activity, RotateCcw, Zap, Server, Check,
+    Sliders, Smartphone, ArrowRight
+} from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedDocument, subscribeSharedCollection } from '../services/dataCache';
@@ -77,7 +82,7 @@ const Settings = () => {
         setSavingGoals(true);
         try {
             await setDoc(doc(db, "system_settings", "sector_goals"), goals);
-            showToast("Metas atualizadas com sucesso!", "success");
+            showToast("Metas globais atualizadas com sucesso no banco de dados!", "success");
         } catch {
             showToast("Erro ao atualizar metas.", "error");
         } finally {
@@ -98,7 +103,7 @@ const Settings = () => {
                 updatedAt: new Date().toISOString()
             };
             await setDoc(doc(db, "system_settings", "sla_config"), payload);
-            showToast("Prazos de SLA atualizados com sucesso!", "success");
+            showToast("Prazos de SLA propagados com sucesso para todo o sistema!", "success");
         } catch {
             showToast("Erro ao salvar SLA.", "error");
         } finally {
@@ -109,86 +114,436 @@ const Settings = () => {
     // --- RESTAURAR PADRÕES DE FÁBRICA SLA ---
     const handleResetDefaultSla = () => {
         setSlaConfig(DEFAULT_SLA_PRESETS);
-        showToast("Padrões ISP restaurados no formulário (48h, 120h, 72h, 72h). Clique em 'Salvar' para gravar.", "info");
+        showToast("Padrões ISP restaurados no formulário (48h, 120h, 72h, 72h). Clique em 'Salvar Prazos de SLA' para gravar.", "info");
     };
 
+    // SLA Médio Calculado
+    const averageSlaHours = Math.round(
+        (Number(slaConfig.error_analysis || 48) + 
+         Number(slaConfig.system_improvement || 120) + 
+         Number(slaConfig.facility_improvement || 72) + 
+         Number(slaConfig.other || 72)) / 4
+    );
+
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
+        <div className="w-full min-w-0 flex-1 p-4 sm:p-6 lg:p-8 h-full overflow-y-auto bg-canvas flex flex-col font-sans space-y-6">
+            
+            {/* CABEÇALHO EXECUTIVO (NO FUNDO DA PÁGINA) */}
+            <header className="mb-2 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <SettingsIcon className="w-6 h-6 text-red-600" /> Configurações do Sistema
-                    </h1>
-                    <p className="text-sm text-gray-500">Ajuste de metas e padronização de processos.</p>
-                </div>
-                {!isEditable && (
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-200 text-amber-800 rounded-lg text-xs font-semibold">
-                        <Eye className="w-4 h-4 text-amber-600" />
-                        Apenas Leitura ({activeRoleInfo?.label || normalizedRole})
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Governança & Parametrização Central</span>
                     </div>
-                )}
+                    <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
+                        Configurações do Sistema
+                    </h1>
+                    <p className="text-xs text-secondary-hub mt-0.5">
+                        Gerenciamento de diretrizes corporativas, SLAs parametrizados, matriz RBAC e notificações Web Push.
+                    </p>
+                </div>
+
+                <div className="flex items-center gap-3">
+                    {!isEditable ? (
+                        <div className="flex items-center gap-2 px-3.5 py-2 bg-surface border border-subtle text-secondary-hub rounded-xl text-xs font-semibold shadow-xs">
+                            <Eye className="w-4 h-4 text-amber-500" />
+                            <span>Modo Visualização ({activeRoleInfo?.label || normalizedRole})</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-2 px-3.5 py-2 bg-surface border border-subtle text-secondary-hub rounded-xl text-xs font-semibold shadow-xs">
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <span>Acesso Total ({activeRoleInfo?.label || normalizedRole})</span>
+                        </div>
+                    )}
+                </div>
             </header>
 
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm mb-6 shrink-0 flex space-x-2 overflow-x-auto">
-                <button onClick={() => setActiveTab('goals')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'goals' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                    <Target className="w-4 h-4"/> Metas Globais & SLA
+            {/* GRID BENTO DE INDICADORES VIVOS DE GOVERNANÇA (100% WIDTH) */}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                {/* KPI 1: Metas Estratégicas */}
+                <div className="p-4 rounded-2xl bg-surface border border-subtle shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Metas Setoriais</span>
+                        <Target className="w-4 h-4 text-rose-500" />
+                    </div>
+                    <div className="mt-2">
+                        <div className="text-lg sm:text-xl font-black text-primary-hub font-mono">
+                            FCR ≥{goals.fcr}% <span className="text-xs font-normal text-muted-hub">| QA ≥{goals.qa}%</span>
+                        </div>
+                        <span className="text-[11px] text-secondary-hub block mt-0.5">TMR alvo: ≤{goals.tmr}</span>
+                    </div>
+                </div>
+
+                {/* KPI 2: SLAs Parametrizados */}
+                <div className="p-4 rounded-2xl bg-surface border border-subtle shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Prazos de SLA</span>
+                        <Clock className="w-4 h-4 text-indigo-500" />
+                    </div>
+                    <div className="mt-2">
+                        <div className="text-lg sm:text-xl font-black text-primary-hub font-mono">
+                            {averageSlaHours}h <span className="text-xs font-normal text-muted-hub">médio</span>
+                        </div>
+                        <span className="text-[11px] text-secondary-hub block mt-0.5">4 categorias ativas no ISP</span>
+                    </div>
+                </div>
+
+                {/* KPI 3: Cobertura de Turnos */}
+                <div className="p-4 rounded-2xl bg-surface border border-subtle shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Expedientes</span>
+                        <Headphones className="w-4 h-4 text-amber-500" />
+                    </div>
+                    <div className="mt-2">
+                        <div className="text-lg sm:text-xl font-black text-primary-hub font-mono">
+                            24 Horas <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">100%</span>
+                        </div>
+                        <span className="text-[11px] text-secondary-hub block mt-0.5">4 turnos + Noturno terceirizado</span>
+                    </div>
+                </div>
+
+                {/* KPI 4: Web Push & Som */}
+                <div className="p-4 rounded-2xl bg-surface border border-subtle shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Web Push & Som</span>
+                        <Bell className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div className="mt-2">
+                        <div className="text-lg sm:text-xl font-black text-primary-hub">
+                            {permission === 'granted' ? (
+                                <span className="text-emerald-600 dark:text-emerald-400 font-bold">Autorizado</span>
+                            ) : permission === 'denied' ? (
+                                <span className="text-rose-600 dark:text-rose-400 font-bold">Bloqueado</span>
+                            ) : (
+                                <span className="text-amber-600 dark:text-amber-400 font-bold">Pendente</span>
+                            )}
+                        </div>
+                        <span className="text-[11px] text-secondary-hub block mt-0.5">
+                            Chime acústico: {soundEnabled ? 'Ativo' : 'Desativado'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* ========================================================================= */}
+            <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 relative overflow-hidden shrink-0">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+                    <div className="space-y-1.5">
+                        <div className="flex items-center gap-2.5">
+                            <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1.5">
+                                <Zap className="w-3.5 h-3.5" /> Governança v4.0
+                            </span>
+                            <span className="text-xs text-muted-hub">&bull;</span>
+                            <span className="text-xs font-semibold text-secondary-hub">Parametrização Central da Operação</span>
+                        </div>
+                        <h1 className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight flex items-center gap-3">
+                            <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-700 text-white flex items-center justify-center shadow-md shadow-rose-950/20">
+                                <SettingsIcon className="w-5 h-5 text-white" />
+                            </span>
+                            Configurações do Sistema
+                        </h1>
+                        <p className="text-xs sm:text-sm text-secondary-hub max-w-3xl leading-relaxed">
+                            Gerenciamento de diretrizes corporativas, SLAs com conformidade automática, matriz de controle RBAC granular, turnos de cobertura e notificações Web Push.
+                        </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 self-start lg:self-auto">
+                        {!isEditable ? (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 border border-amber-500/25 text-amber-700 dark:text-amber-400 rounded-xl text-xs font-bold">
+                                <Eye className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                                <span>Modo Visualização ({activeRoleInfo?.label || normalizedRole})</span>
+                            </div>
+                        ) : (
+                            <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                                <span>Acesso Total ({activeRoleInfo?.label || normalizedRole})</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Grid Bento de Indicadores Vivos de Governança (100% Width) */}
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mt-6 pt-6 border-t border-subtle">
+                    {/* KPI 1: Metas Estratégicas */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-subtle/60 border border-subtle flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Metas Setoriais</span>
+                            <Target className="w-4 h-4 text-rose-500" />
+                        </div>
+                        <div className="mt-2">
+                            <div className="text-lg sm:text-xl font-black text-primary-hub font-mono">
+                                FCR ≥{goals.fcr}% <span className="text-xs font-normal text-muted-hub">| QA ≥{goals.qa}%</span>
+                            </div>
+                            <span className="text-[11px] text-secondary-hub block mt-0.5">TMR alvo: ≤{goals.tmr}</span>
+                        </div>
+                    </div>
+
+                    {/* KPI 2: SLAs Parametrizados */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-subtle/60 border border-subtle flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Prazos de SLA</span>
+                            <Clock className="w-4 h-4 text-indigo-500" />
+                        </div>
+                        <div className="mt-2">
+                            <div className="text-lg sm:text-xl font-black text-primary-hub font-mono">
+                                {averageSlaHours}h <span className="text-xs font-normal text-muted-hub">médio</span>
+                            </div>
+                            <span className="text-[11px] text-secondary-hub block mt-0.5">4 categorias ativas no ISP</span>
+                        </div>
+                    </div>
+
+                    {/* KPI 3: Cobertura de Turnos */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-subtle/60 border border-subtle flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Expedientes</span>
+                            <Headphones className="w-4 h-4 text-amber-500" />
+                        </div>
+                        <div className="mt-2">
+                            <div className="text-lg sm:text-xl font-black text-primary-hub font-mono">
+                                24 Horas <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">100%</span>
+                            </div>
+                            <span className="text-[11px] text-secondary-hub block mt-0.5">4 turnos + Noturno terceirizado</span>
+                        </div>
+                    </div>
+
+                    {/* KPI 4: Web Push & Som */}
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-subtle/60 border border-subtle flex flex-col justify-between">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub">Web Push & Som</span>
+                            <Bell className="w-4 h-4 text-emerald-500" />
+                        </div>
+                        <div className="mt-2">
+                            <div className="text-lg sm:text-xl font-black text-primary-hub">
+                                {permission === 'granted' ? (
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">Autorizado</span>
+                                ) : permission === 'denied' ? (
+                                    <span className="text-rose-600 dark:text-rose-400 font-bold">Bloqueado</span>
+                                ) : (
+                                    <span className="text-amber-600 dark:text-amber-400 font-bold">Pendente</span>
+                                )}
+                            </div>
+                            <span className="text-[11px] text-secondary-hub block mt-0.5">
+                                Chime acústico: {soundEnabled ? 'Ativo' : 'Desativado'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ========================================================================= */}
+            {/* BARRA DE NAVEGAÇÃO DE ABAS EXPANSIVA (100% WIDTH COM PILL DOCK)          */}
+            {/* ========================================================================= */}
+            <div className="w-full bg-surface p-2 rounded-2xl border border-subtle shadow-xs shrink-0 flex items-center space-x-2 overflow-x-auto no-scrollbar">
+                <button 
+                    onClick={() => setActiveTab('goals')} 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+                        activeTab === 'goals' 
+                            ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' 
+                            : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle font-medium'
+                    }`}
+                >
+                    <Target className="w-4 h-4" /> Metas Globais & SLA
                 </button>
-                <button onClick={() => setActiveTab('qa')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'qa' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                    <ShieldCheck className="w-4 h-4"/> Processos QA & Checklists
+                <button 
+                    onClick={() => setActiveTab('qa')} 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+                        activeTab === 'qa' 
+                            ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' 
+                            : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle font-medium'
+                    }`}
+                >
+                    <ShieldCheck className="w-4 h-4" /> Processos QA & Checklists
                 </button>
-                <button onClick={() => setActiveTab('roles')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'roles' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                    <Shield className="w-4 h-4"/> Cargos e Permissões (RBAC)
+                <button 
+                    onClick={() => setActiveTab('roles')} 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+                        activeTab === 'roles' 
+                            ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' 
+                            : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle font-medium'
+                    }`}
+                >
+                    <Shield className="w-4 h-4" /> Cargos e Permissões (RBAC)
                 </button>
-                <button onClick={() => setActiveTab('shifts')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'shifts' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                    <Clock className="w-4 h-4"/> Expedientes & Turnos
+                <button 
+                    onClick={() => setActiveTab('shifts')} 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+                        activeTab === 'shifts' 
+                            ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' 
+                            : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle font-medium'
+                    }`}
+                >
+                    <Clock className="w-4 h-4" /> Expedientes & Turnos
                 </button>
-                <button onClick={() => setActiveTab('feedback_tags')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'feedback_tags' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                    <Tag className="w-4 h-4"/> Tags de Feedback
+                <button 
+                    onClick={() => setActiveTab('feedback_tags')} 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+                        activeTab === 'feedback_tags' 
+                            ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' 
+                            : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle font-medium'
+                    }`}
+                >
+                    <Tag className="w-4 h-4" /> Tags de Feedback
                 </button>
-                <button onClick={() => setActiveTab('notifications')} className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all whitespace-nowrap cursor-pointer ${activeTab === 'notifications' ? 'bg-red-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>
-                    <Bell className="w-4 h-4"/> Notificações Push
+                <button 
+                    onClick={() => setActiveTab('notifications')} 
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs transition-all whitespace-nowrap cursor-pointer border ${
+                        activeTab === 'notifications' 
+                            ? 'bg-rose-600 text-white border-transparent shadow-xs font-bold' 
+                            : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle font-medium'
+                    }`}
+                >
+                    <Bell className="w-4 h-4" /> Notificações Push
                 </button>
             </div>
 
+            {/* ========================================================================= */}
+            {/* ABA: CARGOS E PERMISSÕES (RBAC)                                           */}
+            {/* ========================================================================= */}
             {activeTab === 'roles' && (
-                <RbacSettingsTab />
+                <div className="w-full">
+                    <RbacSettingsTab />
+                </div>
             )}
 
+            {/* ========================================================================= */}
+            {/* ABA: EXPEDIENTES & TURNOS (100% WIDTH COM TIMELINE 24H)                   */}
+            {/* ========================================================================= */}
             {activeTab === 'shifts' && (
-                <div className="space-y-6 max-w-4xl">
-                    {/* Card dos Turnos Oficiais */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 pb-3">
+                <div className="w-full space-y-6">
+                    {/* Linha do Tempo Visual 24 Horas */}
+                    <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
                             <div>
-                                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-red-600" />
-                                    Expedientes Oficiais da Operação (v3.6)
+                                <h2 className="text-base sm:text-lg font-bold text-primary-hub flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                    Linha do Tempo de Cobertura Contínua (24 Horas)
                                 </h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    Jornadas de trabalho homologadas para analistas e equipes de suporte.
+                                <p className="text-xs text-secondary-hub mt-0.5">
+                                    Visualização esquemática da transição de escala entre os turnos diurnos e o serviço terceirizado noturno.
                                 </p>
                             </div>
-                            <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1 self-start sm:self-auto">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Ativos no Sistema
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full flex items-center gap-1.5 self-start sm:self-auto">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Sem Gargalos Operacionais
                             </span>
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                        {/* Régua de Horas Visual */}
+                        <div className="space-y-3">
+                            <div className="flex justify-between text-[11px] font-mono font-bold text-muted-hub px-1">
+                                <span>00:00</span>
+                                <span>04:00</span>
+                                <span>08:00</span>
+                                <span>12:00</span>
+                                <span>16:00</span>
+                                <span>20:00</span>
+                                <span>24:00</span>
+                            </div>
+
+                            {/* Barras de Turno na Timeline */}
+                            <div className="space-y-2 pt-1">
+                                {/* Terceirizada Noturna (22h - 06h) */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs text-secondary-hub">
+                                        <span className="font-bold flex items-center gap-1.5">
+                                            <Headphones className="w-3.5 h-3.5 text-amber-500" />
+                                            {THIRD_PARTY_SCHEDULE_INFO.title}
+                                        </span>
+                                        <span className="font-mono text-[11px] text-amber-600 dark:text-amber-400 font-bold">{THIRD_PARTY_SCHEDULE_INFO.hours}</span>
+                                    </div>
+                                    <div className="h-4 bg-subtle rounded-full overflow-hidden flex relative">
+                                        {/* 00h às 06h (25% do dia) */}
+                                        <div className="w-[25%] bg-amber-500/80 h-full rounded-l-full" title="00:00 às 06:00"></div>
+                                        {/* Espaço diurno 06h às 22h (66.6%) */}
+                                        <div className="w-[66.6%] h-full"></div>
+                                        {/* 22h às 24h (8.4% do dia) */}
+                                        <div className="w-[8.4%] bg-amber-500/80 h-full rounded-r-full" title="22:00 às 24:00"></div>
+                                    </div>
+                                </div>
+
+                                {/* Turno 1 Manhã (07h - 16h) */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs text-secondary-hub">
+                                        <span className="font-bold flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                                            Turno Manhã (07:00 às 16:00)
+                                        </span>
+                                        <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400 font-bold">07:00 - 16:00</span>
+                                    </div>
+                                    <div className="h-4 bg-subtle rounded-full overflow-hidden flex">
+                                        <div className="w-[29.1%] h-full"></div>
+                                        <div className="w-[37.5%] bg-blue-500/80 h-full rounded-full" title="07:00 às 16:00"></div>
+                                        <div className="w-[33.4%] h-full"></div>
+                                    </div>
+                                </div>
+
+                                {/* Turno 2 Intermediário (08h - 17h) */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs text-secondary-hub">
+                                        <span className="font-bold flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                                            Turno Intermediário (08:00 às 17:00)
+                                        </span>
+                                        <span className="font-mono text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">08:00 - 17:00</span>
+                                    </div>
+                                    <div className="h-4 bg-subtle rounded-full overflow-hidden flex">
+                                        <div className="w-[33.3%] h-full"></div>
+                                        <div className="w-[37.5%] bg-emerald-500/80 h-full rounded-full" title="08:00 às 17:00"></div>
+                                        <div className="w-[29.2%] h-full"></div>
+                                    </div>
+                                </div>
+
+                                {/* Turno 3 Tarde (13h - 22h) */}
+                                <div className="space-y-1">
+                                    <div className="flex justify-between text-xs text-secondary-hub">
+                                        <span className="font-bold flex items-center gap-1.5">
+                                            <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                                            Turno Tarde (13:00 às 22:00)
+                                        </span>
+                                        <span className="font-mono text-[11px] text-purple-600 dark:text-purple-400 font-bold">13:00 - 22:00</span>
+                                    </div>
+                                    <div className="h-4 bg-subtle rounded-full overflow-hidden flex">
+                                        <div className="w-[54.1%] h-full"></div>
+                                        <div className="w-[37.5%] bg-purple-500/80 h-full rounded-full" title="13:00 às 22:00"></div>
+                                        <div className="w-[8.4%] h-full"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Cards dos Turnos Oficiais em Grid 100% */}
+                    <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-subtle pb-3">
+                            <div>
+                                <h3 className="text-base sm:text-lg font-bold text-primary-hub flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                    Expedientes Oficiais da Operação Interna
+                                </h3>
+                                <p className="text-xs text-secondary-hub mt-0.5">
+                                    Jornadas de trabalho homologadas para analistas de suporte, triagem e monitoramento.
+                                </p>
+                            </div>
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full flex items-center gap-1 self-start sm:self-auto">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Ativos no Sistema
+                            </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
                             {SYSTEM_SHIFTS.map(shift => (
-                                <div key={shift.id} className="p-4 rounded-xl border border-gray-200 bg-gray-50/60 flex flex-col justify-between">
+                                <div key={shift.id} className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-black uppercase text-gray-900">{shift.label}</span>
+                                            <span className="text-xs font-black uppercase text-primary-hub">{shift.label}</span>
                                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md border ${shift.badge}`}>
                                                 {shift.id}
                                             </span>
                                         </div>
-                                        <div className="text-lg font-mono font-black text-gray-900 mt-1">
+                                        <div className="text-xl font-mono font-black text-primary-hub mt-1">
                                             {shift.hours}
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-gray-200/80 text-[11px] text-gray-500">
-                                        Início: <strong>{shift.start}</strong> • Término: <strong>{shift.end}</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub">
+                                        Início: <strong className="text-primary-hub">{shift.start}</strong> • Término: <strong className="text-primary-hub">{shift.end}</strong>
                                     </div>
                                 </div>
                             ))}
@@ -196,58 +551,58 @@ const Settings = () => {
                     </div>
 
                     {/* Card Oficial da Operação Terceirizada Noturna */}
-                    <div className="bg-zinc-950 rounded-2xl border border-zinc-800 shadow-xl p-6 text-white space-y-4">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+                    <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0">
-                                    <Headphones className="w-5 h-5 text-amber-400" />
+                                    <Headphones className="w-5 h-5 text-amber-500" />
                                 </div>
                                 <div>
-                                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                                    <h3 className="text-base font-bold text-primary-hub flex items-center gap-2">
                                         {THIRD_PARTY_SCHEDULE_INFO.title}
                                     </h3>
-                                    <p className="text-xs text-zinc-400 mt-0.5">
-                                        Período assumido por terceirizada homologada para atendimento noturno contínuo.
+                                    <p className="text-xs text-secondary-hub mt-0.5">
+                                        Período assumido por parceiro homologado para atendimento noturno contínuo.
                                     </p>
                                 </div>
                             </div>
-                            <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full self-start sm:self-auto flex items-center gap-1.5">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-400" />
+                            <span className="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-full self-start sm:self-auto flex items-center gap-1.5">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />
                                 Salvo nas Configurações do Sistema
                             </span>
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-                            <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800">
-                                <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
-                                    Horário de Cobertura
+                            <div className="p-4 rounded-2xl bg-subtle border border-subtle space-y-2">
+                                <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider block">
+                                    Horário de Cobertura Noturna
                                 </span>
-                                <span className="text-2xl font-mono font-black text-amber-400 mt-1 block">
+                                <span className="text-2xl font-mono font-black text-amber-600 dark:text-amber-400 block">
                                     {THIRD_PARTY_SCHEDULE_INFO.hours}
                                 </span>
-                                <p className="text-xs text-zinc-300 mt-2 leading-relaxed">
+                                <p className="text-xs text-secondary-hub leading-relaxed">
                                     {THIRD_PARTY_SCHEDULE_INFO.description}
                                 </p>
                             </div>
 
-                            <div className="p-4 rounded-xl bg-zinc-900 border border-zinc-800 flex flex-col justify-between">
+                            <div className="p-4 rounded-2xl bg-subtle border border-subtle flex flex-col justify-between">
                                 <div>
-                                    <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">
+                                    <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider block">
                                         Finalidade no Sistema
                                     </span>
-                                    <p className="text-xs text-zinc-300 mt-1 leading-relaxed">
+                                    <p className="text-xs text-secondary-hub mt-1 leading-relaxed">
                                         {THIRD_PARTY_SCHEDULE_INFO.note} Essa informação está registrada na base do sistema para planejamento de transição de turnos e futuras escalas.
                                     </p>
                                 </div>
                                 {isEditable && (
-                                    <div className="mt-3 pt-3 border-t border-zinc-800 flex justify-end">
+                                    <div className="mt-4 pt-3 border-t border-subtle flex justify-end">
                                         <button
                                             type="button"
                                             onClick={async () => {
                                                 const ok = await saveSystemShiftsInfo();
                                                 if (ok) showToast('Informações de turnos e terceirizada sincronizadas no Firestore!', 'success');
                                             }}
-                                            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer"
+                                            className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 text-xs font-semibold rounded-xl transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
                                         >
                                             <Save className="w-3.5 h-3.5" /> Re-sincronizar no Firestore
                                         </button>
@@ -259,24 +614,25 @@ const Settings = () => {
                 </div>
             )}
 
+            {/* ========================================================================= */}
+            {/* ABA: METAS GLOBAIS & SLA (100% WIDTH COM CARDS BENTO E ALTO CONTRASTE)   */}
+            {/* ========================================================================= */}
             {activeTab === 'goals' && (
-                <div className="space-y-6 max-w-5xl">
+                <div className="w-full space-y-6">
                     
-                    {/* ========================================================================= */}
-                    {/* BLOCO 1: METAS ESTRATÉGICAS DO SETOR (TMR, FCR, REINCIDÊNCIA, QA)        */}
-                    {/* ========================================================================= */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-6 space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                    {/* BLOCO 1: METAS ESTRATÉGICAS DO SETOR */}
+                    <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
                             <div>
-                                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                    <Target className="w-5 h-5 text-red-600" />
+                                <h2 className="text-base sm:text-lg font-bold text-primary-hub flex items-center gap-2">
+                                    <Target className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                                     Metas Estratégicas Globais da Operação
                                 </h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    Parâmetros de referência utilizados para cálculo de conformidade nos cockpits e evolução histórica.
+                                <p className="text-xs text-secondary-hub mt-0.5">
+                                    Parâmetros de referência utilizados para cálculo de conformidade nos cockpits, relatórios e evolução histórica.
                                 </p>
                             </div>
-                            <span className="text-xs font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full flex items-center gap-1.5 self-start sm:self-auto">
+                            <span className="text-xs font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-500/10 border border-indigo-500/25 px-3 py-1 rounded-full flex items-center gap-1.5 self-start sm:self-auto">
                                 <Sparkles className="w-3.5 h-3.5 text-indigo-500" /> Cockpit de KPIs Ativo
                             </span>
                         </div>
@@ -285,21 +641,21 @@ const Settings = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 
                                 {/* Card 1: Meta TMR */}
-                                <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-purple-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Meta TMR Setor
                                             </span>
-                                            <div className="p-1 rounded-md bg-purple-100 text-purple-700">
-                                                <Clock className="w-3.5 h-3.5" />
+                                            <div className="p-1.5 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+                                                <Clock className="w-4 h-4" />
                                             </div>
                                         </div>
-                                        <p className="text-[11px] text-purple-900/70 mb-3">
+                                        <p className="text-xs text-secondary-hub mb-3">
                                             Tempo médio máximo de resposta tolerado
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-purple-700 uppercase mb-1">Formato (hh:mm:ss)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Formato (hh:mm:ss)</label>
                                             <input 
                                                 type="text" 
                                                 placeholder="00:20:00"
@@ -307,35 +663,36 @@ const Settings = () => {
                                                 disabled={!isEditable} 
                                                 value={goals.tmr || ''} 
                                                 onChange={(e) => setGoals({...goals, tmr: e.target.value})} 
-                                                className={`w-full px-3 py-2 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                className={`w-full px-3 py-2.5 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                     !isEditable 
-                                                        ? 'bg-purple-100/50 border-purple-200 text-purple-900 cursor-not-allowed' 
-                                                        : 'bg-white border-purple-300 text-purple-950 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600'
+                                                        ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                        : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                 }`} 
                                             />
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-purple-200/60 text-[11px] text-purple-800/80 font-medium">
-                                        Objetivo: <strong>≤ {goals.tmr || '00:20:00'}</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Objetivo operacional:</span>
+                                        <strong className="text-primary-hub font-mono">≤ {goals.tmr || '00:20:00'}</strong>
                                     </div>
                                 </div>
 
                                 {/* Card 2: Meta FCR */}
-                                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Meta FCR (1º Contato)
                                             </span>
-                                            <div className="p-1 rounded-md bg-emerald-100 text-emerald-700">
-                                                <Target className="w-3.5 h-3.5" />
+                                            <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                                <Target className="w-4 h-4" />
                                             </div>
                                         </div>
-                                        <p className="text-[11px] text-emerald-900/70 mb-3">
+                                        <p className="text-xs text-secondary-hub mb-3">
                                             Resolução imediata no primeiro contato
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-emerald-700 uppercase mb-1">Percentual Mínimo (%)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Percentual Mínimo (%)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -345,37 +702,38 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={goals.fcr ?? 80} 
                                                     onChange={(e) => setGoals({...goals, fcr: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-emerald-100/50 border-emerald-200 text-emerald-900 cursor-not-allowed' 
-                                                            : 'bg-white border-emerald-300 text-emerald-950 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-700 pointer-events-none">%</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">%</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-emerald-200/60 text-[11px] text-emerald-800/80 font-medium">
-                                        Objetivo: <strong>≥ {goals.fcr ?? 80}%</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Objetivo operacional:</span>
+                                        <strong className="text-emerald-600 dark:text-emerald-400 font-mono">≥ {goals.fcr ?? 80}%</strong>
                                     </div>
                                 </div>
 
                                 {/* Card 3: Taxa de Reincidência */}
-                                <div className="p-4 rounded-xl border border-blue-200 bg-blue-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-blue-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Reincidência Máxima
                                             </span>
-                                            <div className="p-1 rounded-md bg-blue-100 text-blue-700">
-                                                <Activity className="w-3.5 h-3.5" />
+                                            <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                                <Activity className="w-4 h-4" />
                                             </div>
                                         </div>
-                                        <p className="text-[11px] text-blue-900/70 mb-3">
+                                        <p className="text-xs text-secondary-hub mb-3">
                                             Limite aceitável de chamados reincidentes
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-blue-700 uppercase mb-1">Teto Máximo (%)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Teto Máximo (%)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -385,37 +743,38 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={goals.recurrence ?? 20} 
                                                     onChange={(e) => setGoals({...goals, recurrence: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-blue-100/50 border-blue-200 text-blue-900 cursor-not-allowed' 
-                                                            : 'bg-white border-blue-300 text-blue-950 focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-blue-700 pointer-events-none">%</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">%</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-blue-200/60 text-[11px] text-blue-800/80 font-medium">
-                                        Objetivo: <strong>≤ {goals.recurrence ?? 20}%</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Objetivo operacional:</span>
+                                        <strong className="text-blue-600 dark:text-blue-400 font-mono">≤ {goals.recurrence ?? 20}%</strong>
                                     </div>
                                 </div>
 
                                 {/* Card 4: Meta QA Operação */}
-                                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Índice QA Operação
                                             </span>
-                                            <div className="p-1 rounded-md bg-indigo-100 text-indigo-700">
-                                                <ShieldCheck className="w-3.5 h-3.5" />
+                                            <div className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                                <ShieldCheck className="w-4 h-4" />
                                             </div>
                                         </div>
-                                        <p className="text-[11px] text-indigo-900/70 mb-3">
+                                        <p className="text-xs text-secondary-hub mb-3">
                                             Qualidade média de auditorias e checklists
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-indigo-700 uppercase mb-1">Percentual Mínimo (%)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Percentual Mínimo (%)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -425,18 +784,19 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={goals.qa ?? 85} 
                                                     onChange={(e) => setGoals({...goals, qa: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-indigo-100/50 border-indigo-200 text-indigo-900 cursor-not-allowed' 
-                                                            : 'bg-white border-indigo-300 text-indigo-950 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-700 pointer-events-none">%</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">%</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-indigo-200/60 text-[11px] text-indigo-800/80 font-medium">
-                                        Objetivo: <strong>≥ {goals.qa ?? 85}%</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Objetivo operacional:</span>
+                                        <strong className="text-indigo-600 dark:text-indigo-400 font-mono">≥ {goals.qa ?? 85}%</strong>
                                     </div>
                                 </div>
 
@@ -444,41 +804,39 @@ const Settings = () => {
 
                             {isEditable ? (
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pt-2">
-                                    <span className="text-xs text-gray-500">
-                                        As metas salvas são propagadas instantaneamente para os cockpits e filtros de KPIs.
+                                    <span className="text-xs text-secondary-hub">
+                                        As metas salvas são propagadas instantaneamente para os cockpits, cockpits de colaboradores e auditorias.
                                     </span>
                                     <button 
                                         type="submit" 
                                         disabled={savingGoals} 
-                                        className="py-2.5 px-6 bg-red-600 text-white rounded-xl hover:bg-red-700 font-bold text-sm transition-all shadow-xs disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+                                        className="py-2.5 px-6 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-rose-950/20 disabled:opacity-70 flex items-center gap-2 cursor-pointer active:scale-95"
                                     >
                                         {savingGoals ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar Metas Estratégicas
                                     </button>
                                 </div>
                             ) : (
-                                <div className="text-xs text-gray-400 italic pt-2">
+                                <div className="text-xs text-secondary-hub italic pt-2">
                                     * Apenas usuários com permissão de edição em Configurações podem alterar as metas do setor.
                                 </div>
                             )}
                         </form>
                     </div>
 
-                    {/* ========================================================================= */}
-                    {/* BLOCO 2: PARAMETRIZAÇÃO DE SLA (TAREFAS, RELATÓRIOS E DEMANDAS ISP)        */}
-                    {/* ========================================================================= */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-xs p-6 space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                    {/* BLOCO 2: PARAMETRIZAÇÃO DE SLA ISP */}
+                    <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-subtle pb-4">
                             <div>
-                                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                    <Clock className="w-5 h-5 text-red-600" />
-                                    Prazos de SLA (Tarefas, Demandas & Relatórios)
+                                <h2 className="text-base sm:text-lg font-bold text-primary-hub flex items-center gap-2">
+                                    <Clock className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                    Prazos de SLA (Tarefas, Demandas & Chamados ISP)
                                 </h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    Defina o tempo limite (em horas) para triagem, resposta e resolução por categoria de chamado ISP.
+                                <p className="text-xs text-secondary-hub mt-0.5">
+                                    Defina o tempo limite máximo em horas por categoria de chamado para cálculo de estouro e alertas visuais.
                                 </p>
                             </div>
-                            <span className="text-xs font-bold text-emerald-800 bg-emerald-100 border border-emerald-300 px-3 py-1 rounded-full flex items-center gap-1.5 self-start sm:self-auto">
-                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" /> Sincronização em Tempo Real
+                            <span className="text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-3 py-1 rounded-full flex items-center gap-1.5 self-start sm:self-auto">
+                                <CheckCircle2 className="w-3.5 h-3.5" /> Sincronização em Tempo Real
                             </span>
                         </div>
 
@@ -486,21 +844,21 @@ const Settings = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 
                                 {/* SLA 1: Análise de Erro */}
-                                <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-rose-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Análise de Erro
                                             </span>
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 border border-rose-200">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                                                 Falhas
                                             </span>
                                         </div>
-                                        <p className="text-[11px] text-rose-900/70 mb-3">
-                                            Divergências em atendimentos, falhas operacionais e gargalos
+                                        <p className="text-xs text-secondary-hub mb-3">
+                                            Divergências operacionais, bugs críticos e gargalos
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-rose-700 uppercase mb-1">Prazo Alvo (Horas)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Prazo Alvo (Horas)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -510,38 +868,38 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={slaConfig.error_analysis} 
                                                     onChange={(e) => setSlaConfig({...slaConfig, error_analysis: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-rose-100/50 border-rose-200 text-rose-900 cursor-not-allowed' 
-                                                            : 'bg-white border-rose-300 text-rose-950 focus:ring-2 focus:ring-rose-500/20 focus:border-rose-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-rose-700 pointer-events-none">h</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">h</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-rose-200/60 text-[11px] text-rose-800/80 font-medium flex items-center justify-between">
-                                        <span>Equivalência:</span>
-                                        <strong>{(Number(slaConfig.error_analysis) / 24).toFixed(1)} dias</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Equivalência em dias:</span>
+                                        <strong className="text-primary-hub font-mono">{(Number(slaConfig.error_analysis) / 24).toFixed(1)} dias</strong>
                                     </div>
                                 </div>
 
                                 {/* SLA 2: Melhoria de Sistema */}
-                                <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Melhoria de Sistema
                                             </span>
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 border border-indigo-200">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                                                 Software
                                             </span>
                                         </div>
-                                        <p className="text-[11px] text-indigo-900/70 mb-3">
-                                            Solicitações de ajustes em ERP, automações e softwares
+                                        <p className="text-xs text-secondary-hub mb-3">
+                                            Ajustes em ERP, automações, scripts e integrações
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-indigo-700 uppercase mb-1">Prazo Alvo (Horas)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Prazo Alvo (Horas)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -551,38 +909,38 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={slaConfig.system_improvement} 
                                                     onChange={(e) => setSlaConfig({...slaConfig, system_improvement: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-indigo-100/50 border-indigo-200 text-indigo-900 cursor-not-allowed' 
-                                                            : 'bg-white border-indigo-300 text-indigo-950 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-indigo-700 pointer-events-none">h</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">h</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-indigo-200/60 text-[11px] text-indigo-800/80 font-medium flex items-center justify-between">
-                                        <span>Equivalência:</span>
-                                        <strong>{(Number(slaConfig.system_improvement) / 24).toFixed(1)} dias</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Equivalência em dias:</span>
+                                        <strong className="text-primary-hub font-mono">{(Number(slaConfig.system_improvement) / 24).toFixed(1)} dias</strong>
                                     </div>
                                 </div>
 
                                 {/* SLA 3: Melhoria de Ambiente */}
-                                <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-emerald-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Melhoria Ambiente
                                             </span>
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                                                 Estrutura
                                             </span>
                                         </div>
-                                        <p className="text-[11px] text-emerald-900/70 mb-3">
-                                            Infraestrutura física, cadeiras, periféricos e ergonomia
+                                        <p className="text-xs text-secondary-hub mb-3">
+                                            Infraestrutura física, estações, rede e periféricos
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-emerald-700 uppercase mb-1">Prazo Alvo (Horas)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Prazo Alvo (Horas)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -592,38 +950,38 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={slaConfig.facility_improvement} 
                                                     onChange={(e) => setSlaConfig({...slaConfig, facility_improvement: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-emerald-100/50 border-emerald-200 text-emerald-900 cursor-not-allowed' 
-                                                            : 'bg-white border-emerald-300 text-emerald-950 focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-emerald-700 pointer-events-none">h</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">h</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-emerald-200/60 text-[11px] text-emerald-800/80 font-medium flex items-center justify-between">
-                                        <span>Equivalência:</span>
-                                        <strong>{(Number(slaConfig.facility_improvement) / 24).toFixed(1)} dias</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Equivalência em dias:</span>
+                                        <strong className="text-primary-hub font-mono">{(Number(slaConfig.facility_improvement) / 24).toFixed(1)} dias</strong>
                                     </div>
                                 </div>
 
                                 {/* SLA 4: Outros */}
-                                <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/40 flex flex-col justify-between">
+                                <div className="p-4 rounded-2xl border border-subtle bg-subtle/50 flex flex-col justify-between hover:border-border-hub transition-colors">
                                     <div>
                                         <div className="flex items-center justify-between mb-2">
-                                            <span className="text-xs font-bold uppercase tracking-wider text-purple-800">
+                                            <span className="text-xs font-bold uppercase tracking-wider text-primary-hub">
                                                 Outras Demandas
                                             </span>
-                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200">
+                                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20">
                                                 Geral
                                             </span>
                                         </div>
-                                        <p className="text-[11px] text-purple-900/70 mb-3">
-                                            Comunicados internos, tarefas avulsas e alinhamentos
+                                        <p className="text-xs text-secondary-hub mb-3">
+                                            Comunicados internos, alinhamentos e tarefas avulsas
                                         </p>
                                         <div>
-                                            <label className="block text-[10px] font-bold text-purple-700 uppercase mb-1">Prazo Alvo (Horas)</label>
+                                            <label className="block text-[10px] font-bold text-secondary-hub uppercase mb-1">Prazo Alvo (Horas)</label>
                                             <div className="relative">
                                                 <input 
                                                     type="number" 
@@ -633,19 +991,19 @@ const Settings = () => {
                                                     disabled={!isEditable} 
                                                     value={slaConfig.other} 
                                                     onChange={(e) => setSlaConfig({...slaConfig, other: Number(e.target.value)})} 
-                                                    className={`w-full px-3 py-2 pr-8 border rounded-lg font-mono font-bold text-sm outline-none transition-all ${
+                                                    className={`w-full px-3 py-2.5 pr-8 border rounded-xl font-mono font-bold text-sm outline-none transition-all ${
                                                         !isEditable 
-                                                            ? 'bg-purple-100/50 border-purple-200 text-purple-900 cursor-not-allowed' 
-                                                            : 'bg-white border-purple-300 text-purple-950 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-600'
+                                                            ? 'bg-subtle border-subtle text-muted-hub cursor-not-allowed' 
+                                                            : 'bg-surface border-subtle text-primary-hub focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500'
                                                     }`} 
                                                 />
-                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-purple-700 pointer-events-none">h</span>
+                                                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-secondary-hub pointer-events-none">h</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div className="mt-3 pt-2 border-t border-purple-200/60 text-[11px] text-purple-800/80 font-medium flex items-center justify-between">
-                                        <span>Equivalência:</span>
-                                        <strong>{(Number(slaConfig.other) / 24).toFixed(1)} dias</strong>
+                                    <div className="mt-4 pt-3 border-t border-subtle text-xs text-secondary-hub flex items-center justify-between">
+                                        <span>Equivalência em dias:</span>
+                                        <strong className="text-primary-hub font-mono">{(Number(slaConfig.other) / 24).toFixed(1)} dias</strong>
                                     </div>
                                 </div>
 
@@ -656,20 +1014,20 @@ const Settings = () => {
                                     <button
                                         type="button"
                                         onClick={handleResetDefaultSla}
-                                        className="text-xs font-semibold text-gray-500 hover:text-gray-900 flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        className="text-xs font-semibold text-secondary-hub hover:text-primary-hub flex items-center gap-1.5 transition-colors cursor-pointer"
                                     >
                                         <RotateCcw className="w-3.5 h-3.5" /> Restaurar Padrões de Fábrica ISP (48h, 120h, 72h, 72h)
                                     </button>
                                     <button 
                                         type="submit" 
                                         disabled={savingSla} 
-                                        className="py-2.5 px-6 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-all shadow-xs disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+                                        className="py-2.5 px-6 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-rose-950/20 disabled:opacity-70 flex items-center gap-2 cursor-pointer active:scale-95"
                                     >
                                         {savingSla ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salvar Prazos de SLA
                                     </button>
                                 </div>
                             ) : (
-                                <div className="text-xs text-gray-400 italic pt-2">
+                                <div className="text-xs text-secondary-hub italic pt-2">
                                     * Apenas administradores com permissão de edição podem parametrizar as regras de SLA.
                                 </div>
                             )}
@@ -679,157 +1037,208 @@ const Settings = () => {
                 </div>
             )}
 
+            {/* ========================================================================= */}
+            {/* ABA: PROCESSOS QA & CHECKLISTS                                            */}
+            {/* ========================================================================= */}
             {activeTab === 'qa' && (
-                <QaProcessesTab 
-                    processes={processes} 
-                    loading={loadingProcesses} 
-                    isEditable={isEditable} 
-                />
+                <div className="w-full">
+                    <QaProcessesTab 
+                        processes={processes} 
+                        loading={loadingProcesses} 
+                        isEditable={isEditable} 
+                    />
+                </div>
             )}
 
+            {/* ========================================================================= */}
+            {/* ABA: TAGS DE FEEDBACK                                                     */}
+            {/* ========================================================================= */}
             {activeTab === 'feedback_tags' && (
-                <FeedbackTagsTab />
+                <div className="w-full">
+                    <FeedbackTagsTab />
+                </div>
             )}
 
+            {/* ========================================================================= */}
+            {/* ABA: NOTIFICAÇÕES PUSH (100% WIDTH COM SIMULADOR INTERATIVO)              */}
+            {/* ========================================================================= */}
             {activeTab === 'notifications' && (
-                <div className="space-y-6 max-w-4xl">
-                    {/* Card de Status da Notificação do Navegador */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                <div className="w-full space-y-6">
+                    {/* Status da Permissão e Central de Notificações */}
+                    <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-4">
                             <div>
-                                <h2 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                                    <Bell className="w-5 h-5 text-red-600" />
+                                <h2 className="text-base sm:text-lg font-bold text-primary-hub flex items-center gap-2">
+                                    <Bell className="w-5 h-5 text-rose-600 dark:text-rose-400" />
                                     Notificações Push no Navegador (Web Push)
                                 </h2>
-                                <p className="text-xs text-gray-500 mt-0.5">
-                                    Configuração de alertas nativos do navegador para feedbacks de desempenho e atualizações de chamados.
+                                <p className="text-xs text-secondary-hub mt-0.5">
+                                    Configuração de alertas nativos do navegador para feedbacks de desempenho e atualizações de chamados em tempo real.
                                 </p>
                             </div>
 
-                            <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${
+                            <span className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border ${
                                 permission === 'granted'
-                                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                    ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
                                     : permission === 'denied'
-                                    ? 'bg-rose-50 text-rose-700 border-rose-200'
-                                    : 'bg-amber-50 text-amber-700 border-amber-200'
+                                    ? 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25'
+                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25'
                             }`}>
-                                {permission === 'granted' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
-                                {permission === 'denied' && <XCircle className="w-3.5 h-3.5 text-rose-600" />}
-                                {permission === 'default' && <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />}
+                                {permission === 'granted' && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />}
+                                {permission === 'denied' && <XCircle className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />}
+                                {permission === 'default' && <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
                                 {permission === 'granted' ? 'Permissão Ativa' : permission === 'denied' ? 'Bloqueada no Navegador' : 'Aguardando Permissão'}
                             </span>
                         </div>
 
-                        {/* Explicação e Ação de Permissão */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/80 space-y-2">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Como funciona o alerta</h3>
-                                <p className="text-xs text-gray-600 leading-relaxed">
-                                    Quando a gestão ou supervisão registra um <strong>Feedback</strong> para um colaborador (ex: Eduardo Caetano), o colaborador que estiver com o sistema aberto em seu computador receberá uma <strong>notificação nativa do sistema operacional/navegador</strong> na tela, mesmo se estiver em outra aba ou minimizado.
-                                </p>
-                            </div>
+                        {/* Layout Bento de 2 Colunas: Centro de Controle e Simulador Interativo */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            
+                            {/* Coluna 1: Permissão e Chime */}
+                            <div className="space-y-4">
+                                <div className="p-5 rounded-2xl bg-subtle border border-subtle space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary-hub">
+                                            Status do Dispositivo
+                                        </h3>
+                                        <span className="text-[11px] font-mono text-secondary-hub">ServiceWorker Ativo</span>
+                                    </div>
+                                    <p className="text-xs text-secondary-hub leading-relaxed">
+                                        {permission === 'granted' 
+                                            ? 'Seu navegador está devidamente homologado para emitir popups nativos mesmo com a janela do sistema em segundo plano ou minimizada.'
+                                            : permission === 'denied'
+                                            ? 'O navegador bloqueou as notificações para este domínio. Clique no ícone de cadeado na barra de endereços do navegador e marque Notificações como "Permitir".'
+                                            : 'O navegador ainda não autorizou notificações para esta sessão. Clique no botão abaixo para conceder permissão imediata.'}
+                                    </p>
+                                    {permission !== 'granted' && permission !== 'denied' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => requestPermission()}
+                                            className="inline-flex items-center gap-2 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                                        >
+                                            <Bell className="w-4 h-4" />
+                                            <span>Conceder Permissão Web Push Agora</span>
+                                        </button>
+                                    )}
+                                </div>
 
-                            <div className="p-4 rounded-xl bg-gray-50 border border-gray-200/80 space-y-3">
-                                <h3 className="text-xs font-bold uppercase tracking-wider text-gray-700">Ação de Permissão</h3>
-                                <p className="text-xs text-gray-600 leading-relaxed">
-                                    {permission === 'granted' 
-                                        ? 'Seu navegador já está autorizado a emitir popups nativos de alertas.'
-                                        : permission === 'denied'
-                                        ? 'O navegador bloqueou as notificações. Clique no ícone de ajustes/cadeado na barra de endereços do navegador e marque Notificações como "Permitir".'
-                                        : 'Clique no botão abaixo para autorizar as notificações no navegador deste dispositivo.'}
-                                </p>
-                                {permission !== 'granted' && permission !== 'denied' && (
+                                {/* Sinal Sonoro Suave */}
+                                <div className="flex items-center justify-between p-4 rounded-2xl bg-subtle border border-subtle">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-surface border border-subtle flex items-center justify-center text-primary-hub shadow-xs">
+                                            {soundEnabled ? <Volume2 className="w-5 h-5 text-emerald-500" /> : <VolumeX className="w-5 h-5 text-muted-hub" />}
+                                        </div>
+                                        <div>
+                                            <h4 className="text-xs font-bold text-primary-hub">Alerta Acústico Suave (Chime)</h4>
+                                            <p className="text-xs text-secondary-hub">Tocar sinal suave ao receber feedbacks, despachos e auditorias.</p>
+                                        </div>
+                                    </div>
+
                                     <button
                                         type="button"
-                                        onClick={() => requestPermission()}
-                                        className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-xs cursor-pointer"
+                                        onClick={() => toggleSound()}
+                                        className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                                            soundEnabled 
+                                                ? 'bg-emerald-600 text-white shadow-xs' 
+                                                : 'bg-subtle text-secondary-hub border border-subtle'
+                                        }`}
                                     >
-                                        <Bell className="w-4 h-4" />
-                                        <span>Solicitar Permissão Agora</span>
+                                        {soundEnabled ? 'Som Ativado' : 'Mudo'}
                                     </button>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Sinal Sonoro */}
-                        <div className="flex items-center justify-between p-4 rounded-xl bg-zinc-50 border border-zinc-200">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-white border border-gray-200 flex items-center justify-center text-gray-700 shadow-2xs">
-                                    {soundEnabled ? <Volume2 className="w-5 h-5 text-emerald-600" /> : <VolumeX className="w-5 h-5 text-gray-400" />}
                                 </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-gray-900">Alerta Sonoro Suave (Chime)</h4>
-                                    <p className="text-xs text-gray-500">Tocar sinal acústico agradável ao receber um feedback ou despacho.</p>
+
+                                {/* Botões de Disparo */}
+                                <div className="p-4 rounded-2xl bg-subtle border border-subtle space-y-3">
+                                    <h4 className="text-xs font-bold uppercase tracking-wider text-primary-hub">Testes em Tempo Real</h4>
+                                    <div className="flex flex-wrap gap-2.5">
+                                        <button
+                                            type="button"
+                                            onClick={testNotification}
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-surface hover:bg-subtle text-primary-hub text-xs font-bold transition-all border border-subtle cursor-pointer active:scale-95"
+                                        >
+                                            <Bell className="w-4 h-4 text-emerald-500" />
+                                            <span>Disparar Notificação de Teste</span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                window.dispatchEvent(new CustomEvent('HUBDESK_SIMULATE_FEEDBACK', {
+                                                    detail: {
+                                                        id: `sim-test-${Date.now()}`,
+                                                        type: 'Elogio',
+                                                        method: 'Sistema',
+                                                        comment: 'Excelente desempenho no atendimento aos chamados de alta prioridade nesta semana!',
+                                                        createdBy: 'Supervisão Operacional',
+                                                        date: new Date().toLocaleDateString('pt-BR'),
+                                                        createdAt: new Date().toISOString()
+                                                    }
+                                                }));
+                                            }}
+                                            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+                                        >
+                                            <Send className="w-4 h-4" />
+                                            <span>Simular Chegada de Feedback Real</span>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <button
-                                type="button"
-                                onClick={() => toggleSound()}
-                                className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                    soundEnabled 
-                                        ? 'bg-emerald-600 text-white shadow-xs' 
-                                        : 'bg-zinc-200 text-zinc-700'
-                                }`}
-                            >
-                                {soundEnabled ? 'Som Ligado' : 'Mudo'}
-                            </button>
-                        </div>
+                            {/* Coluna 2: Simulador Visual Interativo da Notificação */}
+                            <div className="p-5 rounded-2xl bg-gradient-to-br from-subtle/80 to-subtle/30 border border-subtle flex flex-col justify-between space-y-4">
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-hub flex items-center gap-1.5">
+                                            <Smartphone className="w-3.5 h-3.5 text-rose-500" /> Simulador Visual de Notificação
+                                        </span>
+                                        <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                            Preview Fiel
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-secondary-hub leading-relaxed">
+                                        Veja exatamente como o colaborador visualiza o alerta nativo na tela do computador ao receber um novo feedback ou atualização:
+                                    </p>
+                                </div>
 
-                        {/* Painel de Testes */}
-                        <div className="p-5 rounded-xl bg-zinc-950 text-white border border-zinc-800 space-y-3">
-                            <div className="flex items-center gap-2">
-                                <Sparkles className="w-4 h-4 text-amber-400" />
-                                <h3 className="text-xs font-bold text-white uppercase tracking-wider">Testar no seu Computador</h3>
+                                {/* Banner Visual do Toast Desktop */}
+                                <div className="p-4 rounded-2xl bg-surface border border-subtle shadow-lg space-y-3 relative overflow-hidden">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center shrink-0">
+                                            <Sparkles className="w-5 h-5 text-rose-600 dark:text-rose-400" />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between">
+                                                <h5 className="text-xs font-bold text-primary-hub truncate">
+                                                    HubDesk Operação &bull; Novo Feedback
+                                                </h5>
+                                                <span className="text-[10px] text-muted-hub font-mono">Agora</span>
+                                            </div>
+                                            <p className="text-xs font-semibold text-rose-600 dark:text-rose-400 mt-0.5">
+                                                Elogio registrado pela Supervisão
+                                            </p>
+                                            <p className="text-xs text-secondary-hub mt-1 line-clamp-2 leading-relaxed">
+                                                "Parabéns pelo comprometimento e agilidade na resolução dos chamados de rota crítica hoje!"
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="pt-2 border-t border-subtle flex items-center justify-between text-[11px]">
+                                        <span className="text-muted-hub">Clique na notificação para visualizar o histórico</span>
+                                        <span className="font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 cursor-pointer">
+                                            Abrir <ArrowRight className="w-3 h-3" />
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Dica de Boas Práticas */}
+                                <div className="p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-secondary-hub flex items-start gap-2.5">
+                                    <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
+                                    <span>
+                                        O canal Web Push opera em harmonia com a política de privacidade corporativa, notificando exclusivamente eventos pertinentes ao perfil operacional ativo.
+                                    </span>
+                                </div>
                             </div>
-                            <p className="text-xs text-zinc-400">
-                                Dispare um teste imediato para conferir a notificação nativa do navegador, o sinal sonoro e o toast interativo:
-                            </p>
 
-                            <div className="flex flex-wrap gap-3 pt-1">
-                                <button
-                                    type="button"
-                                    onClick={testNotification}
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold transition-all border border-zinc-700 cursor-pointer"
-                                >
-                                    <Bell className="w-4 h-4 text-emerald-400" />
-                                    <span>Disparar Notificação de Teste</span>
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        window.dispatchEvent(new CustomEvent('HUBDESK_SIMULATE_FEEDBACK', {
-                                            detail: {
-                                                id: `sim-test-${Date.now()}`,
-                                                type: 'Elogio',
-                                                method: 'Sistema',
-                                                comment: 'Teste prático: Notificação push de feedback entregue com sucesso!',
-                                                createdBy: 'Gestão HubDesk',
-                                                date: new Date().toLocaleDateString('pt-BR'),
-                                                createdAt: new Date().toISOString()
-                                            }
-                                        }));
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
-                                >
-                                    <Send className="w-4 h-4" />
-                                    <span>Simular Chegada de Feedback Real</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Guia Informativo com o exemplo de Eduardo Caetano */}
-                        <div className="p-4 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-start gap-3">
-                            <Info className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
-                            <div className="text-xs text-blue-900 leading-relaxed space-y-1">
-                                <p className="font-bold">Validação de Teste Multi-Usuário (Exemplo: Eduardo Caetano):</p>
-                                <ol className="list-decimal ml-4 space-y-1 text-blue-800">
-                                    <li>Abra uma janela normal com o usuário do colaborador (ex: Eduardo Caetano) e confirme que as notificações estão ativadas no sininho do topo.</li>
-                                    <li>Em outra janela (ou no computador do Gestor), acesse a aba <strong>Colaboradores</strong> ou <strong>Gestor de Dados</strong> e clique no botão de <strong>Feedback</strong> para o Eduardo Caetano.</li>
-                                    <li>Ao salvar o feedback, o Firestore sincroniza em tempo real e a tela do Eduardo Caetano exibirá a notificação nativa do navegador imediatamente com som e botão direto para abrir o histórico!</li>
-                                </ol>
-                            </div>
                         </div>
                     </div>
                 </div>

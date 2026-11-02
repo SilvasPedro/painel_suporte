@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { 
   Mail, 
@@ -11,26 +12,21 @@ import {
   Sparkles, 
   ShieldCheck, 
   CheckCircle2, 
+  Activity,
+  Calendar,
+  Headphones,
+  Trophy,
+  Clock,
   Layers,
-  History,
-  Info
+  FileText
 } from 'lucide-react';
 import { login } from '../services/auth';
 import logo from '../assets/favicon_red.png';
 import VersionChangelogModal from '../components/VersionChangelogModal';
-import { CURRENT_VERSION, CHANGELOG_VERSIONS } from '../data/changelogData';
-
-// Geração de partículas de bolha para o plano de fundo
-const BUBBLE_COUNT = 38;
-const BUBBLES_DATA = Array.from({ length: BUBBLE_COUNT }).map((_, idx) => ({
-  id: idx,
-  size: Math.floor(Math.random() * 22) + 10, // 10px a 32px
-  left: Math.floor(Math.random() * 96) + 2,   // 2% a 98%
-  duration: (Math.random() * 4 + 4.5).toFixed(2), // 4.5s a 8.5s
-  delay: (Math.random() * 5).toFixed(2),         // 0s a 5s
-  isRed: Math.random() > 0.45,
-  opacity: (Math.random() * 0.4 + 0.3).toFixed(2),
-}));
+import { CURRENT_VERSION } from '../data/changelogData';
+import { Button, Input, Badge } from '../components/ui';
+import { BorderBeam } from '../components/magicui';
+import { cn } from '../utils/cn';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -66,306 +62,245 @@ const Login = () => {
     }
   };
 
-  // Efeito de bolhas subindo suavemente até 70% da altura da tela e sumindo
-  const renderedBubbles = useMemo(() => {
-    return BUBBLES_DATA.map((b) => (
-      <div
-        key={b.id}
-        className={`absolute rounded-full pointer-events-none animate-float-bubble backdrop-blur-xs ${
-          b.isRed 
-            ? 'bg-red-500/15 border border-red-500/30 shadow-[0_0_15px_rgba(239,68,68,0.2)]' 
-            : 'bg-white/10 border border-white/20 shadow-[0_0_12px_rgba(255,255,255,0.1)]'
-        }`}
+  return (
+    <div className="min-h-screen bg-[#07080b] text-zinc-100 flex items-center justify-center p-4 sm:p-6 lg:p-10 relative overflow-hidden font-sans selection:bg-rose-500/30 selection:text-rose-200">
+      
+      {/* Grade de Linhas Sutil & Iluminação Volumétrica de Fundo */}
+      <div 
+        className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
-          width: `${b.size}px`,
-          height: `${b.size}px`,
-          left: `${b.left}%`,
-          bottom: '-30px',
-          animationDuration: `${b.duration}s`,
-          animationDelay: `${b.delay}s`,
+          backgroundImage: `linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)`,
+          backgroundSize: '48px 48px',
         }}
       />
-    ));
-  }, []);
+      <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[750px] h-[380px] bg-rose-600/15 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute -bottom-24 -left-20 w-96 h-96 bg-rose-950/25 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-1/2 -right-24 w-80 h-80 bg-amber-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-  return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center p-3 sm:p-5 lg:p-8 relative overflow-hidden font-sans selection:bg-red-500/30 selection:text-red-200">
-      
-      {/* Camada Atmosférica de Fundo */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-20%,rgba(185,28,28,0.15),rgba(255,255,255,0))] pointer-events-none" />
-      <div className="absolute top-1/4 -left-40 w-96 h-96 bg-red-600/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-10 right-0 w-80 h-80 bg-red-950/20 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Bolhas ascendentes animadas que sobem até 70% e somem */}
-      <div className="absolute inset-x-0 bottom-0 top-0 overflow-hidden pointer-events-none z-0">
-        {renderedBubbles}
-      </div>
-
-      {/* Card Principal Dual-Panel */}
-      <div className="max-w-6xl w-full bg-zinc-900/70 backdrop-blur-2xl border border-zinc-800/90 shadow-[0_20px_50px_rgba(0,0,0,0.6)] rounded-3xl overflow-hidden flex flex-col lg:flex-row relative z-10">
+      {/* Card Principal Dual-Panel com Glassmorphism Refinado */}
+      <motion.div 
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: 'easeOut' }}
+        className="max-w-6xl w-full bg-[#0d0f15]/90 backdrop-blur-2xl border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.8)] rounded-3xl overflow-hidden flex flex-col lg:flex-row relative z-10"
+      >
         
-        {/* Painel Esquerdo: Branding e Feed de Changelog Visível */}
-        <div className="lg:w-7/12 p-6 sm:p-8 lg:p-10 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-zinc-800/80 bg-zinc-950/40 relative">
-          
+        {/* Painel Esquerdo: Vitrine Executiva & Métricas da Operação */}
+        <div className="lg:w-7/12 p-6 sm:p-8 lg:p-12 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-white/10 bg-gradient-to-br from-black/40 via-zinc-950/20 to-black/30 relative">
           <div>
-            {/* Topo: Logo & Identidade Visual */}
+            {/* Topo: Logo & Versão Ativa */}
             <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-zinc-900 border border-zinc-800/90 flex items-center justify-center shrink-0 p-2 shadow-inner">
-                  <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
+                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-2 shadow-lg shadow-rose-950/40">
+                  <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain filter drop-shadow" />
                 </div>
-                <span className="font-brand text-2xl font-black tracking-tight text-white flex items-center select-none">
-                  HUB<span className="text-red-500 font-black ml-0.5">DESK</span>
-                </span>
+                <div>
+                  <span className="font-brand text-2xl font-black tracking-tight text-white flex items-center select-none">
+                    HUB<span className="text-rose-500 ml-0.5">DESK</span>
+                  </span>
+                  <p className="text-[10px] uppercase font-bold tracking-widest text-zinc-500 -mt-0.5">
+                    Central de Operações
+                  </p>
+                </div>
               </div>
 
-              {/* Tag de Versão Ativa com Trigger para Modal */}
+              {/* Tag de Versão Estática (Trigger para Changelog) */}
               <button
                 type="button"
                 id="btn-login-version"
                 onClick={() => setIsChangelogModalOpen(true)}
-                className="group px-3 py-1.5 rounded-xl bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 hover:border-red-500/40 text-xs font-mono font-bold text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-2 shadow-2xs"
-                title="Clique para ver o histórico completo de versões"
+                className="group px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-rose-500/40 text-xs font-mono font-bold text-zinc-300 hover:text-white transition-all cursor-pointer flex items-center gap-2 shadow-xs"
+                title="Ver histórico de notas da versão"
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span>{CURRENT_VERSION}</span>
-                <span className="text-[10px] uppercase tracking-wider text-emerald-400 font-sans font-semibold ml-0.5">
-                  Ativa
+                <span className="text-[10px] uppercase tracking-wider text-rose-400 font-sans font-bold">
+                  Notas ➔
                 </span>
               </button>
             </div>
 
             {/* Cabeçalho da Seção */}
-            <div className="mb-6">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight leading-snug mb-2">
-                Gestão & Performance de <span className="text-red-500">Suporte Técnico</span>
+            <div className="mb-8">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs font-bold mb-3 tracking-wide">
+                <Activity className="w-3.5 h-3.5 text-rose-500" />
+                <span>Plataforma Integrada de Gestão</span>
+              </div>
+              <h1 className="font-brand text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight mb-3">
+                Inteligência Operacional & <br />
+                <span className="bg-gradient-to-r from-rose-400 via-rose-500 to-amber-400 bg-clip-text text-transparent">
+                  Performance de Suporte
+                </span>
               </h1>
-              <p className="text-sm text-zinc-400 max-w-xl leading-relaxed">
-                Plataforma unificada para acompanhamento de KPIs, auditorias de conformidade QA, escalas de colaboradores e produtividade.
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-lg leading-relaxed">
+                Cockpit unificado para acompanhamento de KPIs, auditorias de conformidade QA, gestão de 4 turnos e rankings da equipe.
               </p>
             </div>
 
-            {/* FEED DO CHANGELOG VISÍVEL DIRETAMENTE NA TELA DE LOGIN */}
-            <div className="mt-6 rounded-2xl bg-zinc-900/80 border border-zinc-800/90 p-4 sm:p-5 shadow-inner">
-              <div className="flex items-center justify-between mb-3.5 pb-2.5 border-b border-zinc-800">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </div>
-                  <h2 className="text-xs sm:text-sm font-bold text-white tracking-wide flex items-center gap-1.5">
-                    Changelog & Novidades
-                  </h2>
+            {/* Bento Grid: 3 Pilares Executivos em Cards Glass */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 transition-colors flex flex-col justify-between">
+                <div className="w-8 h-8 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center mb-2.5">
+                  <Activity className="w-4 h-4" />
                 </div>
-                <span className="text-[11px] font-medium text-zinc-400">
-                  Atualizado em tempo real
-                </span>
+                <div>
+                  <span className="text-xs font-bold text-zinc-200 block">Cockpit de KPIs</span>
+                  <span className="text-[11px] text-zinc-400 block mt-0.5">TMR, TMA, FCR & chamados em tempo real</span>
+                </div>
               </div>
 
-              {/* Lista com scroll para comportar histórico extenso */}
-              <div className="space-y-4 max-h-[280px] sm:max-h-[320px] overflow-y-auto pr-1.5 scrollbar-thin">
-                {CHANGELOG_VERSIONS.map((release) => (
-                  <div key={release.version} className="space-y-2.5">
-                    {/* Header da Versão */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-md font-mono text-xs font-black border ${
-                          release.isCurrent 
-                            ? 'bg-red-500/15 text-red-400 border-red-500/30' 
-                            : 'bg-zinc-800 text-zinc-400 border-zinc-700/50'
-                        }`}>
-                          {release.version}
-                        </span>
-                        <span className="text-[11px] text-zinc-500">
-                          {release.date}
-                        </span>
-                      </div>
-                      <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${
-                        release.isCurrent 
-                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
-                          : 'bg-zinc-800/70 text-zinc-400 border border-zinc-700/40'
-                      }`}>
-                        {release.tag}
-                      </span>
-                    </div>
-
-                    {/* Resumo da Versão */}
-                    {release.summary && (
-                      <p className="text-xs text-zinc-400 px-0.5">
-                        {release.summary}
-                      </p>
-                    )}
-
-                    {/* Itens detalhados */}
-                    <div className="space-y-2">
-                      {release.items.map((item, idx) => {
-                        const IconComponent = item.icon;
-                        return (
-                          <div 
-                            key={idx}
-                            className={`p-3 rounded-xl border transition-all flex items-start gap-3 ${
-                              release.isCurrent
-                                ? 'bg-zinc-950/60 border-zinc-800/90 hover:border-zinc-700'
-                                : 'bg-zinc-950/30 border-zinc-800/40 opacity-80'
-                            }`}
-                          >
-                            <div className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 ${item.iconColor}`}>
-                              <IconComponent className="w-3.5 h-3.5" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between gap-2 mb-0.5">
-                                <h3 className="text-xs font-bold text-zinc-200 truncate">
-                                  {item.title}
-                                </h3>
-                                <span className="text-[10px] font-medium text-zinc-500 shrink-0">
-                                  {item.category}
-                                </span>
-                              </div>
-                              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                                {item.description}
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 transition-colors flex flex-col justify-between">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-2.5">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-zinc-200 block">Radar de Turnos</span>
+                  <span className="text-[11px] text-zinc-400 block mt-0.5">Gestão de 4 turnos oficiais e escalas</span>
+                </div>
               </div>
 
-              {/* Botão de Expansão Modal */}
-              <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                <span className="text-[11px] flex items-center gap-1.5 text-zinc-500">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                  Histórico cumulativo preservado
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsChangelogModalOpen(true)}
-                  className="text-xs font-semibold text-red-400 hover:text-red-300 hover:underline cursor-pointer flex items-center gap-1"
-                >
-                  Ver em tela cheia
-                </button>
+              <div className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 transition-colors flex flex-col justify-between">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mb-2.5">
+                  <Trophy className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-xs font-bold text-zinc-200 block">Auditorias & Rank</span>
+                  <span className="text-[11px] text-zinc-400 block mt-0.5">Rankings semanais com pontuação ponderada</span>
+                </div>
               </div>
+            </div>
+
+            {/* Destaque da Versão Atual */}
+            <div className="p-4 rounded-2xl bg-black/40 border border-white/10 flex items-center justify-between gap-3 shadow-inner">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center shrink-0">
+                  <FileText className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-xs font-bold text-white block truncate">
+                    Atualização {CURRENT_VERSION} disponível
+                  </span>
+                  <span className="text-[11px] text-zinc-400 block truncate">
+                    Novo Hub da equipe, navegação com Magic UI e design executivo.
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChangelogModalOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-bold text-rose-400 hover:text-rose-300 transition-colors shrink-0 cursor-pointer"
+              >
+                Ver Notas
+              </button>
             </div>
           </div>
 
-          {/* Rodapé da Coluna */}
-          <div className="mt-8 pt-4 border-t border-zinc-800/60 text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <span>&copy; 2026 HubDesk Suporte &bull; Gestão Interna</span>
+          {/* Rodapé da Coluna Esquerda */}
+          <div className="mt-8 pt-4 border-t border-white/10 text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>&copy; 2026 HubDesk Suporte &bull; Gestão Operacional</span>
             <span className="flex items-center gap-1.5 text-[11px] text-zinc-400">
-              <ShieldCheck className="w-3.5 h-3.5 text-red-500" />
-              Conexão Segura Corporativa
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-500" />
+              Ambiente Seguro com RBAC
             </span>
           </div>
         </div>
 
-        {/* Painel Direito: Formulário de Autenticação */}
-        <div className="lg:w-5/12 p-6 sm:p-8 lg:p-10 flex flex-col justify-center bg-zinc-950/80 relative">
+        {/* Painel Direito: Formulário com BorderBeam Magic UI */}
+        <div className="lg:w-5/12 p-6 sm:p-8 lg:p-12 flex flex-col justify-center bg-zinc-950/90 relative overflow-hidden">
+          <BorderBeam size={160} duration={8} colorFrom="#f43f5e" colorTo="#fbbf24" borderWidth={1.5} />
+          
           <div className="max-w-md w-full mx-auto relative z-10">
             
             <div className="mb-6 sm:mb-8 text-left">
-              <span className="px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-[11px] font-bold uppercase tracking-wider mb-3 inline-block">
-                Acesso Restrito
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-[10px] font-bold text-rose-400 tracking-wider uppercase mb-3">
+                <Lock className="w-3 h-3 text-rose-400" />
+                <span>Portal de Acesso</span>
               </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
+              <h2 className="font-brand text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Entrar no Sistema
               </h2>
-              <p className="text-sm text-zinc-400 mt-1">
-                Informe suas credenciais autorizadas para continuar.
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1.5">
+                Informe suas credenciais autorizadas para acessar o cockpit.
               </p>
             </div>
 
-            <form onSubmit={handleLogin} className="space-y-5">
+            <form onSubmit={handleLogin} className="space-y-4">
               
-              {/* Alerta de Erro */}
-              {error && (
-                <div className="flex items-start gap-3 p-3.5 text-xs text-red-300 bg-red-950/50 rounded-xl border border-red-800/80 animate-in fade-in duration-200">
-                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
-                  <p className="leading-relaxed">{error}</p>
-                </div>
-              )}
+              {/* Alerta de Erro com Animação */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    className="flex items-start gap-3 p-3.5 text-xs text-rose-300 bg-rose-950/40 rounded-xl border border-rose-800/60 shadow-xs"
+                  >
+                    <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">{error}</p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               {/* Input: E-mail */}
-              <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1.5 uppercase tracking-wider">
-                  E-mail corporativo
-                </label>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-                    <Mail className="h-4 w-4" />
-                  </div>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="block w-full pl-10 pr-3.5 py-3 text-sm border border-zinc-800 rounded-xl bg-zinc-900/80 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500 transition-colors shadow-inner"
-                    placeholder="usuario@empresa.com"
-                  />
-                </div>
-              </div>
+              <Input
+                label="E-MAIL CORPORATIVO"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="usuario@empresa.com"
+                icon={Mail}
+                autoComplete="email"
+              />
 
               {/* Input: Senha */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-semibold text-zinc-300 uppercase tracking-wider">
-                    Senha
-                  </label>
-                </div>
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-zinc-500">
-                    <Lock className="h-4 w-4" />
-                  </div>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="block w-full pl-10 pr-10 py-3 text-sm border border-zinc-800 rounded-xl bg-zinc-900/80 text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-red-500/30 focus:border-red-500 transition-colors shadow-inner"
-                    placeholder="••••••••"
-                  />
+              <Input
+                label="SENHA DE ACESSO"
+                type={showPassword ? 'text' : 'password'}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                icon={Lock}
+                autoComplete="current-password"
+                iconRight={
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer"
+                    className="text-zinc-400 hover:text-white transition-colors cursor-pointer"
                     title={showPassword ? 'Ocultar senha' : 'Exibir senha'}
                   >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </div>
-              </div>
+                }
+              />
 
-              {/* Botão de Entrar */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                id="btn-login-submit"
-                className="w-full mt-2 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl shadow-lg shadow-red-600/20 text-sm font-bold text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 focus:ring-offset-zinc-950 transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isLoading ? (
-                  <span className="flex items-center gap-2">
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                    <span>Autenticando acesso...</span>
-                  </span>
-                ) : (
-                  <>
-                    <span>Entrar no HubDesk</span>
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
-              </button>
+              {/* Botão de Entrar Shimmer com Feixe de Luz */}
+              <div className="pt-2">
+                <Button
+                  type="submit"
+                  variant="shimmer"
+                  size="lg"
+                  loading={isLoading}
+                  disabled={isLoading}
+                  iconRight={ArrowRight}
+                  className="w-full h-12 text-sm font-bold shadow-lg shadow-rose-600/25"
+                >
+                  Entrar no HubDesk
+                </Button>
+              </div>
             </form>
 
-            <div className="mt-8 pt-6 border-t border-zinc-800/80 text-center">
-              <p className="text-xs text-zinc-500">
-                Problemas de acesso ou redefinição de credenciais? Contate o administrador do suporte.
+            <div className="mt-8 pt-6 border-t border-white/10 text-center">
+              <p className="text-xs text-zinc-500 leading-relaxed">
+                Problemas de acesso ou redefinição de credenciais? Contate a gestão ou o administrador do suporte.
               </p>
             </div>
 
           </div>
         </div>
 
-      </div>
+      </motion.div>
 
       {/* Modal Completo de Changelog */}
       <VersionChangelogModal

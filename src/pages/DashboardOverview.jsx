@@ -3,7 +3,9 @@ import {
     Rocket, Target, Activity, Star, Clock, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, CheckCircle, Loader2, Users, ChevronRight,
     TrendingUp, TrendingDown, ArrowUpRight, BarChart3, LineChart as LineChartIcon,
-    Info, X, ShieldCheck, CheckCircle2, AlertCircle, Headphones, FileCheck
+    Info, X, ShieldCheck, CheckCircle2, AlertCircle, Headphones, FileCheck,
+    Filter, RotateCcw, Calendar, Layers, Sparkles, ChevronDown, Check,
+    Search, ArrowRight, Zap, RefreshCw
 } from 'lucide-react';
 import {
     AreaChart, Area, LineChart, Line, BarChart, Bar,
@@ -14,11 +16,12 @@ import { subscribeSharedCollection, subscribeSharedDocument } from '../services/
 import { useTheme } from '../context/ThemeContext';
 import { timeToDecimal, formatTime, formatDateBR, parseDateSort } from '../utils/timeCalculations';
 import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { StatCard, Tabs, Card, Badge } from '../components/ui';
+import { BorderBeam } from '../components/magicui/BorderBeam';
 
 // --- HELPERS DE IDENTIFICAÇÃO DE TURNOS OFICIAIS ---
-// Turnos: Manhã I, Manhã II, Tarde e Noturno.
-// Manhã I, Manhã II e Tarde disputam a mesma média por atuarem no horário de pico.
-// Noturno disputa sua própria média.
+const OFFICIAL_SHIFTS = ['Manhã I', 'Manhã II', 'Tarde', 'Noturno'];
+
 const isNightShift = (shiftStr) => {
     if (!shiftStr) return false;
     const s = String(shiftStr).toLowerCase().trim();
@@ -41,20 +44,26 @@ const TrendBadge = ({ type, val, goal }) => {
     }
 
     return (
-        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
-            isGood ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
+        <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border transition-colors ${
+            isGood 
+                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
         }`}>
-            {isGood ? <TrendingUp className="w-3 h-3 text-emerald-600" /> : <TrendingDown className="w-3 h-3 text-rose-600" />}
+            {isGood ? <TrendingUp className="w-3 h-3 text-emerald-500" /> : <TrendingDown className="w-3 h-3 text-rose-500" />}
             {isGood ? 'Na Meta' : 'Fora da Meta'}
         </span>
     );
 };
 
+/**
+ * DashboardOverview (v4.0.0 Hubdesk)
+ * Cockpit Geral de KPIs, Monitorias e Inteligência Operacional.
+ * Totalmente repaginado com filtragem interativa, tokens semânticos e acabamento executivo.
+ */
 const DashboardOverview = ({ onNavigate }) => {
     const { theme } = useTheme();
-    const isDarkMode = theme === 'dark';
 
-    // Navegação segura para abas (ex: relatórios críticos)
+    // Navegação segura para abas (ex: relatórios críticos, auditorias)
     const handleNavigate = (tabId) => {
         if (typeof onNavigate === 'function') {
             onNavigate(tabId);
@@ -66,10 +75,14 @@ const DashboardOverview = ({ onNavigate }) => {
     // Modo de Visualização Principal
     const [viewMode, setViewMode] = useState('cockpit'); // 'cockpit', 'evolution', 'compliance', 'shifts'
     
+    // Filtros Globais da Dashboard
+    const [selectedShiftFilter, setSelectedShiftFilter] = useState('all'); // 'all', 'Manhã I', 'Manhã II', 'Tarde', 'Noturno'
+    const [selectedPeriodFilter, setSelectedPeriodFilter] = useState('all'); // 'all', 'last30', 'last60', 'last90'
+    const [searchTerm, setSearchTerm] = useState('');
+
     // Configurações do Gráfico de Evolução de KPIs & Monitoria
-    const [selectedKpi, setSelectedKpi] = useState('tmr'); // 'tmr', 'fcr', 'recurrence', 'qa_rate', 'volume', 'tma_tel', 'tma_huggy', 'points'
+    const [selectedKpi, setSelectedKpi] = useState('tmr'); // 'tmr', 'fcr', 'recurrence', 'qa_rate', 'volume', 'avg_points'
     const [chartType, setChartType] = useState('area'); // 'area', 'line', 'bar'
-    const [timeframe, setTimeframe] = useState('all'); // 'all', 'last30', 'last60'
 
     // Estados de Dados do Firebase
     const [latestKpi, setLatestKpi] = useState({ tmr: '00:00:00', fcr: 0, recurrence: 0, date: '' });
@@ -82,7 +95,7 @@ const DashboardOverview = ({ onNavigate }) => {
     const [thirdPartyAudits, setThirdPartyAudits] = useState([]);
     const [reportStats, setReportStats] = useState({ pending: 0, inProgress: 0, resolved: 0 });
 
-    // Modal de Informações Detalhadas
+    // Modal de Informações Detalhadas de Ranking
     const [modalInfo, setModalInfo] = useState(null);
     const [loading, setLoading] = useState(true);
 
@@ -101,7 +114,6 @@ const DashboardOverview = ({ onNavigate }) => {
             setSectorKpisList(kpis);
 
             if (kpis.length > 0) {
-                // Último lançado
                 setLatestKpi(kpis[kpis.length - 1]);
             }
             setLoading(false);
@@ -126,7 +138,7 @@ const DashboardOverview = ({ onNavigate }) => {
             setEvalsList(evals);
         });
 
-        // Relatórios Críticos / Solicitações
+        // Relatórios Críticos / Demandas
         const unsubReports = subscribeSharedCollection("critical_reports", (items) => {
             let pending = 0; let inProgress = 0; let resolved = 0;
             items.forEach(data => {
@@ -144,7 +156,7 @@ const DashboardOverview = ({ onNavigate }) => {
             setAuditsList(fetched);
         });
 
-        // Auditorias da Terceirizada (FCR, Conformidade e Qualidade)
+        // Auditorias da Terceirizada
         const unsubThirdParty = subscribeSharedCollection("third_party_audits", (items) => {
             const fetched = [...items];
             fetched.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
@@ -162,14 +174,71 @@ const DashboardOverview = ({ onNavigate }) => {
         };
     }, []);
 
-    // --- ESTATÍSTICAS DE QA / QUALIDADE INTERNO ---
+    // --- REGRAS DE FILTRO POR DATA (PERÍODO) ---
+    const filterByPeriod = (itemDateStr) => {
+        if (selectedPeriodFilter === 'all' || !itemDateStr) return true;
+        const itemTimestamp = parseDateSort(itemDateStr);
+        if (!itemTimestamp) return true;
+
+        const now = Date.now();
+        const daysMap = {
+            last30: 30 * 24 * 60 * 60 * 1000,
+            last60: 60 * 24 * 60 * 60 * 1000,
+            last90: 90 * 24 * 60 * 60 * 1000
+        };
+
+        const limitMs = daysMap[selectedPeriodFilter] || 0;
+        return (now - itemTimestamp) <= limitMs;
+    };
+
+    // --- DADOS FILTRADOS EM TEMPO REAL ---
+    const filteredSectorKpis = useMemo(() => {
+        return sectorKpisList.filter(kpi => filterByPeriod(kpi.date));
+    }, [sectorKpisList, selectedPeriodFilter]);
+
+    const filteredEvalsList = useMemo(() => {
+        return evalsList.filter(e => {
+            const passPeriod = filterByPeriod(e.date);
+            if (!passPeriod) return false;
+
+            if (selectedShiftFilter !== 'all') {
+                const colabId = e.colabId || e.collaboratorId;
+                const colabInfo = colabsFull[colabId] || (e.colabName && colabsFull[e.colabName.trim().toLowerCase()]);
+                const shift = colabInfo?.shift || e.shift || '';
+                return shift === selectedShiftFilter;
+            }
+
+            return true;
+        });
+    }, [evalsList, selectedPeriodFilter, selectedShiftFilter, colabsFull]);
+
+    const filteredAuditsList = useMemo(() => {
+        return auditsList.filter(a => {
+            const passPeriod = filterByPeriod(a.date || a.createdAt);
+            if (!passPeriod) return false;
+
+            if (selectedShiftFilter !== 'all') {
+                const colabInfo = colabsFull[a.colabId];
+                const shift = colabInfo?.shift || '';
+                return shift === selectedShiftFilter;
+            }
+
+            return true;
+        });
+    }, [auditsList, selectedPeriodFilter, selectedShiftFilter, colabsFull]);
+
+    const filteredThirdPartyAudits = useMemo(() => {
+        return thirdPartyAudits.filter(a => filterByPeriod(a.date || a.createdAt));
+    }, [thirdPartyAudits, selectedPeriodFilter]);
+
+    // --- ESTATÍSTICAS DE QA / QUALIDADE INTERNO (COM FILTRO) ---
     const qaStats = useMemo(() => {
         let total = 0;
         let conformes = 0;
 
-        auditsList.forEach(audit => {
+        filteredAuditsList.forEach(audit => {
             const colabInfo = colabsFull[audit.colabId];
-            if (colabInfo && colabInfo.active !== false) {
+            if (!colabInfo || colabInfo.active !== false) {
                 total++;
                 if (audit.status === 'Conforme') conformes++;
             }
@@ -177,11 +246,11 @@ const DashboardOverview = ({ onNavigate }) => {
 
         const taxaResult = total > 0 ? Number(((conformes / total) * 100).toFixed(1)) : 0;
         return { taxa: taxaResult, total, conformes, naoConformes: total - conformes };
-    }, [auditsList, colabsFull]);
+    }, [filteredAuditsList, colabsFull]);
 
-    // --- ESTATÍSTICAS DA TERCEIRIZADA (FCR, Conformidade e % de Qualidade) ---
+    // --- ESTATÍSTICAS DA TERCEIRIZADA (COM FILTRO) ---
     const thirdPartyStats = useMemo(() => {
-        const total = thirdPartyAudits.length;
+        const total = filteredThirdPartyAudits.length;
         if (total === 0) {
             return {
                 total: 0,
@@ -200,24 +269,20 @@ const DashboardOverview = ({ onNavigate }) => {
             };
         }
 
-        // Considerar atendimentos que possuem dados auditados
-        const completed = thirdPartyAudits.filter(a => 
+        const completed = filteredThirdPartyAudits.filter(a => 
             a.procedures || a.outcome || a.clientName || a.operatorName
         );
         const completedCount = completed.length;
         const pendingCount = total - completedCount;
 
-        // FCR: Resolvido vs Encaminhado
         const resolvedCount = completed.filter(a => a.outcome === 'Resolvido').length;
         const forwardedCount = completed.filter(a => a.outcome === 'Encaminhado').length;
         const fcr = completedCount > 0 ? Math.round((resolvedCount / completedCount) * 100) : 0;
 
-        // Conformidade: Conforme vs Não conforme
         const conformeCount = completed.filter(a => a.procedures === 'Conforme').length;
         const naoConformeCount = completedCount - conformeCount;
         const compliance = completedCount > 0 ? Math.round((conformeCount / completedCount) * 100) : 0;
 
-        // % de Qualidade: Positiva vs Negativa (Neutro neutro)
         const positiveCount = completed.filter(a => a.quality === 'Positiva').length;
         const neutralCount = completed.filter(a => a.quality === 'Neutra').length;
         const negativeCount = completed.filter(a => a.quality === 'Negativa').length;
@@ -239,9 +304,9 @@ const DashboardOverview = ({ onNavigate }) => {
             neutralCount,
             negativeCount
         };
-    }, [thirdPartyAudits]);
+    }, [filteredThirdPartyAudits]);
 
-    // --- ESTATÍSTICAS CONSOLIDADAS DA EQUIPE ---
+    // --- ESTATÍSTICAS CONSOLIDADAS DA EQUIPE (DINÂMICAS POR TURNO E DATA) ---
     const teamStats = useMemo(() => {
         const defaultStats = {
             avgVol: 0, avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00',
@@ -262,14 +327,14 @@ const DashboardOverview = ({ onNavigate }) => {
             }
         };
 
-        if (evalsList.length === 0) return defaultStats;
+        if (filteredEvalsList.length === 0) return defaultStats;
 
         const colabPointsData = {};
         const accumulatedVol = {};
         const accumulatedTmaTel = {};
         const accumulatedTmaHuggy = {};
 
-        evalsList.forEach(e => {
+        filteredEvalsList.forEach(e => {
             const colabId = e.colabId || e.collaboratorId;
             let colabInfo = colabsFull[colabId];
             if (!colabInfo && e.colabName) colabInfo = colabsFull[e.colabName.trim().toLowerCase()];
@@ -297,9 +362,6 @@ const DashboardOverview = ({ onNavigate }) => {
             }
         });
 
-        // Rankings por Turno baseados na Média de Pontos por Avaliação (Equitativo para novos e antigos colaboradores)
-        // Manhã I, Manhã II e Tarde disputam a mesma média (horário de pico).
-        // Noturno disputa sua própria média isolada.
         const topPointsDayList = [];
         const topPointsNightList = [];
         
@@ -318,7 +380,6 @@ const DashboardOverview = ({ onNavigate }) => {
                 if (isNightShift(colabInfo.shift)) {
                     topPointsNightList.push(item);
                 } else {
-                    // Manhã I, Manhã II, Tarde e demais colaboradores do diurno disputam a mesma média no pico
                     topPointsDayList.push(item);
                 }
             }
@@ -364,13 +425,13 @@ const DashboardOverview = ({ onNavigate }) => {
         const lowestAvgVol = avgVolList.length > 0 ? avgVolList[0] : { val: 0, name: '--' };
 
         // Médias da última semana apurada
-        const latestDate = evalsList.reduce((max, e) => {
+        const latestDate = filteredEvalsList.reduce((max, e) => {
             if (!max) return e.date || '';
             const tE = parseDateSort(e.date);
             const tMax = parseDateSort(max);
             return tE > tMax ? e.date : max;
         }, '');
-        const currentWeek = evalsList.filter(e => e.date === latestDate);
+        const currentWeek = filteredEvalsList.filter(e => e.date === latestDate);
 
         let sumVol = 0, sumTmaTel = 0, sumTmaHuggy = 0;
         let sumPtsDay = 0, countDay = 0, sumVolDay = 0;
@@ -404,7 +465,6 @@ const DashboardOverview = ({ onNavigate }) => {
                         sumVolNight += vol;
                         countNight++;
                     } else {
-                        // Manhã I, Manhã II, Tarde disputam a mesma média no horário de pico
                         sumPtsDay += currentPts;
                         sumVolDay += vol;
                         countDay++;
@@ -450,14 +510,12 @@ const DashboardOverview = ({ onNavigate }) => {
                 }
             }
         };
-    }, [evalsList, colabsFull]);
+    }, [filteredEvalsList, colabsFull]);
 
-    // --- TIMELINE DE DADOS CONSOLIDADOS PARA OS GRÁFICOS DE EVOLUÇÃO ---
-    // Mantém estritamente os KPIs principais com lançamentos corretos: TMR, FCR, Reincidência e QA
+    // --- TIMELINE DE DADOS CONSOLIDADOS PARA OS GRÁFICOS ---
     const evolutionTimeline = useMemo(() => {
-        // Agrupa auditorias de QA por data
         const qaByDate = {};
-        auditsList.forEach(a => {
+        filteredAuditsList.forEach(a => {
             let d = a.date;
             if (!d && a.createdAt) {
                 if (a.createdAt.toDate) {
@@ -475,21 +533,34 @@ const DashboardOverview = ({ onNavigate }) => {
             if (a.status === 'Conforme') qaByDate[d].conformes++;
         });
 
-        // Timeline baseada nos lançamentos oficiais e corretos de KPIs do Setor
+        // Avaliações de volume e pontos por data
+        const evalsByDate = {};
+        filteredEvalsList.forEach(e => {
+            const d = e.date;
+            if (!d) return;
+            if (!evalsByDate[d]) evalsByDate[d] = { sumVol: 0, sumPts: 0, count: 0 };
+            evalsByDate[d].sumVol += Number(e.Atendimentos_Finalizados) || 0;
+            evalsByDate[d].sumPts += e.pontuacao !== undefined ? e.pontuacao : calculatePerformanceScore(e);
+            evalsByDate[d].count++;
+        });
+
         const combined = [];
         const registeredDates = new Set();
 
-        sectorKpisList.forEach(kpi => {
+        filteredSectorKpis.forEach(kpi => {
             const tmrDec = timeToDecimal(kpi.tmr);
             const dateLabel = formatDateBR(kpi.date);
             const rawDate = kpi.date;
             registeredDates.add(rawDate);
 
-            // Busca auditoria de QA para a data correspondente
             const qaMatch = qaByDate[rawDate];
             const qaRate = (qaMatch && qaMatch.total > 0)
                 ? Number(((qaMatch.conformes / qaMatch.total) * 100).toFixed(1))
                 : qaStats.taxa;
+
+            const evalMatch = evalsByDate[rawDate];
+            const avgVol = (evalMatch && evalMatch.count > 0) ? Math.round(evalMatch.sumVol / evalMatch.count) : teamStats.avgVol;
+            const avgPts = (evalMatch && evalMatch.count > 0) ? Math.round(evalMatch.sumPts / evalMatch.count) : teamStats.avgPtsDay;
 
             combined.push({
                 id: kpi.id,
@@ -500,17 +571,23 @@ const DashboardOverview = ({ onNavigate }) => {
                 tmrFormatted: kpi.tmr,
                 fcr: Number(kpi.fcr || 0),
                 recurrence: Number(kpi.recurrence || 0),
-                qaRate: Number(qaRate)
+                qaRate: Number(qaRate),
+                volume: avgVol,
+                avgPoints: avgPts
             });
         });
 
-        // Se houver datas com auditorias de QA não contempladas em sector_kpis, adiciona para completude da curva de QA
-        Object.entries(qaByDate).forEach(([rawDate, qaData]) => {
+        // Adiciona datas com avaliações ou QA que não estavam em sector_kpis
+        Object.entries(evalsByDate).forEach(([rawDate, evData]) => {
             if (!registeredDates.has(rawDate)) {
                 const dateLabel = formatDateBR(rawDate);
-                const qaRate = qaData.total > 0 ? Number(((qaData.conformes / qaData.total) * 100).toFixed(1)) : 0;
+                const qaMatch = qaByDate[rawDate];
+                const qaRate = (qaMatch && qaMatch.total > 0) ? Number(((qaMatch.conformes / qaMatch.total) * 100).toFixed(1)) : qaStats.taxa;
+                const avgVol = evData.count > 0 ? Math.round(evData.sumVol / evData.count) : 0;
+                const avgPts = evData.count > 0 ? Math.round(evData.sumPts / evData.count) : 0;
+
                 combined.push({
-                    id: `qa-${rawDate}`,
+                    id: `ev-${rawDate}`,
                     date: dateLabel,
                     fullDate: rawDate,
                     timestamp: parseDateSort(rawDate),
@@ -518,20 +595,18 @@ const DashboardOverview = ({ onNavigate }) => {
                     tmrFormatted: latestKpi.tmr || '00:00:00',
                     fcr: Number(latestKpi.fcr || 0),
                     recurrence: Number(latestKpi.recurrence || 0),
-                    qaRate: Number(qaRate)
+                    qaRate: Number(qaRate),
+                    volume: avgVol,
+                    avgPoints: avgPts
                 });
             }
         });
 
         combined.sort((a, b) => a.timestamp - b.timestamp);
-
-        // Aplica filtro de tempo
-        if (timeframe === 'last30') return combined.slice(-5);
-        if (timeframe === 'last60') return combined.slice(-10);
         return combined;
-    }, [sectorKpisList, auditsList, qaStats, latestKpi, timeframe]);
+    }, [filteredSectorKpis, filteredAuditsList, filteredEvalsList, qaStats, latestKpi, teamStats]);
 
-    // Definição dos Metadados dos 4 KPIs Principais
+    // Definição dos Metadados do KPI Selecionado
     const currentKpiConfig = useMemo(() => {
         switch (selectedKpi) {
             case 'tmr':
@@ -546,39 +621,39 @@ const DashboardOverview = ({ onNavigate }) => {
                     currentVal: latestKpi.tmr || '00:00:00',
                     currentNum: timeToDecimal(latestKpi.tmr),
                     formatTooltip: (val) => `${formatTime(val)} (${val.toFixed(1)} min)`,
-                    category: 'KPI Principal'
+                    category: 'KPI Estratégico'
                 };
             case 'fcr':
                 return {
                     label: 'FCR - Resolução no Primeiro Contato',
                     unit: '%',
                     dataKey: 'fcr',
-                    color: '#10b981', // Verde
+                    color: '#10b981', // Verde esmeralda
                     goalValue: Number(goals.fcr),
                     goalFormatted: `≥ ${goals.fcr}%`,
                     isBetterLower: false,
                     currentVal: `${latestKpi.fcr}%`,
                     currentNum: Number(latestKpi.fcr),
                     formatTooltip: (val) => `${val}%`,
-                    category: 'KPI Principal'
+                    category: 'KPI Estratégico'
                 };
             case 'recurrence':
                 return {
                     label: 'Taxa de Reincidência de Atendimentos',
                     unit: '%',
                     dataKey: 'recurrence',
-                    color: '#f43f5e', // Rosa / Vermelho
+                    color: '#f43f5e', // Carmesim / Rose
                     goalValue: Number(goals.recurrence),
                     goalFormatted: `≤ ${goals.recurrence}%`,
                     isBetterLower: true,
                     currentVal: `${latestKpi.recurrence}%`,
                     currentNum: Number(latestKpi.recurrence),
                     formatTooltip: (val) => `${val}%`,
-                    category: 'KPI Principal'
+                    category: 'KPI Estratégico'
                 };
             case 'qa_rate':
                 return {
-                    label: 'Taxa de Conformidade QA (Monitoria de Qualidade)',
+                    label: 'Taxa de Conformidade QA (Monitoria)',
                     unit: '%',
                     dataKey: 'qaRate',
                     color: '#f59e0b', // Âmbar
@@ -589,6 +664,34 @@ const DashboardOverview = ({ onNavigate }) => {
                     currentNum: Number(qaStats.taxa),
                     formatTooltip: (val) => `${val}%`,
                     category: 'Monitoria QA'
+                };
+            case 'volume':
+                return {
+                    label: 'Média de Atendimentos Finalizados',
+                    unit: 'finalizações',
+                    dataKey: 'volume',
+                    color: '#0284c7', // Sky
+                    goalValue: 50,
+                    goalFormatted: '≥ 50 fin.',
+                    isBetterLower: false,
+                    currentVal: `${teamStats.avgVol} fin.`,
+                    currentNum: teamStats.avgVol,
+                    formatTooltip: (val) => `${val} atendimentos`,
+                    category: 'Operacional'
+                };
+            case 'avg_points':
+                return {
+                    label: 'Pontuação Média da Equipe',
+                    unit: 'pontos',
+                    dataKey: 'avgPoints',
+                    color: '#6366f1', // Indigo
+                    goalValue: 120,
+                    goalFormatted: '≥ 120 pts',
+                    isBetterLower: false,
+                    currentVal: `${teamStats.avgPtsDay} pts`,
+                    currentNum: teamStats.avgPtsDay,
+                    formatTooltip: (val) => `${val} pts`,
+                    category: 'Desempenho'
                 };
             default:
                 return {
@@ -602,14 +705,14 @@ const DashboardOverview = ({ onNavigate }) => {
                     currentVal: latestKpi.tmr || '00:00:00',
                     currentNum: timeToDecimal(latestKpi.tmr),
                     formatTooltip: (val) => `${formatTime(val)} (${val.toFixed(1)} min)`,
-                    category: 'KPI Principal'
+                    category: 'KPI Estratégico'
                 };
         }
-    }, [selectedKpi, goals, latestKpi, qaStats]);
+    }, [selectedKpi, goals, latestKpi, qaStats, teamStats]);
 
-    // Estatísticas resumidas da métrica no período selecionado (Mín, Máx, Média, Variação)
+    // Resumo Estatístico do Período no Gráfico
     const kpiSummaryStats = useMemo(() => {
-        if (evolutionTimeline.length === 0) return { avg: 0, min: 0, max: 0, diff: 0 };
+        if (evolutionTimeline.length === 0) return { avg: 0, min: 0, max: 0, diff: 0, count: 0 };
         const values = evolutionTimeline.map(i => Number(i[currentKpiConfig.dataKey]) || 0);
         const sum = values.reduce((a, b) => a + b, 0);
         const avg = Number((sum / values.length).toFixed(1));
@@ -621,339 +724,364 @@ const DashboardOverview = ({ onNavigate }) => {
         return { avg, min, max, diff, count: values.length };
     }, [evolutionTimeline, currentKpiConfig]);
 
+    // Reset de Filtros
+    const hasActiveFilters = selectedShiftFilter !== 'all' || selectedPeriodFilter !== 'all';
+    const handleResetFilters = () => {
+        setSelectedShiftFilter('all');
+        setSelectedPeriodFilter('all');
+    };
+
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 h-full p-8">
-                <Loader2 className="w-10 h-10 text-red-600 animate-spin mb-3" />
-                <p className="text-sm font-medium text-gray-600">Carregando painel analítico de KPIs e monitorias...</p>
+            <div className="flex-1 flex flex-col items-center justify-center bg-canvas h-full p-8 text-primary-hub">
+                <Loader2 className="w-10 h-10 text-rose-500 animate-spin mb-3" />
+                <p className="text-sm font-medium text-secondary-hub">Carregando inteligência analítica de KPIs e monitorias...</p>
             </div>
         );
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col space-y-6">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8 h-full overflow-y-auto bg-canvas text-primary-hub flex flex-col space-y-6 transition-colors">
             
             {/* ========================================================= */}
-            {/* CABEÇALHO DA DASHBOARD INFOGRÁFICA                        */}
+            {/* 1. CABEÇALHO NO FUNDO DA PÁGINA (PADRÃO V4.0.0)           */}
             {/* ========================================================= */}
-            <header className="bg-white p-6 rounded-xl border border-gray-200 shadow-xs flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 shrink-0">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2.5 bg-red-50 text-red-600 rounded-xl border border-red-200">
-                            <Rocket className="w-6 h-6" />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-2xl font-black text-gray-900 tracking-tight">
-                                    Cockpit Geral de KPIs & Monitorias
-                                </h1>
-                                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200 flex items-center gap-1">
-                                    <Activity className="w-3.5 h-3.5 text-red-600" /> Operação em Tempo Real
-                                </span>
-                            </div>
-                            <p className="text-sm text-gray-500">
-                                Monitoramento infográfico consolidado, metas de qualidade, conformidade e evolução histórica.
-                            </p>
-                        </div>
+            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 shrink-0">
+                <div>
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+                        <Activity className="w-3.5 h-3.5" />
+                        <span>Cockpit Executivo & Inteligência de Dados</span>
                     </div>
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <h1 className="font-brand text-2xl sm:text-3xl lg:text-4xl font-bold text-primary-hub tracking-tight">
+                            Visão Geral de KPIs
+                        </h1>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            v4.0 Hubdesk
+                        </span>
+                        {hasActiveFilters && (
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                                <Filter className="w-3 h-3" /> Filtros Ativos
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-xs sm:text-sm text-secondary-hub mt-1 leading-relaxed">
+                        Monitoramento infográfico em tempo real: metas de qualidade, SLAs, desempenho de equipes e auditorias.
+                    </p>
                 </div>
 
-                {/* MODOS DE VISUALIZAÇÃO ALTERNÁVEIS */}
-                <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0 self-start xl:self-auto">
-                    <button 
-                        onClick={() => setViewMode('cockpit')} 
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            viewMode === 'cockpit' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                        title="Visão Cockpit Executivo"
-                    >
-                        <BarChart3 className="w-3.5 h-3.5 text-red-600" />
-                        <span>Cockpit Geral</span>
-                    </button>
-                    <button 
-                        onClick={() => setViewMode('evolution')} 
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            viewMode === 'evolution' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                        title="Gráficos de Evolução Temporal com Seleção"
-                    >
-                        <LineChartIcon className="w-3.5 h-3.5 text-purple-600" />
-                        <span>Evolução & Gráficos</span>
-                    </button>
-                    <button 
-                        onClick={() => setViewMode('compliance')} 
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            viewMode === 'compliance' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                        title="Semáforo e Metas"
-                    >
-                        <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                        <span>Semáforo de Metas</span>
-                    </button>
-                    <button 
-                        onClick={() => setViewMode('shifts')} 
-                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            viewMode === 'shifts' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
-                        }`}
-                        title="Comparativo por Turno"
-                    >
-                        <Users className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Por Turnos</span>
-                    </button>
+                {/* MODOS DE VISUALIZAÇÃO ALTERNÁVEIS VIA TABS */}
+                <div className="self-start lg:self-center">
+                    <Tabs
+                        tabs={[
+                            { id: 'cockpit', label: 'Cockpit Geral', icon: BarChart3 },
+                            { id: 'evolution', label: 'Evolução & Gráficos', icon: LineChartIcon },
+                            { id: 'compliance', label: 'Semáforo de Metas', icon: ShieldCheck },
+                            { id: 'shifts', label: 'Por Turnos', icon: Users },
+                        ]}
+                        activeTab={viewMode}
+                        onChange={setViewMode}
+                        id="cockpit-modes-tabs"
+                    />
                 </div>
             </header>
 
             {/* ========================================================= */}
-            {/* PRIMEIRA FILEIRA: SOMENTE CARDS DE DEMANDAS / TAREFAS     */}
+            {/* 2. BARRA DE FILTRAGEM INTERATIVA (DINÂMICA EM TEMPO REAL) */}
             {/* ========================================================= */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
-                {/* 1. Demandas Pendentes - CRÍTICO (Fundo Sólido Destaque estilo Audit QA) */}
-                <div 
-                    onClick={() => handleNavigate('reports')}
-                    className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-amber-500/50 transition-all cursor-pointer group"
-                    title="Clique para acessar a tela de Tarefas & Relatórios"
-                >
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
-                                <Clock className="w-4 h-4 text-amber-400" />
-                                Demandas Pendentes
-                            </span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                                Aguardando Triagem
-                            </span>
-                        </div>
-                        <div className="mt-2 flex items-baseline gap-2">
-                            <span className="text-3xl font-black text-white tracking-tight">
-                                {reportStats.pending}
-                            </span>
-                            <span className="text-xs text-zinc-400 font-medium">solicitações</span>
-                        </div>
+            <div className="bg-surface p-3.5 sm:p-4 rounded-2xl border border-subtle shadow-xs flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-3">
+                    <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
+                        <Filter className="w-3.5 h-3.5 text-rose-500" />
+                        Filtrar Dados:
+                    </span>
+
+                    {/* Filtro de Turno */}
+                    <div className="flex items-center gap-1 bg-canvas p-1 rounded-xl border border-subtle">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedShiftFilter('all')}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                selectedShiftFilter === 'all'
+                                    ? 'bg-surface text-primary-hub shadow-xs border border-subtle'
+                                    : 'text-muted-hub hover:text-primary-hub'
+                            }`}
+                        >
+                            Todos Turnos
+                        </button>
+                        {OFFICIAL_SHIFTS.map((shift) => (
+                            <button
+                                key={shift}
+                                type="button"
+                                onClick={() => setSelectedShiftFilter(shift)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    selectedShiftFilter === shift
+                                        ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30'
+                                        : 'text-muted-hub hover:text-primary-hub'
+                                }`}
+                            >
+                                {shift}
+                            </button>
+                        ))}
                     </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] font-bold text-amber-400">
-                        <span>Acessar chamados</span>
-                        <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+
+                    {/* Filtro de Período Temporal */}
+                    <div className="flex items-center gap-1 bg-canvas p-1 rounded-xl border border-subtle">
+                        {[
+                            { id: 'all', label: 'Todo Histórico' },
+                            { id: 'last30', label: '30 Dias' },
+                            { id: 'last60', label: '60 Dias' },
+                            { id: 'last90', label: '90 Dias' },
+                        ].map((p) => (
+                            <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => setSelectedPeriodFilter(p.id)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                    selectedPeriodFilter === p.id
+                                        ? 'bg-surface text-primary-hub shadow-xs border border-subtle'
+                                        : 'text-muted-hub hover:text-primary-hub'
+                                }`}
+                            >
+                                {p.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
-                {/* 2. Demandas Em Andamento - Contorno Leve com Ícone */}
-                <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-sky-300 transition-all flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <Activity className="w-4 h-4 text-sky-500" />
-                                Em Andamento
-                            </span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 font-bold border border-sky-100 dark:border-sky-800/40">
-                                Fila Ativa
-                            </span>
-                        </div>
-                        <div className="mt-2 flex items-baseline gap-2">
-                            <span className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-                                {reportStats.inProgress}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-zinc-400 font-medium">em análise</span>
-                        </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800/80 text-[11px] text-gray-400 dark:text-zinc-500 font-medium">
-                        Em análise técnica da operação
-                    </div>
-                </div>
-
-                {/* 3. Demandas Resolvidas - Contorno Leve com Ícone */}
-                <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-emerald-300 transition-all flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                                Resolvidas
-                            </span>
-                            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-100 dark:border-emerald-800/40">
-                                Concluídas
-                            </span>
-                        </div>
-                        <div className="mt-2 flex items-baseline gap-2">
-                            <span className="text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
-                                {reportStats.resolved}
-                            </span>
-                            <span className="text-xs text-emerald-600/70 dark:text-emerald-400/70 font-medium">finalizados</span>
-                        </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800/80 text-[11px] text-gray-400 dark:text-zinc-500 font-medium">
-                        Histórico completo com parecer
-                    </div>
+                {/* Reset e Indicadores */}
+                <div className="flex items-center gap-2">
+                    {hasActiveFilters && (
+                        <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="px-3 py-1.5 rounded-xl border border-subtle bg-canvas hover:bg-subtle text-secondary-hub hover:text-primary-hub text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            <span>Limpar Filtros</span>
+                        </button>
+                    )}
+                    <span className="text-[11px] text-muted-hub font-medium hidden sm:inline">
+                        {filteredEvalsList.length} avaliações apuradas
+                    </span>
                 </div>
             </div>
 
             {/* ========================================================= */}
-            {/* CONTEÚDO PRINCIPAL DE ACORDO COM O MODO SELECIONADO       */}
+            {/* 3. PRIMEIRA FILEIRA BENTO: DEMANDAS & ORDENS DE SERVIÇO   */}
+            {/* ========================================================= */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 shrink-0">
+                {/* 1. Demandas Pendentes - Triagem */}
+                <Card 
+                    hover
+                    onClick={() => handleNavigate('reports')}
+                    className="relative overflow-hidden p-5 border-amber-500/30 hover:border-amber-500/60 shadow-xs flex flex-col justify-between group cursor-pointer bg-surface"
+                >
+                    <BorderBeam size={160} duration={8} colorFrom="#f59e0b" colorTo="#d97706" borderWidth={1.2} />
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1.5">
+                                <Clock className="w-4 h-4 text-amber-500" />
+                                Demandas Pendentes
+                            </span>
+                            <Badge variant="warning" size="sm">
+                                Aguardando Triagem
+                            </Badge>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="font-brand text-3xl font-black text-primary-hub tracking-tight tabular-nums">
+                                {reportStats.pending}
+                            </span>
+                            <span className="text-xs text-secondary-hub font-medium">solicitações</span>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-subtle flex items-center justify-between text-xs font-bold text-amber-500">
+                        <span>Acessar chamados</span>
+                        <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                    </div>
+                </Card>
+
+                {/* 2. Demandas Em Andamento */}
+                <Card 
+                    className="p-5 border-sky-500/30 hover:border-sky-500/50 shadow-xs flex flex-col justify-between bg-surface"
+                >
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
+                                <Activity className="w-4 h-4 text-sky-500" />
+                                Em Andamento
+                            </span>
+                            <Badge variant="info" size="sm">
+                                Fila Ativa
+                            </Badge>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="font-brand text-3xl font-black text-primary-hub tracking-tight tabular-nums">
+                                {reportStats.inProgress}
+                            </span>
+                            <span className="text-xs text-secondary-hub font-medium">em análise</span>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-subtle text-[11px] text-muted-hub font-medium">
+                        Em análise técnica da operação
+                    </div>
+                </Card>
+
+                {/* 3. Demandas Resolvidas */}
+                <Card 
+                    className="p-5 border-emerald-500/30 hover:border-emerald-500/50 shadow-xs flex flex-col justify-between bg-surface"
+                >
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                                Resolvidas
+                            </span>
+                            <Badge variant="success" size="sm">
+                                Concluídas
+                            </Badge>
+                        </div>
+                        <div className="mt-2 flex items-baseline gap-2">
+                            <span className="font-brand text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight tabular-nums">
+                                {reportStats.resolved}
+                            </span>
+                            <span className="text-xs text-secondary-hub font-medium">finalizados</span>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-3 border-t border-subtle text-[11px] text-muted-hub font-medium">
+                        Histórico completo com parecer
+                    </div>
+                </Card>
+            </div>
+
+            {/* ========================================================= */}
+            {/* 4. CONTEÚDO PRINCIPAL DE ACORDO COM A ABA ATIVA           */}
             {/* ========================================================= */}
 
             {/* --------------------------------------------------------- */}
-            {/* MODO 1: COCKPIT GERAL INFOGRÁFICO                         */}
+            {/* ABA 1: COCKPIT GERAL EXECUTIVO                            */}
             {/* --------------------------------------------------------- */}
             {viewMode === 'cockpit' && (
                 <div className="space-y-6">
                     
-                    {/* BLOCO INFOGRÁFICO DE KPIS DO SETOR */}
+                    {/* INDICADORES ESTRATÉGICOS GLOBAIS */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                <Rocket className="w-4 h-4 text-red-600" /> Indicadores Estratégicos Globais
+                            <h2 className="text-xs font-black text-secondary-hub uppercase tracking-widest flex items-center gap-2">
+                                <Rocket className="w-4 h-4 text-rose-500" /> Indicadores Estratégicos Globais
                             </h2>
                             <button 
                                 onClick={() => setViewMode('evolution')} 
-                                className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1 cursor-pointer transition-colors"
+                                className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                             >
                                 Ver Gráficos de Evolução <ArrowUpRight className="w-3.5 h-3.5" />
                             </button>
                         </div>
 
-                        {/* 4 CARDS ESTRATÉGICOS GLOBAIS: TMR, FCR, REINCIDÊNCIA E ÍNDICE QA DA OPERAÇÃO */}
+                        {/* 4 CARDS ESTRATÉGICOS GLOBAIS */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            
-                            {/* TMR Setor - Contorno Leve */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-purple-200 transition-all flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Clock className="w-4 h-4 text-purple-500" />
-                                            TMR Setor
-                                        </span>
-                                        <TrendBadge type="tmr" val={latestKpi.tmr} goal={goals.tmr} />
-                                    </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
-                                        {latestKpi.tmr || '00:00:00'}
-                                    </div>
-                                </div>
+                            <StatCard
+                                title="TMR Setor"
+                                value={latestKpi.tmr || '00:00:00'}
+                                goal={`≤ ${goals.tmr}`}
+                                icon={Clock}
+                                status={timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'success' : 'danger'}
+                                isGood={timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr)}
+                                trend={timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'up' : 'down'}
+                                trendLabel={timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'Na Meta' : 'Fora da Meta'}
+                                subtitle="Tempo Médio Resposta"
+                                onClick={() => {
+                                    setSelectedKpi('tmr');
+                                    setViewMode('evolution');
+                                }}
+                            />
 
-                                <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
-                                    <span>Meta Estipulada:</span>
-                                    <span className="font-bold text-gray-700 dark:text-zinc-300">≤ {goals.tmr}</span>
-                                </div>
-                            </div>
+                            <StatCard
+                                title="FCR (1º Contato)"
+                                value={`${latestKpi.fcr || 0}%`}
+                                goal={`≥ ${goals.fcr}%`}
+                                icon={Target}
+                                status={Number(latestKpi.fcr || 0) >= Number(goals.fcr) ? 'success' : 'danger'}
+                                isGood={Number(latestKpi.fcr || 0) >= Number(goals.fcr)}
+                                trend={Number(latestKpi.fcr || 0) >= Number(goals.fcr) ? 'up' : 'down'}
+                                trendLabel={Number(latestKpi.fcr || 0) >= Number(goals.fcr) ? 'Na Meta' : 'Fora da Meta'}
+                                subtitle="Resolução Imediata"
+                                onClick={() => {
+                                    setSelectedKpi('fcr');
+                                    setViewMode('evolution');
+                                }}
+                            />
 
-                            {/* FCR (1º Contato) - Contorno Leve */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-emerald-200 transition-all flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Target className="w-4 h-4 text-emerald-500" />
-                                            FCR (1º Contato)
-                                        </span>
-                                        <TrendBadge type="fcr" val={latestKpi.fcr} goal={goals.fcr} />
-                                    </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight mt-1">
-                                        {latestKpi.fcr}%
-                                    </div>
-                                </div>
+                            <StatCard
+                                title="Reincidência"
+                                value={`${latestKpi.recurrence || 0}%`}
+                                goal={`≤ ${goals.recurrence}%`}
+                                icon={Activity}
+                                status={Number(latestKpi.recurrence || 0) <= Number(goals.recurrence) ? 'success' : 'danger'}
+                                isGood={Number(latestKpi.recurrence || 0) <= Number(goals.recurrence)}
+                                trend={Number(latestKpi.recurrence || 0) <= Number(goals.recurrence) ? 'up' : 'down'}
+                                trendLabel={Number(latestKpi.recurrence || 0) <= Number(goals.recurrence) ? 'Na Meta' : 'Fora da Meta'}
+                                subtitle="Retornos de Atendimento"
+                                onClick={() => {
+                                    setSelectedKpi('recurrence');
+                                    setViewMode('evolution');
+                                }}
+                            />
 
-                                <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
-                                    <span>Meta Estipulada:</span>
-                                    <span className="font-bold text-gray-700 dark:text-zinc-300">≥ {goals.fcr}%</span>
-                                </div>
-                            </div>
-
-                            {/* Reincidência - Contorno Leve */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-blue-200 transition-all flex flex-col justify-between">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Activity className="w-4 h-4 text-blue-500" />
-                                            Reincidência
-                                        </span>
-                                        <TrendBadge type="recurrence" val={latestKpi.recurrence} goal={goals.recurrence} />
-                                    </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
-                                        {latestKpi.recurrence}%
-                                    </div>
-                                </div>
-
-                                <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
-                                    <span>Meta Estipulada:</span>
-                                    <span className="font-bold text-gray-700 dark:text-zinc-300">≤ {goals.recurrence}%</span>
-                                </div>
-                            </div>
-
-                            {/* Índice QA da Operação - CRÍTICO (Fundo Sólido Destaque estilo Audit QA) */}
-                            <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-zinc-700 transition-all relative overflow-hidden">
-                                <div>
-                                    <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-300 flex items-center gap-1.5">
-                                            <ShieldCheck className="w-4 h-4 text-red-500" />
-                                            Índice QA Operação
-                                        </span>
-                                        <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                            qaStats.taxa >= (goals.qa || 85) 
-                                                ? 'bg-emerald-950/80 text-emerald-400 border-emerald-800' 
-                                                : 'bg-red-950/80 text-red-400 border-red-800'
-                                        }`}>
-                                            Meta: {goals.qa || 85}%
-                                        </span>
-                                    </div>
-                                    <div className="flex items-baseline justify-between gap-2 mt-1">
-                                        <div className={`text-2xl sm:text-3xl font-black tracking-tight ${
-                                            qaStats.taxa >= (goals.qa || 85) ? 'text-emerald-400' : 'text-amber-400'
-                                        }`}>
-                                            {qaStats.taxa}%
-                                        </div>
-                                        <span className={`inline-flex items-center gap-1 text-[11px] font-bold ${
-                                            qaStats.taxa >= (goals.qa || 85) ? 'text-emerald-400' : 'text-amber-400'
-                                        }`}>
-                                            {qaStats.taxa >= (goals.qa || 85) ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                            {qaStats.taxa >= (goals.qa || 85) ? 'Na Meta' : 'Abaixo'}
-                                        </span>
-                                    </div>
-                                </div>
-
-                                <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                                    <span>Conformidade:</span>
-                                    <span className="font-bold text-white">{qaStats.conformes} de {qaStats.total}</span>
-                                </div>
-                            </div>
-
+                            <StatCard
+                                title="Índice QA Operação"
+                                value={`${qaStats.taxa}%`}
+                                goal={`≥ ${goals.qa || 85}%`}
+                                icon={Award}
+                                status={qaStats.taxa >= (goals.qa || 85) ? 'success' : 'danger'}
+                                isGood={qaStats.taxa >= (goals.qa || 85)}
+                                trend={qaStats.taxa >= (goals.qa || 85) ? 'up' : 'down'}
+                                trendLabel={qaStats.taxa >= (goals.qa || 85) ? 'Na Meta' : 'Abaixo da Meta'}
+                                subtitle={`${qaStats.conformes} de ${qaStats.total} conformes`}
+                                onClick={() => {
+                                    setSelectedKpi('qa_rate');
+                                    setViewMode('evolution');
+                                }}
+                            />
                         </div>
                     </div>
 
-                    {/* NOVA SESSÃO: INDICADORES DA TERCEIRIZADA (FCR, CONFORMIDADE E % DE QUALIDADE) */}
+                    {/* INDICADORES DA OPERAÇÃO TERCEIRIZADA */}
                     <div>
                         <div className="flex items-center justify-between mb-3">
-                            <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2">
-                                <Headphones className="w-4 h-4 text-indigo-600" /> Indicadores da Terceirizada
+                            <h2 className="text-xs font-black text-secondary-hub uppercase tracking-widest flex items-center gap-2">
+                                <Headphones className="w-4 h-4 text-indigo-500" /> Indicadores da Terceirizada (Plantão Noturno)
                             </h2>
                             <button 
                                 onClick={() => handleNavigate('third_party_audits')} 
-                                className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 cursor-pointer transition-colors"
-                                title="Acessar painel completo de auditoria da terceirizada"
+                                className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                             >
                                 Painel de Auditoria <ArrowUpRight className="w-3.5 h-3.5" />
                             </button>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            
-                            {/* FCR Terceirizada (Resolvido no 1º Contato) */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-indigo-200 transition-all flex flex-col justify-between">
+                            {/* FCR Terceirizada */}
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-indigo-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <Target className="w-4 h-4 text-indigo-500" />
                                             FCR Terceirizada
                                         </span>
                                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
                                             thirdPartyStats.fcr >= 70 
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40' 
-                                                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40'
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                                         }`}>
                                             {thirdPartyStats.fcr >= 70 ? 'Resolução Alta' : 'Acompanhar'}
                                         </span>
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
+                                    <div className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight mt-1">
                                         {thirdPartyStats.fcr}%
                                     </div>
                                 </div>
-
-                                <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+                                <div className="pt-3 mt-3 border-t border-subtle flex items-center justify-between text-xs text-secondary-hub">
                                     <span>Chamados Resolvidos:</span>
                                     <span className="font-bold text-indigo-600 dark:text-indigo-400">
                                         {thirdPartyStats.resolvedCount} de {thirdPartyStats.completedCount}
@@ -962,27 +1090,26 @@ const DashboardOverview = ({ onNavigate }) => {
                             </div>
 
                             {/* Conformidade de Procedimentos */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-teal-200 transition-all flex flex-col justify-between">
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-teal-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <ShieldCheck className="w-4 h-4 text-teal-500" />
-                                            Conformidade
+                                            Conformidade de Procedimentos
                                         </span>
                                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
                                             thirdPartyStats.compliance >= 80 
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40' 
-                                                : 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/40'
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                                                : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
                                         }`}>
                                             {thirdPartyStats.compliance >= 80 ? 'Procedimento Correto' : 'Revisar Roteiro'}
                                         </span>
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
+                                    <div className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight mt-1">
                                         {thirdPartyStats.compliance}%
                                     </div>
                                 </div>
-
-                                <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+                                <div className="pt-3 mt-3 border-t border-subtle flex items-center justify-between text-xs text-secondary-hub">
                                     <span>Conformes / Não Conformes:</span>
                                     <span className="font-bold text-teal-600 dark:text-teal-400">
                                         {thirdPartyStats.conformeCount} / {thirdPartyStats.naoConformeCount}
@@ -991,217 +1118,215 @@ const DashboardOverview = ({ onNavigate }) => {
                             </div>
 
                             {/* % de Qualidade da Terceirizada */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-amber-200 transition-all flex flex-col justify-between">
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-amber-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <Star className="w-4 h-4 text-amber-500" />
-                                            % de Qualidade
+                                            Qualidade do Atendimento
                                         </span>
                                         <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
                                             thirdPartyStats.qualityRate >= 80 
-                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/40' 
-                                                : 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40'
+                                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                                                : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                                         }`}>
                                             {thirdPartyStats.qualityRate >= 80 ? 'Aprovado' : 'Atenção'}
                                         </span>
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
+                                    <div className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight mt-1">
                                         {thirdPartyStats.qualityRate}%
                                     </div>
                                 </div>
-
-                                <div className="pt-3 mt-3 border-t border-gray-100 dark:border-zinc-800 flex items-center justify-between text-xs text-gray-500 dark:text-zinc-400">
+                                <div className="pt-3 mt-3 border-t border-subtle flex items-center justify-between text-xs text-secondary-hub">
                                     <span>Avaliações Positivas:</span>
                                     <span className="font-bold text-amber-600 dark:text-amber-400">
                                         {thirdPartyStats.positiveCount} de {thirdPartyStats.positiveCount + thirdPartyStats.negativeCount}
                                     </span>
                                 </div>
                             </div>
-
                         </div>
                     </div>
 
-                    {/* BLOCO PERFORMANCE OPERACIONAL DA EQUIPE */}
+                    {/* EFICIÊNCIA MÉDIA DA EQUIPE */}
                     <div>
-                        <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-3">
-                            <Users className="w-4 h-4 text-indigo-600" /> Eficiência Média da Equipe
+                        <h2 className="text-xs font-black text-secondary-hub uppercase tracking-widest flex items-center gap-2 mb-3">
+                            <Users className="w-4 h-4 text-indigo-500" /> Eficiência Operacional da Equipe
                         </h2>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             {/* Média Finalizações */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-emerald-200 transition-all flex flex-col justify-between">
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-emerald-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <CheckSquare className="w-4 h-4 text-emerald-500" />
                                             Média Finalizações
                                         </span>
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
+                                    <div className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight mt-1">
                                         {teamStats.avgVol}
                                     </div>
                                 </div>
-                                <span className="text-xs text-gray-400 dark:text-zinc-500 mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800 font-medium">
+                                <span className="text-xs text-muted-hub mt-3 pt-3 border-t border-subtle font-medium">
                                     Atendimentos concluídos / analista
                                 </span>
                             </div>
 
                             {/* TMA Médio (Voz) */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-blue-200 transition-all flex flex-col justify-between">
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-sky-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                                            <Phone className="w-4 h-4 text-blue-500" />
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
+                                            <Phone className="w-4 h-4 text-sky-500" />
                                             TMA Médio (Voz)
                                         </span>
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
+                                    <div className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight mt-1">
                                         {teamStats.avgTmaTel}
                                     </div>
                                 </div>
-                                <span className="text-xs text-gray-400 dark:text-zinc-500 mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800 font-medium">
-                                    Tempo médio em ligação telefônica
+                                <span className="text-xs text-muted-hub mt-3 pt-3 border-t border-subtle font-medium">
+                                    Tempo médio em chamada telefônica
                                 </span>
                             </div>
 
                             {/* TMA Médio (Chat) */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-purple-200 transition-all flex flex-col justify-between">
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-purple-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <MessageCircle className="w-4 h-4 text-purple-500" />
                                             TMA Médio (Chat)
                                         </span>
                                     </div>
-                                    <div className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mt-1">
+                                    <div className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight mt-1">
                                         {teamStats.avgTmaHuggy}
                                     </div>
                                 </div>
-                                <span className="text-xs text-gray-400 dark:text-zinc-500 mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800 font-medium">
+                                <span className="text-xs text-muted-hub mt-3 pt-3 border-t border-subtle font-medium">
                                     Tempo médio no atendimento Huggy
                                 </span>
                             </div>
 
                             {/* Pontuação por Turno */}
-                            <div className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-gray-200 dark:border-zinc-800 shadow-xs hover:border-amber-200 transition-all flex flex-col justify-between">
+                            <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs hover:border-amber-500/40 transition-all flex flex-col justify-between">
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
-                                        <span className="text-[11px] font-bold text-gray-500 dark:text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <Star className="w-4 h-4 text-amber-500" />
-                                            Pontuação por Turno
+                                            Média de Pontos por Turno
                                         </span>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 mt-2">
-                                        <div className="border-r border-gray-100 dark:border-zinc-800 pr-2">
-                                            <span className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase block">Dia (Pico)</span>
+                                        <div className="border-r border-subtle pr-2">
+                                            <span className="text-[10px] text-muted-hub font-bold uppercase block">Dia (Pico)</span>
                                             <span className="text-lg font-black text-amber-600 dark:text-amber-400">{teamStats.avgPtsDay} pts</span>
                                         </div>
                                         <div className="pl-2">
-                                            <span className="text-[10px] text-gray-400 dark:text-zinc-400 font-bold uppercase block">Noturno</span>
+                                            <span className="text-[10px] text-muted-hub font-bold uppercase block">Noturno</span>
                                             <span className="text-lg font-black text-indigo-600 dark:text-indigo-400">{teamStats.avgPtsNight} pts</span>
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-gray-400 dark:text-zinc-500 mt-3 pt-3 border-t border-gray-100 dark:border-zinc-800 block">
-                                    Média apurada da semana
+                                <span className="text-[11px] text-muted-hub mt-3 pt-3 border-t border-subtle block">
+                                    Média apurada da semana corrente
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    {/* BLOCO DESTAQUES & PONTOS DE ATENÇÃO */}
+                    {/* DESTAQUES OPERACIONAIS & PONTOS DE ATENÇÃO */}
                     <div>
-                        <h2 className="text-xs font-black text-gray-500 uppercase tracking-widest flex items-center gap-2 mb-3">
+                        <h2 className="text-xs font-black text-secondary-hub uppercase tracking-widest flex items-center gap-2 mb-3">
                             <Award className="w-4 h-4 text-amber-500" /> Destaques Operacionais & Atenção
                         </h2>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             
-                            {/* TOP PERFORMER DIA - Destaque em Fundo Sólido */}
+                            {/* TOP PERFORMER DIA */}
                             <div 
                                 id="card-leader-day"
                                 onClick={() => setModalInfo({ title: 'Top Desempenho por Média (Manhã I, II & Tarde - Pico)', data: teamStats.rankings.topPointsDay, formatVal: (v) => `${v} pts (média)` })}
-                                className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-500/50 transition-all active:scale-[0.98]"
+                                className="bg-surface p-5 rounded-2xl border border-subtle shadow-sm flex flex-col justify-between cursor-pointer hover:border-emerald-500/50 transition-all active:scale-[0.98] group"
                             >
                                 <div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5 block">
-                                                <Award className="w-3.5 h-3.5 text-emerald-400" />
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 block">
+                                                <Award className="w-3.5 h-3.5 text-emerald-500" />
                                                 Líder Geral (Dia)
                                             </span>
-                                            <span className="text-[10px] text-zinc-400 font-medium block">
+                                            <span className="text-[10px] text-muted-hub font-medium block">
                                                 Manhã I, II & Tarde
                                             </span>
                                         </div>
-                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 font-bold border border-emerald-800">
+                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/30">
                                             Top Dia
                                         </span>
                                     </div>
                                     <div className="my-2">
-                                        <span className="text-base font-black text-white block truncate" title={teamStats.topDay.name}>
+                                        <span className="text-base font-black text-primary-hub block truncate" title={teamStats.topDay.name}>
                                             {teamStats.topDay.name}
                                         </span>
-                                        <div className="text-xs text-emerald-400 font-bold flex items-center gap-1 flex-wrap mt-0.5">
+                                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1 flex-wrap mt-0.5">
                                             <span>{teamStats.topDay.val} pts</span>
                                             {teamStats.topDay.evalCount > 0 && (
-                                                <span className="text-[10px] text-zinc-400 font-normal">
+                                                <span className="text-[10px] text-muted-hub font-normal">
                                                     ({teamStats.topDay.evalCount} avaliações)
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-emerald-400 flex items-center gap-1 pt-2 border-t border-zinc-800 font-bold hover:underline">
-                                    Ver ranking <ChevronRight className="w-3 h-3" />
+                                <span className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 pt-2 border-t border-subtle font-bold group-hover:underline">
+                                    Ver ranking completo <ChevronRight className="w-3 h-3" />
                                 </span>
                             </div>
 
-                            {/* TOP PERFORMER NOITE - Destaque em Fundo Sólido */}
+                            {/* TOP PERFORMER NOITE */}
                             <div 
                                 id="card-leader-night"
                                 onClick={() => setModalInfo({ title: 'Top Desempenho por Média (Noturno)', data: teamStats.rankings.topPointsNight, formatVal: (v) => `${v} pts (média)` })}
-                                className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between cursor-pointer hover:border-indigo-500/50 transition-all active:scale-[0.98]"
+                                className="bg-surface p-5 rounded-2xl border border-subtle shadow-sm flex flex-col justify-between cursor-pointer hover:border-indigo-500/50 transition-all active:scale-[0.98] group"
                             >
                                 <div>
                                     <div className="flex justify-between items-start mb-2">
                                         <div>
-                                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5 block">
-                                                <Award className="w-3.5 h-3.5 text-indigo-400" />
+                                            <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 block">
+                                                <Award className="w-3.5 h-3.5 text-indigo-500" />
                                                 Líder Geral (Noite)
                                             </span>
-                                            <span className="text-[10px] text-zinc-400 font-medium block">
+                                            <span className="text-[10px] text-muted-hub font-medium block">
                                                 Noturno (13:45 às 20h)
                                             </span>
                                         </div>
-                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-950/80 text-indigo-400 font-bold border border-indigo-800">
+                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold border border-indigo-500/30">
                                             Top Noite
                                         </span>
                                     </div>
                                     <div className="my-2">
-                                        <span className="text-base font-black text-white block truncate" title={teamStats.topNight.name}>
+                                        <span className="text-base font-black text-primary-hub block truncate" title={teamStats.topNight.name}>
                                             {teamStats.topNight.name}
                                         </span>
-                                        <div className="text-xs text-indigo-400 font-bold flex items-center gap-1 flex-wrap mt-0.5">
+                                        <div className="text-xs text-indigo-600 dark:text-indigo-400 font-bold flex items-center gap-1 flex-wrap mt-0.5">
                                             <span>{teamStats.topNight.val} pts</span>
                                             {teamStats.topNight.evalCount > 0 && (
-                                                <span className="text-[10px] text-zinc-400 font-normal">
+                                                <span className="text-[10px] text-muted-hub font-normal">
                                                     ({teamStats.topNight.evalCount} avaliações)
                                                 </span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-indigo-400 flex items-center gap-1 pt-2 border-t border-zinc-800 font-bold hover:underline">
-                                    Ver ranking <ChevronRight className="w-3 h-3" />
+                                <span className="text-[11px] text-indigo-600 dark:text-indigo-400 flex items-center gap-1 pt-2 border-t border-subtle font-bold group-hover:underline">
+                                    Ver ranking completo <ChevronRight className="w-3 h-3" />
                                 </span>
                             </div>
 
-                            {/* MAIOR TMA VOZ (ATENÇÃO) - Contorno Leve com Destaque de Alerta */}
+                            {/* MAIOR TMA VOZ (ATENÇÃO) */}
                             <div 
                                 onClick={() => setModalInfo({ title: 'Maiores TMAs em Telefonia', data: teamStats.rankings.maxTmaTel })}
-                                className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-rose-200/80 dark:border-rose-900/40 shadow-xs hover:border-rose-300 transition-all flex flex-col justify-between cursor-pointer active:scale-[0.98]"
+                                className="bg-surface p-5 rounded-2xl border border-rose-500/30 shadow-xs hover:border-rose-500/60 transition-all flex flex-col justify-between cursor-pointer active:scale-[0.98]"
                             >
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
@@ -1209,7 +1334,7 @@ const DashboardOverview = ({ onNavigate }) => {
                                             <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
                                             Maior TMA Voz
                                         </span>
-                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold border border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/40">
+                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30">
                                             Atenção
                                         </span>
                                     </div>
@@ -1217,20 +1342,20 @@ const DashboardOverview = ({ onNavigate }) => {
                                         <span className="text-2xl font-black text-rose-600 dark:text-rose-400">
                                             {teamStats.maxTmaTel.val}
                                         </span>
-                                        <span className="text-xs text-gray-700 dark:text-zinc-300 font-bold block truncate mt-0.5" title={teamStats.maxTmaTel.name}>
+                                        <span className="text-xs text-primary-hub font-bold block truncate mt-0.5" title={teamStats.maxTmaTel.name}>
                                             {teamStats.maxTmaTel.name}
                                         </span>
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium pt-2 border-t border-rose-100 dark:border-rose-900/30">
+                                <span className="text-[11px] text-rose-600 dark:text-rose-400 font-medium pt-2 border-t border-subtle">
                                     Requer alinhamento de escopo
                                 </span>
                             </div>
 
-                            {/* MENOR MÉDIA DE FINALIZAÇÕES (ATENÇÃO) - Contorno Leve com Destaque de Alerta */}
+                            {/* MENOR MÉDIA DE FINALIZAÇÕES (ATENÇÃO) */}
                             <div 
                                 onClick={() => setModalInfo({ title: 'Menor Média de Finalizações', data: teamStats.rankings.lowestVol })}
-                                className="bg-white dark:bg-zinc-900/60 p-5 rounded-2xl border border-amber-200/80 dark:border-amber-900/40 shadow-xs hover:border-amber-300 transition-all flex flex-col justify-between cursor-pointer active:scale-[0.98]"
+                                className="bg-surface p-5 rounded-2xl border border-amber-500/30 shadow-xs hover:border-amber-500/60 transition-all flex flex-col justify-between cursor-pointer active:scale-[0.98]"
                             >
                                 <div>
                                     <div className="flex justify-between items-center mb-2">
@@ -1238,7 +1363,7 @@ const DashboardOverview = ({ onNavigate }) => {
                                             <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                                             Menor Volume
                                         </span>
-                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-bold border border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/40">
+                                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30">
                                             Atenção
                                         </span>
                                     </div>
@@ -1246,12 +1371,12 @@ const DashboardOverview = ({ onNavigate }) => {
                                         <span className="text-2xl font-black text-amber-600 dark:text-amber-400">
                                             {teamStats.lowestAvgVol.val} fin.
                                         </span>
-                                        <span className="text-xs text-gray-700 dark:text-zinc-300 font-bold block truncate mt-0.5" title={teamStats.lowestAvgVol.name}>
+                                        <span className="text-xs text-primary-hub font-bold block truncate mt-0.5" title={teamStats.lowestAvgVol.name}>
                                             {teamStats.lowestAvgVol.name}
                                         </span>
                                     </div>
                                 </div>
-                                <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium pt-2 border-t border-amber-100 dark:border-amber-900/30">
+                                <span className="text-[11px] text-amber-600 dark:text-amber-400 font-medium pt-2 border-t border-subtle">
                                     Oportunidade de capacitação
                                 </span>
                             </div>
@@ -1263,208 +1388,123 @@ const DashboardOverview = ({ onNavigate }) => {
             )}
 
             {/* --------------------------------------------------------- */}
-            {/* MODO 2: GRÁFICOS DE EVOLUÇÃO DE KPIS & MONITORIA          */}
+            {/* ABA 2: GRÁFICOS DE EVOLUÇÃO & ANALYTICS INTERATIVO        */}
             {/* --------------------------------------------------------- */}
             {viewMode === 'evolution' && (
                 <div className="space-y-6">
                     
                     {/* BARRA DE CONTROLE DO GRÁFICO */}
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                    <div className="bg-surface p-5 rounded-3xl border border-subtle shadow-xs flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                         <div>
-                            <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Indicador Selecionado para Análise</span>
-                            <div className="flex items-center gap-2 mt-1">
-                                <h3 className="text-lg font-black text-gray-900">
+                            <span className="text-xs font-bold text-muted-hub uppercase tracking-wider block">Indicador Selecionado para Análise</span>
+                            <div className="flex items-center gap-2.5 mt-1 flex-wrap">
+                                <h3 className="text-lg font-bold text-primary-hub font-brand">
                                     {currentKpiConfig.label}
                                 </h3>
-                                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 border border-gray-200">
+                                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-subtle text-secondary-hub border border-subtle">
                                     {currentKpiConfig.category}
                                 </span>
                             </div>
                         </div>
 
-                        {/* TIPO DE GRÁFICO & PERÍODO */}
-                        <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                            {/* Filtro de Janela Temporal */}
-                            <div className="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
-                                <button 
-                                    onClick={() => setTimeframe('all')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                                        timeframe === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
+                        {/* CONTROLES: TIPO DE GRÁFICO */}
+                        <div className="flex items-center bg-canvas p-1 rounded-xl border border-subtle">
+                            {[
+                                { id: 'area', label: 'Área Suave' },
+                                { id: 'line', label: 'Linhas' },
+                                { id: 'bar', label: 'Barras' },
+                            ].map((c) => (
+                                <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => setChartType(c.id)}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer ${
+                                        chartType === c.id
+                                            ? 'bg-surface text-primary-hub shadow-xs border border-subtle'
+                                            : 'text-muted-hub hover:text-primary-hub'
                                     }`}
                                 >
-                                    Todo o Histórico
+                                    {c.label}
                                 </button>
-                                <button 
-                                    onClick={() => setTimeframe('last60')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                                        timeframe === 'last60' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                                    }`}
-                                >
-                                    Últimos Lançamentos
-                                </button>
-                                <button 
-                                    onClick={() => setTimeframe('last30')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                                        timeframe === 'last30' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                                    }`}
-                                >
-                                    Recentes (5)
-                                </button>
-                            </div>
-
-                            {/* Tipo de Visualização Gráfica */}
-                            <div className="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
-                                <button 
-                                    onClick={() => setChartType('area')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                                        chartType === 'area' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                                    }`}
-                                    title="Gráfico de Área"
-                                >
-                                    Área Suave
-                                </button>
-                                <button 
-                                    onClick={() => setChartType('line')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                                        chartType === 'line' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                                    }`}
-                                    title="Gráfico de Linha"
-                                >
-                                    Linhas
-                                </button>
-                                <button 
-                                    onClick={() => setChartType('bar')}
-                                    className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
-                                        chartType === 'bar' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500 hover:text-gray-900'
-                                    }`}
-                                    title="Gráfico de Barras"
-                                >
-                                    Barras
-                                </button>
-                            </div>
+                            ))}
                         </div>
                     </div>
 
-                    {/* SELETOR DE KPIS PRINCIPAIS (APENAS OS 4 COM LANÇAMENTOS CORRETOS) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <button 
-                            id="kpi-filter-tmr"
-                            onClick={() => setSelectedKpi('tmr')}
-                            className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                                selectedKpi === 'tmr' 
-                                    ? 'bg-purple-50/90 border-purple-400 ring-2 ring-purple-500/20 shadow-xs' 
-                                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-2xs'
-                            }`}
-                        >
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] font-bold text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
-                                    <Clock className="w-3.5 h-3.5" /> TMR Setor
-                                </span>
-                                <TrendBadge type="tmr" val={latestKpi.tmr} goal={goals.tmr} />
-                            </div>
-                            <span className="text-2xl font-black text-gray-900 block mt-1">{latestKpi.tmr || '00:00:00'}</span>
-                            <span className="text-xs text-gray-400 mt-1 block">Meta do Setor: ≤ {goals.tmr}</span>
-                        </button>
-
-                        <button 
-                            id="kpi-filter-fcr"
-                            onClick={() => setSelectedKpi('fcr')}
-                            className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                                selectedKpi === 'fcr' 
-                                    ? 'bg-emerald-50/90 border-emerald-400 ring-2 ring-emerald-500/20 shadow-xs' 
-                                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-2xs'
-                            }`}
-                        >
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider flex items-center gap-1.5">
-                                    <Target className="w-3.5 h-3.5" /> FCR (1º Contato)
-                                </span>
-                                <TrendBadge type="fcr" val={latestKpi.fcr} goal={goals.fcr} />
-                            </div>
-                            <span className="text-2xl font-black text-gray-900 block mt-1">{latestKpi.fcr}%</span>
-                            <span className="text-xs text-gray-400 mt-1 block">Meta do Setor: ≥ {goals.fcr}%</span>
-                        </button>
-
-                        <button 
-                            id="kpi-filter-recurrence"
-                            onClick={() => setSelectedKpi('recurrence')}
-                            className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                                selectedKpi === 'recurrence' 
-                                    ? 'bg-rose-50/90 border-rose-400 ring-2 ring-rose-500/20 shadow-xs' 
-                                    : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-2xs'
-                            }`}
-                        >
-                            <div className="flex justify-between items-center mb-1">
-                                <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
-                                    <Activity className="w-3.5 h-3.5" /> Reincidência
-                                </span>
-                                <TrendBadge type="recurrence" val={latestKpi.recurrence} goal={goals.recurrence} />
-                            </div>
-                            <span className="text-2xl font-black text-gray-900 block mt-1">{latestKpi.recurrence}%</span>
-                            <span className="text-xs text-gray-400 mt-1 block">Meta do Setor: ≤ {goals.recurrence}%</span>
-                        </button>
-
-                        <button 
-                            id="kpi-filter-qa"
-                            onClick={() => setSelectedKpi('qa_rate')}
-                            className={`p-4 rounded-xl border text-left transition-all cursor-pointer ${
-                                selectedKpi === 'qa_rate' 
-                                    ? (isDarkMode ? 'bg-amber-950/40 border-amber-500/70 ring-2 ring-amber-500/20 shadow-xs' : 'bg-amber-50/90 border-amber-400 ring-2 ring-amber-500/20 shadow-xs') 
-                                    : (isDarkMode ? 'bg-[#181a20] border-zinc-800 hover:border-zinc-700 hover:shadow-2xs' : 'bg-white border-gray-200 hover:border-gray-300 hover:shadow-2xs')
-                            }`}
-                        >
-                            <div className="flex justify-between items-center mb-1">
-                                <span className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${isDarkMode ? 'text-amber-400' : 'text-amber-700'}`}>
-                                    <Star className="w-3.5 h-3.5" /> % QA Monitoria
-                                </span>
-                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                    qaStats.taxa >= (goals.qa || 85) 
-                                        ? (isDarkMode ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-800/50' : 'bg-emerald-100 text-emerald-800 border border-emerald-200') 
-                                        : (isDarkMode ? 'bg-amber-950/80 text-amber-300 border border-amber-800/50' : 'bg-amber-100 text-amber-800 border border-amber-200')
-                                }`}>
-                                    {qaStats.taxa >= (goals.qa || 85) ? 'Na Meta' : 'Abaixo'}
-                                </span>
-                            </div>
-                            <span className={`text-2xl font-black block mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{qaStats.taxa}%</span>
-                            <span className={`text-xs mt-1 block ${isDarkMode ? 'text-zinc-500' : 'text-gray-400'}`}>Meta: ≥ {goals.qa || 85}% ({qaStats.total} aud.)</span>
-                        </button>
+                    {/* SELETORES DE KPIS INTERATIVOS */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+                        {[
+                            { id: 'tmr', label: 'TMR Setor', val: latestKpi.tmr, goal: `≤ ${goals.tmr}`, icon: Clock, color: 'text-purple-500' },
+                            { id: 'fcr', label: 'FCR (1º Cont.)', val: `${latestKpi.fcr}%`, goal: `≥ ${goals.fcr}%`, icon: Target, color: 'text-emerald-500' },
+                            { id: 'recurrence', label: 'Reincidência', val: `${latestKpi.recurrence}%`, goal: `≤ ${goals.recurrence}%`, icon: Activity, color: 'text-rose-500' },
+                            { id: 'qa_rate', label: '% QA Monitoria', val: `${qaStats.taxa}%`, goal: `≥ ${goals.qa || 85}%`, icon: Star, color: 'text-amber-500' },
+                            { id: 'volume', label: 'Volume Médio', val: `${teamStats.avgVol} fin.`, goal: '≥ 50 fin.', icon: CheckSquare, color: 'text-sky-500' },
+                            { id: 'avg_points', label: 'Pontuação Média', val: `${teamStats.avgPtsDay} pts`, goal: '≥ 120 pts', icon: Award, color: 'text-indigo-500' },
+                        ].map((k) => {
+                            const isSelected = selectedKpi === k.id;
+                            const IconComponent = k.icon;
+                            return (
+                                <button
+                                    key={k.id}
+                                    type="button"
+                                    onClick={() => setSelectedKpi(k.id)}
+                                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                                        isSelected
+                                            ? 'bg-surface border-rose-500 ring-2 ring-rose-500/20 shadow-xs'
+                                            : 'bg-surface border-subtle hover:bg-subtle text-secondary-hub'
+                                    }`}
+                                >
+                                    <div className="flex items-center justify-between mb-1.5">
+                                        <span className="text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5">
+                                            <IconComponent className={`w-3.5 h-3.5 ${k.color}`} />
+                                            {k.label}
+                                        </span>
+                                    </div>
+                                    <span className="text-xl font-bold text-primary-hub block tabular-nums">
+                                        {k.val}
+                                    </span>
+                                    <span className="text-[10px] text-muted-hub mt-1 block">
+                                        {k.goal}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
 
                     {/* GRÁFICO PRINCIPAL COM RECHARTS */}
-                    <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-2xs">
+                    <div className="bg-surface p-5 sm:p-6 rounded-3xl border border-subtle shadow-xs space-y-5">
                         
                         {/* RIBBON DE ESTATÍSTICAS DA MÉTRICA */}
-                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pb-5 mb-5 border-b border-gray-100">
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 pb-5 border-b border-subtle">
                             <div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Valor Atual</span>
-                                <span className="text-xl font-black text-gray-900 mt-0.5 block">{currentKpiConfig.currentVal}</span>
+                                <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Valor Atual</span>
+                                <span className="text-xl font-black text-primary-hub mt-0.5 block">{currentKpiConfig.currentVal}</span>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Meta Definida</span>
-                                <span className="text-xl font-black text-purple-700 mt-0.5 block">{currentKpiConfig.goalFormatted}</span>
+                                <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Meta Definida</span>
+                                <span className="text-xl font-black text-rose-600 dark:text-rose-400 mt-0.5 block">{currentKpiConfig.goalFormatted}</span>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Média no Período</span>
-                                <span className="text-xl font-black text-gray-900 mt-0.5 block">{kpiSummaryStats.avg} {currentKpiConfig.unit}</span>
+                                <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Média do Período</span>
+                                <span className="text-xl font-black text-primary-hub mt-0.5 block">{kpiSummaryStats.avg} {currentKpiConfig.unit}</span>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Melhor Registro</span>
-                                <span className="text-xl font-black text-emerald-600 mt-0.5 block">
+                                <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Melhor Registro</span>
+                                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">
                                     {currentKpiConfig.isBetterLower ? kpiSummaryStats.min : kpiSummaryStats.max}
                                 </span>
                             </div>
                             <div>
-                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Lançamentos</span>
-                                <span className="text-xl font-black text-gray-900 mt-0.5 block">{kpiSummaryStats.count} datas</span>
+                                <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Total de Amostras</span>
+                                <span className="text-xl font-black text-primary-hub mt-0.5 block">{kpiSummaryStats.count} datas</span>
                             </div>
                         </div>
 
                         {/* ÁREA DO GRÁFICO */}
                         <div className="w-full h-80">
                             {evolutionTimeline.length === 0 ? (
-                                <div className="w-full h-full flex flex-col items-center justify-center text-gray-400">
+                                <div className="w-full h-full flex flex-col items-center justify-center text-muted-hub">
                                     <BarChart3 className="w-10 h-10 opacity-30 mb-2" />
-                                    <p className="text-sm">Ainda não há dados suficientes para gerar a curva deste indicador.</p>
+                                    <p className="text-sm">Ainda não há dados suficientes no recorte selecionado.</p>
                                 </div>
                             ) : (
                                 <ResponsiveContainer width="100%" height="100%">
@@ -1476,11 +1516,11 @@ const DashboardOverview = ({ onNavigate }) => {
                                                     <stop offset="95%" stopColor={currentKpiConfig.color} stopOpacity={0.0}/>
                                                 </linearGradient>
                                             </defs>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-subtle opacity-30" />
+                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-hub" />
+                                            <YAxis tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-hub" />
                                             <Tooltip 
-                                                contentStyle={{ backgroundColor: '#09090b', borderRadius: '12px', border: 'none', color: '#fff' }}
+                                                contentStyle={{ backgroundColor: '#18181b', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px' }}
                                                 labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
                                                 formatter={(val) => [currentKpiConfig.formatTooltip(val), currentKpiConfig.label]}
                                             />
@@ -1503,11 +1543,11 @@ const DashboardOverview = ({ onNavigate }) => {
                                         </AreaChart>
                                     ) : chartType === 'line' ? (
                                         <LineChart data={evolutionTimeline} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-subtle opacity-30" />
+                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-hub" />
+                                            <YAxis tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-hub" />
                                             <Tooltip 
-                                                contentStyle={{ backgroundColor: '#09090b', borderRadius: '12px', border: 'none', color: '#fff' }}
+                                                contentStyle={{ backgroundColor: '#18181b', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px' }}
                                                 labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
                                                 formatter={(val) => [currentKpiConfig.formatTooltip(val), currentKpiConfig.label]}
                                             />
@@ -1530,11 +1570,11 @@ const DashboardOverview = ({ onNavigate }) => {
                                         </LineChart>
                                     ) : (
                                         <BarChart data={evolutionTimeline} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                            <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-subtle opacity-30" />
+                                            <XAxis dataKey="date" tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-hub" />
+                                            <YAxis tick={{ fontSize: 11, fill: 'currentColor' }} className="text-muted-hub" />
                                             <Tooltip 
-                                                contentStyle={{ backgroundColor: '#09090b', borderRadius: '12px', border: 'none', color: '#fff' }}
+                                                contentStyle={{ backgroundColor: '#18181b', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.1)', color: '#fff', fontSize: '12px' }}
                                                 labelStyle={{ color: '#a1a1aa', fontWeight: 'bold' }}
                                                 formatter={(val) => [currentKpiConfig.formatTooltip(val), currentKpiConfig.label]}
                                             />
@@ -1557,28 +1597,28 @@ const DashboardOverview = ({ onNavigate }) => {
                         </div>
                     </div>
 
-                    {/* TABELA DE LANÇAMENTOS DO INDICADOR SELECIONADO */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
-                        <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                            <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                    {/* TABELA DE LANÇAMENTOS DO INDICADOR */}
+                    <div className="bg-surface rounded-3xl border border-subtle shadow-xs overflow-hidden">
+                        <div className="p-4 sm:p-5 border-b border-subtle flex justify-between items-center bg-canvas">
+                            <h4 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
                                 Registros Históricos ({evolutionTimeline.length})
                             </h4>
-                            <span className="text-xs text-gray-400">
-                                Ordenado cronologicamente
+                            <span className="text-xs text-muted-hub">
+                                Ordenação cronológica
                             </span>
                         </div>
 
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200 text-xs">
-                                <thead className="bg-gray-50 text-gray-500 font-bold">
+                            <table className="min-w-full divide-y divide-subtle text-xs">
+                                <thead className="bg-canvas text-secondary-hub font-bold">
                                     <tr>
-                                        <th className="px-4 py-3 text-left">Data</th>
-                                        <th className="px-4 py-3 text-right">Valor Registrado</th>
-                                        <th className="px-4 py-3 text-right">Meta</th>
-                                        <th className="px-4 py-3 text-center">Status de Conformidade</th>
+                                        <th className="px-5 py-3 text-left">Data</th>
+                                        <th className="px-5 py-3 text-right">Valor Registrado</th>
+                                        <th className="px-5 py-3 text-right">Meta Estabelecida</th>
+                                        <th className="px-5 py-3 text-center">Status de Conformidade</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-subtle">
                                     {evolutionTimeline.map((item, idx) => {
                                         const rawVal = item[currentKpiConfig.dataKey];
                                         const isOk = currentKpiConfig.isBetterLower 
@@ -1586,19 +1626,21 @@ const DashboardOverview = ({ onNavigate }) => {
                                             : rawVal >= currentKpiConfig.goalValue;
 
                                         return (
-                                            <tr key={idx} className="hover:bg-gray-50/80">
-                                                <td className="px-4 py-3 font-medium text-gray-900">{item.fullDate || item.date}</td>
-                                                <td className="px-4 py-3 text-right font-bold text-gray-900 font-mono">
+                                            <tr key={idx} className="hover:bg-subtle/50 transition-colors">
+                                                <td className="px-5 py-3.5 font-medium text-primary-hub">{item.fullDate || item.date}</td>
+                                                <td className="px-5 py-3.5 text-right font-bold text-primary-hub font-mono">
                                                     {currentKpiConfig.formatTooltip(rawVal)}
                                                 </td>
-                                                <td className="px-4 py-3 text-right text-gray-500 font-mono">
+                                                <td className="px-5 py-3.5 text-right text-muted-hub font-mono">
                                                     {currentKpiConfig.goalFormatted}
                                                 </td>
-                                                <td className="px-4 py-3 text-center">
-                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                                                        isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+                                                <td className="px-5 py-3.5 text-center">
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-bold text-[10px] border ${
+                                                        isOk 
+                                                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30' 
+                                                            : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30'
                                                     }`}>
-                                                        {isOk ? <CheckCircle2 className="w-3 h-3 text-emerald-600" /> : <AlertCircle className="w-3 h-3 text-rose-600" />}
+                                                        {isOk ? <CheckCircle2 className="w-3 h-3 text-emerald-500" /> : <AlertCircle className="w-3 h-3 text-rose-500" />}
                                                         {isOk ? 'Em Conformidade' : 'Fora do Alvo'}
                                                     </span>
                                                 </td>
@@ -1614,43 +1656,43 @@ const DashboardOverview = ({ onNavigate }) => {
             )}
 
             {/* --------------------------------------------------------- */}
-            {/* MODO 3: SEMÁFORO DE METAS & CONFORMIDADE OPERACIONAL      */}
+            {/* ABA 3: SEMÁFORO DE METAS & CONFORMIDADE OPERACIONAL      */}
             {/* --------------------------------------------------------- */}
             {viewMode === 'compliance' && (
                 <div className="space-y-6">
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                        <h3 className="text-base font-black text-gray-900">Matriz Semafórica de SLAs & Metas</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                            Visão de conformidade imediata para tomada de decisão gerencial.
+                    <div className="bg-surface p-5 sm:p-6 rounded-3xl border border-subtle shadow-xs">
+                        <h3 className="text-base font-bold text-primary-hub font-brand">Matriz Semafórica de SLAs & Metas</h3>
+                        <p className="text-xs text-secondary-hub mt-0.5">
+                            Visão panorâmica de aderência às metas corporativas para tomada de decisão imediata.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         
                         {/* TMR Semáforo */}
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4">
+                        <div className="bg-surface p-5 rounded-3xl border border-subtle shadow-xs space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Tempo Médio de Resposta (TMR)</span>
-                                    <h4 className="text-2xl font-black text-gray-900 mt-1">{latestKpi.tmr || '00:00:00'}</h4>
+                                    <span className="text-xs font-bold text-muted-hub uppercase tracking-wider block">Tempo Médio de Resposta (TMR)</span>
+                                    <h4 className="text-2xl font-black text-primary-hub mt-1">{latestKpi.tmr || '00:00:00'}</h4>
                                 </div>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                                    timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-rose-500 ring-4 ring-rose-100'
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm ${
+                                    timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'bg-emerald-600' : 'bg-rose-600'
                                 }`}>
                                     {timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'OK' : '!'}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex justify-between text-xs text-gray-600">
+                                <div className="flex justify-between text-xs text-secondary-hub">
                                     <span>Meta Estipulada: ≤ {goals.tmr}</span>
                                     <span className="font-bold">
                                         {timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'Dentro do SLA' : 'SLA Violado'}
                                     </span>
                                 </div>
-                                <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                                <div className="w-full bg-canvas h-2.5 rounded-full overflow-hidden border border-subtle">
                                     <div 
-                                        className={`h-full rounded-full ${
+                                        className={`h-full rounded-full transition-all ${
                                             timeToDecimal(latestKpi.tmr) <= timeToDecimal(goals.tmr) ? 'bg-emerald-500' : 'bg-rose-500'
                                         }`} 
                                         style={{ width: `${Math.min(100, Math.round((timeToDecimal(latestKpi.tmr) / (timeToDecimal(goals.tmr) || 1)) * 100))}%` }}
@@ -1660,29 +1702,29 @@ const DashboardOverview = ({ onNavigate }) => {
                         </div>
 
                         {/* FCR Semáforo */}
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4">
+                        <div className="bg-surface p-5 rounded-3xl border border-subtle shadow-xs space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Resolução 1º Contato (FCR)</span>
-                                    <h4 className="text-2xl font-black text-gray-900 mt-1">{latestKpi.fcr}%</h4>
+                                    <span className="text-xs font-bold text-muted-hub uppercase tracking-wider block">Resolução 1º Contato (FCR)</span>
+                                    <h4 className="text-2xl font-black text-primary-hub mt-1">{latestKpi.fcr}%</h4>
                                 </div>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                                    Number(latestKpi.fcr) >= Number(goals.fcr) ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-rose-500 ring-4 ring-rose-100'
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm ${
+                                    Number(latestKpi.fcr) >= Number(goals.fcr) ? 'bg-emerald-600' : 'bg-rose-600'
                                 }`}>
                                     {Number(latestKpi.fcr) >= Number(goals.fcr) ? 'OK' : '!'}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex justify-between text-xs text-gray-600">
+                                <div className="flex justify-between text-xs text-secondary-hub">
                                     <span>Meta Estipulada: ≥ {goals.fcr}%</span>
                                     <span className="font-bold">
                                         {Number(latestKpi.fcr) >= Number(goals.fcr) ? 'Meta Superada' : 'Abaixo da Meta'}
                                     </span>
                                 </div>
-                                <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                                <div className="w-full bg-canvas h-2.5 rounded-full overflow-hidden border border-subtle">
                                     <div 
-                                        className={`h-full rounded-full ${
+                                        className={`h-full rounded-full transition-all ${
                                             Number(latestKpi.fcr) >= Number(goals.fcr) ? 'bg-emerald-500' : 'bg-rose-500'
                                         }`} 
                                         style={{ width: `${Math.min(100, Number(latestKpi.fcr))}%` }}
@@ -1692,29 +1734,29 @@ const DashboardOverview = ({ onNavigate }) => {
                         </div>
 
                         {/* Reincidência Semáforo */}
-                        <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-2xs space-y-4">
+                        <div className="bg-surface p-5 rounded-3xl border border-subtle shadow-xs space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Taxa de Reincidência</span>
-                                    <h4 className="text-2xl font-black text-gray-900 mt-1">{latestKpi.recurrence}%</h4>
+                                    <span className="text-xs font-bold text-muted-hub uppercase tracking-wider block">Taxa de Reincidência</span>
+                                    <h4 className="text-2xl font-black text-primary-hub mt-1">{latestKpi.recurrence}%</h4>
                                 </div>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                                    Number(latestKpi.recurrence) <= Number(goals.recurrence) ? 'bg-emerald-500 ring-4 ring-emerald-100' : 'bg-rose-500 ring-4 ring-rose-100'
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm ${
+                                    Number(latestKpi.recurrence) <= Number(goals.recurrence) ? 'bg-emerald-600' : 'bg-rose-600'
                                 }`}>
                                     {Number(latestKpi.recurrence) <= Number(goals.recurrence) ? 'OK' : '!'}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <div className="flex justify-between text-xs text-gray-600">
+                                <div className="flex justify-between text-xs text-secondary-hub">
                                     <span>Meta Estipulada: ≤ {goals.recurrence}%</span>
                                     <span className="font-bold">
                                         {Number(latestKpi.recurrence) <= Number(goals.recurrence) ? 'Controle Adequado' : 'Reincidência Crítica'}
                                     </span>
                                 </div>
-                                <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                                <div className="w-full bg-canvas h-2.5 rounded-full overflow-hidden border border-subtle">
                                     <div 
-                                        className={`h-full rounded-full ${
+                                        className={`h-full rounded-full transition-all ${
                                             Number(latestKpi.recurrence) <= Number(goals.recurrence) ? 'bg-emerald-500' : 'bg-rose-500'
                                         }`} 
                                         style={{ width: `${Math.min(100, (Number(latestKpi.recurrence) / (Number(goals.recurrence) || 1)) * 100)}%` }}
@@ -1724,33 +1766,29 @@ const DashboardOverview = ({ onNavigate }) => {
                         </div>
 
                         {/* QA Monitoria Semáforo */}
-                        <div className={`p-5 rounded-xl border shadow-2xs space-y-4 ${
-                            isDarkMode ? 'bg-[#181a20] border-zinc-800' : 'bg-white border-gray-200'
-                        }`}>
+                        <div className="bg-surface p-5 rounded-3xl border border-subtle shadow-xs space-y-4">
                             <div className="flex justify-between items-start">
                                 <div>
-                                    <span className="text-xs font-bold text-gray-400 uppercase tracking-wider block">Conformidade Monitoria QA</span>
-                                    <h4 className={`text-2xl font-black mt-1 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>{qaStats.taxa}%</h4>
+                                    <span className="text-xs font-bold text-muted-hub uppercase tracking-wider block">Conformidade Monitoria QA</span>
+                                    <h4 className="text-2xl font-black text-primary-hub mt-1">{qaStats.taxa}%</h4>
                                 </div>
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${
-                                    qaStats.taxa >= (goals.qa || 85) 
-                                        ? `bg-emerald-500 ring-4 ${isDarkMode ? 'ring-emerald-950/80' : 'ring-emerald-100'}` 
-                                        : `bg-amber-500 ring-4 ${isDarkMode ? 'ring-amber-950/80' : 'ring-amber-100'}`
+                                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-white shadow-sm ${
+                                    qaStats.taxa >= (goals.qa || 85) ? 'bg-emerald-600' : 'bg-amber-600'
                                 }`}>
                                     {qaStats.taxa >= (goals.qa || 85) ? 'OK' : '!'}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <div className={`flex justify-between text-xs ${isDarkMode ? 'text-zinc-400' : 'text-gray-600'}`}>
+                                <div className="flex justify-between text-xs text-secondary-hub">
                                     <span>Meta Estipulada: ≥ {goals.qa || 85}%</span>
                                     <span className="font-bold">
-                                        {qaStats.taxa >= (goals.qa || 85) ? 'Conformidade Plena' : 'Necessita Treinamento'}
+                                        {qaStats.taxa >= (goals.qa || 85) ? 'Conformidade Plena' : 'Necessita Atenção'}
                                     </span>
                                 </div>
-                                <div className={`w-full h-2.5 rounded-full overflow-hidden ${isDarkMode ? 'bg-zinc-800' : 'bg-gray-100'}`}>
+                                <div className="w-full bg-canvas h-2.5 rounded-full overflow-hidden border border-subtle">
                                     <div 
-                                        className={`h-full rounded-full ${
+                                        className={`h-full rounded-full transition-all ${
                                             qaStats.taxa >= (goals.qa || 85) ? 'bg-emerald-500' : 'bg-amber-500'
                                         }`} 
                                         style={{ width: `${Math.min(100, qaStats.taxa)}%` }}
@@ -1764,57 +1802,57 @@ const DashboardOverview = ({ onNavigate }) => {
             )}
 
             {/* --------------------------------------------------------- */}
-            {/* MODO 4: COMPARATIVO POR TURNOS (SQUADS)                   */}
+            {/* ABA 4: COMPARATIVO POR TURNOS (SQUADS)                   */}
             {/* --------------------------------------------------------- */}
             {viewMode === 'shifts' && (
                 <div className="space-y-6">
-                    <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-xs">
-                        <h3 className="text-base font-black text-gray-900">Comparativo Operacional entre Turnos</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                            Comportamento e distribuição de carga entre o horário de pico diurno (Manhã I, Manhã II e Tarde) e o turno Noturno.
+                    <div className="bg-surface p-5 sm:p-6 rounded-3xl border border-subtle shadow-xs">
+                        <h3 className="text-base font-bold text-primary-hub font-brand">Comparativo Operacional entre Turnos</h3>
+                        <p className="text-xs text-secondary-hub mt-0.5">
+                            Comportamento e distribuição de carga entre o horário de pico diurno (Manhã I, II e Tarde) e o turno Noturno.
                         </p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* TURNO MANHÃ I, II & TARDE (HORÁRIO DE PICO) */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
-                            <div className="p-5 bg-gradient-to-r from-amber-500/10 to-orange-500/5 border-b border-amber-200/50 flex justify-between items-center">
+                        {/* TURNO MANHÃ I, II & TARDE */}
+                        <div className="bg-surface rounded-3xl border border-subtle shadow-xs overflow-hidden">
+                            <div className="p-5 bg-amber-500/10 border-b border-amber-500/20 flex justify-between items-center">
                                 <div>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Horário de Pico (Diurno)</span>
-                                    <h4 className="text-lg font-black text-gray-900">Manhã I, II & Tarde</h4>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">Horário de Pico (Diurno)</span>
+                                    <h4 className="text-lg font-bold text-primary-hub">Manhã I, II & Tarde</h4>
                                 </div>
-                                <span className="px-3 py-1 bg-amber-100 text-amber-800 font-bold rounded-full text-xs">
-                                    {teamStats.shiftSummary.day.count} colaboradores avaliados
+                                <span className="px-3 py-1 bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold rounded-full text-xs">
+                                    {teamStats.shiftSummary.day.count} avaliados
                                 </span>
                             </div>
 
                             <div className="p-6 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Média de Pontos</span>
-                                        <span className="text-2xl font-black text-amber-600 mt-1 block">{teamStats.shiftSummary.day.avgPts} pts</span>
+                                    <div className="bg-canvas p-4 rounded-2xl border border-subtle">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Média de Pontos</span>
+                                        <span className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-1 block">{teamStats.shiftSummary.day.avgPts} pts</span>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Volume Finalizado</span>
-                                        <span className="text-2xl font-black text-emerald-600 mt-1 block">{teamStats.shiftSummary.day.avgVol}</span>
+                                    <div className="bg-canvas p-4 rounded-2xl border border-subtle">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Volume Finalizado</span>
+                                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{teamStats.shiftSummary.day.avgVol}</span>
                                     </div>
                                 </div>
 
-                                <div className="pt-2 border-t border-gray-100">
-                                    <span className="text-xs font-bold text-gray-700 block mb-2">Destaque do Turno (Líder Geral):</span>
-                                    <div className="flex items-center justify-between bg-amber-50/60 p-3 rounded-lg border border-amber-200/60">
-                                        <div className="flex items-center gap-2">
-                                            <Award className="w-4 h-4 text-amber-600" />
+                                <div className="pt-2 border-t border-subtle">
+                                    <span className="text-xs font-bold text-secondary-hub block mb-2">Destaque do Turno (Líder Geral):</span>
+                                    <div className="flex items-center justify-between bg-canvas p-3 rounded-xl border border-subtle">
+                                        <div className="flex items-center gap-2.5">
+                                            <Award className="w-4 h-4 text-amber-500" />
                                             <div>
-                                                <span className="text-sm font-bold text-gray-900 block">{teamStats.topDay.name}</span>
+                                                <span className="text-sm font-bold text-primary-hub block">{teamStats.topDay.name}</span>
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     {teamStats.topDay.evalCount > 0 && (
-                                                        <span className="text-[10px] text-amber-800/80">
+                                                        <span className="text-[10px] text-muted-hub">
                                                             {teamStats.topDay.evalCount} {teamStats.topDay.evalCount === 1 ? 'avaliação' : 'avaliações'}
                                                         </span>
                                                     )}
                                                     {teamStats.topDay.shift && (
-                                                        <span className="text-[10px] px-1 py-0.2 bg-amber-100 text-amber-900 font-semibold rounded">
+                                                        <span className="text-[10px] px-1.5 py-0.2 bg-subtle text-secondary-hub font-semibold rounded-md border border-subtle">
                                                             {teamStats.topDay.shift}
                                                         </span>
                                                     )}
@@ -1822,8 +1860,8 @@ const DashboardOverview = ({ onNavigate }) => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs font-extrabold text-amber-700 block">{teamStats.topDay.val} pts</span>
-                                            <span className="text-[10px] text-gray-500 font-medium">(média)</span>
+                                            <span className="text-xs font-extrabold text-amber-600 dark:text-amber-400 block">{teamStats.topDay.val} pts</span>
+                                            <span className="text-[10px] text-muted-hub font-medium">(média)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1831,44 +1869,44 @@ const DashboardOverview = ({ onNavigate }) => {
                         </div>
 
                         {/* TURNO NOTURNO */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
-                            <div className="p-5 bg-gradient-to-r from-indigo-500/10 to-purple-500/5 border-b border-indigo-200/50 flex justify-between items-center">
+                        <div className="bg-surface rounded-3xl border border-subtle shadow-xs overflow-hidden">
+                            <div className="p-5 bg-indigo-500/10 border-b border-indigo-500/20 flex justify-between items-center">
                                 <div>
-                                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-800">Turno Noturno</span>
-                                    <h4 className="text-lg font-black text-gray-900">Noturno (13:45 às 20:00)</h4>
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">Turno Noturno</span>
+                                    <h4 className="text-lg font-bold text-primary-hub">Noturno (13:45 às 20:00)</h4>
                                 </div>
-                                <span className="px-3 py-1 bg-indigo-100 text-indigo-800 font-bold rounded-full text-xs">
-                                    {teamStats.shiftSummary.night.count} colaboradores avaliados
+                                <span className="px-3 py-1 bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30 font-bold rounded-full text-xs">
+                                    {teamStats.shiftSummary.night.count} avaliados
                                 </span>
                             </div>
 
                             <div className="p-6 space-y-4">
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Média de Pontos</span>
-                                        <span className="text-2xl font-black text-indigo-600 mt-1 block">{teamStats.shiftSummary.night.avgPts} pts</span>
+                                    <div className="bg-canvas p-4 rounded-2xl border border-subtle">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Média de Pontos</span>
+                                        <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-1 block">{teamStats.shiftSummary.night.avgPts} pts</span>
                                     </div>
-                                    <div className="bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Volume Finalizado</span>
-                                        <span className="text-2xl font-black text-emerald-600 mt-1 block">{teamStats.shiftSummary.night.avgVol}</span>
+                                    <div className="bg-canvas p-4 rounded-2xl border border-subtle">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Volume Finalizado</span>
+                                        <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1 block">{teamStats.shiftSummary.night.avgVol}</span>
                                     </div>
                                 </div>
 
-                                <div className="pt-2 border-t border-gray-100">
-                                    <span className="text-xs font-bold text-gray-700 block mb-2">Destaque do Turno (Líder Geral):</span>
-                                    <div className="flex items-center justify-between bg-indigo-50/60 p-3 rounded-lg border border-indigo-200/60">
-                                        <div className="flex items-center gap-2">
-                                            <Award className="w-4 h-4 text-indigo-600" />
+                                <div className="pt-2 border-t border-subtle">
+                                    <span className="text-xs font-bold text-secondary-hub block mb-2">Destaque do Turno (Líder Geral):</span>
+                                    <div className="flex items-center justify-between bg-canvas p-3 rounded-xl border border-subtle">
+                                        <div className="flex items-center gap-2.5">
+                                            <Award className="w-4 h-4 text-indigo-500" />
                                             <div>
-                                                <span className="text-sm font-bold text-gray-900 block">{teamStats.topNight.name}</span>
+                                                <span className="text-sm font-bold text-primary-hub block">{teamStats.topNight.name}</span>
                                                 <div className="flex items-center gap-1.5 flex-wrap">
                                                     {teamStats.topNight.evalCount > 0 && (
-                                                        <span className="text-[10px] text-indigo-800/80">
+                                                        <span className="text-[10px] text-muted-hub">
                                                             {teamStats.topNight.evalCount} {teamStats.topNight.evalCount === 1 ? 'avaliação' : 'avaliações'}
                                                         </span>
                                                     )}
                                                     {teamStats.topNight.shift && (
-                                                        <span className="text-[10px] px-1 py-0.2 bg-indigo-100 text-indigo-900 font-semibold rounded">
+                                                        <span className="text-[10px] px-1.5 py-0.2 bg-subtle text-secondary-hub font-semibold rounded-md border border-subtle">
                                                             {teamStats.topNight.shift}
                                                         </span>
                                                     )}
@@ -1876,8 +1914,8 @@ const DashboardOverview = ({ onNavigate }) => {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <span className="text-xs font-extrabold text-indigo-700 block">{teamStats.topNight.val} pts</span>
-                                            <span className="text-[10px] text-gray-500 font-medium">(média)</span>
+                                            <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400 block">{teamStats.topNight.val} pts</span>
+                                            <span className="text-[10px] text-muted-hub font-medium">(média)</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1888,69 +1926,70 @@ const DashboardOverview = ({ onNavigate }) => {
             )}
 
             {/* ========================================================= */}
-            {/* MODAL DE RANKINGS / DETALHAMENTO (INFO MODAL)             */}
+            {/* 5. MODAL DE RANKINGS & DETALHAMENTO COM BORDERBEAM        */}
             {/* ========================================================= */}
             {modalInfo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between p-4 bg-zinc-950 text-white border-b border-zinc-800">
-                            <h3 className="font-bold text-sm">{modalInfo.title}</h3>
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-3 sm:p-4 bg-zinc-950/75 backdrop-blur-md">
+                    <div className="relative bg-surface rounded-3xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden border border-subtle text-primary-hub animate-in fade-in zoom-in-95 duration-200">
+                        <BorderBeam size={220} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
+                        
+                        <div className="flex items-center justify-between p-5 bg-surface text-primary-hub border-b border-subtle">
+                            <div>
+                                <h3 className="font-bold text-base font-brand">{modalInfo.title}</h3>
+                                <p className="text-xs text-muted-hub">Classificação apurada no período ativo</p>
+                            </div>
                             <button 
                                 onClick={() => setModalInfo(null)} 
-                                className="p-1 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                                className="p-2 hover:bg-subtle text-muted-hub hover:text-primary-hub rounded-xl transition-colors cursor-pointer"
                             >
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <div className="p-4 overflow-y-auto divide-y divide-gray-100">
+
+                        <div className="p-5 overflow-y-auto divide-y divide-subtle bg-canvas space-y-1">
                             {modalInfo.data && modalInfo.data.length > 0 ? (
                                 modalInfo.data.map((item, idx) => (
-                                    <div key={item.id || idx} className="flex justify-between items-center py-2.5 gap-2">
+                                    <div key={item.id || idx} className="flex justify-between items-center py-3 gap-3">
                                         <div className="flex items-center gap-3 min-w-0">
-                                            <span className={`font-bold w-6 text-center text-xs shrink-0 ${idx < 3 ? 'text-amber-500 font-black' : 'text-gray-400'}`}>
+                                            <span className={`font-bold w-6 text-center text-xs shrink-0 ${idx < 3 ? 'text-amber-500 font-black' : 'text-muted-hub'}`}>
                                                 {idx + 1}º
                                             </span>
                                             <div className="min-w-0">
-                                                <div className="flex items-center gap-1.5 flex-wrap">
-                                                    <span className="font-bold text-gray-800 text-sm block truncate">{item.name}</span>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span className="font-bold text-primary-hub text-sm block truncate">{item.name}</span>
                                                     {item.shift && (
-                                                        <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${
-                                                            item.shift === 'Manhã I' ? 'bg-amber-50 text-amber-800 border-amber-200' :
-                                                            item.shift === 'Manhã II' ? 'bg-yellow-50 text-yellow-900 border-yellow-300' :
-                                                            item.shift === 'Tarde' ? 'bg-orange-50 text-orange-800 border-orange-200' :
-                                                            item.shift === 'Noturno' ? 'bg-indigo-50 text-indigo-800 border-indigo-200' :
-                                                            'bg-gray-100 text-gray-700 border-gray-200'
-                                                        }`}>
+                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-subtle text-secondary-hub border border-subtle">
                                                             {item.shift}
                                                         </span>
                                                     )}
                                                 </div>
                                                 {item.evalCount !== undefined && (
-                                                    <span className="text-[11px] text-gray-400 font-medium block">
+                                                    <span className="text-[11px] text-muted-hub font-medium block">
                                                         {item.evalCount} {item.evalCount === 1 ? 'avaliação' : 'avaliações'} • Total: {item.totalPts} pts
                                                     </span>
                                                 )}
                                             </div>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <span className="font-bold text-gray-900 text-sm block">
+                                            <span className="font-bold text-primary-hub text-sm block font-mono">
                                                 {modalInfo.formatVal ? modalInfo.formatVal(item.val) : item.val}
                                             </span>
                                         </div>
                                     </div>
                                 ))
                             ) : (
-                                <div className="text-center text-gray-500 py-8 text-sm">
+                                <div className="text-center text-muted-hub py-8 text-sm">
                                     Nenhum registro disponível para este recorte.
                                 </div>
                             )}
                         </div>
-                        <div className="p-3 bg-gray-50 border-t border-gray-100 flex justify-end">
+
+                        <div className="p-4 bg-surface border-t border-subtle flex justify-end">
                             <button 
                                 onClick={() => setModalInfo(null)}
-                                className="px-4 py-1.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-xs rounded-lg transition-colors cursor-pointer"
+                                className="px-5 py-2 bg-canvas hover:bg-subtle text-secondary-hub border border-subtle font-bold text-xs rounded-xl transition-colors cursor-pointer"
                             >
-                                Fechar
+                                Fechar Janela
                             </button>
                         </div>
                     </div>

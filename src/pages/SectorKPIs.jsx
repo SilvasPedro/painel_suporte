@@ -449,21 +449,21 @@ const SectorKPIs = () => {
             {/* ========================================================================= */}
             {/* CABEÇALHO PRINCIPAL COM IDENTIDADE HUBDESK                                 */}
             {/* ========================================================================= */}
-            <header className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs">
+            <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 bg-red-50 text-red-600 rounded-xl border border-red-200 shrink-0">
+                    <div className="p-3 w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
                         <Rocket className="w-6 h-6" />
                     </div>
                     <div>
                         <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+                            <h1 className="text-2xl font-black text-primary-hub tracking-tight">
                                 Gestão Estratégica de KPIs do Setor
                             </h1>
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-200 flex items-center gap-1">
-                                <Sparkles className="w-3 h-3 text-red-600" /> Metas Globais & SLAs
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">
+                                <Sparkles className="w-3 h-3 text-rose-600 dark:text-rose-400" /> Metas Globais & SLAs
                             </span>
                         </div>
-                        <p className="text-sm text-gray-500 mt-0.5">
+                        <p className="text-sm text-secondary-hub mt-0.5">
                             Lançamentos semanais, acompanhamento histórico e conformidade em tempo real.
                         </p>
                     </div>
