@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-// Definindo as alocações da Escala Pré 16/11
+// Definindo as alocações da Escala Pré 16/11 (com Luiz Guilherme 09:00 às 15:15)
 const escalaPre = [
   // SEGUNDA
   { dia: "Segunda", canal: "Telefonia", colab: "Danilo dos Santos Amaro", turno: "08:00 às 14:15" },
@@ -16,6 +16,7 @@ const escalaPre = [
   { dia: "Segunda", canal: "Huggy", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Segunda", canal: "Huggy", colab: "Eduardo Caetano", turno: "08:00 às 14:15" },
   { dia: "Segunda", canal: "Huggy", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Segunda", canal: "Huggy", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Segunda", canal: "Huggy", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Segunda", canal: "Huggy", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Segunda", canal: "Huggy", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -29,6 +30,7 @@ const escalaPre = [
   { dia: "Terça", canal: "Telefonia", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Terça", canal: "Telefonia", colab: "Eduardo Caetano", turno: "08:00 às 14:15" },
   { dia: "Terça", canal: "Telefonia", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Terça", canal: "Telefonia", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Terça", canal: "Telefonia", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Terça", canal: "Telefonia", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Terça", canal: "Telefonia", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -58,6 +60,7 @@ const escalaPre = [
   { dia: "Quarta", canal: "Huggy", colab: "Luana Ângelo", turno: "08:00 às 14:15" },
   { dia: "Quarta", canal: "Huggy", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Quarta", canal: "Huggy", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Quarta", canal: "Huggy", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Quarta", canal: "Huggy", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Quarta", canal: "Huggy", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Quarta", canal: "Huggy", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -71,6 +74,7 @@ const escalaPre = [
   { dia: "Quinta", canal: "Telefonia", colab: "Luana Ângelo", turno: "08:00 às 14:15" },
   { dia: "Quinta", canal: "Telefonia", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Quinta", canal: "Telefonia", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Quinta", canal: "Telefonia", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Quinta", canal: "Telefonia", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Quinta", canal: "Telefonia", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Quinta", canal: "Telefonia", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -100,6 +104,7 @@ const escalaPre = [
   { dia: "Sexta", canal: "Huggy", colab: "Danilo dos Santos Amaro", turno: "08:00 às 14:15" },
   { dia: "Sexta", canal: "Huggy", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Sexta", canal: "Huggy", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Sexta", canal: "Huggy", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Sexta", canal: "Huggy", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Sexta", canal: "Huggy", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Sexta", canal: "Huggy", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -113,6 +118,7 @@ const escalaPre = [
   { dia: "Sábado", canal: "Telefonia", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Sábado", canal: "Telefonia", colab: "Eduardo Caetano", turno: "08:00 às 14:15" },
   { dia: "Sábado", canal: "Telefonia", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Sábado", canal: "Telefonia", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Sábado", canal: "Telefonia", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Sábado", canal: "Telefonia", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Sábado", canal: "Telefonia", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -130,7 +136,7 @@ const escalaPre = [
   { dia: "Sábado", canal: "Apoio", colab: "Pedro Pinze", turno: "13:45 às 20:00" },
 ];
 
-// Definindo as alocações da Escala Pós 16/11
+// Definindo as alocações da Escala Pós 16/11 (com Luiz Guilherme 09:00 às 15:15)
 const escalaPos = [
   // SEGUNDA
   { dia: "Segunda", canal: "Telefonia", colab: "Danilo dos Santos Amaro", turno: "08:00 às 14:15" },
@@ -144,6 +150,7 @@ const escalaPos = [
   { dia: "Segunda", canal: "Huggy", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Segunda", canal: "Huggy", colab: "Ana Beatriz Jesus", turno: "08:00 às 14:15" },
   { dia: "Segunda", canal: "Huggy", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Segunda", canal: "Huggy", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Segunda", canal: "Huggy", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Segunda", canal: "Huggy", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Segunda", canal: "Huggy", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -158,6 +165,7 @@ const escalaPos = [
   { dia: "Terça", canal: "Telefonia", colab: "Ana Beatriz Jesus", turno: "08:00 às 14:15" },
   { dia: "Terça", canal: "Telefonia", colab: "Luana Ângelo", turno: "09:00 às 15:15" },
   { dia: "Terça", canal: "Telefonia", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Terça", canal: "Telefonia", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Terça", canal: "Telefonia", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Terça", canal: "Telefonia", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Terça", canal: "Telefonia", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -186,6 +194,7 @@ const escalaPos = [
   { dia: "Quarta", canal: "Huggy", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Quarta", canal: "Huggy", colab: "Luana Ângelo", turno: "09:00 às 15:15" },
   { dia: "Quarta", canal: "Huggy", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Quarta", canal: "Huggy", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Quarta", canal: "Huggy", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Quarta", canal: "Huggy", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Quarta", canal: "Huggy", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -200,6 +209,7 @@ const escalaPos = [
   { dia: "Quinta", canal: "Telefonia", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Quinta", canal: "Telefonia", colab: "Luana Ângelo", turno: "09:00 às 15:15" },
   { dia: "Quinta", canal: "Telefonia", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Quinta", canal: "Telefonia", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Quinta", canal: "Telefonia", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Quinta", canal: "Telefonia", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Quinta", canal: "Telefonia", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -228,6 +238,7 @@ const escalaPos = [
   { dia: "Sexta", canal: "Huggy", colab: "Danilo dos Santos Amaro", turno: "08:00 às 14:15" },
   { dia: "Sexta", canal: "Huggy", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Sexta", canal: "Huggy", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Sexta", canal: "Huggy", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Sexta", canal: "Huggy", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Sexta", canal: "Huggy", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Sexta", canal: "Huggy", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
@@ -242,6 +253,7 @@ const escalaPos = [
   { dia: "Sábado", canal: "Telefonia", colab: "Thiago Nathan", turno: "08:00 às 14:15" },
   { dia: "Sábado", canal: "Telefonia", colab: "Ana Beatriz Jesus", turno: "08:00 às 14:15" },
   { dia: "Sábado", canal: "Telefonia", colab: "Carolini Pontes", turno: "09:00 às 15:15" },
+  { dia: "Sábado", canal: "Telefonia", colab: "Luiz Guilherme", turno: "09:00 às 15:15" },
   { dia: "Sábado", canal: "Telefonia", colab: "Douglas Ferreira Cruz", turno: "13:45 às 20:00" },
   { dia: "Sábado", canal: "Telefonia", colab: "Eduardo Silva Veira", turno: "13:45 às 20:00" },
   { dia: "Sábado", canal: "Telefonia", colab: "Heitor Hugo", turno: "13:45 às 20:00" },
