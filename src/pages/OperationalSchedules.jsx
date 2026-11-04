@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
     CalendarDays, Calendar, Save, Loader2, Users, GripVertical, 
     X, Phone, MessageCircle, LifeBuoy, Search, ChevronLeft, 
     ChevronRight, ChevronDown, ChevronsUpDown, Minimize2, Plus, 
-    AlertCircle, CheckCircle2, Sparkles, Filter
+    AlertCircle, CheckCircle2, Sparkles, Filter, Upload, Download, FileSpreadsheet
 } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -109,6 +109,7 @@ export const OperationalSchedules = ({
     const [originalDailySchedule, setOriginalDailySchedule] = useState({});
     const [loadingDaily, setLoadingDaily] = useState(true);
     const [savingDaily, setSavingDaily] = useState(false);
+    const csvFileInputRef = useRef(null);
 
     // Estado da Escala de Plantão (Documento mensal: "YYYY-MM")
     const [currentSundayDate, setCurrentSundayDate] = useState(new Date());
@@ -277,6 +278,207 @@ export const OperationalSchedules = ({
     };
 
     // --- SALVAR ESCALA DE PLANTÃO ---
+    
+    // --- IMPORTAR ESCALA DIARIA VIA CSV ---
+    const handleImportCsv = (e) => {
+        if (readOnly) return;
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            try {
+                const csvText = event.target?.result;
+                if (!csvText || typeof csvText !== 'string') {
+                    showToast("Arquivo CSV inválido ou vazio.", "error");
+                    return;
+                }
+
+                const lines = csvText.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                if (lines.length < 2) {
+                    showToast("Arquivo CSV não contém dados suficientes.", "warning");
+                    return;
+                }
+
+                const delimiter = lines[0].includes(";") ? ";" : ",";
+                const splitRow = (row) => {
+                    const regex = new RegExp(`(?:^|${delimiter})(?:"([^"]*)"|([^${delimiter}"]*))`, "g");
+                    const result = [];
+                    let match;
+                    while ((match = regex.exec(row)) !== null) {
+                        const val = match[1] !== undefined ? match[1] : match[2];
+                        result.push(val !== undefined ? val.trim() : "");
+                        if (regex.lastIndex === row.length) break;
+                    }
+                    return result;
+                };
+
+                const normalize = (s) => s?.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim() || "";
+                const headers = splitRow(lines[0]).map(h => normalize(h));
+
+                const validDays = {
+                    segunda: "segunda", seg: "segunda",
+                    terca: "terca", tercafeira: "terca", ter: "terca",
+                    quarta: "quarta", quartafeira: "quarta", qua: "quarta",
+                    quinta: "quinta", quintafeira: "quinta", qui: "quinta",
+                    sexta: "sexta", sextafeira: "sexta", sex: "sexta",
+                    sabado: "sabado", sab: "sabado"
+                };
+
+                const validRoles = {
+                    telefonia: "telefonia", telefone: "telefonia", voz: "telefonia", tel: "telefonia",
+                    huggy: "huggy", chat: "huggy",
+                    apoio: "apoio", suporte: "apoio", apoiooperacional: "apoio"
+                };
+
+                const newSchedule = {
+                    segunda: { telefonia: [], huggy: [], apoio: [] },
+                    terca: { telefonia: [], huggy: [], apoio: [] },
+                    quarta: { telefonia: [], huggy: [], apoio: [] },
+                    quinta: { telefonia: [], huggy: [], apoio: [] },
+                    sexta: { telefonia: [], huggy: [], apoio: [] },
+                    sabado: { telefonia: [], huggy: [], apoio: [] }
+                };
+
+                let totalAllocations = 0;
+                const isColumnFormat = headers.some(h => h.includes("dia")) && headers.some(h => h.includes("canal") || h.includes("posto") || h.includes("funcao"));
+
+                if (isColumnFormat) {
+                    const diaIdx = headers.findIndex(h => h.includes("dia"));
+                    const canalIdx = headers.findIndex(h => h.includes("canal") || h.includes("posto") || h.includes("funcao"));
+                    const colabIdx = headers.findIndex(h => h.includes("colaborador") || h.includes("nome") || h.includes("operador"));
+                    const turnoIdx = headers.findIndex(h => h.includes("turno") || h.includes("horario"));
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = splitRow(lines[i]);
+                        if (cols.length <= Math.max(diaIdx, canalIdx, colabIdx)) continue;
+
+                        const rawDia = normalize(cols[diaIdx]);
+                        const rawCanal = normalize(cols[canalIdx]);
+                        const rawColab = cols[colabIdx]?.trim();
+                        const rawTurno = turnoIdx >= 0 ? cols[turnoIdx]?.trim() : "";
+
+                        if (!rawDia || !rawCanal || !rawColab) continue;
+
+                        const targetDay = validDays[rawDia];
+                        const targetRole = validRoles[rawCanal];
+                        if (!targetDay || !targetRole) continue;
+
+                        const normName = normalize(rawColab);
+                        const matched = collaborators.find(c => {
+                            const cn = normalize(c.name || c.colabName);
+                            return cn === normName || cn.includes(normName) || normName.includes(cn);
+                        });
+
+                        const colabObj = matched
+                            ? { ...matched }
+                            : {
+                                id: `imported_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                                name: rawColab,
+                                shift: rawTurno || "Manhã I",
+                                role: "Colaborador",
+                                active: true
+                            };
+
+                        if (!newSchedule[targetDay][targetRole].some(c => c.name === colabObj.name)) {
+                            newSchedule[targetDay][targetRole].push(colabObj);
+                            totalAllocations++;
+                        }
+                    }
+                } else {
+                    const colabIdx = headers.findIndex(h => h.includes("colaborador") || h.includes("nome") || h.includes("operador"));
+                    const dayIndices = {};
+                    headers.forEach((h, idx) => {
+                        if (validDays[h]) dayIndices[validDays[h]] = idx;
+                    });
+
+                    if (colabIdx >= 0 && Object.keys(dayIndices).length > 0) {
+                        for (let i = 1; i < lines.length; i++) {
+                            const cols = splitRow(lines[i]);
+                            const rawColab = cols[colabIdx]?.trim();
+                            if (!rawColab) continue;
+
+                            const normName = normalize(rawColab);
+                            const matched = collaborators.find(c => {
+                                const cn = normalize(c.name || c.colabName);
+                                return cn === normName || cn.includes(normName) || normName.includes(cn);
+                            });
+
+                            const colabObj = matched
+                                ? { ...matched }
+                                : {
+                                    id: `imported_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+                                    name: rawColab,
+                                    shift: "Manhã I",
+                                    role: "Colaborador",
+                                    active: true
+                                };
+
+                            for (const [dayKey, colIdx] of Object.entries(dayIndices)) {
+                                const roleRaw = normalize(cols[colIdx]);
+                                const roleTarget = validRoles[roleRaw];
+                                if (roleTarget) {
+                                    if (!newSchedule[dayKey][roleTarget].some(c => c.name === colabObj.name)) {
+                                        newSchedule[dayKey][roleTarget].push(colabObj);
+                                        totalAllocations++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (totalAllocations === 0) {
+                    showToast("Nenhuma alocação válida encontrada no CSV. Verifique as colunas (Dia;Canal;Colaborador;Turno).", "warning");
+                    return;
+                }
+
+                // Substitui a escala atual pela nova importada
+                setDailySchedule(newSchedule);
+                showToast(`Escala importada com sucesso (${totalAllocations} alocações)! Clique em "Salvar Escala Diária" para confirmar.`, "success");
+            } catch (err) {
+                console.error("Erro ao importar CSV:", err);
+                showToast("Falha ao processar o arquivo CSV: " + err.message, "error");
+            } finally {
+                if (e.target) e.target.value = "";
+            }
+        };
+        reader.readAsText(file, "UTF-8");
+    };
+
+    // --- EXPORTAR ESCALA DIARIA ATUAL EM CSV ---
+    const handleExportCsv = () => {
+        try {
+            const rows = ["Dia;Canal;Colaborador;Turno"];
+            DAYS_OF_WEEK.forEach(day => {
+                const dayData = dailySchedule[day.id] || { telefonia: [], huggy: [], apoio: [] };
+                ROLES.forEach(role => {
+                    const list = dayData[role.key] || [];
+                    list.forEach(c => {
+                        const dName = day.label.replace("-feira", "");
+                        const rName = role.label.replace(" / Chat", "").replace(" Operacional", "");
+                        rows.push(`"${dName}";"${rName}";"${c.name || 'Operador'}";"${c.shift || 'Manhã I'}"`);
+                    });
+                });
+            });
+
+            const csvContent = "\uFEFF" + rows.join("\r\n");
+            const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.setAttribute("download", `escala_diaria_hubdesk_${new Date().toISOString().split("T")[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            showToast("Escala diária exportada em CSV com sucesso!", "success");
+        } catch (err) {
+            console.error("Erro ao exportar CSV:", err);
+            showToast("Erro ao exportar CSV.", "error");
+        }
+    };
+
     const handleSaveSunday = async () => {
         if (readOnly) return;
         setSavingSunday(true);
@@ -527,22 +729,49 @@ export const OperationalSchedules = ({
                         </div>
                     )}
 
-                    {/* Botão de Salvar Alterações */}
+                    {/* Botões de Ação da Escala Diária (Importar CSV, Exportar e Salvar) */}
                     {!readOnly && (
                         activeTab === 'diaria' ? (
-                            <button
-                                type="button"
-                                onClick={handleSaveDaily}
-                                disabled={savingDaily || !isDailyDirty}
-                                className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer ${
-                                    isDailyDirty
-                                        ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                }`}
-                            >
-                                {savingDaily ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                                <span>{savingDaily ? 'Salvando...' : isDailyDirty ? 'Salvar Escala Diária' : 'Salvo'}</span>
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="file"
+                                    ref={csvFileInputRef}
+                                    onChange={handleImportCsv}
+                                    accept=".csv"
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => csvFileInputRef.current?.click()}
+                                    className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300 shadow-2xs transition-all cursor-pointer active:scale-95"
+                                    title="Importar escala diária a partir de um arquivo .csv (substitui a escala atual)"
+                                >
+                                    <Upload className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Importar Escala (.csv)</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleExportCsv}
+                                    className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 shadow-2xs transition-all cursor-pointer active:scale-95"
+                                    title="Exportar a escala diária atual em formato CSV"
+                                >
+                                    <Download className="w-3.5 h-3.5 text-gray-500" />
+                                    <span>Exportar</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveDaily}
+                                    disabled={savingDaily || !isDailyDirty}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer ${
+                                        isDailyDirty
+                                            ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                    }`}
+                                >
+                                    {savingDaily ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                                    <span>{savingDaily ? 'Salvando...' : isDailyDirty ? 'Salvar Escala Diária' : 'Salvo'}</span>
+                                </button>
+                            </div>
                         ) : (
                             <button
                                 type="button"

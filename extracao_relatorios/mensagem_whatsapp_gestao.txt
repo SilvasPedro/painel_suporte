@@ -1,0 +1,78 @@
+📊 *RELATÓRIO EXECUTIVO DE DESEMPENHO OPERACIONAL*
+📅 *Período Avaliado:* 06/01/2026 até 31/10/2026 (23 Semanas Operacionais)
+👥 *Colaboradores:* Alejandro Eduardo, Heitor Hugo, Matheus Santos, Thiago Nathan e Victor Silva
+
+---
+
+📌 *1. RESUMO GERAL DA EQUIPE*
+• *Total de Atendimentos:* 7.823 (3.748 no ERP, 2.850 via Chat Huggy e 1.225 na Telefonia)
+• *Média de Conformidade QA:* 89,8% de assertividade técnica
+• *TMA Médio Geral:* 08m56s na Telefonia | 25m24s no Chat
+• *Saldo de Feedbacks:* 80,6% positivos (25 elogios em 31 registros)
+_(Obs.: Avaliações 1:1 desconsideradas pela disparidade de atualização cadastral)._
+
+---
+
+🏆 *2. QUADRO COMPARATIVO DE INDICADORES*
+
+🥇 *Heitor Hugo (Manhã I)*
+• *Volume Total:* 2.141 entregas *(Líder geral da central)*
+• *ERP:* 919 | *Chat:* 798 | *Voz Atendidas:* 424 (92,2% de taxa)
+• *TMA:* 09m49s (Voz) | 28m00s (Chat)
+• *QA:* 88,9% (8 de 9 conformes) | *Feedbacks:* 3 Elogios / 1 Orientação
+
+🥈 *Matheus Santos (Noturno)*
+• *Volume Total:* 1.790 entregas *(Líder em eficiência)*
+• *ERP:* 783 | *Chat:* 602 | *Voz Atendidas:* 405 (94,2% de taxa)
+• *TMA:* 07m47s (Voz) | 23m03s (Chat) — _Menor TMA da equipe_
+• *QA:* 100,0% (8 de 8 conformes) | *Feedbacks:* 3 Elogios / 2 Orientações
+
+🥉 *Victor Silva Alves (Polo Peruíbe / Manhã I)*
+• *Volume Total:* 1.488 entregas *(Alta satisfação do cliente)*
+• *ERP:* 779 | *Chat:* 521 | *Voz Atendidas:* 188 (96,4% de taxa)
+• *TMA:* 09m11s (Voz) | 23m53s (Chat)
+• *QA:* 87,5% (7 de 8 conformes) | *Feedbacks:* 7 Elogios / 1 Melhoria
+
+4º *Alejandro Eduardo (Tarde / Apoio Operacional)*
+• *Volume Total:* 1.330 entregas *(Mentoria e suporte interno)*
+• *ERP:* 648 | *Chat:* 593 | *Voz Atendidas:* 89 (67,4% de taxa)
+• *TMA:* 09m55s (Voz) | 27m59s (Chat)
+• *QA:* 77,8% acumulado (100% no ciclo recente) | *Feedbacks:* 8 Elogios / 1 Orientação
+
+5º *Thiago Nathan (Manhã I / Abertura)*
+• *Volume Total:* 1.074 entregas *(Pontualidade e processos)*
+• *ERP:* 619 | *Chat:* 336 | *Voz Atendidas:* 119 (100% de taxa)
+• *TMA:* 07m59s (Voz) | 24m06s (Chat)
+• *QA:* 100,0% (7 de 7 conformes) | *Feedbacks:* 4 Elogios / 1 Melhoria
+
+---
+
+🔍 *3. RAIO-X: PONTOS FORTES & OPORTUNIDADES*
+
+👤 *Heitor Hugo:*
+✅ *Destaque:* Principal tração operacional; líder absoluto em entregas e ligações atendidas; rápida comunicação em casos sensíveis.
+⚠️ *Melhoria:* Tornar o diálogo verbal mais dinâmico para reduzir pausas em silêncio; alertar desconexão de rede antes de trocar senha Wi-Fi.
+
+👤 *Matheus Santos:*
+✅ *Destaque:* Maior velocidade e precisão técnica; 100% em QA; menor TMA geral; alta estabilidade no turno de fechamento.
+⚠️ *Melhoria:* Acompanhar diariamente chamados pendentes (caso de 15 dias sem movimentação); alinhar estudo de viabilidade prévia para pontos adicionais corporativos.
+
+👤 *Victor Silva Alves:*
+✅ *Destaque:* Atendimento excelente com elogio espontâneo 5 estrelas no Google; grande autonomia no polo Peruíbe com múltiplos sistemas em migração.
+⚠️ *Melhoria:* Agrupar mensagens curtas no Huggy para reduzir custos de disparos da plataforma; manter cliente posicionado durante aberturas longas de O.S.
+
+👤 *Alejandro Eduardo:*
+✅ *Destaque:* Pilar de mentoria técnica da equipe (treinamentos em TopSapp, ERP e OLTs); menor tempo de espera em voz (10s); forte proatividade em melhorias de sistema.
+⚠️ *Melhoria:* Elevar prontidão na telefonia receptiva (67,4% de taxa com 43 perdidas); evitar silêncios prolongados durante consultas na ligação.
+
+👤 *Thiago Nathan:*
+✅ *Destaque:* Disciplina britânica (100% de pontualidade sem atrasos); 100% de assertividade em QA; excelente didática com clientes leigos e documentações.
+⚠️ *Melhoria:* Manter fila de telefonia sempre ativa durante todo o turno; elevar o volume global de entregas para se aproximar dos pares.
+
+---
+
+🎯 *4. AÇÕES E DIRETRIZES PARA A GESTÃO*
+1. *Rebalancear a Telefonia:* Heitor e Matheus concentram mais de 67% das ligações. Integrar Thiago e Alejandro na escala receptiva para equilibrar a carga.
+2. *FinOps no Chat:* Padronizar envio de mensagens estruturadas no Huggy para conter custo por mensagens picadas.
+3. *Regra de Silêncio Tolerado:* Retorno verbal obrigatório a cada 35 segundos em chamadas e atualização a cada 3 minutos no chat.
+4. *Multiplicadores:* Usar a didática de Thiago e a técnica de Alejandro em treinamentos, e a postura de Victor e Matheus como padrão de atendimento para novos operadores.
