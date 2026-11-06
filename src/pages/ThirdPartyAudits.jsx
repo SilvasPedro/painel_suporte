@@ -39,18 +39,30 @@ const isAuditCompleted = (a) => Boolean(
 );
 const isAuditPending = (a) => !isAuditCompleted(a);
 
+// Empresas terceirizadas. UpCall (antiga) fica apenas como histórico de auditoria; ATSOC é a atual.
+const COMPANIES = [
+    { id: 'ATSOC', label: 'ATSOC', hint: 'Atual', archived: false },
+    { id: 'UPCALL', label: 'UpCall', hint: 'Histórico', archived: true }
+];
+const DEFAULT_COMPANY = 'ATSOC';
+const LEGACY_COMPANY = 'UPCALL'; // registros sem o campo "company" pertencem à UpCall
+const getAuditCompany = (a) => a?.company || LEGACY_COMPANY;
+
 export default function ThirdPartyAudits() {
     const { showToast } = useNotification();
     const { currentUser } = useAuth();
     const { canEdit } = usePermissions();
-    const hasEditPermission = canEdit('third_party_audits');
+    const [selectedCompany, setSelectedCompany] = useState(DEFAULT_COMPANY);
+    const companyInfo = COMPANIES.find(c => c.id === selectedCompany) || COMPANIES[0];
+    // Empresa arquivada (UpCall) é somente leitura: sem lançamento, importação, edição ou exclusão
+    const hasEditPermission = canEdit('third_party_audits') && !companyInfo.archived;
 
     // Referência para input de importação de arquivo CSV
     const fileInputRef = useRef(null);
     const [isImporting, setIsImporting] = useState(false);
 
     // Estados de dados
-    const [audits, setAudits] = useState([]);
+    const [allAudits, setAllAudits] = useState([]);
     const [savedOperators, setSavedOperators] = useState([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -123,14 +135,16 @@ export default function ThirdPartyAudits() {
                 const dateB = b.date || '';
                 return dateB.localeCompare(dateA);
             });
-            setAudits(list);
+            setAllAudits(list);
             setLoading(false);
         });
 
-        // 2. Escuta operadores salvos
+        // 2. Escuta operadores salvos (guarda a empresa de cada um)
         const unsubOperators = subscribeSharedCollection('third_party_operators', (items) => {
-            const names = items.map(i => i.name || i.id).filter(Boolean);
-            setSavedOperators(names);
+            const ops = items
+                .map(i => ({ name: i.name || i.id, company: i.company || LEGACY_COMPANY }))
+                .filter(o => o.name);
+            setSavedOperators(ops);
         });
 
         return () => {
@@ -140,15 +154,48 @@ export default function ThirdPartyAudits() {
     }, []);
 
     // Lista unificada e única de operadores (salvos + encontrados nas auditorias)
+    // Auditorias da empresa selecionada (base de todos os cálculos da tela)
+    const audits = useMemo(
+        () => allAudits.filter(a => getAuditCompany(a) === selectedCompany),
+        [allAudits, selectedCompany]
+    );
+
+    // Contagem total por empresa para o seletor
+    const companyCounts = useMemo(() => {
+        const counts = {};
+        COMPANIES.forEach(c => { counts[c.id] = 0; });
+        allAudits.forEach(a => {
+            const c = getAuditCompany(a);
+            counts[c] = (counts[c] || 0) + 1;
+        });
+        return counts;
+    }, [allAudits]);
+
+    // Ao trocar de empresa, limpa filtros que dependem dos dados da empresa anterior
+    const handleSelectCompany = (companyId) => {
+        if (companyId === selectedCompany) return;
+        setSelectedCompany(companyId);
+        setOperatorFilter('all');
+        setSearchTerm('');
+        setStatusFilter('all');
+        setOnlyRepeatsFilter(false);
+        setIsFormModalOpen(false);
+        setEditingAudit(null);
+        // UpCall é histórico: abre em "Todo o Histórico" para não parecer vazio no mês vigente
+        setPeriodType(COMPANIES.find(c => c.id === companyId)?.archived ? 'all' : 'current');
+    };
+
     const allAvailableOperators = useMemo(() => {
-        const set = new Set(savedOperators.map(s => s.trim()));
+        const set = new Set(
+            savedOperators.filter(o => o.company === selectedCompany).map(o => o.name.trim())
+        );
         audits.forEach(a => {
             if (a.operatorName && a.operatorName.trim()) {
                 set.add(a.operatorName.trim());
             }
         });
         return Array.from(set).sort((a, b) => a.localeCompare(b));
-    }, [savedOperators, audits]);
+    }, [savedOperators, audits, selectedCompany]);
 
     // Meses disponíveis no banco para seleção rápida
     const availableMonths = useMemo(() => {
@@ -610,6 +657,7 @@ export default function ThirdPartyAudits() {
                 clientName: cleanClient,
                 outcome: formData.outcome,
                 notes: (formData.notes || '').trim(),
+                company: editingAudit ? getAuditCompany(editingAudit) : selectedCompany,
                 updatedAt: new Date()
             };
 
@@ -626,9 +674,13 @@ export default function ThirdPartyAudits() {
 
             // Salva o nome do operador no catálogo persistente caso ainda não exista
             if (cleanOperator) {
-                const operatorDocId = cleanOperator.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                const opCompany = payload.company;
+                const slug = cleanOperator.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                // Operadores legados (UpCall) mantêm o id antigo; ATSOC usa prefixo próprio
+                const operatorDocId = opCompany === LEGACY_COMPANY ? slug : `${opCompany.toLowerCase()}_${slug}`;
                 await setDoc(doc(db, 'third_party_operators', operatorDocId), {
                     name: cleanOperator,
+                    company: opCompany,
                     lastUsedAt: new Date()
                 }, { merge: true });
             }
@@ -851,6 +903,7 @@ export default function ThirdPartyAudits() {
                     quality,
                     outcome,
                     notes,
+                    company: selectedCompany,
                     createdAt: new Date(),
                     updatedAt: new Date(),
                     auditorName: currentUser?.name || currentUser?.displayName || 'Auditor',
@@ -871,9 +924,11 @@ export default function ThirdPartyAudits() {
             for (const item of newAudits) {
                 await addDoc(collection(db, 'third_party_audits'), item);
                 if (item.operatorName) {
-                    const opId = item.operatorName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    const slug = item.operatorName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    const opId = item.company === LEGACY_COMPANY ? slug : `${item.company.toLowerCase()}_${slug}`;
                     await setDoc(doc(db, 'third_party_operators', opId), {
                         name: item.operatorName,
+                        company: item.company,
                         lastUsedAt: new Date()
                     }, { merge: true });
                 }
@@ -943,7 +998,7 @@ export default function ThirdPartyAudits() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute('download', `auditorias_terceirizadas_${periodType}_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `auditorias_${selectedCompany.toLowerCase()}_${periodType}_${new Date().toISOString().split('T')[0]}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -974,7 +1029,7 @@ export default function ThirdPartyAudits() {
 
             await exportThirdPartyAuditsPDF({
                 audits: filteredAudits,
-                periodLabel: periodLabelMap[periodType] || periodType,
+                periodLabel: `${companyInfo.label} • ${periodLabelMap[periodType] || periodType}`,
                 kpiStats: {
                     compliancePct: metrics.compliancePercent,
                     qualityPct: metrics.qualityPositiveRate,
@@ -993,7 +1048,7 @@ export default function ThirdPartyAudits() {
     };
 
     return (
-        <div className="flex-1 p-3 sm:p-5 lg:p-6 bg-gray-50 h-full overflow-y-auto font-sans">
+        <div className="flex-1 p-3 sm:p-5 lg:p-6 bg-subtle h-full overflow-y-auto font-sans">
             {/* Input Oculto de Arquivo CSV */}
             <input 
                 type="file"
@@ -1008,23 +1063,48 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {/* 1. CABEÇALHO EXECUTIVO E CONTROLES GERAIS                */}
                 {/* ======================================================== */}
-                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-4 sm:p-5 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3.5">
-                        <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-red-600 to-zinc-900 text-white flex items-center justify-center shrink-0 shadow-md">
-                            <Headphones className="w-6 h-6" />
+                <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-4">
+                    <div className="space-y-2.5">
+                        <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+    <Headphones className="w-3.5 h-3.5" />
+    <span>Qualidade &amp; Terceirização</span>
+</div>
+<div className="flex items-center gap-2.5 flex-wrap">
+<h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
+                                Auditoria Terceirizada
+                            </h1>
+                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold border flex items-center gap-1 ${
+                                companyInfo.archived
+                                    ? 'bg-zinc-100 text-zinc-700 border-zinc-200'
+                                    : 'bg-red-100 text-red-800 border-red-200'
+                            }`}>
+                                <ShieldCheck className={`w-3.5 h-3.5 ${companyInfo.archived ? 'text-zinc-500' : 'text-red-600'}`} />
+                                {companyInfo.label} • {companyInfo.archived ? 'Somente consulta' : 'Operação atual'}
+                            </span>
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight">
-                                    Auditorias de Qualidade Terceirizada
-                                </h1>
-                                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-red-100 text-red-800 border border-red-200">
-                                    Equipe Externa • v3.8.2
-                                </span>
-                            </div>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                                Importação de atendimentos via CSV, auditoria de conformidade, FCR na saída e reincidência fora de horário.
-                            </p>
+                        <p className="text-sm text-secondary-hub">
+                            Importação de atendimentos via CSV, conformidade de procedimentos, FCR na saída e reincidência fora de horário.
+                        </p>
+
+                        {/* Seletor de empresa terceirizada */}
+                        <div className="inline-flex items-center bg-subtle p-1 rounded-xl border border-subtle">
+                            {COMPANIES.map(c => (
+                                <button
+                                    key={c.id}
+                                    type="button"
+                                    onClick={() => handleSelectCompany(c.id)}
+                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                        selectedCompany === c.id ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub hover:text-primary-hub'
+                                    }`}
+                                    title={c.archived ? 'Dados da empresa anterior, mantidos apenas para auditoria' : 'Empresa terceirizada atual'}
+                                >
+                                    <span className={`w-2 h-2 rounded-full ${c.archived ? 'bg-zinc-400' : 'bg-emerald-500'}`}></span>
+                                    <span>{c.label}</span>
+                                    <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-subtle text-secondary-hub border border-subtle">
+                                        {companyCounts[c.id] || 0}
+                                    </span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 
@@ -1033,7 +1113,7 @@ export default function ThirdPartyAudits() {
                         <button
                             type="button"
                             onClick={handleDownloadTemplate}
-                            className="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-2 bg-surface hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                             title="Baixar modelo de CSV com colunas pré-formatadas para importação"
                         >
                             <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
@@ -1046,7 +1126,7 @@ export default function ThirdPartyAudits() {
                                 type="button"
                                 disabled={isImporting}
                                 onClick={() => fileInputRef.current?.click()}
-                                className="px-3.5 py-2 bg-white hover:bg-blue-50 text-blue-800 text-xs font-bold rounded-xl border border-blue-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="px-3.5 py-2 bg-surface hover:bg-blue-50 text-blue-800 text-xs font-bold rounded-xl border border-blue-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                 title="Importar atendimentos via arquivo .CSV (Data e Protocolo)"
                             >
                                 {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" /> : <Upload className="w-3.5 h-3.5 text-blue-600" />}
@@ -1058,7 +1138,7 @@ export default function ThirdPartyAudits() {
                         <button
                             type="button"
                             onClick={handleExportCSV}
-                            className="px-3 py-2 bg-white hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="px-3 py-2 bg-surface hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
                             title="Exportar dados filtrados em CSV com protocolos em formato de texto"
                         >
                             <Download className="w-3.5 h-3.5 text-emerald-600" />
@@ -1070,7 +1150,7 @@ export default function ThirdPartyAudits() {
                             type="button"
                             disabled={isExportingPDF}
                             onClick={handleExportPDF}
-                            className="px-3 py-2 bg-white hover:bg-red-50 text-red-800 text-xs font-bold rounded-xl border border-red-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            className="px-3 py-2 bg-surface hover:bg-red-50 text-red-800 text-xs font-bold rounded-xl border border-red-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                             title="Exportar relatório e protocolos unificados em formato .PDF para anexo"
                         >
                             {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" /> : <FileText className="w-3.5 h-3.5 text-red-600" />}
@@ -1094,17 +1174,17 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {/* 1.1 BARRA COMPLETA DE FILTRO POR PERÍODO                 */}
                 {/* ======================================================== */}
-                <div className="bg-white rounded-2xl border border-gray-200/90 shadow-2xs p-3.5 sm:p-4 space-y-3">
+                <div className="bg-surface rounded-2xl border border-subtle shadow-xs p-3.5 sm:p-4 space-y-3">
                     <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-red-600 shrink-0" />
-                            <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                            <span className="text-xs font-bold text-primary-hub uppercase tracking-wider">
                                 Filtrar por Período:
                             </span>
                             <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-800 border border-zinc-200">
                                 {activePeriodLabel}
                             </span>
-                            <span className="text-xs text-gray-400 font-medium">
+                            <span className="text-xs text-muted-hub font-medium">
                                 • {periodAudits.length} registro{periodAudits.length !== 1 ? 's' : ''} no período
                             </span>
                         </div>
@@ -1117,7 +1197,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     periodType === 'current'
                                         ? 'bg-red-600 text-white shadow-2xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        : 'bg-subtle hover:bg-gray-200 text-secondary-hub'
                                 }`}
                             >
                                 Mês Vigente
@@ -1129,7 +1209,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     periodType === 'previous'
                                         ? 'bg-red-600 text-white shadow-2xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        : 'bg-subtle hover:bg-gray-200 text-secondary-hub'
                                 }`}
                             >
                                 Mês Anterior
@@ -1141,7 +1221,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     periodType === 'last7'
                                         ? 'bg-red-600 text-white shadow-2xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        : 'bg-subtle hover:bg-gray-200 text-secondary-hub'
                                 }`}
                             >
                                 Últimos 7 Dias
@@ -1153,7 +1233,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     periodType === 'last30'
                                         ? 'bg-red-600 text-white shadow-2xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        : 'bg-subtle hover:bg-gray-200 text-secondary-hub'
                                 }`}
                             >
                                 Últimos 30 Dias
@@ -1165,7 +1245,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     periodType === 'custom'
                                         ? 'bg-red-600 text-white shadow-2xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        : 'bg-subtle hover:bg-gray-200 text-secondary-hub'
                                 }`}
                             >
                                 Intervalo (De - Até)
@@ -1183,12 +1263,12 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer outline-none border ${
                                     periodType === 'month'
                                         ? 'bg-red-600 text-white border-red-600'
-                                        : 'bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200'
+                                        : 'bg-subtle text-secondary-hub border-subtle hover:bg-gray-200'
                                 }`}
                             >
                                 <option value="" disabled>Outros Meses...</option>
                                 {availableMonths.map(m => (
-                                    <option key={m} value={m} className="bg-white text-gray-800">
+                                    <option key={m} value={m} className="bg-surface text-primary-hub">
                                         Mês {m.split('-')[1]}/{m.split('-')[0]}
                                     </option>
                                 ))}
@@ -1200,7 +1280,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                     periodType === 'all'
                                         ? 'bg-zinc-900 text-white shadow-2xs'
-                                        : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                                        : 'bg-subtle hover:bg-gray-200 text-secondary-hub'
                                 }`}
                             >
                                 Todo o Histórico
@@ -1210,29 +1290,29 @@ export default function ThirdPartyAudits() {
 
                     {/* Inputs de Data Inicial e Final quando Período Personalizado está selecionado */}
                     {periodType === 'custom' && (
-                        <div className="pt-2.5 border-t border-gray-100 flex flex-wrap items-center gap-3 bg-red-50/50 p-2.5 rounded-xl border border-red-100 text-xs animate-in fade-in">
+                        <div className="pt-2.5 border-t border-subtle flex flex-wrap items-center gap-3 bg-red-50/50 p-2.5 rounded-xl border border-red-100 text-xs animate-in fade-in">
                             <span className="font-bold text-red-900 flex items-center gap-1">
                                 <Filter className="w-3.5 h-3.5 text-red-600" />
                                 Definir Intervalo de Datas:
                             </span>
 
                             <div className="flex items-center gap-1.5">
-                                <label className="text-gray-600 font-semibold text-[11px]">De:</label>
+                                <label className="text-secondary-hub font-semibold text-[11px]">De:</label>
                                 <input
                                     type="date"
                                     value={customStartDate}
                                     onChange={(e) => setCustomStartDate(e.target.value)}
-                                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-600 font-medium"
+                                    className="px-2.5 py-1 bg-surface border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-600 font-medium"
                                 />
                             </div>
 
                             <div className="flex items-center gap-1.5">
-                                <label className="text-gray-600 font-semibold text-[11px]">Até:</label>
+                                <label className="text-secondary-hub font-semibold text-[11px]">Até:</label>
                                 <input
                                     type="date"
                                     value={customEndDate}
                                     onChange={(e) => setCustomEndDate(e.target.value)}
-                                    className="px-2.5 py-1 bg-white border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-600 font-medium"
+                                    className="px-2.5 py-1 bg-surface border border-gray-300 rounded-lg text-xs outline-none focus:ring-2 focus:ring-red-600 font-medium"
                                 />
                             </div>
 
@@ -1255,7 +1335,7 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {/* 2. CARD PRINCIPAL: PROGRESSO ATUAL (% E PENDENTES)       */}
                 {/* ======================================================== */}
-                <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-red-950 text-white rounded-2xl sm:rounded-3xl p-5 sm:p-6 shadow-md border border-zinc-800/80 relative overflow-hidden">
+                <div className="bg-zinc-950 text-white rounded-2xl p-5 sm:p-6 shadow-sm border border-zinc-800 relative overflow-hidden">
                     <div className="absolute right-0 top-0 bottom-0 w-96 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 relative z-10">
@@ -1344,9 +1424,9 @@ export default function ThirdPartyAudits() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     
                     {/* CARD 1: FCR (FIRST CALL RESOLUTION) */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2 hover:shadow-xs transition-shadow">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 FCR (Resolução 1ª Chamada)
                             </span>
                             <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
@@ -1359,16 +1439,16 @@ export default function ThirdPartyAudits() {
                             }`}>
                                 {metrics.fcrPercent}%
                             </span>
-                            <span className="text-xs text-gray-500 font-medium">
+                            <span className="text-xs text-secondary-hub font-medium">
                                 Base: Saída
                             </span>
                         </div>
-                        <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                        <div className="pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                             <span className="flex items-center gap-1 font-bold text-emerald-700">
                                 <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
                                 {metrics.totalResolved} Resolvidos
                             </span>
-                            <span className="flex items-center gap-1 text-gray-500">
+                            <span className="flex items-center gap-1 text-secondary-hub">
                                 <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                                 {metrics.totalForwarded} Encaminhados
                             </span>
@@ -1376,9 +1456,9 @@ export default function ThirdPartyAudits() {
                     </div>
 
                     {/* CARD 2: REINCIDÊNCIA DE CLIENTES FORA DE HORÁRIO */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2 hover:shadow-xs transition-shadow">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 Taxa de Reincidência
                             </span>
                             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
@@ -1391,24 +1471,24 @@ export default function ThirdPartyAudits() {
                             }`}>
                                 {metrics.repeatRatePercent}%
                             </span>
-                            <span className="text-xs text-gray-500 font-medium">
+                            <span className="text-xs text-secondary-hub font-medium">
                                 Clientes recorrentes
                             </span>
                         </div>
-                        <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
-                            <span className="text-gray-700 font-medium">
+                        <div className="pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
+                            <span className="text-secondary-hub font-medium">
                                 <strong>{metrics.repeatClientsCount}</strong> clientes reincidentes
                             </span>
-                            <span className="text-gray-400">
+                            <span className="text-muted-hub">
                                 {metrics.uniqueClientsCount} clientes únicos
                             </span>
                         </div>
                     </div>
 
                     {/* CARD 3: CONFORMIDADE DE PROCEDIMENTOS */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2 hover:shadow-xs transition-shadow">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 Conformidade de Procedimentos
                             </span>
                             <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -1421,11 +1501,11 @@ export default function ThirdPartyAudits() {
                             }`}>
                                 {metrics.compliancePercent}%
                             </span>
-                            <span className="text-xs text-gray-500 font-medium">
+                            <span className="text-xs text-secondary-hub font-medium">
                                 Conformes
                             </span>
                         </div>
-                        <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                        <div className="pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                             <span className="text-emerald-700 font-bold">
                                 {metrics.totalConforme} Conformes
                             </span>
@@ -1436,9 +1516,9 @@ export default function ThirdPartyAudits() {
                     </div>
 
                     {/* CARD 4: QUALIDADE DO ATENDIMENTO */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs space-y-2 hover:shadow-xs transition-shadow">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                            <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 Qualidade (Positivos x Negativos)
                             </span>
                             <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
@@ -1449,13 +1529,13 @@ export default function ThirdPartyAudits() {
                             <span className="text-2xl sm:text-3xl font-black text-purple-700">
                                 {metrics.qualityPositiveRate}%
                             </span>
-                            <span className="text-xs text-gray-500 font-medium">
+                            <span className="text-xs text-secondary-hub font-medium">
                                 {metrics.totalQualityRated > 0 ? `${metrics.qualityPositive} de ${metrics.totalQualityRated} avaliados` : 'Sem avaliações'}
                             </span>
                         </div>
-                        <div className="pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-600">
+                        <div className="pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                             <span className="text-emerald-600 font-bold" title="Positivos (somam a favor)">👍 {metrics.qualityPositive}</span>
-                            <span className="text-gray-400 font-medium" title="Neutros não descontam nem somam no % total">😐 {metrics.qualityNeutral} <span className="text-[9px] text-gray-400 font-normal">(Neutros)</span></span>
+                            <span className="text-muted-hub font-medium" title="Neutros não descontam nem somam no % total">😐 {metrics.qualityNeutral} <span className="text-[9px] text-muted-hub font-normal">(Neutros)</span></span>
                             <span className="text-red-600 font-bold" title="Negativos (descontam contra)">👎 {metrics.qualityNegative}</span>
                         </div>
                     </div>
@@ -1468,24 +1548,24 @@ export default function ThirdPartyAudits() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     {/* Card 1: Gráfico de Processos Realizados */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs space-y-3">
-                        <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+                    <div className="bg-surface rounded-2xl border border-subtle p-5 shadow-2xs space-y-3">
+                        <div className="flex items-center justify-between border-b border-subtle pb-3">
                             <div>
-                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
                                     <BarChart2 className="w-4 h-4 text-red-600" />
                                     Demandas por Processo
                                 </h3>
-                                <p className="text-[11px] text-gray-400">
+                                <p className="text-[11px] text-muted-hub">
                                     Motivos dos atendimentos auditados
                                 </p>
                             </div>
-                            <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2 py-0.5 rounded-lg">
+                            <span className="text-xs font-bold text-secondary-hub bg-subtle px-2 py-0.5 rounded-lg">
                                 {periodAudits.length}
                             </span>
                         </div>
 
                         {periodAudits.length === 0 ? (
-                            <div className="h-56 flex flex-col items-center justify-center text-gray-400 text-xs italic">
+                            <div className="h-56 flex flex-col items-center justify-center text-muted-hub text-xs italic">
                                 Nenhum lançamento no período.
                             </div>
                         ) : (
@@ -1512,10 +1592,10 @@ export default function ThirdPartyAudits() {
                     </div>
 
                     {/* Card 2: Desempenho dos Operadores Terceirizados */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="bg-surface rounded-2xl border border-subtle p-5 shadow-2xs space-y-3 flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <div className="flex items-center justify-between border-b border-subtle pb-3">
+                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
                                     <Users className="w-4 h-4 text-blue-600" />
                                     Operadores Terceirizados
                                 </h3>
@@ -1523,13 +1603,13 @@ export default function ThirdPartyAudits() {
                                     FCR & QA
                                 </span>
                             </div>
-                            <p className="text-[11px] text-gray-500 mt-2">
+                            <p className="text-[11px] text-secondary-hub mt-2">
                                 Produtividade e resolução da equipe externa:
                             </p>
 
                             <div className="space-y-2 mt-3 max-h-56 overflow-y-auto pr-1">
                                 {operatorStatsData.length === 0 ? (
-                                    <p className="text-xs text-gray-400 italic text-center py-6">
+                                    <p className="text-xs text-muted-hub italic text-center py-6">
                                         Nenhum operador com atendimentos no período.
                                     </p>
                                 ) : (
@@ -1537,14 +1617,14 @@ export default function ThirdPartyAudits() {
                                         <div 
                                             key={idx}
                                             onClick={() => setOperatorFilter(op.name)}
-                                            className="p-2.5 rounded-xl bg-gray-50 hover:bg-blue-50/50 border border-gray-200 hover:border-blue-200 transition-colors flex items-center justify-between cursor-pointer group"
+                                            className="p-2.5 rounded-xl bg-subtle hover:bg-blue-50/50 border border-subtle hover:border-blue-200 transition-colors flex items-center justify-between cursor-pointer group"
                                             title="Clique para filtrar por este operador"
                                         >
                                             <div className="min-w-0 pr-2">
-                                                <span className="text-xs font-bold text-gray-900 group-hover:text-blue-600 block truncate">
+                                                <span className="text-xs font-bold text-primary-hub group-hover:text-blue-600 block truncate">
                                                     {op.name}
                                                 </span>
-                                                <span className="text-[10px] text-gray-500">
+                                                <span className="text-[10px] text-secondary-hub">
                                                     {op.total} chamada{op.total > 1 ? 's' : ''} auditada{op.total > 1 ? 's' : ''}
                                                 </span>
                                             </div>
@@ -1565,16 +1645,16 @@ export default function ThirdPartyAudits() {
                             </div>
                         </div>
 
-                        <div className="pt-2 border-t border-gray-100 text-[10px] text-gray-400 text-center">
+                        <div className="pt-2 border-t border-subtle text-[10px] text-muted-hub text-center">
                             Clique em um operador para filtrar sua amostragem
                         </div>
                     </div>
 
                     {/* Card 3: Top Clientes Reincidentes Fora de Horário */}
-                    <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-2xs space-y-3 flex flex-col justify-between">
+                    <div className="bg-surface rounded-2xl border border-subtle p-5 shadow-2xs space-y-3 flex flex-col justify-between">
                         <div>
-                            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
-                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <div className="flex items-center justify-between border-b border-subtle pb-3">
+                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
                                     <RefreshCw className="w-4 h-4 text-amber-600" />
                                     Reincidências Fora de Horário
                                 </h3>
@@ -1582,13 +1662,13 @@ export default function ThirdPartyAudits() {
                                     Atenção
                                 </span>
                             </div>
-                            <p className="text-[11px] text-gray-500 mt-2">
+                            <p className="text-[11px] text-secondary-hub mt-2">
                                 Clientes com múltiplos contatos registrados neste período:
                             </p>
 
                             <div className="space-y-2 mt-3 max-h-56 overflow-y-auto pr-1">
                                 {topRepeatClients.length === 0 ? (
-                                    <p className="text-xs text-gray-400 italic text-center py-6">
+                                    <p className="text-xs text-muted-hub italic text-center py-6">
                                         Nenhuma reincidência de cliente detectada no período.
                                     </p>
                                 ) : (
@@ -1596,14 +1676,14 @@ export default function ThirdPartyAudits() {
                                         <div 
                                             key={idx}
                                             onClick={() => setSearchTerm(client.name)}
-                                            className="p-2.5 rounded-xl bg-gray-50 hover:bg-red-50/50 border border-gray-200 hover:border-red-200 transition-colors flex items-center justify-between cursor-pointer group"
+                                            className="p-2.5 rounded-xl bg-subtle hover:bg-red-50/50 border border-subtle hover:border-red-200 transition-colors flex items-center justify-between cursor-pointer group"
                                             title="Clique para filtrar apenas as chamadas deste cliente"
                                         >
                                             <div className="min-w-0 pr-2">
-                                                <span className="text-xs font-bold text-gray-900 group-hover:text-red-600 block truncate">
+                                                <span className="text-xs font-bold text-primary-hub group-hover:text-red-600 block truncate">
                                                     {client.name}
                                                 </span>
-                                                <span className="text-[10px] text-gray-400">
+                                                <span className="text-[10px] text-muted-hub">
                                                     Último contato em {client.lastDate}
                                                 </span>
                                             </div>
@@ -1616,7 +1696,7 @@ export default function ThirdPartyAudits() {
                             </div>
                         </div>
 
-                        <div className="pt-2 border-t border-gray-100 text-[10px] text-gray-400 text-center">
+                        <div className="pt-2 border-t border-subtle text-[10px] text-muted-hub text-center">
                             Acompanhe para evitar desgaste do cliente no plantão
                         </div>
                     </div>
@@ -1626,24 +1706,24 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {/* 5. BARRA DE FILTROS E BUSCA AVANÇADA                     */}
                 {/* ======================================================== */}
-                <div className="bg-white rounded-2xl border border-gray-200 p-4 shadow-2xs space-y-3">
+                <div className="bg-surface rounded-2xl border border-subtle p-4 shadow-2xs space-y-3">
                     <div className="flex flex-col md:flex-row items-center gap-3">
                         
                         {/* Campo de Busca Universal */}
                         <div className="relative flex-1 w-full">
-                            <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                            <Search className="w-4 h-4 text-muted-hub absolute left-3.5 top-3" />
                             <input
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 placeholder="Buscar por cliente, operador, protocolo terceirizada ou MK..."
-                                className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600"
+                                className="w-full pl-9 pr-8 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:bg-surface focus:ring-2 focus:ring-red-600"
                             />
                             {searchTerm && (
                                 <button
                                     type="button"
                                     onClick={() => setSearchTerm('')}
-                                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-600 cursor-pointer"
+                                    className="absolute right-2.5 top-2.5 text-muted-hub hover:text-secondary-hub cursor-pointer"
                                 >
                                     <X className="w-3.5 h-3.5" />
                                 </button>
@@ -1654,12 +1734,12 @@ export default function ThirdPartyAudits() {
                         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
                             
                             {/* Filtro de Status de Preenchimento */}
-                            <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl border border-gray-200">
+                            <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle">
                                 <button
                                     type="button"
                                     onClick={() => setStatusFilter('all')}
                                     className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                        statusFilter === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                                        statusFilter === 'all' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub hover:text-primary-hub'
                                     }`}
                                 >
                                     Todos ({periodAudits.length})
@@ -1690,7 +1770,7 @@ export default function ThirdPartyAudits() {
                             <select
                                 value={operatorFilter}
                                 onChange={(e) => setOperatorFilter(e.target.value)}
-                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
+                                className="px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
                             >
                                 <option value="all">Todos os Operadores</option>
                                 {allAvailableOperators.map(op => (
@@ -1702,7 +1782,7 @@ export default function ThirdPartyAudits() {
                             <select
                                 value={processFilter}
                                 onChange={(e) => setProcessFilter(e.target.value)}
-                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
+                                className="px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
                             >
                                 <option value="all">Todos os Processos</option>
                                 {OFFICIAL_PROCESSES.map(p => (
@@ -1714,7 +1794,7 @@ export default function ThirdPartyAudits() {
                             <select
                                 value={outcomeFilter}
                                 onChange={(e) => setOutcomeFilter(e.target.value)}
-                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
+                                className="px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
                             >
                                 <option value="all">Todas as Saídas (FCR)</option>
                                 <option value="Resolvido">Resolvido (FCR Sim)</option>
@@ -1725,7 +1805,7 @@ export default function ThirdPartyAudits() {
                             <select
                                 value={proceduresFilter}
                                 onChange={(e) => setProceduresFilter(e.target.value)}
-                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
+                                className="px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
                             >
                                 <option value="all">Procedimento</option>
                                 <option value="Conforme">Conforme</option>
@@ -1736,7 +1816,7 @@ export default function ThirdPartyAudits() {
                             <select
                                 value={qualityFilter}
                                 onChange={(e) => setQualityFilter(e.target.value)}
-                                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-medium text-gray-700 outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
+                                className="px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-medium text-secondary-hub outline-none cursor-pointer focus:ring-2 focus:ring-red-600"
                             >
                                 <option value="all">Qualidade</option>
                                 <option value="Positiva">Positiva</option>
@@ -1751,7 +1831,7 @@ export default function ThirdPartyAudits() {
                                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors border flex items-center gap-1.5 cursor-pointer ${
                                     onlyRepeatsFilter 
                                         ? 'bg-amber-500 text-white border-amber-600 shadow-2xs' 
-                                        : 'bg-gray-50 hover:bg-gray-100 text-gray-700 border-gray-200'
+                                        : 'bg-subtle hover:bg-subtle text-secondary-hub border-subtle'
                                 }`}
                             >
                                 <RefreshCw className="w-3.5 h-3.5" />
@@ -1772,7 +1852,7 @@ export default function ThirdPartyAudits() {
                                         setQualityFilter('all');
                                         setOnlyRepeatsFilter(false);
                                     }}
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                                    className="p-2 text-muted-hub hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
                                     title="Limpar todos os filtros"
                                 >
                                     <X className="w-4 h-4" />
@@ -1786,35 +1866,35 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {/* 6. TABELA DE AUDITORIAS                                  */}
                 {/* ======================================================== */}
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
-                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                <div className="bg-surface rounded-2xl border border-subtle shadow-2xs overflow-hidden">
+                    <div className="p-4 border-b border-subtle flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs text-gray-900 uppercase tracking-wider">
+                            <span className="font-bold text-xs text-primary-hub uppercase tracking-wider">
                                 Registros de Auditoria
                             </span>
-                            <span className="text-xs text-gray-400 font-normal">
+                            <span className="text-xs text-muted-hub font-normal">
                                 ({filteredAudits.length} de {audits.length} total)
                             </span>
                         </div>
                     </div>
 
                     {loading ? (
-                        <div className="p-12 text-center flex flex-col items-center justify-center text-gray-400 space-y-2">
+                        <div className="p-12 text-center flex flex-col items-center justify-center text-muted-hub space-y-2">
                             <Loader2 className="w-6 h-6 animate-spin text-red-600" />
                             <span className="text-xs font-medium">Carregando auditorias terceirizadas...</span>
                         </div>
                     ) : filteredAudits.length === 0 ? (
-                        <div className="p-12 text-center flex flex-col items-center justify-center text-gray-400 space-y-2">
-                            <Headphones className="w-10 h-10 text-gray-300 mb-1" />
-                            <h4 className="text-sm font-bold text-gray-700">Nenhuma auditoria encontrada</h4>
-                            <p className="text-xs text-gray-500 max-w-sm">
+                        <div className="p-12 text-center flex flex-col items-center justify-center text-muted-hub space-y-2">
+                            <Headphones className="w-10 h-10 text-muted-hub mb-1" />
+                            <h4 className="text-sm font-bold text-secondary-hub">Nenhuma auditoria encontrada</h4>
+                            <p className="text-xs text-secondary-hub max-w-sm">
                                 Não há auditorias lançadas para este filtro ou período. Utilize o botão "Importar CSV" ou "Lançar Manual" para cadastrar avaliações.
                             </p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto w-full">
-                            <table className="w-full text-left text-xs text-gray-600 table-auto">
-                                <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                            <table className="w-full text-left text-xs text-secondary-hub table-auto">
+                                <thead className="bg-gray-50/80 border-b border-subtle text-[10px] font-bold text-secondary-hub uppercase tracking-wider">
                                     <tr>
                                         <th className="px-3 py-2.5 whitespace-nowrap">Data</th>
                                         <th className="px-3 py-2.5 whitespace-nowrap">Protocolos</th>
@@ -1828,7 +1908,7 @@ export default function ThirdPartyAudits() {
                                         <th className="px-3 py-2.5 text-right whitespace-nowrap">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100">
+                                <tbody className="divide-y divide-subtle">
                                     {filteredAudits.map((item) => {
                                         const cKey = item.clientName ? item.clientName.trim().toLowerCase() : '';
                                         const totalClientCalls = clientHistoryMap[cKey]?.length || 0;
@@ -1839,26 +1919,26 @@ export default function ThirdPartyAudits() {
                                             <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
                                                 
                                                 {/* Data */}
-                                                <td className="px-3 py-2.5 whitespace-nowrap font-medium text-gray-900">
+                                                <td className="px-3 py-2.5 whitespace-nowrap font-medium text-primary-hub">
                                                     {item.date ? item.date.split('-').reverse().join('/') : '--'}
                                                 </td>
 
                                                 {/* Protocolo Terceirizada & MK */}
                                                 <td className="px-3 py-2.5 whitespace-nowrap">
                                                     <div className="space-y-0.5">
-                                                        <div className="flex items-center gap-1 font-mono text-[11px] font-bold text-gray-900">
+                                                        <div className="flex items-center gap-1 font-mono text-[11px] font-bold text-primary-hub">
                                                             <span>#{item.protocol}</span>
                                                             <button
                                                                 type="button"
                                                                 onClick={() => handleCopy(item.protocol, `prot_${item.id}`)}
-                                                                className="text-gray-400 hover:text-gray-700 cursor-pointer p-0.5"
+                                                                className="text-muted-hub hover:text-secondary-hub cursor-pointer p-0.5"
                                                                 title="Copiar protocolo"
                                                             >
                                                                 {copiedField === `prot_${item.id}` ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
                                                             </button>
                                                         </div>
                                                         {item.erpProtocol ? (
-                                                            <div className="flex items-center gap-1 text-[10px] text-gray-500 font-mono">
+                                                            <div className="flex items-center gap-1 text-[10px] text-secondary-hub font-mono">
                                                                 <span>MK: {item.erpProtocol}</span>
                                                             </div>
                                                         ) : (
@@ -1888,7 +1968,7 @@ export default function ThirdPartyAudits() {
                                                 <td className="px-3 py-2.5">
                                                     <div className="space-y-0.5 min-w-[120px]">
                                                         {item.clientName ? (
-                                                            <span className="font-bold text-gray-900 block truncate" title={item.clientName}>
+                                                            <span className="font-bold text-primary-hub block truncate" title={item.clientName}>
                                                                 {item.clientName}
                                                             </span>
                                                         ) : (
@@ -1910,7 +1990,7 @@ export default function ThirdPartyAudits() {
                                                 </td>
 
                                                 {/* Operador Terceirizado */}
-                                                <td className="px-3 py-2.5 whitespace-nowrap font-medium text-gray-800">
+                                                <td className="px-3 py-2.5 whitespace-nowrap font-medium text-primary-hub">
                                                     {item.operatorName ? (
                                                         <div className="flex items-center gap-1.5 min-w-[110px]">
                                                             <div className="w-5 h-5 rounded-full bg-zinc-800 text-white flex items-center justify-center text-[10px] font-bold shrink-0">
@@ -1919,13 +1999,13 @@ export default function ThirdPartyAudits() {
                                                             <span className="truncate" title={item.operatorName}>{item.operatorName}</span>
                                                         </div>
                                                     ) : (
-                                                        <span className="text-[11px] text-gray-400 italic">Não informado</span>
+                                                        <span className="text-[11px] text-muted-hub italic">Não informado</span>
                                                     )}
                                                 </td>
 
                                                 {/* Processo Realizado */}
                                                 <td className="px-2.5 py-2.5 whitespace-nowrap">
-                                                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200">
+                                                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-subtle text-secondary-hub border border-subtle">
                                                         {item.process || 'Sem acesso'}
                                                     </span>
                                                 </td>
@@ -1965,7 +2045,7 @@ export default function ThirdPartyAudits() {
                                                             {item.quality === 'Positiva' ? '👍 Positiva' : item.quality === 'Neutra' ? '😐 Neutra' : '👎 Negativa'}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-[10px] text-gray-400 italic">Neutra</span>
+                                                        <span className="text-[10px] text-muted-hub italic">Neutra</span>
                                                     )}
                                                 </td>
 
@@ -1997,7 +2077,7 @@ export default function ThirdPartyAudits() {
                                                         <button
                                                             type="button"
                                                             onClick={() => setViewingAudit(item)}
-                                                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                            className="p-1.5 text-muted-hub hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                                                             title="Ver detalhes da auditoria"
                                                         >
                                                             <Eye className="w-3.5 h-3.5" />
@@ -2018,7 +2098,7 @@ export default function ThirdPartyAudits() {
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => handleOpenEditModal(item)}
-                                                                        className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                                        className="p-1.5 text-muted-hub hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                                                                         title="Editar auditoria"
                                                                     >
                                                                         <Edit2 className="w-3.5 h-3.5" />
@@ -2027,7 +2107,7 @@ export default function ThirdPartyAudits() {
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => setDeletingId(item.id)}
-                                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                                    className="p-1.5 text-muted-hub hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                                                     title="Excluir auditoria"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -2051,7 +2131,7 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {isFormModalOpen && (
                     <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-3 sm:p-4 z-[80] backdrop-blur-xs">
-                        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-surface rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in fade-in zoom-in-95 duration-200">
                             
                             {/* Cabeçalho do Modal */}
                             <div className="p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0">
@@ -2078,11 +2158,11 @@ export default function ThirdPartyAudits() {
                             </div>
 
                             {/* Formulário com Scroll */}
-                            <form id="auditThirdPartyForm" onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 bg-gray-50 flex-1">
+                            <form id="auditThirdPartyForm" onSubmit={handleSubmit} className="p-5 sm:p-6 overflow-y-auto space-y-5 bg-subtle flex-1">
                                 
                                 {/* 1. DADOS COLETADOS NO SISTEMA ADMIN DA TERCEIRIZADA */}
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-3">
-                                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2 flex items-center gap-1.5">
+                                <div className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs space-y-3">
+                                    <h4 className="text-xs font-bold text-primary-hub uppercase tracking-wider border-b border-subtle pb-2 flex items-center gap-1.5">
                                         <PhoneIncoming className="w-3.5 h-3.5 text-red-600" />
                                         1. Chamada Coletada no Admin Terceirizada
                                     </h4>
@@ -2091,7 +2171,7 @@ export default function ThirdPartyAudits() {
                                         {/* Data - Obrigatoriamente em branco na criação */}
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
-                                                <label className="text-[11px] font-bold text-gray-700">
+                                                <label className="text-[11px] font-bold text-secondary-hub">
                                                     Data da Chamada *
                                                 </label>
                                                 <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
@@ -2103,8 +2183,8 @@ export default function ThirdPartyAudits() {
                                                 required
                                                 value={formData.date}
                                                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                                                className={`w-full p-2 bg-gray-50 border rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 font-medium ${
-                                                    !formData.date ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-gray-200'
+                                                className={`w-full p-2 bg-subtle border rounded-xl text-xs outline-none focus:bg-surface focus:ring-2 focus:ring-red-600 font-medium ${
+                                                    !formData.date ? 'border-amber-400 bg-amber-50/20 ring-1 ring-amber-300' : 'border-subtle'
                                                 }`}
                                             />
                                             {!formData.date && (
@@ -2117,7 +2197,7 @@ export default function ThirdPartyAudits() {
                                         {/* Protocolo da Terceirizada com Validação Anti-Duplicidade */}
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
-                                                <label className="block text-[11px] font-bold text-gray-700">
+                                                <label className="block text-[11px] font-bold text-secondary-hub">
                                                     Protocolo Chamada *
                                                 </label>
                                                 {duplicateProtocolAudit && (
@@ -2133,10 +2213,10 @@ export default function ThirdPartyAudits() {
                                                 placeholder="Ex: #PBX-94821"
                                                 value={formData.protocol}
                                                 onChange={(e) => setFormData({ ...formData, protocol: e.target.value })}
-                                                className={`w-full p-2 bg-gray-50 border rounded-xl text-xs font-mono outline-none focus:bg-white font-medium transition-all ${
+                                                className={`w-full p-2 bg-subtle border rounded-xl text-xs font-mono outline-none focus:bg-surface font-medium transition-all ${
                                                     duplicateProtocolAudit
                                                         ? 'border-red-500 bg-red-50/50 text-red-900 ring-2 ring-red-400 focus:ring-red-500'
-                                                        : 'border-gray-200 focus:ring-2 focus:ring-red-600'
+                                                        : 'border-subtle focus:ring-2 focus:ring-red-600'
                                                 }`}
                                             />
                                             {duplicateProtocolAudit && (
@@ -2156,8 +2236,8 @@ export default function ThirdPartyAudits() {
                                 </div>
 
                                 {/* 2. OPERADOR E PROTOCOLO MK (ERP) */}
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-3">
-                                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2 flex items-center gap-1.5">
+                                <div className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs space-y-3">
+                                    <h4 className="text-xs font-bold text-primary-hub uppercase tracking-wider border-b border-subtle pb-2 flex items-center gap-1.5">
                                         <User className="w-3.5 h-3.5 text-red-600" />
                                         2. Atendimento & Identificação
                                     </h4>
@@ -2165,7 +2245,7 @@ export default function ThirdPartyAudits() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         {/* Nome do Operador (Salvo após informado e exibido em lista suspensa) */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                                            <label className="block text-[11px] font-bold text-secondary-hub mb-1">
                                                 Nome do Operador Terceirizado *
                                             </label>
                                             <div className="relative">
@@ -2176,7 +2256,7 @@ export default function ThirdPartyAudits() {
                                                     placeholder="Selecione ou digite novo operador..."
                                                     value={formData.operatorName}
                                                     onChange={(e) => setFormData({ ...formData, operatorName: e.target.value })}
-                                                    className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 font-medium"
+                                                    className="w-full p-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:bg-surface focus:ring-2 focus:ring-red-600 font-medium"
                                                 />
                                                 <datalist id="operatorsDatalist">
                                                     {allAvailableOperators.map(op => (
@@ -2184,27 +2264,27 @@ export default function ThirdPartyAudits() {
                                                     ))}
                                                 </datalist>
                                             </div>
-                                            <span className="text-[10px] text-gray-400 mt-0.5 block">
+                                            <span className="text-[10px] text-muted-hub mt-0.5 block">
                                                 Salvo automaticamente para as próximas listas suspensas.
                                             </span>
                                         </div>
 
                                         {/* Protocolo MK (ERP) */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                                            <label className="block text-[11px] font-bold text-secondary-hub mb-1">
                                                 Protocolo no MK (ERP)
                                             </label>
                                             <div className="relative">
-                                                <Database className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
+                                                <Database className="w-3.5 h-3.5 text-muted-hub absolute left-3 top-2.5" />
                                                 <input
                                                     type="text"
                                                     placeholder="Protocolo ERP para consulta posterior..."
                                                     value={formData.erpProtocol}
                                                     onChange={(e) => setFormData({ ...formData, erpProtocol: e.target.value })}
-                                                    className="w-full pl-8 pr-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-mono outline-none focus:bg-white focus:ring-2 focus:ring-red-600"
+                                                    className="w-full pl-8 pr-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-mono outline-none focus:bg-surface focus:ring-2 focus:ring-red-600"
                                                 />
                                             </div>
-                                            <span className="text-[10px] text-gray-400 mt-0.5 block">
+                                            <span className="text-[10px] text-muted-hub mt-0.5 block">
                                                 Permite auditar diretamente no ERP posteriormente.
                                             </span>
                                         </div>
@@ -2212,7 +2292,7 @@ export default function ThirdPartyAudits() {
 
                                     {/* Nome do Cliente com Detector de Reincidência */}
                                     <div>
-                                        <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                                        <label className="block text-[11px] font-bold text-secondary-hub mb-1">
                                             Nome do Cliente (Consulta de Reincidência Fora de Horário) *
                                         </label>
                                         <input
@@ -2221,7 +2301,7 @@ export default function ThirdPartyAudits() {
                                             placeholder="Nome completo do cliente atendido..."
                                             value={formData.clientName}
                                             onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                                            className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-red-600 font-medium"
+                                            className="w-full p-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:bg-surface focus:ring-2 focus:ring-red-600 font-medium"
                                         />
 
                                         {/* Alerta em tempo real de reincidência */}
@@ -2242,8 +2322,8 @@ export default function ThirdPartyAudits() {
                                 </div>
 
                                 {/* 3. AVALIAÇÃO DE QUALIDADE, PROCESSO E SAÍDA */}
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-3">
-                                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider border-b border-gray-100 pb-2 flex items-center gap-1.5">
+                                <div className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs space-y-3">
+                                    <h4 className="text-xs font-bold text-primary-hub uppercase tracking-wider border-b border-subtle pb-2 flex items-center gap-1.5">
                                         <ShieldCheck className="w-3.5 h-3.5 text-red-600" />
                                         3. Critérios de Qualidade & Saída (FCR)
                                     </h4>
@@ -2253,7 +2333,7 @@ export default function ThirdPartyAudits() {
                                         {/* Procedimentos */}
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
-                                                <label className="text-[11px] font-bold text-gray-700">
+                                                <label className="text-[11px] font-bold text-secondary-hub">
                                                     Procedimentos *
                                                 </label>
                                                 {!formData.procedures ? (
@@ -2277,7 +2357,7 @@ export default function ThirdPartyAudits() {
                                                     className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                         formData.procedures === 'Conforme'
                                                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                                                            : 'bg-subtle hover:bg-gray-200 text-secondary-hub border-subtle'
                                                     }`}
                                                 >
                                                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -2289,7 +2369,7 @@ export default function ThirdPartyAudits() {
                                                     className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                         formData.procedures === 'Não conforme'
                                                             ? 'bg-red-600 text-white border-red-600 shadow-2xs'
-                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                                                            : 'bg-subtle hover:bg-gray-200 text-secondary-hub border-subtle'
                                                     }`}
                                                 >
                                                     <XCircle className="w-3.5 h-3.5" />
@@ -2300,7 +2380,7 @@ export default function ThirdPartyAudits() {
 
                                         {/* Qualidade */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                                            <label className="block text-[11px] font-bold text-secondary-hub mb-1">
                                                 Qualidade do Atendimento *
                                             </label>
                                             <div className="grid grid-cols-3 gap-1.5">
@@ -2316,7 +2396,7 @@ export default function ThirdPartyAudits() {
                                                                     : q === 'Neutra'
                                                                     ? 'bg-blue-600 text-white border-blue-600'
                                                                     : 'bg-red-600 text-white border-red-600'
-                                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                                                                : 'bg-subtle hover:bg-gray-200 text-secondary-hub border-subtle'
                                                         }`}
                                                     >
                                                         {q}
@@ -2331,14 +2411,14 @@ export default function ThirdPartyAudits() {
                                         
                                         {/* Processo Realizado */}
                                         <div>
-                                            <label className="block text-[11px] font-bold text-gray-700 mb-1">
+                                            <label className="block text-[11px] font-bold text-secondary-hub mb-1">
                                                 Processo Realizado *
                                             </label>
                                             <select
                                                 required
                                                 value={formData.process}
                                                 onChange={(e) => setFormData({ ...formData, process: e.target.value })}
-                                                className="w-full p-2 bg-gray-50 border border-gray-200 rounded-xl text-xs font-semibold text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-red-600 cursor-pointer"
+                                                className="w-full p-2 bg-subtle border border-subtle rounded-xl text-xs font-semibold text-primary-hub outline-none focus:bg-surface focus:ring-2 focus:ring-red-600 cursor-pointer"
                                             >
                                                 {OFFICIAL_PROCESSES.map(proc => (
                                                     <option key={proc} value={proc}>{proc}</option>
@@ -2349,7 +2429,7 @@ export default function ThirdPartyAudits() {
                                         {/* Saída (Encaminhado / Resolvido = FCR) */}
                                         <div>
                                             <div className="flex items-center justify-between mb-1">
-                                                <label className="text-[11px] font-bold text-gray-700">
+                                                <label className="text-[11px] font-bold text-secondary-hub">
                                                     Saída da Chamada (Cálculo FCR) *
                                                 </label>
                                                 {!formData.outcome ? (
@@ -2373,7 +2453,7 @@ export default function ThirdPartyAudits() {
                                                     className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                         formData.outcome === 'Resolvido'
                                                             ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs ring-2 ring-emerald-500/20'
-                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                                                            : 'bg-subtle hover:bg-gray-200 text-secondary-hub border-subtle'
                                                     }`}
                                                 >
                                                     <Check className="w-3.5 h-3.5" />
@@ -2385,7 +2465,7 @@ export default function ThirdPartyAudits() {
                                                     className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
                                                         formData.outcome === 'Encaminhado'
                                                             ? 'bg-blue-600 text-white border-blue-600 shadow-2xs ring-2 ring-blue-500/20'
-                                                            : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                                                            : 'bg-subtle hover:bg-gray-200 text-secondary-hub border-subtle'
                                                     }`}
                                                 >
                                                     <ArrowRight className="w-3.5 h-3.5" />
@@ -2399,14 +2479,14 @@ export default function ThirdPartyAudits() {
                                     {/* Observações / Parecer com Atalhos Rápidos */}
                                     <div className="pt-1 space-y-2">
                                         <div className="flex items-center justify-between">
-                                            <label className="block text-[11px] font-bold text-gray-700">
+                                            <label className="block text-[11px] font-bold text-secondary-hub">
                                                 Observações / Parecer do Auditor (Opcional)
                                             </label>
                                             {formData.notes && (
                                                 <button
                                                     type="button"
                                                     onClick={() => setFormData({ ...formData, notes: '' })}
-                                                    className="text-[10px] text-gray-400 hover:text-red-600 transition-colors cursor-pointer"
+                                                    className="text-[10px] text-muted-hub hover:text-red-600 transition-colors cursor-pointer"
                                                 >
                                                     Limpar texto
                                                 </button>
@@ -2414,8 +2494,8 @@ export default function ThirdPartyAudits() {
                                         </div>
 
                                         {/* Botões de atalho rápido */}
-                                        <div className="bg-gray-50/80 p-2.5 rounded-xl border border-gray-200/90 space-y-1.5">
-                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+                                        <div className="bg-gray-50/80 p-2.5 rounded-xl border border-subtle space-y-1.5">
+                                            <div className="flex items-center gap-1.5 text-[10px] font-bold text-secondary-hub uppercase tracking-wider">
                                                 <Sparkles className="w-3 h-3 text-amber-500" />
                                                 Atalhos rápidos para o comentário:
                                             </div>
@@ -2423,7 +2503,7 @@ export default function ThirdPartyAudits() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleApplyCommentShortcut('Problema foi resolvido remotamente pelo operador após procedimentos.')}
-                                                    className="px-2.5 py-1.5 bg-white hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-200/80 rounded-lg text-[11px] font-medium transition-all text-left flex items-start gap-2 cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 group"
+                                                    className="px-2.5 py-1.5 bg-surface hover:bg-emerald-50 text-emerald-800 hover:text-emerald-900 border border-emerald-200/80 rounded-lg text-[11px] font-medium transition-all text-left flex items-start gap-2 cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 group"
                                                     title="Clique para adicionar este parecer ao comentário"
                                                 >
                                                     <span className="w-4 h-4 rounded-full bg-emerald-100 group-hover:bg-emerald-200 flex items-center justify-center shrink-0 mt-0.5">
@@ -2435,7 +2515,7 @@ export default function ThirdPartyAudits() {
                                                 <button
                                                     type="button"
                                                     onClick={() => handleApplyCommentShortcut('Atendimento encaminhado para equipe N2/N3.')}
-                                                    className="px-2.5 py-1.5 bg-white hover:bg-blue-50 text-blue-800 hover:text-blue-900 border border-blue-200/80 rounded-lg text-[11px] font-medium transition-all text-left flex items-start gap-2 cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 group"
+                                                    className="px-2.5 py-1.5 bg-surface hover:bg-blue-50 text-blue-800 hover:text-blue-900 border border-blue-200/80 rounded-lg text-[11px] font-medium transition-all text-left flex items-start gap-2 cursor-pointer shadow-2xs hover:shadow-xs active:scale-98 group"
                                                     title="Clique para adicionar este parecer ao comentário"
                                                 >
                                                     <span className="w-4 h-4 rounded-full bg-blue-100 group-hover:bg-blue-200 flex items-center justify-center shrink-0 mt-0.5">
@@ -2451,7 +2531,7 @@ export default function ThirdPartyAudits() {
                                             placeholder="Detalhes adicionais, anotações de falha ou elogio ao operador..."
                                             value={formData.notes}
                                             onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                            className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 outline-none focus:bg-white focus:ring-2 focus:ring-red-600 resize-none leading-relaxed"
+                                            className="w-full p-2.5 bg-subtle border border-subtle rounded-xl text-xs text-primary-hub outline-none focus:bg-surface focus:ring-2 focus:ring-red-600 resize-none leading-relaxed"
                                         />
                                     </div>
                                 </div>
@@ -2459,11 +2539,11 @@ export default function ThirdPartyAudits() {
                             </form>
 
                             {/* Rodapé do Modal */}
-                            <div className="p-4 bg-white border-t border-gray-200 flex gap-2.5 shrink-0">
+                            <div className="p-4 bg-surface border-t border-subtle flex gap-2.5 shrink-0">
                                 <button
                                     type="button"
                                     onClick={() => setIsFormModalOpen(false)}
-                                    className="flex-1 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold text-xs transition-colors cursor-pointer"
+                                    className="flex-1 py-2.5 border border-gray-300 text-secondary-hub rounded-xl hover:bg-subtle font-bold text-xs transition-colors cursor-pointer"
                                 >
                                     Cancelar
                                 </button>
@@ -2488,7 +2568,7 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {viewingAudit && (
                     <div className="fixed inset-0 bg-zinc-950/75 flex items-center justify-center p-3 sm:p-4 z-[80] backdrop-blur-xs">
-                        <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+                        <div className="bg-surface rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
                             
                             <div className="p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
                                 <div className="flex items-center gap-2.5">
@@ -2513,64 +2593,64 @@ export default function ThirdPartyAudits() {
                                 </button>
                             </div>
 
-                            <div className="p-6 overflow-y-auto space-y-4 text-xs bg-gray-50 flex-1">
+                            <div className="p-6 overflow-y-auto space-y-4 text-xs bg-subtle flex-1">
                                 
                                 {/* Badges Principais */}
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                                    <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                                        <span className="text-[10px] text-gray-400 block font-bold">Saída (FCR)</span>
+                                    <div className="bg-surface p-2.5 rounded-xl border border-subtle">
+                                        <span className="text-[10px] text-muted-hub block font-bold">Saída (FCR)</span>
                                         <span className={`font-black text-xs block mt-0.5 ${viewingAudit.outcome === 'Resolvido' ? 'text-emerald-700' : 'text-blue-700'}`}>
                                             {viewingAudit.outcome || 'Resolvido'}
                                         </span>
                                     </div>
-                                    <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                                        <span className="text-[10px] text-gray-400 block font-bold">Procedimento</span>
+                                    <div className="bg-surface p-2.5 rounded-xl border border-subtle">
+                                        <span className="text-[10px] text-muted-hub block font-bold">Procedimento</span>
                                         <span className={`font-bold text-xs block mt-0.5 ${viewingAudit.procedures === 'Conforme' ? 'text-emerald-700' : 'text-red-700'}`}>
                                             {viewingAudit.procedures || 'Conforme'}
                                         </span>
                                     </div>
-                                    <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                                        <span className="text-[10px] text-gray-400 block font-bold">Qualidade</span>
-                                        <span className="font-bold text-xs text-gray-800 block mt-0.5">
+                                    <div className="bg-surface p-2.5 rounded-xl border border-subtle">
+                                        <span className="text-[10px] text-muted-hub block font-bold">Qualidade</span>
+                                        <span className="font-bold text-xs text-primary-hub block mt-0.5">
                                             {viewingAudit.quality || 'Positiva'}
                                         </span>
                                     </div>
-                                    <div className="bg-white p-2.5 rounded-xl border border-gray-200">
-                                        <span className="text-[10px] text-gray-400 block font-bold">Status Chamada</span>
-                                        <span className="font-bold text-xs text-gray-800 block mt-0.5">
+                                    <div className="bg-surface p-2.5 rounded-xl border border-subtle">
+                                        <span className="text-[10px] text-muted-hub block font-bold">Status Chamada</span>
+                                        <span className="font-bold text-xs text-primary-hub block mt-0.5">
                                             {viewingAudit.callStatus || 'Atendida'}
                                         </span>
                                     </div>
                                 </div>
 
                                 {/* Dados da Chamada */}
-                                <div className="bg-white p-4 rounded-xl border border-gray-200 space-y-2.5">
+                                <div className="bg-surface p-4 rounded-xl border border-subtle space-y-2.5">
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
-                                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Operador Terceirizado</span>
-                                            <span className="font-bold text-gray-900 text-sm">{viewingAudit.operatorName}</span>
+                                            <span className="text-[10px] text-muted-hub block font-bold uppercase">Operador Terceirizado</span>
+                                            <span className="font-bold text-primary-hub text-sm">{viewingAudit.operatorName}</span>
                                         </div>
                                         <div>
-                                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Processo Realizado</span>
-                                            <span className="font-bold text-gray-900 text-sm">{viewingAudit.process}</span>
+                                            <span className="text-[10px] text-muted-hub block font-bold uppercase">Processo Realizado</span>
+                                            <span className="font-bold text-primary-hub text-sm">{viewingAudit.process}</span>
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
+                                    <div className="grid grid-cols-2 gap-3 pt-2 border-t border-subtle">
                                         <div>
-                                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Cliente</span>
-                                            <span className="font-bold text-gray-900">{viewingAudit.clientName}</span>
+                                            <span className="text-[10px] text-muted-hub block font-bold uppercase">Cliente</span>
+                                            <span className="font-bold text-primary-hub">{viewingAudit.clientName}</span>
                                         </div>
                                         <div>
-                                            <span className="text-[10px] text-gray-400 block font-bold uppercase">Protocolo no MK (ERP)</span>
-                                            <span className="font-mono font-bold text-gray-900">{viewingAudit.erpProtocol || 'Não informado'}</span>
+                                            <span className="text-[10px] text-muted-hub block font-bold uppercase">Protocolo no MK (ERP)</span>
+                                            <span className="font-mono font-bold text-primary-hub">{viewingAudit.erpProtocol || 'Não informado'}</span>
                                         </div>
                                     </div>
 
                                     {viewingAudit.notes && (
-                                        <div className="pt-2 border-t border-gray-100">
-                                            <span className="text-[10px] text-gray-400 block font-bold uppercase mb-1">Observações do Auditor</span>
-                                            <p className="p-3 bg-gray-50 rounded-lg text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                        <div className="pt-2 border-t border-subtle">
+                                            <span className="text-[10px] text-muted-hub block font-bold uppercase mb-1">Observações do Auditor</span>
+                                            <p className="p-3 bg-subtle rounded-lg text-secondary-hub leading-relaxed whitespace-pre-wrap">
                                                 {viewingAudit.notes}
                                             </p>
                                         </div>
@@ -2589,10 +2669,10 @@ export default function ThirdPartyAudits() {
                                         </p>
                                         <div className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
                                             {clientHistoryMap[viewingAudit.clientName.trim().toLowerCase()].map((ch, idx) => (
-                                                <div key={idx} className="p-2 rounded-lg bg-white border border-amber-200 text-[11px] flex items-center justify-between">
+                                                <div key={idx} className="p-2 rounded-lg bg-surface border border-amber-200 text-[11px] flex items-center justify-between">
                                                     <div>
-                                                        <span className="font-bold text-gray-900">{ch.date}</span> • #{ch.protocol}
-                                                        <span className="text-gray-500 block text-[10px]">{ch.operatorName} • {ch.process}</span>
+                                                        <span className="font-bold text-primary-hub">{ch.date}</span> • #{ch.protocol}
+                                                        <span className="text-secondary-hub block text-[10px]">{ch.operatorName} • {ch.process}</span>
                                                     </div>
                                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ch.outcome === 'Resolvido' ? 'bg-emerald-100 text-emerald-800' : 'bg-blue-100 text-blue-800'}`}>
                                                         {ch.outcome}
@@ -2605,11 +2685,11 @@ export default function ThirdPartyAudits() {
 
                             </div>
 
-                            <div className="p-4 bg-white border-t border-gray-200 flex justify-end">
+                            <div className="p-4 bg-surface border-t border-subtle flex justify-end">
                                 <button
                                     type="button"
                                     onClick={() => setViewingAudit(null)}
-                                    className="px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-bold rounded-xl transition-colors cursor-pointer"
+                                    className="px-5 py-2 bg-subtle hover:bg-gray-200 text-primary-hub text-xs font-bold rounded-xl transition-colors cursor-pointer"
                                 >
                                     Fechar
                                 </button>
@@ -2624,19 +2704,19 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {deletingId && (
                     <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[90] backdrop-blur-xs">
-                        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 animate-in zoom-in-95 duration-150">
+                        <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 animate-in zoom-in-95 duration-150">
                             <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-3 text-red-600">
                                 <AlertTriangle className="w-6 h-6" />
                             </div>
-                            <h3 className="text-base font-bold text-gray-900 mb-1">Excluir Auditoria?</h3>
-                            <p className="text-gray-500 text-xs mb-5 leading-relaxed">
+                            <h3 className="text-base font-bold text-primary-hub mb-1">Excluir Auditoria?</h3>
+                            <p className="text-secondary-hub text-xs mb-5 leading-relaxed">
                                 Tem certeza de que deseja excluir este registro de auditoria? Esta ação não pode ser desfeita.
                             </p>
                             <div className="flex gap-2">
                                 <button
                                     type="button"
                                     onClick={() => setDeletingId(null)}
-                                    className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                    className="flex-1 py-2.5 bg-subtle hover:bg-gray-200 text-secondary-hub rounded-xl text-xs font-bold transition-colors cursor-pointer"
                                 >
                                     Cancelar
                                 </button>

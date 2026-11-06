@@ -499,14 +499,15 @@ const OrgChart = ({ readOnly }) => {
                 {/* ======================================================== */}
                 {/* CABEÇALHO PRINCIPAL COM RECONHECIMENTO DE PERMISSÃO */}
                 {/* ======================================================== */}
-                <header className="bg-white rounded-2xl border border-zinc-200/80 shadow-xs p-5 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
                     <div className="space-y-1.5">
                         <div className="flex items-center flex-wrap gap-2.5">
-                            <div className="w-10 h-10 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center text-red-600 shrink-0">
-                                <Network className="w-5 h-5" />
-                            </div>
                             <div>
-                                <h1 className="text-xl sm:text-2xl font-black text-zinc-900 tracking-tight flex items-center gap-2">
+                                <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+    <Network className="w-3.5 h-3.5" />
+    <span>Estrutura &amp; Liderança</span>
+</div>
+<h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                                     Organograma Operacional
                                 </h1>
                                 <p className="text-xs text-zinc-500">

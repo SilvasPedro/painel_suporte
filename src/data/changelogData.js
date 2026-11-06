@@ -1,13 +1,57 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.0.0';
+export const CURRENT_VERSION = 'v4.1.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v3.11.0',
-    date: 'Outubro 2026',
+    version: 'v4.1.0',
+    date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.1.0: Auditoria Terceirizada com seletor de empresa (ATSOC atual e UpCall como histórico somente leitura), modal de Auditorias QA redesenhado com filtros, atalhos e data da auditoria corrigida, calendário de folgas em cards quadrados e padronização dos títulos de 12 telas no estilo de Tarefas & Relatórios.',
+    items: [
+      {
+        icon: Headphones,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Auditoria Terceirizada com Seleção de Empresa (ATSOC / UpCall)',
+        category: 'Auditoria Terceirizada',
+        description: 'Novo seletor de empresa no topo da tela. A ATSOC é a operação atual; os dados da UpCall (antiga terceirizada) ficam preservados em modo somente consulta. Métricas, filtros, CSV e PDF respeitam a empresa selecionada, e registros antigos sem o campo são tratados como UpCall automaticamente.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Modal de Auditorias QA Redesenhado',
+        category: 'Auditorias QA',
+        description: 'Coluna de pontuação fixa durante a rolagem, filtros da checklist (Todos, Pendentes e Falhas), botão Próximo pendente, atalho Hoje na data, tecla Esc para fechar, aviso de critérios sem resposta ao salvar e numeração colorida por resultado.'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Correções de Data e Canal nas Auditorias QA',
+        category: 'Auditorias QA',
+        description: 'O campo de data passou a se chamar Data da Auditoria (dia em que a auditoria foi feita, não do atendimento). O canal de comunicação foi reduzido a Telefone e WhatsApp / Chat, com migração visual dos registros antigos de WhatsApp e Chat. Filtros movidos para o topo da tela, abaixo do título.'
+      },
+      {
+        icon: Coffee,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Escala de Folgas em Cards Quadrados',
+        category: 'Escalas',
+        description: 'Cada dia do mês agora é um card quadrado arredondado, com destaque para hoje e para feriados de 100% H.E, preservando arrastar e soltar, adição rápida e remoção de folgas.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Padronização dos Títulos e Visual Moderno',
+        category: 'UX / UI',
+        description: '12 telas adotaram o padrão de título de Tarefas & Relatórios (linha de contexto em rosa e título na fonte da marca, sem cartão de fundo). Métricas, filtros e tabela de Auditorias QA ganharam visual mais arredondado com barras de progresso, usando os tokens de tema claro, quente e escuro.'
+      }
+    ]
+  },
+  {
+    version: 'v3.11.0',
+    date: 'Outubro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v3.11.0: Refatoração completa da tela de Feedbacks 1:1 (Análise Mensal). Adoção do modelo consolidado em Markdown rico com tabelas, PDI e alinhamentos de metas, fluxo de confirmação de ciência (Estou Ciente) com auditoria de data/hora/usuário, total retrocompatibilidade em modo somente leitura (Read-only com banner contextual) para os feedbacks legados baseados nos 4 pilares, e novos indicadores visuais na listagem.',
     items: [
       {

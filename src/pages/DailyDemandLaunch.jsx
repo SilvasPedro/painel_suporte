@@ -622,17 +622,11 @@ export default function DailyDemandLaunch() {
                     <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-rose-500/10 via-transparent to-transparent -mr-20 -mt-20 pointer-events-none rounded-full blur-2xl" />
                     <div className="relative z-10">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 shrink-0">
-                                <Activity className="w-5 h-5" />
-                            </div>
                             <div>
                                 <div className="flex items-center gap-2 mb-1">
-                                    <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
-                                        <Activity className="w-3.5 h-3.5 text-rose-500" />
-                                        Módulo Operacional • Demanda e Fila Diária
-                                    </span>
+                                    <span className="flex items-center gap-2 text-xs font-semibold text-rose-500 uppercase tracking-wider"><Activity className="w-3.5 h-3.5" />Módulo Operacional • Demanda e Fila Diária</span>
                                 </div>
-                                <h1 className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight">
+                                <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                                     Demanda & Fila Diária
                                 </h1>
                                 <p className="text-muted-hub text-xs sm:text-sm mt-0.5">

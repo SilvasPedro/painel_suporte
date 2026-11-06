@@ -356,9 +356,9 @@ export default function Audits() {
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col justify-center items-center h-full bg-gray-50">
+            <div className="flex-1 flex flex-col justify-center items-center h-full bg-subtle">
                 <Loader2 className="w-9 h-9 text-red-600 animate-spin mb-3" />
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider">
                     Carregando painel de qualidade...
                 </span>
             </div>
@@ -366,34 +366,57 @@ export default function Audits() {
     }
 
     return (
-        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
+        <div className="flex-1 p-4 sm:p-6 h-full overflow-y-auto bg-subtle flex flex-col">
             {/* Cabeçalho da Página */}
-            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-xs shrink-0">
-                <div className="flex items-center gap-3.5">
-                    <div className="w-12 h-12 rounded-2xl bg-red-600 text-white flex items-center justify-center shadow-sm shrink-0">
-                        <ShieldCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
+            <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-5 gap-4 shrink-0">
+                <div className="space-y-1">
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+    <ShieldCheck className="w-3.5 h-3.5" />
+    <span>Qualidade &amp; Conformidade</span>
+</div>
+<div className="flex items-center gap-2.5 flex-wrap">
+<h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                             Auditorias de Qualidade (QA)
                         </h1>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                            Gestão de conformidade, checklists auditáveis e histórico de desempenho da equipe.
-                        </p>
                     </div>
+                    <p className="text-sm text-secondary-hub">
+                        Gestão de conformidade, checklists auditáveis e histórico de desempenho da equipe.
+                    </p>
                 </div>
 
-                <div className="flex items-center gap-2.5 self-stretch sm:self-auto">
-                    <button 
-                        id="btn-nova-auditoria"
-                        onClick={handleOpenNewModal} 
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all shadow-xs hover:shadow cursor-pointer"
-                    >
-                        <Plus className="w-4 h-4" />
-                        <span>Nova Auditoria</span>
-                    </button>
-                </div>
+                <button
+                    id="btn-nova-auditoria"
+                    onClick={handleOpenNewModal}
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-full transition-all shadow-md shadow-red-600/20 hover:shadow-lg cursor-pointer active:scale-95"
+                >
+                    <Plus className="w-4 h-4" />
+                    <span>Nova Auditoria</span>
+                </button>
             </header>
+
+            {/* Barra de Filtros Completos */}
+            <AuditFilters
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                periodFilter={periodFilter}
+                setPeriodFilter={setPeriodFilter}
+                dateFilter={dateFilter}
+                setDateFilter={setDateFilter}
+                statusFilter={statusFilter}
+                setStatusFilter={setStatusFilter}
+                processFilter={processFilter}
+                setProcessFilter={setProcessFilter}
+                colabFilter={colabFilter}
+                setColabFilter={setColabFilter}
+                sortBy={sortBy}
+                setSortBy={setSortBy}
+                onResetFilters={handleResetFilters}
+                hasActiveFilters={hasActiveFilters}
+                processesList={qaProcesses}
+                collaboratorsList={collaboratorsList}
+                totalFiltered={filteredAudits.length}
+                onExportCsv={handleExportCsv}
+            />
 
             {/* Painel de Métricas e Indicadores Rápidos */}
             <AuditMetrics stats={dashboardStats} targetRate={80} />
@@ -401,20 +424,20 @@ export default function Audits() {
             {/* Linha Analítica: Distribuição (Gráfico Donut) e Ranking de Conformidade */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6 shrink-0">
                 {/* Gráfico de Distribuição Donut (4 colunas no desktop) */}
-                <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-gray-200 shadow-xs flex flex-col justify-between">
-                    <div className="flex items-center justify-between pb-3 border-b border-gray-100">
-                        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5">
-                            <PieIcon className="w-4 h-4 text-gray-500" />
+                <div className="lg:col-span-4 bg-surface p-5 rounded-3xl border border-subtle shadow-xs flex flex-col justify-between">
+                    <div className="flex items-center justify-between pb-3 border-b border-subtle">
+                        <h3 className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
+                            <PieIcon className="w-4 h-4 text-secondary-hub" />
                             Distribuição dos Resultados
                         </h3>
-                        <span className="text-[10px] font-mono font-bold text-gray-400">
+                        <span className="text-[10px] font-mono font-bold text-muted-hub">
                             {dashboardStats.total} avaliações
                         </span>
                     </div>
 
                     <div className="h-56 my-auto flex items-center justify-center">
                         {dashboardStats.total === 0 ? (
-                            <div className="text-center text-gray-400 text-xs">
+                            <div className="text-center text-muted-hub text-xs">
                                 Sem dados no período filtrado.
                             </div>
                         ) : (
@@ -449,8 +472,8 @@ export default function Audits() {
                     </div>
 
                     {/* Rodapé do Card do Gráfico */}
-                    <div className="pt-2 border-t border-gray-100 flex justify-between text-xs">
-                        <span className="text-gray-500">Aproveitamento Global:</span>
+                    <div className="pt-2 border-t border-subtle flex justify-between text-xs">
+                        <span className="text-secondary-hub">Aproveitamento Global:</span>
                         <span className={`font-black font-mono ${
                             parseFloat(dashboardStats.taxa) >= 80 ? 'text-emerald-600' : 'text-amber-600'
                         }`}>
@@ -464,30 +487,6 @@ export default function Audits() {
                     <AuditRanking rankingData={rankingData} targetRate={80} />
                 </div>
             </div>
-
-            {/* Barra de Filtros Completos */}
-            <AuditFilters
-                searchTerm={searchTerm}
-                setSearchTerm={setSearchTerm}
-                periodFilter={periodFilter}
-                setPeriodFilter={setPeriodFilter}
-                dateFilter={dateFilter}
-                setDateFilter={setDateFilter}
-                statusFilter={statusFilter}
-                setStatusFilter={setStatusFilter}
-                processFilter={processFilter}
-                setProcessFilter={setProcessFilter}
-                colabFilter={colabFilter}
-                setColabFilter={setColabFilter}
-                sortBy={sortBy}
-                setSortBy={setSortBy}
-                onResetFilters={handleResetFilters}
-                hasActiveFilters={hasActiveFilters}
-                processesList={qaProcesses}
-                collaboratorsList={collaboratorsList}
-                totalFiltered={filteredAudits.length}
-                onExportCsv={handleExportCsv}
-            />
 
             {/* Tabela de Auditorias Completa com Paginação */}
             <AuditTable
@@ -529,22 +528,22 @@ export default function Audits() {
                 >
                     <div 
                         id="audit-delete-dialog"
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 border border-gray-200"
+                        className="bg-surface rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden text-center p-6 border border-subtle"
                     >
                         <div className="w-14 h-14 bg-red-100 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
                             <AlertTriangle className="w-7 h-7" />
                         </div>
-                        <h3 className="text-base font-bold text-gray-900 mb-1.5">
+                        <h3 className="text-base font-bold text-primary-hub mb-1.5">
                             Excluir Registro de Auditoria?
                         </h3>
-                        <p className="text-gray-500 text-xs mb-6 leading-relaxed">
+                        <p className="text-secondary-hub text-xs mb-6 leading-relaxed">
                             Esta ação removerá esta auditoria permanentemente do histórico e atualizará os índices de conformidade da equipe.
                         </p>
                         <div className="flex gap-2.5">
                             <button 
                                 type="button"
                                 onClick={() => setDeletingId(null)} 
-                                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-bold text-xs transition-colors cursor-pointer"
+                                className="flex-1 py-2.5 bg-subtle hover:bg-gray-200 text-secondary-hub rounded-xl font-bold text-xs transition-colors cursor-pointer"
                             >
                                 Cancelar
                             </button>

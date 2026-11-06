@@ -4,6 +4,27 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [06/11/2026] — Versão v4.1.0 (Empresas na Auditoria Terceirizada, Modal QA, Folgas em Cards e Títulos Padronizados)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.0.0` para `4.1.0`. |
+| **Alterado** | `src/pages/ThirdPartyAudits.jsx` | Seletor de empresa (ATSOC / UpCall), filtragem por empresa, campo `company` em auditorias, importações e operadores, UpCall somente leitura, cabeçalho padronizado e tokens de tema. |
+| **Alterado** | `src/pages/Audits.jsx` | Filtros movidos para o topo, cabeçalho padronizado e visual modernizado. |
+| **Alterado** | `src/components/audits/AuditMetrics.jsx` | Reescrito com cartão base (`StatCard` local), ícones em chip e barras de progresso. |
+| **Alterado** | `src/components/audits/AuditFilters.jsx` | Campos e atalhos de período em formato de pílula com tokens de tema. |
+| **Alterado** | `src/components/audits/AuditTable.jsx` | Cabeçalho claro, avatar em gradiente, pontuação com barra, coluna "Data da Auditoria" e ícone do canal WhatsApp/Chat. |
+| **Alterado** | `src/components/audits/AuditFormModal.jsx` | Data da Auditoria, canais Telefone e WhatsApp/Chat, filtros da checklist, próximo pendente, atalho Hoje, tecla Esc, confirmação com pendências e coluna fixa. |
+| **Alterado** | `src/components/audits/AuditDetailsModal.jsx` | Texto "Auditoria realizada em", ícone do canal WhatsApp/Chat e tokens de tema. |
+| **Alterado** | `src/pages/DayOffSchedule.jsx` | Calendário com dias em cards quadrados e título padronizado. |
+| **Alterado** | `src/pages/DailySchedule.jsx`, `SundaySchedule.jsx`, `OperationalSchedules.jsx` | Título padronizado no estilo de Tarefas & Relatórios. |
+| **Alterado** | `src/pages/OrgChart.jsx`, `SectorKPIs.jsx`, `MyHistory.jsx`, `DailyDemandLaunch.jsx`, `MonthlyEvaluations.jsx`, `WeeklyMetrics.jsx` | Título padronizado e remoção do cartão de fundo do cabeçalho. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.1.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.1.0`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [31/10/2026] — Versão v3.11.0 (Refatoração da Tela de Feedbacks 1:1, Tabelas Visuais e Notificações)
 
 | Ação | Arquivo | Descrição da Alteração |

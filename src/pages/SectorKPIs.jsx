@@ -451,12 +451,13 @@ const SectorKPIs = () => {
             {/* ========================================================================= */}
             <header className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                    <div className="p-3 w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
-                        <Rocket className="w-6 h-6" />
-                    </div>
                     <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <h1 className="text-2xl font-black text-primary-hub tracking-tight">
+                        <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+    <Rocket className="w-3.5 h-3.5" />
+    <span>Metas &amp; Indicadores do Setor</span>
+</div>
+<div className="flex items-center gap-2 flex-wrap">
+                            <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                                 Gestão Estratégica de KPIs do Setor
                             </h1>
                             <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 flex items-center gap-1">

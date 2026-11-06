@@ -156,13 +156,14 @@ const SundaySchedule = ({ readOnly = false }) => {
 
     return (
         <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 bg-white p-6 rounded-xl border border-gray-200 shadow-sm shrink-0">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                        <Calendar className="w-6 h-6 text-red-600" />
-                        Escala de Plantão (Domingos)
-                    </h1>
-                    <p className="text-sm text-gray-500 mt-1">
+                    <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+    <Calendar className="w-3.5 h-3.5" />
+    <span>Escalas &amp; Plantões</span>
+</div>
+<h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">Escala de Plantão (Domingos)</h1>
+                    <p className="text-xs text-secondary-hub mt-0.5">
                         {readOnly ? "Consulte a escala de plantões programada para a equipe." : "Arraste os colaboradores para os domingos desejados e monte a escala."}
                     </p>
                 </div>

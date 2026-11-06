@@ -618,16 +618,13 @@ export const OperationalSchedules = ({
             {/* CABEÇALHO UNIFICADO COM SWITCH DE MODALIDADE */}
             <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-2xs z-20">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 border border-red-100 flex items-center justify-center shrink-0 shadow-xs">
-                        {activeTab === 'diaria' ? (
-                            <CalendarDays className="w-5 h-5 text-blue-600" />
-                        ) : (
-                            <Calendar className="w-5 h-5 text-red-600" />
-                        )}
-                    </div>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-base sm:text-lg font-black text-gray-900 tracking-tight">
+                        <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+    <CalendarDays className="w-3.5 h-3.5" />
+    <span>Escalas &amp; Plantões</span>
+</div>
+<div className="flex items-center gap-2">
+                            <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                                 {activeTab === 'diaria' ? 'Escala Diária Operacional' : 'Escala de Plantão (Domingos)'}
                             </h1>
                             <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-700 border border-gray-200">

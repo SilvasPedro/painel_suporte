@@ -8,6 +8,7 @@ const CHANNEL_ICONS = {
     'Telefone': Phone,
     'WhatsApp': MessageSquare,
     'Chat': MessageSquare,
+    'WhatsApp/Chat': MessageSquare,
     'Ticket': Ticket,
     'E-mail': Mail
 };
@@ -48,7 +49,7 @@ export default function AuditDetailsModal({
         >
             <div 
                 id="audit-details-modal"
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] border border-gray-200"
+                className="bg-surface rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[92vh] border border-subtle"
             >
                 {/* Cabeçalho */}
                 <div className="p-4 sm:p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
@@ -74,7 +75,7 @@ export default function AuditDetailsModal({
                                 </span>
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">
-                                Protocolo: <strong className="text-zinc-200">{audit.protocol || 'Sem protocolo'}</strong> • Realizado em {audit.date ? new Date(audit.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
+                                Protocolo: <strong className="text-zinc-200">{audit.protocol || 'Sem protocolo'}</strong> • Auditoria realizada em {audit.date ? new Date(audit.date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : '--'}
                             </p>
                         </div>
                     </div>
@@ -107,55 +108,55 @@ export default function AuditDetailsModal({
                 </div>
 
                 {/* Conteúdo com Scroll */}
-                <div className="overflow-y-auto flex-1 p-4 sm:p-6 bg-gray-50/60 space-y-5">
+                <div className="overflow-y-auto flex-1 p-4 sm:p-6 bg-subtle space-y-5">
                     {/* Painel de Metadados em Grade */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-white p-4 rounded-xl border border-gray-200 shadow-2xs">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-surface p-4 rounded-xl border border-subtle shadow-2xs">
                         <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                            <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                 Colaborador
                             </span>
-                            <span className="text-xs font-bold text-gray-900 mt-0.5 block truncate">
+                            <span className="text-xs font-bold text-primary-hub mt-0.5 block truncate">
                                 {collaboratorName || 'Não identificado'}
                             </span>
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                            <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                 Procedimento
                             </span>
-                            <span className="text-xs font-bold text-gray-900 mt-0.5 block truncate" title={audit.processName}>
+                            <span className="text-xs font-bold text-primary-hub mt-0.5 block truncate" title={audit.processName}>
                                 {audit.processName || '--'}
                             </span>
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                            <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                 Canal de Atendimento
                             </span>
-                            <span className="text-xs font-bold text-gray-900 mt-0.5 flex items-center gap-1.5">
-                                <ChannelIcon className="w-3.5 h-3.5 text-gray-500" />
+                            <span className="text-xs font-bold text-primary-hub mt-0.5 flex items-center gap-1.5">
+                                <ChannelIcon className="w-3.5 h-3.5 text-secondary-hub" />
                                 {audit.channel || 'Ticket / Sistema'}
                             </span>
                         </div>
                         <div>
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                            <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                 Avaliador
                             </span>
-                            <span className="text-xs font-bold text-gray-900 mt-0.5 block truncate">
+                            <span className="text-xs font-bold text-primary-hub mt-0.5 block truncate">
                                 {audit.evaluatorName || 'Gestão'}
                             </span>
                         </div>
                     </div>
 
                     {/* Resumo de Aproveitamento da Checklist */}
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-3">
+                    <div className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs space-y-3">
                         <div className="flex justify-between items-center">
-                            <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">
+                            <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider">
                                 Aproveitamento na Checklist
                             </span>
-                            <span className="text-xs font-mono font-bold text-gray-900">
+                            <span className="text-xs font-mono font-bold text-primary-hub">
                                 {passCount} aprovados • {failCount} reprovados • {naCount} N/A
                             </span>
                         </div>
-                        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden flex">
+                        <div className="w-full h-2.5 bg-subtle rounded-full overflow-hidden flex">
                             {totalValid > 0 && (
                                 <>
                                     <div 
@@ -179,20 +180,20 @@ export default function AuditDetailsModal({
                     </div>
 
                     {/* Lista de Itens da Checklist com Resultados */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
-                        <div className="p-3.5 bg-gray-50 border-b border-gray-100 flex justify-between items-center">
-                            <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                    <div className="bg-surface rounded-xl border border-subtle shadow-2xs overflow-hidden">
+                        <div className="p-3.5 bg-subtle border-b border-subtle flex justify-between items-center">
+                            <h3 className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-2">
                                 <ShieldCheck className="w-4 h-4 text-red-600" />
                                 Detalhamento dos Critérios Avaliados
                             </h3>
-                            <span className="text-xs text-gray-500">
+                            <span className="text-xs text-secondary-hub">
                                 {checklistEntries.length} critérios respondidos
                             </span>
                         </div>
 
                         <div className="divide-y divide-gray-100 p-2">
                             {checklistEntries.length === 0 ? (
-                                <div className="text-center py-6 text-gray-400 text-xs">
+                                <div className="text-center py-6 text-muted-hub text-xs">
                                     Nenhuma pergunta individual registrada para esta auditoria.
                                 </div>
                             ) : (
@@ -206,10 +207,10 @@ export default function AuditDetailsModal({
                                         <div key={idx} className="p-3 flex flex-col gap-1.5 hover:bg-gray-50/50 rounded-lg transition-colors">
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="flex items-start gap-2.5 flex-1">
-                                                    <span className="text-xs font-mono font-bold text-gray-400 mt-0.5 shrink-0">
+                                                    <span className="text-xs font-mono font-bold text-muted-hub mt-0.5 shrink-0">
                                                         {idx + 1}.
                                                     </span>
-                                                    <span className="text-xs text-gray-800 font-medium leading-relaxed">
+                                                    <span className="text-xs text-primary-hub font-medium leading-relaxed">
                                                         {/* Se a chave for número ou pergunta inteira */}
                                                         {key}
                                                     </span>
@@ -228,7 +229,7 @@ export default function AuditDetailsModal({
                                                         </span>
                                                     )}
                                                     {isNa && (
-                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-subtle text-secondary-hub border border-subtle">
                                                             <MinusCircle className="w-3.5 h-3.5" /> N/A
                                                         </span>
                                                     )}
@@ -250,11 +251,11 @@ export default function AuditDetailsModal({
 
                     {/* Observações Gerais do Avaliador */}
                     {audit.notes && (
-                        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-1.5">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block">
+                        <div className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs space-y-1.5">
+                            <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider block">
                                 Parecer Geral / Feedback do Avaliador
                             </span>
-                            <p className="text-xs text-gray-700 bg-gray-50 p-3 rounded-lg leading-relaxed whitespace-pre-wrap">
+                            <p className="text-xs text-secondary-hub bg-subtle p-3 rounded-lg leading-relaxed whitespace-pre-wrap">
                                 {audit.notes}
                             </p>
                         </div>
@@ -262,11 +263,11 @@ export default function AuditDetailsModal({
                 </div>
 
                 {/* Rodapé */}
-                <div className="p-4 bg-white border-t border-gray-200 flex justify-end gap-2 shrink-0">
+                <div className="p-4 bg-surface border-t border-subtle flex justify-end gap-2 shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-5 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold text-xs transition-colors cursor-pointer"
+                        className="px-5 py-2 border border-strong text-secondary-hub rounded-xl hover:bg-subtle font-bold text-xs transition-colors cursor-pointer"
                     >
                         Fechar
                     </button>

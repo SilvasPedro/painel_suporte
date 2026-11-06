@@ -338,21 +338,17 @@ const MonthlyEvaluations = () => {
         <div className="flex-1 p-4 sm:p-6 lg:p-8 h-full overflow-y-auto bg-canvas flex flex-col space-y-6">
             
             {/* CABEÇALHO HERO EXECUTIVO */}
-            <div className="relative rounded-3xl bg-surface border border-subtle p-6 sm:p-8 shadow-xs overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-rose-500/10 via-transparent to-transparent -mr-20 -mt-20 pointer-events-none rounded-full blur-2xl" />
+            <div className="relative">
 
                 <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-5">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2 flex-wrap">
-                            <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 inline-flex items-center gap-1.5">
-                                <CalendarDays className="w-3.5 h-3.5 text-rose-500" />
-                                Módulo de Liderança • Alinhamentos 1:1
-                            </span>
+                            <span className="flex items-center gap-2 text-xs font-semibold text-rose-500 uppercase tracking-wider"><CalendarDays className="w-3.5 h-3.5" />Módulo de Liderança • Alinhamentos 1:1</span>
                             <span className="px-2.5 py-1 rounded-full text-[11px] font-mono font-bold bg-subtle text-secondary-hub border border-subtle">
                                 {evaluations.length} Registros
                             </span>
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-primary-hub tracking-tight">
+                        <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                             Feedbacks & Análise Mensal 1:1
                         </h1>
                         <p className="text-xs sm:text-sm text-muted-hub max-w-2xl leading-relaxed">
