@@ -26,23 +26,34 @@
 }
 
 [data-theme="warm"] {
-  --bg-canvas: #dfd7ca;
-  --bg-surface: #ede6dc;
-  --bg-surface-hover: #e5ded3;
-  --bg-subtle: #e2d9cd;
-  --border-subtle: #cdbfae;
-  --border-strong: #bdae9c;
-  --text-primary: #261f1c;
-  --text-secondary: #574a43;
-  --text-muted: #88786f;
-  --brand-primary: #c2410c;
-  --brand-primary-hover: #9a3412;
-  --brand-surface: #faebe2;
-  --brand-border: #f4cfbe;
-  --card-shadow: 0 1px 3px 0 rgb(60 40 20 / 0.08);
-  --card-shadow-hover: 0 8px 16px -2px rgb(60 40 20 / 0.12);
-  --glass-bg: rgba(237, 230, 220, 0.85);
-  --glass-border: rgba(205, 191, 174, 0.8);
+  --bg-canvas: #ece3d3;
+  --bg-surface: #f7f1e5;
+  --bg-surface-hover: #efe6d5;
+  --bg-subtle: #f0e8d8;
+  --border-subtle: #dccdb6;
+  --border-strong: #c9b79c;
+  --text-primary: #2a1f17;
+  --text-secondary: #5e4b3c;
+  --text-muted: #8b7765;
+  --brand-primary: #b4451a;
+  --brand-primary-hover: #8f3511;
+  --brand-surface: #f9e8dc;
+  --brand-border: #efc7ae;
+  --card-shadow: 0 1px 3px 0 rgb(80 50 25 / 0.10), 0 1px 2px -1px rgb(80 50 25 / 0.08);
+  --card-shadow-hover: 0 10px 20px -4px rgb(80 50 25 / 0.16);
+  --glass-bg: rgba(247, 241, 229, 0.85);
+  --glass-border: rgba(201, 183, 156, 0.8);
+  /* Café espresso: cartões de destaque e barra lateral */
+  --espresso: #2b221b;
+  --espresso-2: #3a2e25;
+  --espresso-border: #4a3b2f;
+  --sidebar-bg: #2b221b;
+  --sidebar-bg-deep: #231b15;
+  --sidebar-bg-raised: #352a22;
+  --sidebar-border: #45372b;
+  --sidebar-text: #e9dccb;
+  --sidebar-muted: #b3a08c;
+  --sidebar-accent: #f0a574;
 }
 
 [data-theme="dark"] {
@@ -507,267 +518,467 @@ html[data-theme="dark"] body {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 2. MODO MORNO (EQUILÍBRIO SÉPIA, LINHO & PEDRA PARA CONFORTO OCULAR)       */
-/* A barra lateral (sidebar) permanece 100% original e inalterada              */
+/* 2. MODO MORNO v4.1.1 — SÉPIA, LINHO & ESPRESSO                              */
+/* Paleta terrosa unificada: tela em linho, cartões em creme, sidebar e        */
+/* cartões de destaque em café espresso, ação principal em terracota.          */
 /* -------------------------------------------------------------------------- */
 [data-theme="warm"],
 html[data-theme="warm"] body {
   color-scheme: light;
-  background-color: #dfd7ca !important;
-  color: #261f1c;
+  background-color: var(--bg-canvas) !important;
+  color: var(--text-primary);
 }
 
-/* Telas principais e canva no modo morno */
-[data-theme="warm"] main.bg-gray-50,
-[data-theme="warm"] main .bg-gray-50,
-[data-theme="warm"] main .bg-zinc-50,
-[data-theme="warm"] main .bg-slate-50 {
-  background-color: #dfd7ca !important;
+[data-theme="warm"] ::selection {
+  background: rgba(180, 69, 26, 0.22);
+  color: var(--text-primary);
 }
 
-/* Cartões, Modais e Superfícies (Linho e Pedra Aconchegante) */
-[data-theme="warm"] main .bg-white,
-[data-theme="warm"] main .bg-white\/80,
-[data-theme="warm"] main .bg-white\/90,
-[data-theme="warm"] main .bg-white\/95,
-[data-theme="warm"] header.bg-white,
-[data-theme="warm"] .fixed .bg-white {
-  background-color: #ede6dc !important;
+[data-theme="warm"] :focus-visible {
+  outline: 2px solid rgba(180, 69, 26, 0.55);
+  outline-offset: 2px;
 }
 
-/* Superfícies secundárias, cabeçalhos de tabela */
-[data-theme="warm"] main .bg-gray-100,
-[data-theme="warm"] main .bg-zinc-100,
-[data-theme="warm"] main .bg-slate-100,
-[data-theme="warm"] main .bg-gray-50\/50,
-[data-theme="warm"] main .bg-gray-50\/80 {
-  background-color: #ded5c7 !important;
+/* ---- Superfícies (legado Tailwind -> paleta morna, em toda a tela) ---- */
+[data-theme="warm"] .bg-gray-50,
+[data-theme="warm"] .bg-zinc-50,
+[data-theme="warm"] .bg-slate-50,
+[data-theme="warm"] .bg-neutral-50,
+[data-theme="warm"] main.bg-gray-50 {
+  background-color: var(--bg-canvas) !important;
 }
 
-[data-theme="warm"] main .bg-gray-200,
-[data-theme="warm"] main .bg-zinc-200,
-[data-theme="warm"] main .bg-gray-200\/80,
-[data-theme="warm"] header .bg-gray-200\/80 {
-  background-color: #d2c6b4 !important;
+[data-theme="warm"] .bg-white,
+[data-theme="warm"] .bg-white\/80,
+[data-theme="warm"] .bg-white\/90,
+[data-theme="warm"] .bg-white\/95 {
+  background-color: var(--bg-surface) !important;
 }
 
-/* Tipografia Quente, Orgânica e Equilibrada (apenas fora da barra lateral) */
-[data-theme="warm"] main .text-gray-900,
-[data-theme="warm"] main .text-zinc-900,
-[data-theme="warm"] main .text-slate-900,
-[data-theme="warm"] main .text-black,
-[data-theme="warm"] header .text-gray-900,
-[data-theme="warm"] .fixed .text-gray-900 {
-  color: #261f1c !important;
+[data-theme="warm"] .bg-gray-100,
+[data-theme="warm"] .bg-zinc-100,
+[data-theme="warm"] .bg-slate-100,
+[data-theme="warm"] .bg-neutral-100,
+[data-theme="warm"] .bg-gray-50\/50,
+[data-theme="warm"] .bg-gray-50\/80,
+[data-theme="warm"] .bg-gray-50\/60,
+[data-theme="warm"] .bg-gray-50\/70 {
+  background-color: var(--bg-subtle) !important;
 }
 
-[data-theme="warm"] main .text-gray-800,
-[data-theme="warm"] main .text-zinc-800,
-[data-theme="warm"] header .text-gray-800,
-[data-theme="warm"] .fixed .text-gray-800 {
-  color: #382e28 !important;
+[data-theme="warm"] .bg-gray-200,
+[data-theme="warm"] .bg-zinc-200,
+[data-theme="warm"] .bg-neutral-200,
+[data-theme="warm"] .bg-gray-200\/80 {
+  background-color: #e3d6c1 !important;
 }
 
-[data-theme="warm"] main .text-gray-700,
-[data-theme="warm"] main .text-zinc-700,
-[data-theme="warm"] header .text-gray-700,
-[data-theme="warm"] .fixed .text-gray-700 {
-  color: #4a3e37 !important;
+[data-theme="warm"] .bg-gray-300 {
+  background-color: #d2c1a8 !important;
 }
 
-[data-theme="warm"] main .text-gray-600,
-[data-theme="warm"] main .text-zinc-600,
-[data-theme="warm"] header .text-gray-600,
-[data-theme="warm"] .fixed .text-gray-600 {
-  color: #615248 !important;
+[data-theme="warm"] .hover\:bg-gray-50:hover,
+[data-theme="warm"] .hover\:bg-gray-100:hover,
+[data-theme="warm"] .hover\:bg-zinc-100:hover {
+  background-color: var(--bg-surface-hover) !important;
 }
 
-[data-theme="warm"] main .text-gray-500,
-[data-theme="warm"] main .text-zinc-500,
-[data-theme="warm"] header .text-gray-500,
-[data-theme="warm"] .fixed .text-gray-500 {
-  color: #78665a !important;
+[data-theme="warm"] .hover\:bg-gray-200:hover {
+  background-color: #e3d6c1 !important;
 }
 
-[data-theme="warm"] main .text-gray-400,
-[data-theme="warm"] main .text-zinc-400,
-[data-theme="warm"] header .text-gray-400,
-[data-theme="warm"] .fixed .text-gray-400 {
-  color: #948275 !important;
+/* ---- Tipografia ---- */
+[data-theme="warm"] .text-gray-900,
+[data-theme="warm"] .text-zinc-900,
+[data-theme="warm"] .text-slate-900,
+[data-theme="warm"] .text-neutral-900,
+[data-theme="warm"] .text-black,
+[data-theme="warm"] .text-gray-800,
+[data-theme="warm"] .text-zinc-800,
+[data-theme="warm"] .text-neutral-800 {
+  color: var(--text-primary) !important;
 }
 
-/* Bordas Orgânicas Cor de Argila / Pedra Natural */
-[data-theme="warm"] main .border-gray-200,
-[data-theme="warm"] main .border-zinc-200,
-[data-theme="warm"] main .border-slate-200,
-[data-theme="warm"] main .border-gray-300,
-[data-theme="warm"] main .border-zinc-300,
-[data-theme="warm"] main .border-gray-200\/80,
-[data-theme="warm"] main .border-zinc-200\/80,
-[data-theme="warm"] main .border-gray-300\/80,
-[data-theme="warm"] header.border-gray-200,
-[data-theme="warm"] header .border-gray-300\/80,
-[data-theme="warm"] .fixed .border-gray-200 {
-  border-color: #cdbfae !important;
+[data-theme="warm"] .text-gray-700,
+[data-theme="warm"] .text-zinc-700,
+[data-theme="warm"] .text-gray-600,
+[data-theme="warm"] .text-zinc-600 {
+  color: var(--text-secondary) !important;
 }
 
-[data-theme="warm"] main .border-gray-100,
-[data-theme="warm"] main .border-zinc-100 {
-  border-color: #dcd1c2 !important;
+[data-theme="warm"] .text-gray-500,
+[data-theme="warm"] .text-zinc-500,
+[data-theme="warm"] .text-gray-400,
+[data-theme="warm"] .text-zinc-400 {
+  color: var(--text-muted) !important;
 }
 
-[data-theme="warm"] main .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
-[data-theme="warm"] main .divide-zinc-200 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #cdbfae !important;
+/* ---- Bordas e divisores ---- */
+[data-theme="warm"] .border-gray-100,
+[data-theme="warm"] .border-zinc-100,
+[data-theme="warm"] .border-gray-200,
+[data-theme="warm"] .border-zinc-200,
+[data-theme="warm"] .border-slate-200,
+[data-theme="warm"] .border-neutral-200,
+[data-theme="warm"] .border-gray-200\/80,
+[data-theme="warm"] .border-gray-200\/90,
+[data-theme="warm"] .border-zinc-200\/80 {
+  border-color: var(--border-subtle) !important;
 }
 
-/* Preservação estrita e absoluta da Barra Lateral (aside) no Modo Morno */
-[data-theme="warm"] aside,
+[data-theme="warm"] .border-gray-300,
+[data-theme="warm"] .border-zinc-300,
+[data-theme="warm"] .border-gray-300\/80 {
+  border-color: var(--border-strong) !important;
+}
+
+[data-theme="warm"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+[data-theme="warm"] .divide-gray-200 > :not([hidden]) ~ :not([hidden]),
+[data-theme="warm"] .divide-zinc-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-subtle) !important;
+}
+
+/* ---- Marca: vermelho/rosa vira terracota (negativos semânticos preservados) ---- */
+[data-theme="warm"] .bg-red-600,
+[data-theme="warm"] .bg-rose-600,
+[data-theme="warm"] .bg-rose-500 {
+  background-color: var(--brand-primary) !important;
+}
+
+[data-theme="warm"] .hover\:bg-red-700:hover,
+[data-theme="warm"] .hover\:bg-rose-700:hover {
+  background-color: var(--brand-primary-hover) !important;
+}
+
+[data-theme="warm"] .text-rose-500,
+[data-theme="warm"] .text-rose-600,
+[data-theme="warm"] .text-rose-700 {
+  color: var(--brand-primary) !important;
+}
+
+[data-theme="warm"] .bg-rose-500\/10 {
+  background-color: rgba(180, 69, 26, 0.1) !important;
+}
+
+[data-theme="warm"] .border-rose-500\/20 {
+  border-color: rgba(180, 69, 26, 0.25) !important;
+}
+
+[data-theme="warm"] .shadow-red-600\/20,
+[data-theme="warm"] .shadow-red-950\/20 {
+  --tw-shadow-color: rgba(180, 69, 26, 0.25) !important;
+}
+
+/* ---- Cartões de destaque escuros: zinc-950 vira café espresso ---- */
+[data-theme="warm"] .bg-zinc-950,
+[data-theme="warm"] .bg-zinc-900 {
+  background-color: var(--espresso) !important;
+  border-color: var(--espresso-border) !important;
+}
+
+[data-theme="warm"] .bg-zinc-800 {
+  background-color: var(--espresso-2) !important;
+}
+
+[data-theme="warm"] [class*="from-zinc-950"] { --tw-gradient-from: var(--espresso) !important; }
+[data-theme="warm"] [class*="via-zinc-900"] { --tw-gradient-via: #3a2e25 !important; }
+[data-theme="warm"] [class*="to-zinc-950"] { --tw-gradient-to: var(--espresso) !important; }
+[data-theme="warm"] [class*="to-red-950"] { --tw-gradient-to: #4a2415 !important; }
+
+[data-theme="warm"] .border-zinc-800,
+[data-theme="warm"] .border-zinc-700 {
+  border-color: var(--espresso-border) !important;
+}
+
+[data-theme="warm"] .bg-zinc-950 .text-zinc-300,
+[data-theme="warm"] .bg-zinc-900 .text-zinc-300,
+[data-theme="warm"] .bg-zinc-950 .text-zinc-200 {
+  color: #e6d8c4 !important;
+}
+[data-theme="warm"] .bg-zinc-950 .text-zinc-400,
+[data-theme="warm"] .bg-zinc-900 .text-zinc-400,
+[data-theme="warm"] .bg-zinc-950 .text-zinc-500,
+[data-theme="warm"] .bg-zinc-900 .text-zinc-500 {
+  color: #b8a692 !important;
+}
+[data-theme="warm"] .bg-zinc-950 .text-gray-500,
+[data-theme="warm"] .bg-zinc-950 .text-gray-400 {
+  color: #b8a692 !important;
+}
+
+/* ---- Overlay de modais ---- */
+[data-theme="warm"] .fixed[class*="bg-zinc-950/"],
+[data-theme="warm"] .fixed[class*="bg-black/"],
+[data-theme="warm"] .fixed[class*="bg-gray-900/"] {
+  background-color: rgba(43, 29, 18, 0.62) !important;
+}
+
+/* ---- Barra lateral (sidebar e gaveta mobile) em espresso ---- */
+[data-theme="warm"] .app-sidebar,
 [data-theme="warm"] .mobile-drawer-sidebar {
-  background-color: #09090b !important;
-  color: #ffffff !important;
-  border-color: #27272a !important;
+  background-color: var(--sidebar-bg) !important;
+  background-image: linear-gradient(180deg, rgba(255, 220, 180, 0.04), transparent 40%) !important;
+  color: var(--sidebar-text) !important;
+  border-color: var(--sidebar-border) !important;
 }
 
-[data-theme="warm"] aside .bg-zinc-950,
-[data-theme="warm"] aside .bg-zinc-950\/50,
+[data-theme="warm"] .app-sidebar .bg-zinc-950,
+[data-theme="warm"] .app-sidebar .bg-zinc-950\/50,
+[data-theme="warm"] .app-sidebar .bg-zinc-950\/95,
 [data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-950,
 [data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-950\/50 {
-  background-color: #09090b !important;
+  background-color: var(--sidebar-bg-deep) !important;
 }
 
-[data-theme="warm"] aside .bg-zinc-900,
-[data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-900 {
-  background-color: #18181b !important;
+[data-theme="warm"] .app-sidebar .bg-zinc-900,
+[data-theme="warm"] .app-sidebar .bg-zinc-800,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-900,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-zinc-800 {
+  background-color: var(--sidebar-bg-raised) !important;
 }
 
-[data-theme="warm"] aside .border-zinc-800,
-[data-theme="warm"] aside .border-zinc-800\/80,
-[data-theme="warm"] .mobile-drawer-sidebar .border-zinc-800 {
-  border-color: #27272a !important;
+[data-theme="warm"] .app-sidebar .hover\:bg-zinc-900\/60:hover,
+[data-theme="warm"] .app-sidebar .hover\:bg-zinc-800\/60:hover,
+[data-theme="warm"] .app-sidebar .hover\:bg-zinc-800:hover,
+[data-theme="warm"] .mobile-drawer-sidebar .hover\:bg-zinc-900\/60:hover {
+  background-color: rgba(255, 224, 190, 0.08) !important;
 }
 
-[data-theme="warm"] aside .text-white,
-[data-theme="warm"] .mobile-drawer-sidebar .text-white {
-  color: #ffffff !important;
+[data-theme="warm"] .app-sidebar .border-zinc-800,
+[data-theme="warm"] .app-sidebar .border-zinc-800\/80,
+[data-theme="warm"] .app-sidebar .border-zinc-700,
+[data-theme="warm"] .app-sidebar .border-zinc-900,
+[data-theme="warm"] .mobile-drawer-sidebar .border-zinc-800,
+[data-theme="warm"] .mobile-drawer-sidebar .border-zinc-800\/80 {
+  border-color: var(--sidebar-border) !important;
 }
 
-[data-theme="warm"] aside .text-zinc-300,
+[data-theme="warm"] .app-sidebar .text-white,
+[data-theme="warm"] .mobile-drawer-sidebar .text-white,
+[data-theme="warm"] .app-sidebar .hover\:text-zinc-100:hover,
+[data-theme="warm"] .app-sidebar .hover\:text-zinc-200:hover {
+  color: #fbf3e6 !important;
+}
+
+[data-theme="warm"] .app-sidebar .text-zinc-200,
+[data-theme="warm"] .app-sidebar .text-zinc-300,
 [data-theme="warm"] .mobile-drawer-sidebar .text-zinc-300 {
-  color: #d4d4d8 !important;
+  color: var(--sidebar-text) !important;
 }
 
-[data-theme="warm"] aside .text-zinc-400,
-[data-theme="warm"] .mobile-drawer-sidebar .text-zinc-400 {
-  color: #a1a1aa !important;
-}
-
-[data-theme="warm"] aside .text-zinc-500,
+[data-theme="warm"] .app-sidebar .text-zinc-400,
+[data-theme="warm"] .app-sidebar .text-zinc-500,
+[data-theme="warm"] .mobile-drawer-sidebar .text-zinc-400,
 [data-theme="warm"] .mobile-drawer-sidebar .text-zinc-500 {
-  color: #71717a !important;
+  color: var(--sidebar-muted) !important;
 }
 
-/* Controles de Formulário no modo Morno */
-[data-theme="warm"] input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]),
-[data-theme="warm"] select,
-[data-theme="warm"] textarea {
-  background-color: #f5efe6 !important;
-  color: #261f1c !important;
-  border-color: #cdbfae !important;
+/* Item ativo, indicadores e brilhos ambientes viram terracota quente */
+[data-theme="warm"] .app-sidebar .text-rose-400,
+[data-theme="warm"] .app-sidebar .text-rose-500,
+[data-theme="warm"] .mobile-drawer-sidebar .text-rose-400,
+[data-theme="warm"] .mobile-drawer-sidebar .text-rose-500 {
+  color: var(--sidebar-accent) !important;
+}
+
+[data-theme="warm"] .app-sidebar .bg-rose-500,
+[data-theme="warm"] .app-sidebar .bg-rose-400,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-rose-500,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-rose-400 {
+  background-color: var(--sidebar-accent) !important;
+}
+
+[data-theme="warm"] .app-sidebar .border-rose-500,
+[data-theme="warm"] .mobile-drawer-sidebar .border-rose-500 {
+  border-color: var(--sidebar-accent) !important;
+}
+
+[data-theme="warm"] .app-sidebar [class*="from-rose-500"],
+[data-theme="warm"] .mobile-drawer-sidebar [class*="from-rose-500"] {
+  --tw-gradient-from: rgba(240, 165, 116, 0.22) !important;
+}
+[data-theme="warm"] .app-sidebar [class*="via-rose-500"],
+[data-theme="warm"] .mobile-drawer-sidebar [class*="via-rose-500"] {
+  --tw-gradient-via: rgba(240, 165, 116, 0.1) !important;
+}
+
+[data-theme="warm"] .app-sidebar .bg-rose-500\/10,
+[data-theme="warm"] .app-sidebar .bg-rose-500\/5,
+[data-theme="warm"] .mobile-drawer-sidebar .bg-rose-500\/10 {
+  background-color: rgba(240, 165, 116, 0.1) !important;
+}
+
+[data-theme="warm"] .app-sidebar input,
+[data-theme="warm"] .app-sidebar select,
+[data-theme="warm"] .app-sidebar textarea {
+  background-color: var(--sidebar-bg-raised) !important;
+  border-color: var(--sidebar-border) !important;
+  color: var(--sidebar-text) !important;
+}
+
+/* Barra de rolagem da sidebar */
+[data-theme="warm"] .app-sidebar ::-webkit-scrollbar-thumb {
+  background: #5a4838;
+}
+
+/* ---- Controles de formulário ---- */
+[data-theme="warm"] main input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]),
+[data-theme="warm"] main select,
+[data-theme="warm"] main textarea,
+[data-theme="warm"] .fixed input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="range"]),
+[data-theme="warm"] .fixed select,
+[data-theme="warm"] .fixed textarea {
+  background-color: #fbf7ee !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-strong) !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+[data-theme="warm"] main input:focus,
+[data-theme="warm"] main select:focus,
+[data-theme="warm"] main textarea:focus,
+[data-theme="warm"] .fixed input:focus,
+[data-theme="warm"] .fixed select:focus,
+[data-theme="warm"] .fixed textarea:focus {
+  border-color: var(--brand-primary) !important;
+  box-shadow: 0 0 0 3px rgba(180, 69, 26, 0.16) !important;
+  outline: none;
 }
 
 [data-theme="warm"] input::placeholder,
 [data-theme="warm"] textarea::placeholder {
-  color: #948275 !important;
+  color: #a08e7c !important;
 }
 
 [data-theme="warm"] select option {
-  background-color: #ede6dc !important;
-  color: #261f1c !important;
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
 }
 
-/* Tabelas e Linhas no Modo Morno */
+[data-theme="warm"] input[type="checkbox"],
+[data-theme="warm"] input[type="radio"],
+[data-theme="warm"] input[type="range"] {
+  accent-color: var(--brand-primary);
+}
+
+/* ---- Tabelas ---- */
 [data-theme="warm"] table th {
-  background-color: #ded5c7 !important;
-  color: #382e28 !important;
-  border-color: #cdbfae !important;
+  background-color: #e6dac6 !important;
+  color: #3a2c20 !important;
+  border-color: var(--border-subtle) !important;
 }
 
 [data-theme="warm"] table td {
-  border-color: #dcd1c2 !important;
+  border-color: var(--border-subtle) !important;
 }
 
 [data-theme="warm"] tbody tr:hover {
-  background-color: #e5ded2 !important;
+  background-color: #f1e7d5 !important;
 }
 
-/* Badges e Pílulas no Modo Morno (Tons terrosos e relaxantes) */
+/* ---- Badges e pílulas em tons terrosos ---- */
 [data-theme="warm"] .bg-emerald-50,
 [data-theme="warm"] .bg-emerald-100 {
-  background-color: #e3ede5 !important;
-  color: #235936 !important;
-  border-color: #bdd6c3 !important;
+  background-color: #e4ecdc !important;
+  color: #2f5a35 !important;
+  border-color: #c3d4b7 !important;
 }
 
 [data-theme="warm"] .bg-amber-50,
 [data-theme="warm"] .bg-amber-100 {
-  background-color: #f7ede0 !important;
-  color: #8c5318 !important;
-  border-color: #ebd3b6 !important;
+  background-color: #f6e8cf !important;
+  color: #82500f !important;
+  border-color: #e6cca0 !important;
 }
 
 [data-theme="warm"] .bg-red-50,
 [data-theme="warm"] .bg-red-100 {
-  background-color: #fce8e6 !important;
-  color: #992828 !important;
-  border-color: #f3c7c5 !important;
+  background-color: #f7e0d6 !important;
+  color: #9a3412 !important;
+  border-color: #ebbfaa !important;
 }
 
 [data-theme="warm"] .bg-blue-50,
-[data-theme="warm"] .bg-blue-100 {
-  background-color: #e3ecf5 !important;
-  color: #245682 !important;
-  border-color: #bad3eb !important;
+[data-theme="warm"] .bg-blue-100,
+[data-theme="warm"] .bg-sky-50,
+[data-theme="warm"] .bg-sky-100 {
+  background-color: #e0e8ec !important;
+  color: #2d5266 !important;
+  border-color: #bccdd6 !important;
 }
 
 [data-theme="warm"] .bg-purple-50,
-[data-theme="warm"] .bg-purple-100 {
-  background-color: #ede7f5 !important;
-  color: #5d338a !important;
-  border-color: #d2c4e8 !important;
+[data-theme="warm"] .bg-purple-100,
+[data-theme="warm"] .bg-indigo-50,
+[data-theme="warm"] .bg-indigo-100 {
+  background-color: #ebe3ee !important;
+  color: #5b3a6e !important;
+  border-color: #d3c3d9 !important;
 }
 
-/* Gráficos Recharts no Modo Morno */
+[data-theme="warm"] .bg-teal-50,
+[data-theme="warm"] .bg-teal-100 {
+  background-color: #dfeae4 !important;
+  color: #2a5a4c !important;
+  border-color: #b9d1c6 !important;
+}
+
+/* ---- Gráficos (Recharts) ---- */
 [data-theme="warm"] .recharts-cartesian-grid-horizontal line,
 [data-theme="warm"] .recharts-cartesian-grid-vertical line {
-  stroke: #cdbfae !important;
+  stroke: #d8cab6 !important;
 }
 
 [data-theme="warm"] .recharts-text {
-  fill: #78665a !important;
+  fill: #7a6656 !important;
 }
 
 [data-theme="warm"] .recharts-default-tooltip {
-  background-color: #ede6dc !important;
-  border-color: #cdbfae !important;
-  color: #261f1c !important;
-  box-shadow: 0 10px 25px -5px rgba(50, 40, 30, 0.2) !important;
+  background-color: var(--bg-surface) !important;
+  border-color: var(--border-strong) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 10px 25px -5px rgba(60, 40, 20, 0.22) !important;
 }
 
-/* Barra de rolagem no Modo Morno */
+/* ---- Barra de rolagem (espresso, igual à barra lateral) ---- */
 [data-theme="warm"] ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
 }
 [data-theme="warm"] ::-webkit-scrollbar-track {
-  background: #dfd7ca;
+  background: var(--bg-canvas);
 }
 [data-theme="warm"] ::-webkit-scrollbar-thumb {
-  background: #b8a896;
-  border-radius: 4px;
+  background: var(--espresso-2);
+  border-radius: 6px;
+  border: 2px solid var(--bg-canvas);
 }
 [data-theme="warm"] ::-webkit-scrollbar-thumb:hover {
-  background: #a3927f;
+  background: var(--espresso);
+}
+[data-theme="warm"] * {
+  scrollbar-color: var(--espresso-2) var(--bg-canvas);
+}
+
+/* ---- Documentos Markdown ---- */
+[data-theme="warm"] .markdown-content table {
+  border-color: var(--border-strong) !important;
+}
+[data-theme="warm"] .markdown-content th {
+  background-color: var(--espresso) !important;
+  border-color: var(--espresso-border) !important;
+  color: #fbf3e6 !important;
+}
+[data-theme="warm"] .markdown-content td {
+  border-bottom-color: var(--border-subtle) !important;
+  border-right-color: var(--border-subtle) !important;
+  color: var(--text-primary) !important;
+}
+[data-theme="warm"] .markdown-content tr:nth-child(even) td {
+  background-color: var(--bg-subtle) !important;
+}
+[data-theme="warm"] .markdown-content tr:hover td {
+  background-color: var(--brand-surface) !important;
 }
 
 /* Card de % QA no Modo Escuro - visualização limpa e nítida sem brilho branco excessivo */

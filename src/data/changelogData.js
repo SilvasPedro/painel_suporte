@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.1.0';
+export const CURRENT_VERSION = 'v4.1.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.1.0',
+    version: 'v4.1.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.1.1: reformulação completa do tema Morno (sépia). Paleta de linho, creme e café espresso aplicada à tela inteira, com barra lateral, cartões de destaque, modais, formulários, tabelas, badges, gráficos e botões de ação em terracota, finalmente harmonizados.',
+    items: [
+      {
+        icon: Coffee,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Barra Lateral em Café Espresso',
+        category: 'Tema Morno',
+        description: 'A barra lateral e a gaveta mobile deixaram de ser pretas e passaram a usar tons de café espresso, com texto em creme, item ativo, indicadores e brilhos em terracota claro, harmonizados com o restante da tela.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Nova Paleta Sépia e Cor de Marca em Terracota',
+        category: 'Tema Morno',
+        description: 'Tokens de cor refinados (linho, creme, bordas e textos terrosos) e vermelho/rosa de marca convertidos em terracota nos botões de ação, eyebrows e destaques, mantendo o vermelho apenas onde indica status negativo.'
+      },
+      {
+        icon: Layers,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Cobertura Total dos Elementos',
+        category: 'Tema Morno',
+        description: 'O tema agora vale para a tela inteira (não só o conteúdo principal): cabeçalho, modais e overlays, cartões escuros de destaque, formulários com foco em terracota, tabelas, badges, gráficos, barras de rolagem e documentos Markdown.'
+      }
+    ]
+  },
+  {
+    version: 'v4.1.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.1.0: Auditoria Terceirizada com seletor de empresa (ATSOC atual e UpCall como histórico somente leitura), modal de Auditorias QA redesenhado com filtros, atalhos e data da auditoria corrigida, calendário de folgas em cards quadrados e padronização dos títulos de 12 telas no estilo de Tarefas & Relatórios.',
     items: [
       {
@@ -51,7 +81,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v3.11.0',
     date: 'Outubro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v3.11.0: Refatoração completa da tela de Feedbacks 1:1 (Análise Mensal). Adoção do modelo consolidado em Markdown rico com tabelas, PDI e alinhamentos de metas, fluxo de confirmação de ciência (Estou Ciente) com auditoria de data/hora/usuário, total retrocompatibilidade em modo somente leitura (Read-only com banner contextual) para os feedbacks legados baseados nos 4 pilares, e novos indicadores visuais na listagem.',
     items: [
       {

@@ -291,7 +291,7 @@ const AdminDashboard = () => {
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             {/* BARRA LATERAL ULTRA-MODERNA (MAGIC DESIGN SYSTEM) */}
             <aside className={cn(
-                "bg-zinc-950/95 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800/80 transition-all duration-300 relative z-20 backdrop-blur-xl select-none overflow-hidden",
+                "app-sidebar bg-zinc-950/95 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800/80 transition-all duration-300 relative z-20 backdrop-blur-xl select-none overflow-hidden",
                 isSidebarCollapsed ? "w-20" : "w-64"
             )}>
                 {/* Iluminação Ambiente Volumétrica Carmesim */}

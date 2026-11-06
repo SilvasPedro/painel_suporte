@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [06/11/2026] — Versão v4.1.1 (Melhoria Substancial do Tema Morno / Sépia)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.1.0` para `4.1.1`. |
+| **Alterado** | `src/index.css` | Reescrita dos tokens do tema Morno (paleta linho/creme/espresso/terracota, variáveis da sidebar) e do bloco de regras do modo Morno: sidebar em espresso, superfícies e tipografia globais, marca em terracota, cartões escuros, overlays, formulários, tabelas, badges, gráficos, rolagem e Markdown. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.1.1` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.1.1`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [06/11/2026] — Versão v4.1.0 (Empresas na Auditoria Terceirizada, Modal QA, Folgas em Cards e Títulos Padronizados)
 
 | Ação | Arquivo | Descrição da Alteração |
