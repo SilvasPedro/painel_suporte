@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.4.0 (Capa Ajustável e Remoção da Biografia)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.3.1` para `4.4.0`. |
+| **Alterado** | `src/pages/MyProfile.jsx` | Ajuste da capa (arrastar, posição X/Y e zoom com pré-visualização), componente `ProfileBannerImage` e remoção do campo de biografia. |
+| **Alterado** | `src/services/userProfile.js` | Gravação de `bannerPosX`, `bannerPosY` e `bannerZoom` com validação de limites e remoção de `bio` do payload. |
+| **Alterado** | `src/services/rbac.js` | Descrição da permissão da tela de perfil sem menção a biografia. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.4.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.4.0`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.3.1 (Modelo de Métricas na Ordem da Tela)
 
 | Ação | Arquivo | Descrição da Alteração |

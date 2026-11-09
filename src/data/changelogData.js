@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.3.1';
+export const CURRENT_VERSION = 'v4.4.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.3.1',
+    version: 'v4.4.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.4.0: perfil do usuário com capa ajustável. Agora é possível reposicionar e ampliar a imagem de capa, com pré-visualização ao vivo, e a opção de biografia foi removida.',
+    items: [
+      {
+        icon: Palette,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Ajuste de Enquadramento da Capa',
+        category: 'Perfil',
+        description: 'Ao usar uma imagem de capa por link, é possível arrastar a imagem na pré-visualização, ajustar a posição horizontal e vertical e aplicar zoom de 100% a 300% a partir do ponto escolhido. O botão Restaurar padrão volta ao enquadramento original e a capa do perfil exibe exatamente o que foi configurado.'
+      },
+      {
+        icon: User,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Biografia Removida do Perfil',
+        category: 'Perfil',
+        description: 'O campo Legenda / Bio Profissional foi retirado da tela de perfil e deixou de ser gravado. Os textos já salvos permanecem no banco, mas não são mais exibidos.'
+      }
+    ]
+  },
+  {
+    version: 'v4.3.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.3.1: o modelo de métricas para download passa a seguir a mesma ordem de colunas da tela de lançamento semanal, com Ligações Realizadas e Huggy Iniciados/Finalizados agrupados de forma lógica.',
     items: [
       {
@@ -23,7 +46,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.3.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.3.0: novas métricas nas avaliações semanais. Ligações Realizadas passam a ser lançadas e valem 1 ponto, e o Huggy ganha Iniciados x Finalizados com cálculo do % de aproveitamento (0,5 ponto por 1%). Registros antigos mantêm a pontuação original.',
     items: [
       {

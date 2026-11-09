@@ -45,7 +45,7 @@ export const SYSTEM_MODULES = [
         id: 'my_profile',
         label: 'Meu Perfil',
         group: 'Principal',
-        description: 'Tela de perfil oficial do usuário com foto via PhotoUrl do Firebase, bio, tags de conhecimento em redes, emblemas, horários e canais de contato.'
+        description: 'Tela de perfil oficial do usuário com foto via PhotoUrl do Firebase, capa ajustável, tags de conhecimento em redes, emblemas, horários e canais de contato.'
     },
     {
         id: 'my_dashboard',

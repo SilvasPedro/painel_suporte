@@ -3,6 +3,12 @@ import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { calculatePerformanceScore } from '../utils/scoringCalculations';
 
+const clampNumber = (value, min, max, fallback) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return fallback;
+    return Math.min(max, Math.max(min, Math.round(n)));
+};
+
 /**
  * Atualiza o perfil completo do usuário atual tanto no Firebase Auth (photoURL, displayName)
  * quanto na coleção 'collaborators' do Firestore.
@@ -31,9 +37,12 @@ export const saveUserProfileData = async (user, profileData) => {
         name: profileData.name || user.name || '',
         photoUrl: profileData.photoURL || '',
         photoURL: profileData.photoURL || '',
-        bio: profileData.bio || '',
         bannerColor: profileData.bannerColor || 'carmim',
         bannerUrl: profileData.bannerUrl || '',
+        // Enquadramento da imagem de capa: posição (0-100%) e zoom (100-300%)
+        bannerPosX: clampNumber(profileData.bannerPosX, 0, 100, 50),
+        bannerPosY: clampNumber(profileData.bannerPosY, 0, 100, 50),
+        bannerZoom: clampNumber(profileData.bannerZoom, 100, 300, 100),
         interests: Array.isArray(profileData.interests) ? profileData.interests : [],
         phone: profileData.phone || '',
         ramal: profileData.ramal || profileData.slackOrTeams || '',

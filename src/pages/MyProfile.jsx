@@ -3,7 +3,7 @@ import {
     Camera, Upload, Link as LinkIcon, Check, X, ShieldCheck,
     Trophy, Zap, Star, Rocket, CalendarCheck, Award, Mail,
     Phone, Clock, ExternalLink, Copy, CheckCircle2,
-    Sparkles, Plus, Trash2, Edit3, Loader2, Save,
+    Sparkles, Plus, Trash2, Loader2, Save,
     Headphones, Users, Search,
     ArrowLeft, Eye, ChevronRight, TrendingUp, Palette, Image as ImageIcon
 } from 'lucide-react';
@@ -39,6 +39,22 @@ const BADGE_ICONS = {
     Sparkles
 };
 
+// Imagem de capa com enquadramento: o zoom parte do ponto focal escolhido (posição X/Y)
+const ProfileBannerImage = ({ url, x = 50, y = 50, zoom = 100 }) => (
+    <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-no-repeat"
+        style={{
+            backgroundImage: `url("${url}")`,
+            backgroundPosition: `${x}% ${y}%`,
+            transform: `scale(${zoom / 100})`,
+            transformOrigin: `${x}% ${y}%`
+        }}
+    />
+);
+
+const clampPct = (n, min = 0, max = 100) => Math.min(max, Math.max(min, n));
+
 const getInitialFormData = (u) => {
     const rawShift = u?.shift || 'Manhã I';
     const normShift = normalizeShiftName(rawShift);
@@ -47,9 +63,11 @@ const getInitialFormData = (u) => {
     return {
         name: u?.name || u?.displayName || u?.email?.split('@')[0] || '',
         photoURL: u?.photoURL || u?.photoUrl || '',
-        bio: u?.bio || '',
         bannerColor: u?.bannerColor || 'carmim',
         bannerUrl: u?.bannerUrl || '',
+        bannerPosX: u?.bannerPosX ?? 50,
+        bannerPosY: u?.bannerPosY ?? 50,
+        bannerZoom: u?.bannerZoom ?? 100,
         interests: Array.isArray(u?.interests) && u.interests.length > 0
             ? u.interests
             : ['Atendimento Humanizado', 'Resolução Ágil', 'Automação'],
@@ -146,6 +164,12 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     // Rascunho temporário no modal de customização da capa
     const [bannerColorDraft, setBannerColorDraft] = useState(() => user?.bannerColor || 'carmim');
     const [bannerUrlDraft, setBannerUrlDraft] = useState(() => user?.bannerUrl || '');
+    const [bannerPosDraft, setBannerPosDraft] = useState(() => ({
+        x: user?.bannerPosX ?? 50,
+        y: user?.bannerPosY ?? 50,
+        zoom: user?.bannerZoom ?? 100
+    }));
+    const bannerDragRef = useRef(null); // estado do arrastar na pré-visualização
 
     // Sincroniza se o usuário selecionado mudar
     const prevUserIdRef = useRef(user?.firestoreId || user?.uid || user?.id);
@@ -160,6 +184,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             setPhotoPreview(updated.photoURL);
             setBannerColorDraft(updated.bannerColor || 'carmim');
             setBannerUrlDraft(updated.bannerUrl || '');
+            setBannerPosDraft({ x: updated.bannerPosX, y: updated.bannerPosY, zoom: updated.bannerZoom });
         }
     }, [activeSelectedColab, myAuthUser]);
 
@@ -218,7 +243,34 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         }
         setBannerColorDraft(formData.bannerColor || 'carmim');
         setBannerUrlDraft(formData.bannerUrl || '');
+        setBannerPosDraft({ x: formData.bannerPosX ?? 50, y: formData.bannerPosY ?? 50, zoom: formData.bannerZoom ?? 100 });
         setIsBannerModalOpen(true);
+    };
+
+    // Arrastar a imagem na pré-visualização reposiciona o enquadramento
+    const handleBannerPointerDown = (e) => {
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        bannerDragRef.current = { lastX: e.clientX, lastY: e.clientY };
+    };
+
+    const handleBannerPointerMove = (e) => {
+        const drag = bannerDragRef.current;
+        if (!drag) return;
+        const rect = e.currentTarget.getBoundingClientRect();
+        const dx = e.clientX - drag.lastX;
+        const dy = e.clientY - drag.lastY;
+        drag.lastX = e.clientX;
+        drag.lastY = e.clientY;
+        // Mover a imagem para a direita equivale a reduzir a posição X (e o mesmo no eixo Y)
+        setBannerPosDraft(prev => ({
+            ...prev,
+            x: clampPct(prev.x - (dx / rect.width) * 100),
+            y: clampPct(prev.y - (dy / rect.height) * 100)
+        }));
+    };
+
+    const handleBannerPointerUp = () => {
+        bannerDragRef.current = null;
     };
 
     const handleConfirmBanner = () => {
@@ -230,7 +282,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
         setFormData(prev => ({
             ...prev,
             bannerColor: bannerColorDraft,
-            bannerUrl: cleanUrl
+            bannerUrl: cleanUrl,
+            bannerPosX: bannerPosDraft.x,
+            bannerPosY: bannerPosDraft.y,
+            bannerZoom: bannerPosDraft.zoom
         }));
         setIsBannerModalOpen(false);
         showToast('Capa do perfil selecionada! Clique em "Salvar Alterações" para confirmar.', 'info');
@@ -440,9 +495,16 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 <div className="bg-surface rounded-3xl border border-subtle shadow-sm overflow-hidden relative">
                     {/* Fundo Personalizável (8 Cores ou Imagem HTTPS) com Textura Elegante */}
                     <div 
-                        className={`h-48 sm:h-56 bg-gradient-to-r ${selectedBannerPreset.gradient} p-6 relative flex items-start justify-between bg-cover bg-center transition-all duration-300`}
-                        style={formData.bannerUrl && formData.bannerUrl.startsWith('https://') ? { backgroundImage: `url(${formData.bannerUrl})` } : {}}
+                        className={`h-48 sm:h-56 bg-gradient-to-r ${selectedBannerPreset.gradient} p-6 relative flex items-start justify-between overflow-hidden transition-all duration-300`}
                     >
+                        {formData.bannerUrl && formData.bannerUrl.startsWith('https://') && (
+                            <ProfileBannerImage
+                                url={formData.bannerUrl}
+                                x={formData.bannerPosX ?? 50}
+                                y={formData.bannerPosY ?? 50}
+                                zoom={formData.bannerZoom ?? 100}
+                            />
+                        )}
                         {/* Overlay para contraste quando houver imagem */}
                         {formData.bannerUrl && formData.bannerUrl.startsWith('https://') && (
                             <div className="absolute inset-0 bg-black/40 backdrop-blur-[0.5px]"></div>
@@ -571,7 +633,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             </div>
                         </div>
 
-                        {/* Nome, Email Principal e Legenda/Bio */}
+                        {/* Nome e E-mail Principal */}
                         <div className="space-y-3">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <div>
@@ -599,27 +661,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 <div className="text-xs text-muted-hub sm:text-right font-mono">
                                     <span>ID: {user?.firestoreId || user?.uid || 'USR-001'}</span>
                                 </div>
-                            </div>
-
-                            {/* Campo de Bio / Legenda do Usuário */}
-                            <div className="bg-subtle rounded-2xl p-3.5 border border-subtle focus-within:border-rose-500/50 transition-all">
-                                <label className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider flex items-center justify-between mb-1.5">
-                                    <span className="flex items-center gap-1.5">
-                                        <Edit3 className="w-3.5 h-3.5 text-rose-500" />
-                                        Legenda / Bio Profissional
-                                    </span>
-                                    <span className="text-[10px] text-muted-hub font-mono">
-                                        {formData.bio.length}/180 caracteres
-                                    </span>
-                                </label>
-                                <textarea
-                                    value={formData.bio}
-                                    maxLength={180}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
-                                    placeholder="Ex: Especialista em redes FTTH, diagnóstico ágil e suporte consultivo. Foco em resoluções de primeiro contato com alta satisfação."
-                                    rows={2}
-                                    className="w-full text-xs text-primary-hub bg-transparent border-0 outline-none resize-none leading-relaxed placeholder:text-muted-hub"
-                                />
                             </div>
                         </div>
                     </div>
@@ -1246,7 +1287,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </div>
                                 <div>
                                     <h3 className="text-sm font-bold text-white">Personalizar Capa do Perfil</h3>
-                                    <p className="text-[11px] text-rose-100">Escolha uma das 8 cores ou informe um link HTTPS de imagem</p>
+                                    <p className="text-[11px] text-rose-100">Escolha uma cor ou informe um link HTTPS e ajuste o enquadramento da imagem</p>
                                 </div>
                             </div>
                             <button
@@ -1270,15 +1311,21 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     const hasValidImg = Boolean(bannerUrlDraft && bannerUrlDraft.trim().startsWith('https://'));
                                     return (
                                         <div 
-                                            className={`h-28 rounded-2xl bg-gradient-to-r ${previewPreset.gradient} relative overflow-hidden flex items-end p-3.5 border border-subtle shadow-inner transition-all bg-cover bg-center`}
-                                            style={hasValidImg ? { backgroundImage: `url(${bannerUrlDraft.trim()})` } : {}}
+                                            className={`h-32 rounded-2xl bg-gradient-to-r ${previewPreset.gradient} relative overflow-hidden flex items-end p-3.5 border border-subtle shadow-inner transition-all ${hasValidImg ? 'cursor-grab active:cursor-grabbing touch-none select-none' : ''}`}
+                                            onPointerDown={hasValidImg ? handleBannerPointerDown : undefined}
+                                            onPointerMove={hasValidImg ? handleBannerPointerMove : undefined}
+                                            onPointerUp={handleBannerPointerUp}
+                                            onPointerCancel={handleBannerPointerUp}
                                         >
-                                            <div className="absolute inset-0 bg-black/30"></div>
+                                            {hasValidImg && (
+                                                <ProfileBannerImage url={bannerUrlDraft.trim()} x={bannerPosDraft.x} y={bannerPosDraft.y} zoom={bannerPosDraft.zoom} />
+                                            )}
+                                            <div className="absolute inset-0 bg-black/30 pointer-events-none"></div>
                                             <div className="relative z-10 text-white flex items-center justify-between w-full">
                                                 <div>
                                                     <span className="text-xs font-black drop-shadow-sm">{previewPreset.name}</span>
                                                     {hasValidImg && (
-                                                        <span className="block text-[10px] text-white/90 font-medium">Link de imagem HTTPS ativo</span>
+                                                        <span className="block text-[10px] text-white/90 font-medium">Arraste a imagem para reposicionar</span>
                                                     )}
                                                 </div>
                                                 <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full backdrop-blur-xs font-bold">
@@ -1339,6 +1386,47 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                     Deixe em branco para usar apenas o gradiente de cor selecionado acima.
                                 </p>
                             </div>
+
+                            {/* Ajuste de enquadramento da imagem */}
+                            {bannerUrlDraft.trim().startsWith('https://') && (
+                                <div className="space-y-3 rounded-2xl bg-subtle border border-subtle p-4">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-xs font-bold text-primary-hub">Ajustar imagem</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setBannerPosDraft({ x: 50, y: 50, zoom: 100 })}
+                                            className="text-[11px] font-bold text-rose-600 hover:underline cursor-pointer"
+                                        >
+                                            Restaurar padrão
+                                        </button>
+                                    </div>
+
+                                    {[
+                                        { key: 'zoom', label: 'Zoom', min: 100, max: 300, step: 5, suffix: '%' },
+                                        { key: 'x', label: 'Posição horizontal', min: 0, max: 100, step: 1, suffix: '%' },
+                                        { key: 'y', label: 'Posição vertical', min: 0, max: 100, step: 1, suffix: '%' }
+                                    ].map(ctrl => (
+                                        <div key={ctrl.key} className="flex items-center gap-3">
+                                            <span className="w-32 shrink-0 text-[11px] font-semibold text-secondary-hub">{ctrl.label}</span>
+                                            <input
+                                                type="range"
+                                                min={ctrl.min}
+                                                max={ctrl.max}
+                                                step={ctrl.step}
+                                                value={bannerPosDraft[ctrl.key]}
+                                                onChange={(e) => setBannerPosDraft(prev => ({ ...prev, [ctrl.key]: Number(e.target.value) }))}
+                                                className="flex-1 accent-rose-600 cursor-pointer"
+                                            />
+                                            <span className="w-10 text-right text-[11px] font-mono font-bold text-primary-hub">
+                                                {Math.round(bannerPosDraft[ctrl.key])}{ctrl.suffix}
+                                            </span>
+                                        </div>
+                                    ))}
+                                    <p className="text-[10px] text-muted-hub">
+                                        Dica: arraste a imagem na pré-visualização para posicionar e use o zoom para aproximar.
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         {/* Footer Modal */}

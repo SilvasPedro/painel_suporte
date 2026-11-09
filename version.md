@@ -4,6 +4,24 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.4.0] - 2026-11-09
+
+### 🎯 Destaque Principal
+Perfil do usuário com **capa ajustável**: reposicionar e ampliar a imagem de capa com pré-visualização ao vivo. A opção de **biografia** foi removida.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Ajuste de enquadramento da capa**: para capas com imagem (link HTTPS), é possível arrastar a imagem na pré-visualização, ajustar posição horizontal e vertical (0–100%) e zoom (100–300%), com o zoom partindo do ponto focal escolhido. Botão "Restaurar padrão".
+- Novos campos no perfil (`collaborators`): `bannerPosX`, `bannerPosY` e `bannerZoom`, gravados com limites validados (`clampNumber`). Perfis sem esses valores continuam centralizados e sem zoom.
+- Componente `ProfileBannerImage`, compartilhado entre a capa do perfil e a pré-visualização do modal.
+
+### 🔄 Alterações (Changed)
+- **Biografia removida**: o campo "Legenda / Bio Profissional" saiu da tela e `bio` deixou de ser gravado em `saveUserProfileData`. Textos já salvos permanecem no banco, sem exibição.
+- Descrição da permissão da tela de perfil (RBAC) atualizada, sem menção a biografia.
+
+---
+
 ## [v4.3.1] - 2026-11-09
 
 ### 🔄 Alterações (Changed)
