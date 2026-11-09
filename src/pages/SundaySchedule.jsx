@@ -151,11 +151,11 @@ const SundaySchedule = ({ readOnly = false }) => {
     const monthName = currentDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
 
     if (loading && collaborators.length === 0) {
-        return <div className="flex-1 flex items-center justify-center bg-gray-50 h-full"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
+        return <div className="flex-1 flex items-center justify-center bg-subtle h-full"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
+        <div className="flex-1 p-6 h-full overflow-y-auto bg-subtle flex flex-col">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
                 <div>
                     <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
@@ -169,14 +169,14 @@ const SundaySchedule = ({ readOnly = false }) => {
                 </div>
                 
                 <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="flex items-center bg-gray-100 rounded-lg p-1 border border-gray-200">
-                        <button onClick={handlePrevMonth} className="p-2 hover:bg-white rounded-md transition-colors text-gray-600">
+                    <div className="flex items-center bg-subtle rounded-lg p-1 border border-subtle">
+                        <button onClick={handlePrevMonth} className="p-2 hover:bg-surface rounded-md transition-colors text-secondary-hub">
                             <ChevronLeft className="w-5 h-5" />
                         </button>
-                        <span className="w-40 text-center font-bold text-gray-800 capitalize">
+                        <span className="w-40 text-center font-bold text-primary-hub capitalize">
                             {monthName}
                         </span>
-                        <button onClick={handleNextMonth} className="p-2 hover:bg-white rounded-md transition-colors text-gray-600">
+                        <button onClick={handleNextMonth} className="p-2 hover:bg-surface rounded-md transition-colors text-secondary-hub">
                             <ChevronRight className="w-5 h-5" />
                         </button>
                     </div>
@@ -198,17 +198,17 @@ const SundaySchedule = ({ readOnly = false }) => {
                 {/* LADO ESQUERDO: Colaboradores Disponíveis (Oculto no ReadOnly) */}
                 {!readOnly && (
                     <div 
-                        className="w-full lg:w-72 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden shrink-0"
+                        className="w-full lg:w-72 bg-surface rounded-xl border border-subtle shadow-sm flex flex-col overflow-hidden shrink-0"
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, null)}
                     >
-                        <div className="p-4 border-b border-gray-100 bg-zinc-950 text-white flex items-center gap-2">
+                        <div className="p-4 border-b border-subtle bg-zinc-950 text-white flex items-center gap-2">
                             <Users className="w-5 h-5 text-red-500" />
                             <h3 className="font-bold">Equipe Ativa</h3>
                         </div>
                         
-                        <div className="p-3 overflow-y-auto flex-1 space-y-2 bg-gray-50">
-                            <p className="text-xs text-gray-500 mb-3 text-center">
+                        <div className="p-3 overflow-y-auto flex-1 space-y-2 bg-subtle">
+                            <p className="text-xs text-secondary-hub mb-3 text-center">
                                 Arraste os cards abaixo para os quadros de domingo. Solte aqui para remover.
                             </p>
                             {collaborators.map(colab => (
@@ -217,12 +217,12 @@ const SundaySchedule = ({ readOnly = false }) => {
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, colab, null)}
                                     onDragEnd={handleDragEnd}
-                                    className="bg-white border border-gray-200 p-3 rounded-lg shadow-sm flex items-center gap-3 cursor-grab hover:border-red-300 hover:shadow-md transition-all group"
+                                    className="bg-surface border border-subtle p-3 rounded-lg shadow-sm flex items-center gap-3 cursor-grab hover:border-red-300 hover:shadow-md transition-all group"
                                 >
-                                    <GripVertical className="w-4 h-4 text-gray-300 group-hover:text-red-400 shrink-0" />
+                                    <GripVertical className="w-4 h-4 text-muted-hub group-hover:text-red-400 shrink-0" />
                                     <div className="overflow-hidden">
-                                        <p className="font-bold text-sm text-gray-800 truncate" title={colab.name}>{colab.name}</p>
-                                        <p className="text-[10px] text-gray-500 uppercase">{colab.shift || 'Sem turno'}</p>
+                                        <p className="font-bold text-sm text-primary-hub truncate" title={colab.name}>{colab.name}</p>
+                                        <p className="text-[10px] text-secondary-hub uppercase">{colab.shift || 'Sem turno'}</p>
                                     </div>
                                 </div>
                             ))}
@@ -243,23 +243,23 @@ const SundaySchedule = ({ readOnly = false }) => {
                             return (
                                 <div 
                                     key={dateString} 
-                                    className="w-72 bg-gray-100 rounded-xl border border-gray-200 shadow-inner flex flex-col shrink-0 overflow-hidden"
+                                    className="w-72 bg-subtle rounded-xl border border-subtle shadow-inner flex flex-col shrink-0 overflow-hidden"
                                     onDragOver={!readOnly ? handleDragOver : undefined}
                                     onDrop={!readOnly ? (e) => handleDrop(e, dateString) : undefined}
                                 >
-                                    <div className="p-3 bg-white border-b border-gray-200 flex justify-between items-center">
+                                    <div className="p-3 bg-surface border-b border-subtle flex justify-between items-center">
                                         <div>
-                                            <h3 className="font-black text-gray-900">Domingo</h3>
+                                            <h3 className="font-black text-primary-hub">Domingo</h3>
                                             <p className="text-xs font-bold text-red-600">{formattedDay}</p>
                                         </div>
-                                        <div className="bg-gray-100 text-gray-600 text-xs font-bold px-2 py-1 rounded-md">
+                                        <div className="bg-subtle text-secondary-hub text-xs font-bold px-2 py-1 rounded-md">
                                             {assignedColabs.length} {assignedColabs.length === 1 ? 'pessoa' : 'pessoas'}
                                         </div>
                                     </div>
                                     
                                     <div className="flex-1 p-3 overflow-y-auto space-y-2">
                                         {assignedColabs.length === 0 ? (
-                                            <div className="h-full flex items-center justify-center text-center p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-400 text-sm">
+                                            <div className="h-full flex items-center justify-center text-center p-4 border-2 border-dashed border-strong rounded-xl text-muted-hub text-sm">
                                                 {readOnly ? 'Sem plantonistas' : 'Arraste um colaborador aqui'}
                                             </div>
                                         ) : (
@@ -269,16 +269,16 @@ const SundaySchedule = ({ readOnly = false }) => {
                                                     draggable={!readOnly}
                                                     onDragStart={!readOnly ? (e) => handleDragStart(e, colab, dateString) : undefined}
                                                     onDragEnd={!readOnly ? handleDragEnd : undefined}
-                                                    className={`bg-white border-l-4 border-l-red-500 border-y border-r border-gray-200 p-3 rounded-lg shadow-sm flex justify-between items-center transition-all group ${!readOnly ? 'cursor-grab hover:shadow-md' : 'cursor-default'}`}
+                                                    className={`bg-surface border-l-4 border-l-red-500 border-y border-r border-subtle p-3 rounded-lg shadow-sm flex justify-between items-center transition-all group ${!readOnly ? 'cursor-grab hover:shadow-md' : 'cursor-default'}`}
                                                 >
                                                     <div className="overflow-hidden pr-2">
-                                                        <p className="font-bold text-sm text-gray-800 truncate" title={colab.name}>{colab.name}</p>
-                                                        <p className="text-[10px] text-gray-500 uppercase">{colab.shift || 'Sem turno'}</p>
+                                                        <p className="font-bold text-sm text-primary-hub truncate" title={colab.name}>{colab.name}</p>
+                                                        <p className="text-[10px] text-secondary-hub uppercase">{colab.shift || 'Sem turno'}</p>
                                                     </div>
                                                     {!readOnly && (
                                                         <button 
                                                             onClick={() => removeColab(dateString, colab.id)}
-                                                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                                                            className="p-1.5 text-muted-hub hover:text-red-600 hover:bg-red-50 rounded-md transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                                                             title="Remover do plantão"
                                                         >
                                                             <X className="w-4 h-4" />

@@ -57,7 +57,7 @@ const SHIFT_BADGES = {
     'Tarde II': 'bg-violet-50 text-violet-700 border-violet-200',
     'Noturno': 'bg-amber-50 text-amber-800 border-amber-200',
     'Madrugada': 'bg-indigo-50 text-indigo-700 border-indigo-200',
-    'default': 'bg-gray-50 text-gray-700 border-gray-200'
+    'default': 'bg-subtle text-secondary-hub border-subtle'
 };
 
 const getSundaysInMonth = (year, month) => {
@@ -614,9 +614,9 @@ export const OperationalSchedules = ({
     };
 
     return (
-        <div className="flex-1 flex flex-col h-full bg-gray-50 overflow-hidden">
+        <div className="flex-1 flex flex-col h-full bg-subtle overflow-hidden">
             {/* CABEÇALHO UNIFICADO COM SWITCH DE MODALIDADE */}
-            <div className="bg-white border-b border-gray-200 px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-2xs z-20">
+            <div className="bg-surface border-b border-subtle px-4 sm:px-6 py-3.5 flex flex-wrap items-center justify-between gap-3 shrink-0 shadow-2xs z-20">
                 <div className="flex items-center gap-3">
                     <div>
                         <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
@@ -627,11 +627,11 @@ export const OperationalSchedules = ({
                             <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
                                 {activeTab === 'diaria' ? 'Escala Diária Operacional' : 'Escala de Plantão (Domingos)'}
                             </h1>
-                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-700 border border-gray-200">
+                            <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-subtle text-secondary-hub border border-subtle">
                                 {activeTab === 'diaria' ? 'Horários Fixos Semanais' : `${MONTH_NAMES[sundayMonth]} ${sundayYear}`}
                             </span>
                         </div>
-                        <p className="text-xs text-gray-500 hidden sm:block">
+                        <p className="text-xs text-secondary-hub hidden sm:block">
                             {activeTab === 'diaria'
                                 ? 'Distribuição semanal dos postos de atendimento: Telefonia, Huggy e Apoio'
                                 : 'Escalação dos plantonistas para os finais de semana e feriados'}
@@ -641,14 +641,14 @@ export const OperationalSchedules = ({
 
                 <div className="flex items-center gap-2.5 flex-wrap">
                     {/* Switch de Abas: Escala Diária vs Escala de Plantão */}
-                    <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200 text-xs font-bold">
+                    <div className="flex items-center bg-subtle p-0.5 rounded-xl border border-subtle text-xs font-bold">
                         <button
                             type="button"
                             onClick={() => setActiveTab('diaria')}
                             className={`px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'diaria'
-                                    ? 'bg-white text-gray-900 shadow-xs font-black'
-                                    : 'text-gray-500 hover:text-gray-900'
+                                    ? 'bg-surface text-primary-hub shadow-xs font-black'
+                                    : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                         >
                             <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
@@ -659,8 +659,8 @@ export const OperationalSchedules = ({
                             onClick={() => setActiveTab('plantao')}
                             className={`px-3.5 py-1.5 rounded-lg flex items-center gap-2 transition-all cursor-pointer ${
                                 activeTab === 'plantao'
-                                    ? 'bg-white text-gray-900 shadow-xs font-black'
-                                    : 'text-gray-500 hover:text-gray-900'
+                                    ? 'bg-surface text-primary-hub shadow-xs font-black'
+                                    : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                         >
                             <Calendar className="w-3.5 h-3.5 text-amber-600" />
@@ -671,11 +671,11 @@ export const OperationalSchedules = ({
                     {/* Controles Específicos para Escala de Plantão (Mês anterior / próximo) */}
                     {activeTab === 'plantao' && (
                         <div className="flex items-center gap-1.5">
-                            <div className="flex items-center bg-gray-100 p-0.5 rounded-xl border border-gray-200">
+                            <div className="flex items-center bg-subtle p-0.5 rounded-xl border border-subtle">
                                 <button
                                     type="button"
                                     onClick={() => setCurrentSundayDate(new Date(sundayYear, sundayMonth - 1, 1))}
-                                    className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                                    className="p-1.5 hover:bg-surface rounded-lg text-secondary-hub hover:text-primary-hub transition-colors cursor-pointer"
                                     title="Mês Anterior"
                                     aria-label="Mês Anterior"
                                 >
@@ -689,7 +689,7 @@ export const OperationalSchedules = ({
                                             setCurrentSundayDate(new Date(y, m, 1));
                                         }}
                                         aria-label="Mês e Ano Selecionados"
-                                        className="appearance-none bg-transparent pl-3 pr-6 py-1 text-xs font-black text-gray-800 capitalize cursor-pointer focus:outline-none"
+                                        className="appearance-none bg-transparent pl-3 pr-6 py-1 text-xs font-black text-primary-hub capitalize cursor-pointer focus:outline-none"
                                     >
                                         {[-1, 0, 1].flatMap((yearOffset) => {
                                             const targetYear = new Date().getFullYear() + yearOffset;
@@ -700,12 +700,12 @@ export const OperationalSchedules = ({
                                             ));
                                         })}
                                     </select>
-                                    <ChevronDown className="w-3.5 h-3.5 text-gray-500 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                                    <ChevronDown className="w-3.5 h-3.5 text-secondary-hub absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setCurrentSundayDate(new Date(sundayYear, sundayMonth + 1, 1))}
-                                    className="p-1.5 hover:bg-white rounded-lg text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
+                                    className="p-1.5 hover:bg-surface rounded-lg text-secondary-hub hover:text-primary-hub transition-colors cursor-pointer"
                                     title="Próximo Mês"
                                     aria-label="Próximo Mês"
                                 >
@@ -717,7 +717,7 @@ export const OperationalSchedules = ({
                             <button
                                 type="button"
                                 onClick={() => setCurrentSundayDate(new Date())}
-                                className="px-2.5 py-1.5 text-xs font-bold text-gray-600 hover:text-gray-900 bg-gray-100 hover:bg-white rounded-xl border border-gray-200 transition-all cursor-pointer shadow-2xs hover:shadow-xs"
+                                className="px-2.5 py-1.5 text-xs font-bold text-secondary-hub hover:text-primary-hub bg-subtle hover:bg-surface rounded-xl border border-subtle transition-all cursor-pointer shadow-2xs hover:shadow-xs"
                                 title="Ir para o mês atual"
                                 aria-label="Ir para o mês atual"
                             >
@@ -740,7 +740,7 @@ export const OperationalSchedules = ({
                                 <button
                                     type="button"
                                     onClick={() => csvFileInputRef.current?.click()}
-                                    className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 hover:border-gray-300 shadow-2xs transition-all cursor-pointer active:scale-95"
+                                    className="px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 bg-surface hover:bg-subtle text-secondary-hub border border-subtle hover:border-strong shadow-2xs transition-all cursor-pointer active:scale-95"
                                     title="Importar escala diária a partir de um arquivo .csv (substitui a escala atual)"
                                 >
                                     <Upload className="w-3.5 h-3.5 text-blue-600" />
@@ -749,10 +749,10 @@ export const OperationalSchedules = ({
                                 <button
                                     type="button"
                                     onClick={handleExportCsv}
-                                    className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-600 border border-gray-200 hover:border-gray-300 shadow-2xs transition-all cursor-pointer active:scale-95"
+                                    className="px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 bg-surface hover:bg-subtle text-secondary-hub border border-subtle hover:border-strong shadow-2xs transition-all cursor-pointer active:scale-95"
                                     title="Exportar a escala diária atual em formato CSV"
                                 >
-                                    <Download className="w-3.5 h-3.5 text-gray-500" />
+                                    <Download className="w-3.5 h-3.5 text-secondary-hub" />
                                     <span>Exportar</span>
                                 </button>
                                 <button
@@ -762,7 +762,7 @@ export const OperationalSchedules = ({
                                     className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer ${
                                         isDailyDirty
                                             ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            : 'bg-subtle text-muted-hub cursor-not-allowed border border-subtle'
                                     }`}
                                 >
                                     {savingDaily ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -777,7 +777,7 @@ export const OperationalSchedules = ({
                                 className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer ${
                                     isSundayDirty
                                         ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
-                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                        : 'bg-subtle text-muted-hub cursor-not-allowed border border-subtle'
                                 }`}
                             >
                                 {savingSunday ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
@@ -798,11 +798,11 @@ export const OperationalSchedules = ({
                             if (activeTab === 'diaria') handleDropDaily(e, null, null);
                             else handleDropSunday(e, null);
                         }}
-                        className="w-64 sm:w-72 bg-white border-r border-gray-200 flex flex-col shrink-0 overflow-hidden shadow-xs z-10"
+                        className="w-64 sm:w-72 bg-surface border-r border-subtle flex flex-col shrink-0 overflow-hidden shadow-xs z-10"
                     >
-                        <div className="p-3.5 border-b border-gray-100 space-y-2.5 bg-gray-50/50">
+                        <div className="p-3.5 border-b border-subtle space-y-2.5 bg-gray-50/50">
                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-black uppercase tracking-wider text-gray-700 flex items-center gap-1.5">
+                                <span className="text-xs font-black uppercase tracking-wider text-secondary-hub flex items-center gap-1.5">
                                     <Users className="w-3.5 h-3.5 text-red-600" />
                                     Equipe Disponível ({collaborators.length})
                                 </span>
@@ -810,13 +810,13 @@ export const OperationalSchedules = ({
 
                             {/* Campo de Busca */}
                             <div className="relative">
-                                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-hub" />
                                 <input
                                     type="text"
                                     value={searchColab}
                                     onChange={(e) => setSearchColab(e.target.value)}
                                     placeholder="Buscar pelo nome..."
-                                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 font-medium"
+                                    className="w-full pl-8 pr-3 py-1.5 text-xs bg-surface border border-subtle rounded-lg focus:outline-none focus:ring-1 focus:ring-red-500 font-medium"
                                 />
                             </div>
 
@@ -824,7 +824,7 @@ export const OperationalSchedules = ({
                             <select
                                 value={shiftFilter}
                                 onChange={(e) => setShiftFilter(e.target.value)}
-                                className="w-full py-1 px-2 text-xs bg-white border border-gray-200 rounded-lg text-gray-700 font-semibold focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
+                                className="w-full py-1 px-2 text-xs bg-surface border border-subtle rounded-lg text-secondary-hub font-semibold focus:outline-none focus:ring-1 focus:ring-red-500 cursor-pointer"
                             >
                                 <option value="all">Todos os Turnos</option>
                                 <option value="Manhã I">Manhã I</option>
@@ -839,7 +839,7 @@ export const OperationalSchedules = ({
                         {/* Lista de Colaboradores Arrastáveis */}
                         <div className="flex-1 overflow-y-auto p-2 space-y-1.5 scrollbar-thin">
                             {filteredColabs.length === 0 ? (
-                                <div className="p-6 text-center text-xs text-gray-400">
+                                <div className="p-6 text-center text-xs text-muted-hub">
                                     Nenhum colaborador encontrado
                                 </div>
                             ) : (
@@ -849,10 +849,10 @@ export const OperationalSchedules = ({
                                         draggable={!readOnly}
                                         onDragStart={(e) => handleDragStart(e, colab, { type: activeTab, colabId: colab.id })}
                                         onDragEnd={handleDragEnd}
-                                        className="p-2 bg-white hover:bg-red-50/40 rounded-xl border border-gray-200 hover:border-red-300 shadow-2xs cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-2 group select-none"
+                                        className="p-2 bg-surface hover:bg-red-50/40 rounded-xl border border-subtle hover:border-red-300 shadow-2xs cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-2 group select-none"
                                     >
                                         <div className="flex items-center gap-2 min-w-0">
-                                            <GripVertical className="w-3.5 h-3.5 text-gray-300 group-hover:text-red-500 shrink-0" />
+                                            <GripVertical className="w-3.5 h-3.5 text-muted-hub group-hover:text-red-500 shrink-0" />
                                             <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0 overflow-hidden border border-red-200">
                                                 {colab.photoURL ? (
                                                     <img src={colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
@@ -861,7 +861,7 @@ export const OperationalSchedules = ({
                                                 )}
                                             </div>
                                             <div className="min-w-0">
-                                                <p className="text-xs font-bold text-gray-800 truncate leading-tight group-hover:text-red-700">
+                                                <p className="text-xs font-bold text-primary-hub truncate leading-tight group-hover:text-red-700">
                                                     {colab.name}
                                                 </p>
                                                 <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded border ${SHIFT_BADGES[colab.shift] || SHIFT_BADGES.default}`}>
@@ -874,14 +874,14 @@ export const OperationalSchedules = ({
                             )}
                         </div>
 
-                        <div className="p-2 border-t border-gray-100 bg-gray-50/80 text-[11px] text-gray-400 text-center select-none">
+                        <div className="p-2 border-t border-subtle bg-subtle text-[11px] text-muted-hub text-center select-none">
                             💡 Arraste para o quadro ao lado ou solte aqui para remover
                         </div>
                     </aside>
                 )}
 
                 {/* 2. ÁREA DE QUADROS (KANBAN DA ESCALA ATIVA) */}
-                <main className="flex-1 overflow-x-auto p-4 sm:p-6 bg-gray-50 flex flex-col">
+                <main className="flex-1 overflow-x-auto p-4 sm:p-6 bg-subtle flex flex-col">
                     {activeTab === 'diaria' ? (
                         /* ======================================================== */
                         /* MODALIDADE 1: ESCALA DIÁRIA (FIXA DE SEGUNDA A SÁBADO)   */
@@ -889,14 +889,14 @@ export const OperationalSchedules = ({
                         loadingDaily ? (
                             <div className="flex-1 flex flex-col items-center justify-center p-12">
                                 <Loader2 className="w-8 h-8 text-blue-600 animate-spin mb-3" />
-                                <span className="text-xs font-bold text-gray-500">Carregando escala diária...</span>
+                                <span className="text-xs font-bold text-secondary-hub">Carregando escala diária...</span>
                             </div>
                         ) : (
                             <div className="flex flex-col">
                                 {/* BARRA DE ATALHOS: EXPANDIR TUDO / RECOLHER TUDO */}
-                                <div className="flex items-center justify-between flex-wrap gap-2.5 mb-4 bg-white p-3 rounded-2xl border border-gray-200 shadow-2xs">
+                                <div className="flex items-center justify-between flex-wrap gap-2.5 mb-4 bg-surface p-3 rounded-2xl border border-subtle shadow-2xs">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-gray-500">Postos de Trabalho:</span>
+                                        <span className="text-xs font-bold text-secondary-hub">Postos de Trabalho:</span>
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {ROLES.map(r => (
                                                 <span key={r.key} className={`text-[11px] font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1.5 ${r.badge} border border-current/10`}>
@@ -910,7 +910,7 @@ export const OperationalSchedules = ({
                                         <button
                                             type="button"
                                             onClick={handleExpandAllRoles}
-                                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-subtle hover:bg-subtle text-secondary-hub border border-subtle hover:border-strong flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
                                             title="Expandir todas as abas de Telefonia, Huggy e Apoio"
                                         >
                                             <ChevronsUpDown className="w-3.5 h-3.5 text-blue-600" />
@@ -919,10 +919,10 @@ export const OperationalSchedules = ({
                                         <button
                                             type="button"
                                             onClick={handleCollapseAllRoles}
-                                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-200 hover:border-gray-300 flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-subtle hover:bg-subtle text-secondary-hub border border-subtle hover:border-strong flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
                                             title="Recolher todas as abas"
                                         >
-                                            <Minimize2 className="w-3.5 h-3.5 text-gray-600" />
+                                            <Minimize2 className="w-3.5 h-3.5 text-secondary-hub" />
                                             <span>Recolher Tudo</span>
                                         </button>
                                     </div>
@@ -936,15 +936,15 @@ export const OperationalSchedules = ({
                                         return (
                                             <div
                                                 key={day.id}
-                                                className="w-72 sm:w-80 bg-white rounded-2xl border border-gray-200 shadow-sm flex flex-col shrink-0 overflow-hidden"
+                                                className="w-72 sm:w-80 bg-surface rounded-2xl border border-subtle shadow-sm flex flex-col shrink-0 overflow-hidden"
                                             >
                                                 {/* Cabeçalho do Dia */}
-                                                <div className="p-3.5 bg-gray-50/80 border-b border-gray-200 flex items-center justify-between">
+                                                <div className="p-3.5 bg-subtle border-b border-subtle flex items-center justify-between">
                                                     <div>
-                                                        <h3 className="font-black text-sm text-gray-900 tracking-tight">
+                                                        <h3 className="font-black text-sm text-primary-hub tracking-tight">
                                                             {day.label}
                                                         </h3>
-                                                        <span className="text-[11px] text-gray-400 font-medium">
+                                                        <span className="text-[11px] text-muted-hub font-medium">
                                                             Postos operacionais fixos
                                                         </span>
                                                     </div>
@@ -967,7 +967,7 @@ export const OperationalSchedules = ({
                                                                 onDragOver={(e) => handleDragOver(e, targetKey)}
                                                                 onDrop={(e) => handleDropDaily(e, day.id, role.key)}
                                                                 className={`rounded-2xl border transition-all ${role.bg} ${role.border} ${
-                                                                    isHighlighted ? 'ring-2 ring-blue-500 scale-[0.99] bg-white' : ''
+                                                                    isHighlighted ? 'ring-2 ring-blue-500 scale-[0.99] bg-surface' : ''
                                                                 } p-2.5 flex flex-col shadow-2xs`}
                                                             >
                                                                 {/* Cabeçalho do Posto com Ação de Recolher/Expandir */}
@@ -977,7 +977,7 @@ export const OperationalSchedules = ({
                                                                     title={isCollapsed ? `Clique para expandir ${role.label}` : `Clique para recolher ${role.label}`}
                                                                 >
                                                                     <div className="flex items-center gap-1.5 min-w-0">
-                                                                        <div className="p-1 rounded-lg bg-white/70 shadow-2xs group-hover/role:bg-white transition-colors">
+                                                                        <div className="p-1 rounded-lg bg-white/70 shadow-2xs group-hover/role:bg-surface transition-colors">
                                                                             {role.icon}
                                                                         </div>
                                                                         <span className="text-xs font-black uppercase tracking-wider truncate">
@@ -990,7 +990,7 @@ export const OperationalSchedules = ({
                                                                         <span className={`text-xs font-black px-2.5 py-0.5 rounded-full transition-all flex items-center gap-1 shadow-2xs ${
                                                                             assigned.length > 0 
                                                                                 ? `${role.badge} border border-current/20 scale-105` 
-                                                                                : 'bg-white/80 text-gray-400 border border-gray-200'
+                                                                                : 'bg-white/80 text-muted-hub border border-subtle'
                                                                         }`}>
                                                                             <span>{assigned.length}</span>
                                                                             <span className="text-[10px] font-bold opacity-80">
@@ -1015,37 +1015,37 @@ export const OperationalSchedules = ({
                                                                         className="mt-2 cursor-pointer"
                                                                     >
                                                                         {assigned.length > 0 ? (
-                                                                            <div className="bg-white/85 rounded-xl p-2 border border-gray-200/70 hover:bg-white hover:border-gray-300 transition-all">
-                                                                                <div className="flex items-center justify-between gap-1 text-[11px] text-gray-700">
+                                                                            <div className="bg-white/85 rounded-xl p-2 border border-gray-200/70 hover:bg-surface hover:border-strong transition-all">
+                                                                                <div className="flex items-center justify-between gap-1 text-[11px] text-secondary-hub">
                                                                                     <div className="flex items-center gap-1.5 truncate">
                                                                                         {/* Mini avatares */}
                                                                                         <div className="flex -space-x-1.5 shrink-0 overflow-hidden">
                                                                                             {assigned.slice(0, 4).map(c => (
                                                                                                 <div 
                                                                                                     key={c.id} 
-                                                                                                    className="w-5 h-5 rounded-full bg-gray-200 border border-white text-[9px] font-bold text-gray-700 flex items-center justify-center shrink-0"
+                                                                                                    className="w-5 h-5 rounded-full bg-gray-200 border border-white text-[9px] font-bold text-secondary-hub flex items-center justify-center shrink-0"
                                                                                                     title={c.name}
                                                                                                 >
                                                                                                     {c.name.charAt(0).toUpperCase()}
                                                                                                 </div>
                                                                                             ))}
                                                                                             {assigned.length > 4 && (
-                                                                                                <div className="w-5 h-5 rounded-full bg-gray-100 border border-white text-[8px] font-bold text-gray-500 flex items-center justify-center shrink-0">
+                                                                                                <div className="w-5 h-5 rounded-full bg-subtle border border-white text-[8px] font-bold text-secondary-hub flex items-center justify-center shrink-0">
                                                                                                     +{assigned.length - 4}
                                                                                                 </div>
                                                                                             )}
                                                                                         </div>
-                                                                                        <span className="truncate font-semibold text-gray-800 text-[11px]">
+                                                                                        <span className="truncate font-semibold text-primary-hub text-[11px]">
                                                                                             {assigned.map(c => c.name.split(' ')[0]).join(', ')}
                                                                                         </span>
                                                                                     </div>
-                                                                                    <span className="text-[10px] text-gray-400 font-medium shrink-0 ml-1">
+                                                                                    <span className="text-[10px] text-muted-hub font-medium shrink-0 ml-1">
                                                                                         Expandir ▾
                                                                                     </span>
                                                                                 </div>
                                                                             </div>
                                                                         ) : (
-                                                                            <div className="h-7 flex items-center justify-center border border-dashed border-gray-300/80 rounded-xl text-gray-400 text-[10px] font-medium bg-white/30 select-none">
+                                                                            <div className="h-7 flex items-center justify-center border border-dashed border-gray-300/80 rounded-xl text-muted-hub text-[10px] font-medium bg-white/30 select-none">
                                                                                 {readOnly ? 'Sem operadores' : 'Nenhum operador (solte aqui)'}
                                                                             </div>
                                                                         )}
@@ -1054,7 +1054,7 @@ export const OperationalSchedules = ({
                                                                     /* Quando Expandido: Lista detalhada completa com drag e remoção */
                                                                     <div className="mt-2.5 space-y-1.5 min-h-[46px]">
                                                                         {assigned.length === 0 ? (
-                                                                            <div className="h-11 flex items-center justify-center border border-dashed border-gray-300 rounded-xl text-gray-400 text-xs font-medium bg-white/40 select-none">
+                                                                            <div className="h-11 flex items-center justify-center border border-dashed border-strong rounded-xl text-muted-hub text-xs font-medium bg-white/40 select-none">
                                                                                 {readOnly ? 'Sem operadores' : 'Arraste colaboradores aqui'}
                                                                             </div>
                                                                         ) : (
@@ -1064,17 +1064,17 @@ export const OperationalSchedules = ({
                                                                                     draggable={!readOnly}
                                                                                     onDragStart={(e) => handleDragStart(e, colab, { type: 'daily', dayId: day.id, roleKey: role.key })}
                                                                                     onDragEnd={handleDragEnd}
-                                                                                    className="bg-white border border-gray-200 p-2 rounded-xl shadow-2xs flex items-center justify-between gap-2 transition-all group select-none hover:border-gray-300 cursor-grab active:cursor-grabbing"
+                                                                                    className="bg-surface border border-subtle p-2 rounded-xl shadow-2xs flex items-center justify-between gap-2 transition-all group select-none hover:border-strong cursor-grab active:cursor-grabbing"
                                                                                 >
                                                                                     <div className="flex items-center gap-2 min-w-0">
-                                                                                        <div className="w-6 h-6 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                                                                        <div className="w-6 h-6 rounded-lg bg-subtle text-secondary-hub font-bold text-xs flex items-center justify-center shrink-0">
                                                                                             {colab.name.charAt(0).toUpperCase()}
                                                                                         </div>
                                                                                         <div className="min-w-0">
-                                                                                            <p className="text-xs font-bold text-gray-900 truncate">
+                                                                                            <p className="text-xs font-bold text-primary-hub truncate">
                                                                                                 {colab.name}
                                                                                             </p>
-                                                                                            <span className="text-[10px] text-gray-400">
+                                                                                            <span className="text-[10px] text-muted-hub">
                                                                                                 {colab.shift}
                                                                                             </span>
                                                                                         </div>
@@ -1087,7 +1087,7 @@ export const OperationalSchedules = ({
                                                                                                 e.stopPropagation();
                                                                                                 handleRemoveDaily(day.id, role.key, colab.id);
                                                                                             }}
-                                                                                            className="text-gray-300 hover:text-red-600 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
+                                                                                            className="text-muted-hub hover:text-red-600 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
                                                                                             title={`Remover ${colab.name}`}
                                                                                         >
                                                                                             <X className="w-3.5 h-3.5" />
@@ -1115,7 +1115,7 @@ export const OperationalSchedules = ({
                         loadingSunday ? (
                             <div className="flex-1 flex flex-col items-center justify-center p-12">
                                 <Loader2 className="w-8 h-8 text-amber-600 animate-spin mb-3" />
-                                <span className="text-xs font-bold text-gray-500">Carregando escala de plantão...</span>
+                                <span className="text-xs font-bold text-secondary-hub">Carregando escala de plantão...</span>
                             </div>
                         ) : (
                             <div className="flex gap-4 pb-4 items-start min-w-max">
@@ -1130,21 +1130,21 @@ export const OperationalSchedules = ({
                                             key={dateString}
                                             onDragOver={(e) => handleDragOver(e, dateString)}
                                             onDrop={(e) => handleDropSunday(e, dateString)}
-                                            className={`w-72 sm:w-80 bg-white rounded-2xl border shadow-sm flex flex-col shrink-0 overflow-hidden transition-all ${
-                                                isHighlighted ? 'border-red-500 ring-2 ring-red-400/40 bg-red-50/20' : 'border-gray-200'
+                                            className={`w-72 sm:w-80 bg-surface rounded-2xl border shadow-sm flex flex-col shrink-0 overflow-hidden transition-all ${
+                                                isHighlighted ? 'border-red-500 ring-2 ring-red-400/40 bg-red-50/20' : 'border-subtle'
                                             }`}
                                         >
                                             {/* Cabeçalho do Domingo */}
-                                            <div className="p-3.5 bg-gray-50/80 border-b border-gray-200 flex items-center justify-between">
+                                            <div className="p-3.5 bg-subtle border-b border-subtle flex items-center justify-between">
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-8 h-8 rounded-xl bg-red-100 text-red-700 font-black text-xs flex items-center justify-center border border-red-200 font-mono">
                                                         DOM
                                                     </span>
                                                     <div>
-                                                        <h3 className="font-black text-sm text-gray-900 tracking-tight">
+                                                        <h3 className="font-black text-sm text-primary-hub tracking-tight">
                                                             Domingo • {formattedDay}
                                                         </h3>
-                                                        <span className="text-[11px] text-gray-400 font-mono">
+                                                        <span className="text-[11px] text-muted-hub font-mono">
                                                             {dateString}
                                                         </span>
                                                     </div>
@@ -1162,13 +1162,13 @@ export const OperationalSchedules = ({
                                             {/* Lista de Plantonistas */}
                                             <div className="p-3 space-y-2 min-h-[160px]">
                                                 {assigned.length === 0 ? (
-                                                    <div className="h-28 flex flex-col items-center justify-center border-2 border-dashed border-gray-200 rounded-xl text-center p-3 select-none">
-                                                        <AlertCircle className="w-5 h-5 text-gray-300 mb-1" />
-                                                        <span className="text-xs font-bold text-gray-400">
+                                                    <div className="h-28 flex flex-col items-center justify-center border-2 border-dashed border-subtle rounded-xl text-center p-3 select-none">
+                                                        <AlertCircle className="w-5 h-5 text-muted-hub mb-1" />
+                                                        <span className="text-xs font-bold text-muted-hub">
                                                             {readOnly ? 'Sem plantonistas' : 'Nenhum plantonista escalado'}
                                                         </span>
                                                         {!readOnly && (
-                                                            <span className="text-[10px] text-gray-400 mt-0.5">
+                                                            <span className="text-[10px] text-muted-hub mt-0.5">
                                                                 Arraste colaboradores aqui
                                                             </span>
                                                         )}
@@ -1180,14 +1180,14 @@ export const OperationalSchedules = ({
                                                             draggable={!readOnly}
                                                             onDragStart={(e) => handleDragStart(e, colab, { type: 'plantao', dateString })}
                                                             onDragEnd={handleDragEnd}
-                                                            className="p-2.5 rounded-xl bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50/20 shadow-2xs flex items-center justify-between gap-2 transition-all group select-none cursor-grab active:cursor-grabbing border-l-4 border-l-red-500"
+                                                            className="p-2.5 rounded-xl bg-surface border border-subtle hover:border-red-300 hover:bg-red-50/20 shadow-2xs flex items-center justify-between gap-2 transition-all group select-none cursor-grab active:cursor-grabbing border-l-4 border-l-red-500"
                                                         >
                                                             <div className="flex items-center gap-2.5 min-w-0">
                                                                 <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0">
                                                                     {colab.name.charAt(0).toUpperCase()}
                                                                 </div>
                                                                 <div className="min-w-0">
-                                                                    <p className="text-xs font-bold text-gray-900 truncate">
+                                                                    <p className="text-xs font-bold text-primary-hub truncate">
                                                                         {colab.name}
                                                                     </p>
                                                                     <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${SHIFT_BADGES[colab.shift] || SHIFT_BADGES.default}`}>
@@ -1200,7 +1200,7 @@ export const OperationalSchedules = ({
                                                                 <button
                                                                     type="button"
                                                                     onClick={() => handleRemoveSunday(dateString, colab.id)}
-                                                                    className="text-gray-300 hover:text-red-600 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
+                                                                    className="text-muted-hub hover:text-red-600 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shrink-0"
                                                                     title={`Remover ${colab.name}`}
                                                                 >
                                                                     <X className="w-3.5 h-3.5" />

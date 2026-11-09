@@ -34,7 +34,7 @@ const ExtensionsBalloon = () => {
     return (
         <div className="fixed bottom-6 right-6 z-50">
             {isOpen && (
-                <div className="absolute bottom-16 right-0 mb-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
+                <div className="absolute bottom-16 right-0 mb-2 w-80 bg-surface rounded-xl shadow-2xl border border-subtle overflow-hidden animate-in slide-in-from-bottom-4 duration-200">
                     <div className="bg-zinc-950 p-4 text-white flex justify-between items-center shrink-0">
                         <div className="flex items-center gap-2">
                             <Phone className="w-4 h-4 text-red-500" />
@@ -47,32 +47,32 @@ const ExtensionsBalloon = () => {
                     <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4 text-sm">
                         
                         <div>
-                            <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2 border-b pb-1">Uso Geral</h4>
+                            <h4 className="font-bold text-xs text-secondary-hub uppercase tracking-widest mb-2 border-b pb-1">Uso Geral</h4>
                             <ul className="space-y-1">
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Suporte</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">20</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Financeiro</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">21</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Comercial</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">22</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Torre de Serviços</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">25</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Retenção</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">28</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Cobrança</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">32</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Auto-Desbloqueio</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">5002</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Suporte</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">20</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Financeiro</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">21</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Comercial</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">22</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Torre de Serviços</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">25</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Retenção</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">28</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Cobrança</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">32</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Auto-Desbloqueio</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">5002</strong></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2 border-b pb-1">Feriados</h4>
+                            <h4 className="font-bold text-xs text-secondary-hub uppercase tracking-widest mb-2 border-b pb-1">Feriados</h4>
                             <ul className="space-y-1">
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Suporte Feriado</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">27</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Financeiro Feriado</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">34</strong></li>
-                                <li className="flex justify-between items-center"><span className="text-gray-700">Comercial Feriado</span> <strong className="text-gray-900 bg-gray-100 px-2 py-0.5 rounded">30</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Suporte Feriado</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">27</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Financeiro Feriado</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">34</strong></li>
+                                <li className="flex justify-between items-center"><span className="text-secondary-hub">Comercial Feriado</span> <strong className="text-primary-hub bg-subtle px-2 py-0.5 rounded">30</strong></li>
                             </ul>
                         </div>
 
                         <div>
-                            <h4 className="font-bold text-xs text-gray-500 uppercase tracking-widest mb-2 border-b pb-1">Transferências</h4>
+                            <h4 className="font-bold text-xs text-secondary-hub uppercase tracking-widest mb-2 border-b pb-1">Transferências</h4>
                             <ul className="space-y-1">
-                                <li className="text-gray-700"><strong className="text-red-600 text-base">##</strong> - Transferência Direta</li>
-                                <li className="text-gray-700"><strong className="text-red-600 text-base">**</strong> - Transferência Assistida</li>
+                                <li className="text-secondary-hub"><strong className="text-red-600 text-base">##</strong> - Transferência Direta</li>
+                                <li className="text-secondary-hub"><strong className="text-red-600 text-base">**</strong> - Transferência Assistida</li>
                             </ul>
                         </div>
 
@@ -174,7 +174,7 @@ const CollaboratorDashboard = ({ currentUserId }) => {
     };
 
     return (
-        <div className="h-screen bg-gray-50 flex overflow-hidden">
+        <div className="h-screen bg-subtle flex overflow-hidden">
             <aside className="w-64 bg-zinc-950 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800">
                 <div className="p-6 flex items-center gap-3 border-b border-zinc-800 shrink-0">
                     <div className="w-10 h-10 rounded-xl bg-zinc-900 border border-zinc-800/80 flex items-center justify-center shrink-0 p-1.5 shadow-2xs">
@@ -486,22 +486,22 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                 </div>
             )}
 
-            <main className="flex-1 flex flex-col overflow-hidden bg-gray-50 relative">
+            <main className="flex-1 flex flex-col overflow-hidden bg-subtle relative">
                 {/* Barra de Topo com Seletor Rápido de Tema (z-50 para sobrepor cabeçalhos sticky de tabelas) */}
-                <header className="h-14 border-b border-gray-200 bg-white px-4 sm:px-6 flex items-center justify-between shrink-0 z-50 relative shadow-2xs">
+                <header className="h-14 border-b border-subtle bg-surface px-4 sm:px-6 flex items-center justify-between shrink-0 z-50 relative shadow-2xs">
                     <div className="flex items-center gap-3 min-w-0">
                         <button 
                             type="button"
                             onClick={() => setIsMobileMenuOpen(true)} 
-                            className="p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 md:hidden transition-colors cursor-pointer shrink-0" 
+                            className="p-2 rounded-lg text-secondary-hub hover:text-primary-hub hover:bg-subtle md:hidden transition-colors cursor-pointer shrink-0" 
                             title="Abrir Menu de Navegação"
                         >
                             <Menu className="w-5 h-5" />
                         </button>
-                        <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 min-w-0">
-                            <span className="text-gray-400 hidden sm:inline">HubDesk</span>
-                            <span className="text-gray-300 hidden sm:inline">/</span>
-                            <span className="text-gray-900 font-bold truncate">
+                        <div className="flex items-center gap-2 text-xs font-semibold text-secondary-hub min-w-0">
+                            <span className="text-muted-hub hidden sm:inline">HubDesk</span>
+                            <span className="text-muted-hub hidden sm:inline">/</span>
+                            <span className="text-primary-hub font-bold truncate">
                                 {currentTabLabel}
                             </span>
                         </div>

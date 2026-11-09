@@ -4,6 +4,22 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.2.1 (Otimização Fase 2 e Migração para Tokens de Tema)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.2.0` para `4.2.1`. |
+| **Alterado** | `src/pages/MyProfile.jsx` | Auditorias QA consultadas apenas do colaborador exibido e remoção da leitura de `third_party_audits`. |
+| **Alterado** | `src/pages/ThirdPartyAudits.jsx` | Importação CSV com `writeBatch` e operadores deduplicados; tokens de tema. |
+| **Alterado** | `src/pages/DataManager.jsx`, `Rankings.jsx`, `SectorKPIs.jsx`, `OperationalSchedules.jsx`, `DailySchedule.jsx`, `SundaySchedule.jsx`, `CollaboratorDashboard.jsx` | Migração de cores fixas para tokens de tema. |
+| **Alterado** | `src/components/collaborators/ReportDashboardModal.jsx`, `EditCollaboratorModal.jsx`, `CreateCollaboratorModal.jsx`, `FeedbackModal.jsx` | Migração de cores fixas para tokens de tema. |
+| **Alterado** | `src/components/settings/QaProcessModal.jsx`, `QaProcessPreviewModal.jsx`, `src/components/FloatingExtensions.jsx`, `src/components/ChangePasswordModal.jsx` | Migração de cores fixas para tokens de tema. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.2.1` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.2.1`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.2.0 (Otimização de Leituras do Firestore)
 
 | Ação | Arquivo | Descrição da Alteração |

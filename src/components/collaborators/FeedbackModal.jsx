@@ -175,7 +175,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-3 sm:p-5 z-[80] backdrop-blur-xs overflow-y-auto">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden my-6 border border-gray-100 animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+            <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden my-6 border border-subtle animate-in fade-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
                 
                 {/* Header do Modal */}
                 <div className="p-5 bg-gradient-to-r from-red-600 via-red-700 to-red-600 text-white flex justify-between items-center shrink-0 shadow-sm">
@@ -206,16 +206,16 @@ export const FeedbackModal = ({ colab, onClose }) => {
                 </div>
 
                 {/* Conteúdo com Scroll */}
-                <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 space-y-5 bg-white">
+                <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-5 sm:p-6 space-y-5 bg-surface">
                     
                     {/* 1. TIPO DE FEEDBACK */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <label className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
                                 <Sparkles className="w-3.5 h-3.5 text-red-600" />
                                 1. Tipo de Feedback <span className="text-red-500">*</span>
                             </label>
-                            <span className="text-[11px] text-gray-400 font-medium">Selecione uma categoria</span>
+                            <span className="text-[11px] text-muted-hub font-medium">Selecione uma categoria</span>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                             {FEEDBACK_TYPES.map(t => {
@@ -229,11 +229,11 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         className={`p-3 rounded-xl border flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
                                             isSelected 
                                                 ? t.activeRing
-                                                : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100/80 text-gray-700'
+                                                : 'border-subtle bg-gray-50/50 hover:bg-subtle text-secondary-hub'
                                         }`}
                                     >
                                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                                            isSelected ? 'bg-white shadow-2xs' : 'bg-gray-200/60'
+                                            isSelected ? 'bg-surface shadow-2xs' : 'bg-gray-200/60'
                                         }`}>
                                             <Icon className="w-4 h-4" />
                                         </div>
@@ -247,11 +247,11 @@ export const FeedbackModal = ({ colab, onClose }) => {
                     {/* 2. CANAL / MEIO DE OBSERVAÇÃO */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
-                                <Monitor className="w-3.5 h-3.5 text-gray-600" />
+                            <label className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
+                                <Monitor className="w-3.5 h-3.5 text-secondary-hub" />
                                 2. Canal / Meio de Observação <span className="text-red-500">*</span>
                             </label>
-                            <span className="text-[11px] text-gray-400 font-medium">Onde foi observado</span>
+                            <span className="text-[11px] text-muted-hub font-medium">Onde foi observado</span>
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {METHODS.map(m => {
@@ -265,7 +265,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         className={`p-2.5 rounded-xl border flex items-center justify-center gap-2 transition-all cursor-pointer ${
                                             isSelected 
                                                 ? 'border-zinc-950 bg-zinc-950 text-white font-bold shadow-xs' 
-                                                : 'border-gray-200 bg-gray-50/50 hover:bg-gray-100/80 text-gray-700'
+                                                : 'border-subtle bg-gray-50/50 hover:bg-subtle text-secondary-hub'
                                         }`}
                                     >
                                         <Icon className="w-4 h-4 shrink-0" />
@@ -280,12 +280,12 @@ export const FeedbackModal = ({ colab, onClose }) => {
                     <div className={`p-4 rounded-xl border transition-all space-y-3 ${
                         hasProtocol === null 
                             ? 'border-amber-300 bg-amber-50/40' 
-                            : 'border-gray-200 bg-gray-50/50'
+                            : 'border-subtle bg-gray-50/50'
                     }`}>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-bold text-gray-800 block">
+                                    <span className="text-xs font-bold text-primary-hub block">
                                         Possui Protocolo ou ID? <span className="text-red-500">*</span>
                                     </span>
                                     {hasProtocol === null && (
@@ -294,7 +294,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         </span>
                                     )}
                                 </div>
-                                <span className="text-[11px] text-gray-500 block mt-0.5">
+                                <span className="text-[11px] text-secondary-hub block mt-0.5">
                                     Ative caso o apontamento esteja atrelado a um chamado ou protocolo de atendimento.
                                 </span>
                             </div>
@@ -307,7 +307,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                         hasProtocol === false
                                             ? 'bg-zinc-900 text-white shadow-xs'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                            : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                                     }`}
                                 >
                                     Não
@@ -319,7 +319,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                     className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                         hasProtocol === true
                                             ? 'bg-red-600 text-white shadow-xs'
-                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                            : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                                     }`}
                                 >
                                     Sim
@@ -329,8 +329,8 @@ export const FeedbackModal = ({ colab, onClose }) => {
 
                         {/* Campo condicional que abre se Sim */}
                         {hasProtocol && (
-                            <div className="pt-2 border-t border-gray-200/80 animate-in fade-in slide-in-from-top-1 duration-150">
-                                <label className="block text-xs font-bold text-gray-700 mb-1.5 flex items-center gap-1.5">
+                            <div className="pt-2 border-t border-subtle animate-in fade-in slide-in-from-top-1 duration-150">
+                                <label className="block text-xs font-bold text-secondary-hub mb-1.5 flex items-center gap-1.5">
                                     <Hash className="w-3.5 h-3.5 text-red-600" />
                                     Informe o Protocolo ou ID <span className="text-red-500">*</span>
                                 </label>
@@ -339,7 +339,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                     placeholder="Ex: 2610.9842 ou ID #1042" 
                                     value={protocol}
                                     onChange={e => setProtocol(e.target.value)}
-                                    className="w-full px-3.5 py-2.5 bg-white border border-gray-300 rounded-xl focus:border-red-600 focus:ring-2 focus:ring-red-600/20 outline-none text-sm font-mono font-medium"
+                                    className="w-full px-3.5 py-2.5 bg-surface border border-strong rounded-xl focus:border-red-600 focus:ring-2 focus:ring-red-600/20 outline-none text-sm font-mono font-medium"
                                     autoFocus
                                     required={hasProtocol}
                                 />
@@ -348,7 +348,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                     </div>
 
                     {/* 4. CAMPOS CONDICIONAIS PELO TIPO DE FEEDBACK */}
-                    <div className="p-4 rounded-xl border border-gray-200 bg-white space-y-4">
+                    <div className="p-4 rounded-xl border border-subtle bg-surface space-y-4">
                         {/* Se for ELOGIO */}
                         {type === 'Elogio' && (
                             <div className="space-y-2 animate-in fade-in duration-150">
@@ -362,7 +362,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                     placeholder="Explique o motivo do reconhecimento, o comportamento destacado e o impacto positivo gerado para o cliente e para a equipe..."
                                     value={praiseReason}
                                     onChange={e => setPraiseReason(e.target.value)}
-                                    className="w-full p-3 bg-emerald-50/30 border border-emerald-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none text-sm leading-relaxed"
+                                    className="w-full p-3 bg-emerald-50/30 border border-emerald-200 rounded-xl focus:bg-surface focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 outline-none text-sm leading-relaxed"
                                 />
                             </div>
                         )}
@@ -380,7 +380,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                     placeholder="Descreva detalhadamente a orientação repassada, fluxos a serem seguidos e diretrizes para os atendimentos futuros..."
                                     value={guidanceText}
                                     onChange={e => setGuidanceText(e.target.value)}
-                                    className="w-full p-3 bg-blue-50/30 border border-blue-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none text-sm leading-relaxed"
+                                    className="w-full p-3 bg-blue-50/30 border border-blue-200 rounded-xl focus:bg-surface focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none text-sm leading-relaxed"
                                 />
                             </div>
                         )}
@@ -400,13 +400,13 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         placeholder="Descreva a falha, desvio de padrão ou ponto fraco observado no atendimento ou processo..."
                                         value={improvementError}
                                         onChange={e => setImprovementError(e.target.value)}
-                                        className="w-full p-3 bg-amber-50/30 border border-amber-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none text-sm leading-relaxed"
+                                        className="w-full p-3 bg-amber-50/30 border border-amber-200 rounded-xl focus:bg-surface focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 outline-none text-sm leading-relaxed"
                                     />
                                 </div>
 
                                 {/* Campo 2: Conduta correta */}
                                 <div className="space-y-1.5">
-                                    <label className="block text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                    <label className="block text-xs font-bold text-primary-hub flex items-center gap-1.5">
                                         <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                                         Qual seria a forma correta de proceder? <span className="text-red-500">*</span>
                                     </label>
@@ -416,13 +416,13 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         placeholder="Explique o padrão oficial, como o colaborador deve agir em situações semelhantes e a conduta esperada..."
                                         value={improvementCorrect}
                                         onChange={e => setImprovementCorrect(e.target.value)}
-                                        className="w-full p-3 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none text-sm leading-relaxed"
+                                        className="w-full p-3 bg-subtle border border-strong rounded-xl focus:bg-surface focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-600 outline-none text-sm leading-relaxed"
                                     />
                                 </div>
 
                                 {/* Campo 3: Prazo para aplicação da solução (texto simples) */}
                                 <div className="space-y-1.5">
-                                    <label className="block text-xs font-bold text-gray-800 flex items-center gap-1.5">
+                                    <label className="block text-xs font-bold text-primary-hub flex items-center gap-1.5">
                                         <Clock className="w-4 h-4 text-red-600" />
                                         Prazo para aplicação da solução <span className="text-red-500">*</span>
                                     </label>
@@ -432,7 +432,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         placeholder="Ex: Imediato, Próximo atendimento, Até 24h, 7 dias úteis..."
                                         value={improvementDeadline}
                                         onChange={e => setImprovementDeadline(e.target.value)}
-                                        className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-300 rounded-xl focus:bg-white focus:ring-2 focus:ring-red-600/30 focus:border-red-600 outline-none text-sm"
+                                        className="w-full px-3.5 py-2.5 bg-subtle border border-strong rounded-xl focus:bg-surface focus:ring-2 focus:ring-red-600/30 focus:border-red-600 outline-none text-sm"
                                     />
                                 </div>
                             </div>
@@ -442,11 +442,11 @@ export const FeedbackModal = ({ colab, onClose }) => {
                     {/* 5. TAGS DO FEEDBACK */}
                     <div>
                         <div className="flex items-center justify-between mb-2">
-                            <label className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <label className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
                                 <Tag className="w-3.5 h-3.5 text-red-600" />
                                 Tags & Competências
                             </label>
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-muted-hub">
                                 {selectedTags.length > 0 ? `${selectedTags.length} selecionada(s)` : 'Opcional, selecione tags'}
                             </span>
                         </div>
@@ -462,7 +462,7 @@ export const FeedbackModal = ({ colab, onClose }) => {
                                         className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border ${
                                             isSelected 
                                                 ? 'bg-red-600 text-white border-red-600 shadow-xs' 
-                                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200'
+                                                : 'bg-subtle hover:bg-gray-200 text-secondary-hub border-subtle'
                                         }`}
                                     >
                                         {isSelected && <Check className="w-3.5 h-3.5" />}
@@ -474,12 +474,12 @@ export const FeedbackModal = ({ colab, onClose }) => {
                     </div>
 
                     {/* Rodapé com Botões de Ação */}
-                    <div className="pt-3 flex items-center justify-end gap-3 border-t border-gray-100">
+                    <div className="pt-3 flex items-center justify-end gap-3 border-t border-subtle">
                         <button 
                             type="button" 
                             onClick={onClose} 
                             disabled={loading}
-                            className="px-5 py-2.5 border border-gray-300 text-gray-700 text-xs font-semibold rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                            className="px-5 py-2.5 border border-strong text-secondary-hub text-xs font-semibold rounded-xl hover:bg-subtle transition-colors cursor-pointer"
                         >
                             Cancelar
                         </button>

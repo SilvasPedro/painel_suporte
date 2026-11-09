@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.2.0';
+export const CURRENT_VERSION = 'v4.2.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.2.0',
+    version: 'v4.2.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.2.1: segunda fase da otimização. O perfil deixa de baixar auditorias de toda a equipe, a importação CSV da Auditoria Terceirizada passa a gravar em lotes e 15 telas e modais migraram das cores fixas para os tokens de tema (claro, morno e escuro).',
+    items: [
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Emblemas do Perfil com Leituras Mínimas',
+        category: 'Performance',
+        description: 'A tela Meu Perfil agora consulta apenas as auditorias QA do colaborador exibido e deixou de ler as auditorias terceirizadas, que nunca eram atribuídas a um colaborador no cálculo dos emblemas. O resultado dos emblemas permanece o mesmo.'
+      },
+      {
+        icon: Layers,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Importação CSV em Lote',
+        category: 'Performance',
+        description: 'A importação de auditorias terceirizadas usa writeBatch (até 400 operações por commit) e grava cada operador uma única vez, reduzindo centenas de escritas sequenciais a poucos commits.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Telas e Modais nos Tokens de Tema',
+        category: 'UX / UI',
+        description: 'Gerenciador de Dados, Rankings, KPIs do Setor, Escalas, Relatório do Colaborador e os modais de colaborador, feedback, processo QA e senha passaram a usar fundos, bordas e textos do tema, acompanhando os modos claro, morno e escuro de forma nativa.'
+      }
+    ]
+  },
+  {
+    version: 'v4.2.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.2.0: otimização de leituras do Firestore. Cada usuário passa a baixar apenas os próprios registros, os limites de coleções volumosas agora vêm acompanhados de ordenação por mais recentes e a Auditoria Terceirizada lê somente os dados da empresa selecionada.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.1.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.1.1: reformulação completa do tema Morno (sépia). Paleta de linho, creme e café espresso aplicada à tela inteira, com barra lateral, cartões de destaque, modais, formulários, tabelas, badges, gráficos e botões de ação em terracota, finalmente harmonizados.',
     items: [
       {

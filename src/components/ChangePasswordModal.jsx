@@ -43,8 +43,8 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
         level: 0,
         label: 'Aguardando senha...',
         barColor: 'bg-gray-200',
-        textColor: 'text-gray-400',
-        badgeBg: 'bg-gray-100 text-gray-500 border-gray-200',
+        textColor: 'text-muted-hub',
+        badgeBg: 'bg-subtle text-secondary-hub border-subtle',
         message: 'Digite sua nova senha para avaliar o nível de segurança.',
         checks: {
           minLength: false,
@@ -166,7 +166,7 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
     >
       <div 
         id="change-password-modal"
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-gray-100 animate-in fade-in zoom-in-95 duration-200 flex flex-col"
+        className="bg-surface rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-subtle animate-in fade-in zoom-in-95 duration-200 flex flex-col"
       >
         {/* Cabeçalho */}
         <div className="bg-gradient-to-r from-zinc-950 via-zinc-900 to-zinc-950 text-white p-4 sm:p-5 flex justify-between items-center border-b border-zinc-800">
@@ -196,7 +196,7 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4">
           {/* Campo: Nova Senha */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>Nova Senha</span>
               {newPassword && (
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md border ${strength.badgeBg}`}>
@@ -205,7 +205,7 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
               )}
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-hub">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -216,12 +216,12 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="Digite a nova senha (mín. 6 dígitos)"
-                className="w-full pl-9 pr-10 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs"
+                className="w-full pl-9 pr-10 py-2.5 bg-subtle border border-subtle rounded-xl text-sm text-primary-hub placeholder-gray-400 focus:bg-surface focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs"
               />
               <button
                 type="button"
                 onClick={() => setShowNewPassword(prev => !prev)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-hub hover:text-secondary-hub cursor-pointer"
                 title={showNewPassword ? "Ocultar senha" : "Ver senha"}
               >
                 {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -249,33 +249,33 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
               </div>
 
               {/* Indicadores de requisitos */}
-              <div className="flex items-center justify-between text-[11px] text-gray-500 pt-0.5">
+              <div className="flex items-center justify-between text-[11px] text-secondary-hub pt-0.5">
                 <span className="flex items-center gap-1 font-medium">
-                  {strength.level === 0 && <span className="text-gray-400">Insira ao menos 6 caracteres</span>}
+                  {strength.level === 0 && <span className="text-muted-hub">Insira ao menos 6 caracteres</span>}
                   {strength.level === 1 && <span className="text-red-600 font-bold">● Senha Fraca</span>}
                   {strength.level === 2 && <span className="text-amber-600 font-bold">● Senha Média</span>}
                   {strength.level === 3 && <span className="text-emerald-600 font-bold">● Senha Forte</span>}
                 </span>
-                <span className="text-[10px] text-gray-400">
+                <span className="text-[10px] text-muted-hub">
                   {newPassword.length} caracteres
                 </span>
               </div>
 
               {/* Checklist de requisitos de segurança */}
               <div className="grid grid-cols-2 gap-1.5 pt-1 text-[10px]">
-                <div className={`flex items-center gap-1.5 ${strength.checks.minLength ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${strength.checks.minLength ? 'text-emerald-700 font-bold' : 'text-muted-hub'}`}>
                   {strength.checks.minLength ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 ml-1 mr-0.5" />}
                   <span>Mínimo 6 caracteres</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${strength.checks.number ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${strength.checks.number ? 'text-emerald-700 font-bold' : 'text-muted-hub'}`}>
                   {strength.checks.number ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 ml-1 mr-0.5" />}
                   <span>Números (0-9)</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${strength.checks.upperLower ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${strength.checks.upperLower ? 'text-emerald-700 font-bold' : 'text-muted-hub'}`}>
                   {strength.checks.upperLower ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 ml-1 mr-0.5" />}
                   <span>Maiúsculas e minúsculas</span>
                 </div>
-                <div className={`flex items-center gap-1.5 ${strength.checks.special ? 'text-emerald-700 font-bold' : 'text-gray-400'}`}>
+                <div className={`flex items-center gap-1.5 ${strength.checks.special ? 'text-emerald-700 font-bold' : 'text-muted-hub'}`}>
                   {strength.checks.special ? <Check className="w-3 h-3 text-emerald-600" /> : <span className="w-1.5 h-1.5 rounded-full bg-gray-300 ml-1 mr-0.5" />}
                   <span>Símbolos especiais</span>
                 </div>
@@ -285,7 +285,7 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
 
           {/* Campo: Confirmar Nova Senha */}
           <div>
-            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+            <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider mb-1.5 flex items-center justify-between">
               <span>Confirmar Nova Senha</span>
               {confirmPassword && (
                 isMatch ? (
@@ -300,7 +300,7 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
               )}
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted-hub">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -311,18 +311,18 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Repita exatamente a nova senha"
-                className={`w-full pl-9 pr-10 py-2.5 bg-gray-50 border rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:outline-hidden focus:ring-2 transition-all shadow-2xs ${
+                className={`w-full pl-9 pr-10 py-2.5 bg-subtle border rounded-xl text-sm text-primary-hub placeholder-gray-400 focus:bg-surface focus:outline-hidden focus:ring-2 transition-all shadow-2xs ${
                   hasMismatch 
                     ? 'border-red-300 focus:ring-red-500/20 focus:border-red-500' 
                     : isMatch 
                     ? 'border-emerald-300 focus:ring-emerald-500/20 focus:border-emerald-500' 
-                    : 'border-gray-200 focus:ring-red-500/20 focus:border-red-500'
+                    : 'border-subtle focus:ring-red-500/20 focus:border-red-500'
                 }`}
               />
               <button
                 type="button"
                 onClick={() => setShowConfirmPassword(prev => !prev)}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 cursor-pointer"
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-muted-hub hover:text-secondary-hub cursor-pointer"
                 title={showConfirmPassword ? "Ocultar confirmação" : "Ver confirmação"}
               >
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -331,21 +331,21 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
           </div>
 
           {/* Dica de Segurança */}
-          <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 flex items-start gap-2 text-xs text-gray-500">
-            <ShieldCheck className="w-4 h-4 text-gray-400 shrink-0 mt-0.5" />
+          <div className="bg-subtle p-3 rounded-xl border border-subtle flex items-start gap-2 text-xs text-secondary-hub">
+            <ShieldCheck className="w-4 h-4 text-muted-hub shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               Evite reutilizar senhas antigas ou senhas pessoais fáceis de deduzir. Sua senha atualizada valerá para os próximos acessos.
             </p>
           </div>
 
           {/* Rodapé de Ações */}
-          <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-gray-100">
+          <div className="pt-2 flex items-center justify-end gap-2.5 border-t border-subtle">
             <button
               id="cancel-change-password-btn"
               type="button"
               onClick={handleClose}
               disabled={loading}
-              className="px-4 py-2.5 border border-gray-200 text-gray-700 hover:bg-gray-50 rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+              className="px-4 py-2.5 border border-subtle text-secondary-hub hover:bg-subtle rounded-xl text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancelar
             </button>

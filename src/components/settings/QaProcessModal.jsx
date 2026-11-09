@@ -214,7 +214,7 @@ function QaProcessModalContent({
         >
             <div 
                 id="qa-process-modal-container"
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh] border border-gray-200"
+                className="bg-surface rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh] border border-subtle"
             >
                 {/* Cabeçalho do Modal */}
                 <div className="p-4 sm:p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
@@ -275,7 +275,7 @@ function QaProcessModalContent({
                 </div>
 
                 {/* Sub-barra de alternância mobile */}
-                <div className="sm:hidden flex border-b border-gray-200 bg-gray-50 p-1">
+                <div className="sm:hidden flex border-b border-subtle bg-subtle p-1">
                     <button
                         type="button"
                         onClick={() => setModalTab('editor')}
@@ -297,13 +297,13 @@ function QaProcessModalContent({
                 </div>
 
                 {/* Corpo do Modal com Scroll */}
-                <div className="overflow-y-auto flex-1 p-4 sm:p-6 bg-gray-50/60">
+                <div className="overflow-y-auto flex-1 p-4 sm:p-6 bg-subtle">
                     {modalTab === 'editor' ? (
                         <form id="qaProcessForm" onSubmit={handleSubmit} className="space-y-6">
                             {/* Card 1: Identificação do Processo */}
-                            <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200 shadow-xs space-y-4">
-                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-gray-100">
-                                    <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                            <div className="bg-surface rounded-xl p-4 sm:p-5 border border-subtle shadow-xs space-y-4">
+                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-subtle">
+                                    <h3 className="text-sm font-bold text-primary-hub flex items-center gap-2">
                                         <Tag className="w-4 h-4 text-red-600" />
                                         Identificação do Processo
                                     </h3>
@@ -320,8 +320,8 @@ function QaProcessModalContent({
                                         </button>
 
                                         {isTemplatesOpen && (
-                                            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-white border border-gray-200 rounded-xl shadow-xl p-2 z-20 space-y-1 animate-in fade-in zoom-in-95 duration-100">
-                                                <div className="p-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-100">
+                                            <div className="absolute right-0 top-full mt-2 w-72 sm:w-80 bg-surface border border-subtle rounded-xl shadow-xl p-2 z-20 space-y-1 animate-in fade-in zoom-in-95 duration-100">
+                                                <div className="p-2 text-xs font-bold text-secondary-hub uppercase tracking-wider border-b border-subtle">
                                                     Selecione um Modelo de Suporte
                                                 </div>
                                                 {PRESET_TEMPLATES.map(tpl => (
@@ -329,24 +329,24 @@ function QaProcessModalContent({
                                                         key={tpl.id}
                                                         type="button"
                                                         onClick={() => handleLoadTemplate(tpl)}
-                                                        className="w-full text-left p-2 rounded-lg hover:bg-red-50 text-gray-800 transition-colors cursor-pointer group"
+                                                        className="w-full text-left p-2 rounded-lg hover:bg-red-50 text-primary-hub transition-colors cursor-pointer group"
                                                     >
-                                                        <div className="font-bold text-xs text-gray-900 group-hover:text-red-600 flex items-center justify-between">
+                                                        <div className="font-bold text-xs text-primary-hub group-hover:text-red-600 flex items-center justify-between">
                                                             <span>{tpl.name}</span>
-                                                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">
+                                                            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-subtle text-secondary-hub">
                                                                 {tpl.checklist.length} itens
                                                             </span>
                                                         </div>
-                                                        <p className="text-[11px] text-gray-500 line-clamp-1 mt-0.5">
+                                                        <p className="text-[11px] text-secondary-hub line-clamp-1 mt-0.5">
                                                             {tpl.description}
                                                         </p>
                                                     </button>
                                                 ))}
-                                                <div className="pt-1 border-t border-gray-100">
+                                                <div className="pt-1 border-t border-subtle">
                                                     <button
                                                         type="button"
                                                         onClick={() => setIsTemplatesOpen(false)}
-                                                        className="w-full py-1 text-center text-xs font-medium text-gray-400 hover:text-gray-600 cursor-pointer"
+                                                        className="w-full py-1 text-center text-xs font-medium text-muted-hub hover:text-secondary-hub cursor-pointer"
                                                     >
                                                         Fechar
                                                     </button>
@@ -358,7 +358,7 @@ function QaProcessModalContent({
 
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div className="md:col-span-2">
-                                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                                        <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider mb-1">
                                             Nome do Processo <span className="text-red-500">*</span>
                                         </label>
                                         <input 
@@ -367,18 +367,18 @@ function QaProcessModalContent({
                                             value={processName} 
                                             onChange={(e) => setProcessName(e.target.value)} 
                                             placeholder="Ex: Sem Acesso à Internet, Lentidão Wi-Fi, Troca de ONU..." 
-                                            className="w-full p-2.5 text-sm font-semibold border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none bg-white transition-all" 
+                                            className="w-full p-2.5 text-sm font-semibold border border-strong rounded-xl focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none bg-surface transition-all" 
                                         />
                                     </div>
 
                                     <div>
-                                        <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
+                                        <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider mb-1">
                                             Categoria / Setor
                                         </label>
                                         <select
                                             value={category}
                                             onChange={(e) => setCategory(e.target.value)}
-                                            className="w-full p-2.5 text-sm font-medium border border-gray-300 rounded-xl focus:ring-2 focus:ring-red-600 outline-none bg-white cursor-pointer"
+                                            className="w-full p-2.5 text-sm font-medium border border-strong rounded-xl focus:ring-2 focus:ring-red-600 outline-none bg-surface cursor-pointer"
                                         >
                                             {CATEGORIES.map(c => (
                                                 <option key={c} value={c}>{c}</option>
@@ -388,28 +388,28 @@ function QaProcessModalContent({
                                 </div>
 
                                 <div>
-                                    <label className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">
-                                        Descrição / Instruções para o Auditor <span className="text-gray-400 font-normal">(opcional)</span>
+                                    <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider mb-1">
+                                        Descrição / Instruções para o Auditor <span className="text-muted-hub font-normal">(opcional)</span>
                                     </label>
                                     <input 
                                         type="text" 
                                         value={description} 
                                         onChange={(e) => setDescription(e.target.value)} 
                                         placeholder="Ex: Utilize este checklist para auditar ligações ou chamados com queixas de perda de sinal..." 
-                                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-gray-50 focus:bg-white transition-all" 
+                                        className="w-full p-2 text-xs border border-subtle rounded-lg focus:ring-2 focus:ring-red-600 outline-none bg-subtle focus:bg-surface transition-all" 
                                     />
                                 </div>
                             </div>
 
                             {/* Card 2: Construtor de Checklist */}
-                            <div className="bg-white rounded-xl p-4 sm:p-5 border border-gray-200 shadow-xs space-y-4">
-                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-gray-100">
+                            <div className="bg-surface rounded-xl p-4 sm:p-5 border border-subtle shadow-xs space-y-4">
+                                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-subtle">
                                     <div>
-                                        <h3 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+                                        <h3 className="text-sm font-bold text-primary-hub flex items-center gap-2">
                                             <Layers className="w-4 h-4 text-red-600" />
                                             Itens de Verificação da Checklist
                                         </h3>
-                                        <p className="text-xs text-gray-500 mt-0.5">
+                                        <p className="text-xs text-secondary-hub mt-0.5">
                                             Adicione cada pergunta ou critério objetivo que o colaborador deve cumprir.
                                         </p>
                                     </div>
@@ -452,7 +452,7 @@ function QaProcessModalContent({
                                             value={bulkText}
                                             onChange={(e) => setBulkText(e.target.value)}
                                             placeholder={"O colaborador confirmou os dados?\nVerificou os LEDs do roteador?\nEfetuou o teste de velocidade?\nFinalizou de forma cordial?"}
-                                            className="w-full p-3 text-xs font-mono bg-white border border-zinc-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none resize-y"
+                                            className="w-full p-3 text-xs font-mono bg-surface border border-zinc-300 rounded-lg focus:ring-2 focus:ring-red-600 outline-none resize-y"
                                         />
                                         <div className="flex justify-end gap-2">
                                             <button
@@ -488,7 +488,7 @@ function QaProcessModalContent({
                                             onChange={(e) => setQuickInput(e.target.value)}
                                             onKeyDown={handleQuickInputKeyDown}
                                             placeholder="Digite uma nova pergunta e pressione [Enter]..."
-                                            className="w-full px-3 py-2 text-xs bg-white border border-red-200 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
+                                            className="w-full px-3 py-2 text-xs bg-surface border border-red-200 rounded-lg focus:ring-2 focus:ring-red-600 outline-none"
                                         />
                                     </div>
                                     <button
@@ -506,10 +506,10 @@ function QaProcessModalContent({
                                     {checklistItems.map((item, index) => (
                                         <div 
                                             key={index} 
-                                            className="group flex items-start gap-2 p-2.5 bg-gray-50/80 hover:bg-white border border-gray-200 hover:border-gray-300 rounded-xl transition-all shadow-2xs"
+                                            className="group flex items-start gap-2 p-2.5 bg-subtle hover:bg-surface border border-subtle hover:border-strong rounded-xl transition-all shadow-2xs"
                                         >
                                             {/* Número / Posição */}
-                                            <div className="w-7 h-7 rounded-lg bg-gray-200/80 text-gray-700 text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
+                                            <div className="w-7 h-7 rounded-lg bg-gray-200/80 text-secondary-hub text-xs font-mono font-bold flex items-center justify-center shrink-0 mt-0.5">
                                                 {index + 1}
                                             </div>
 
@@ -520,7 +520,7 @@ function QaProcessModalContent({
                                                     value={item}
                                                     onChange={(e) => handleItemChange(index, e.target.value)}
                                                     placeholder={`Critério ${index + 1} da checklist (ex: O colaborador testou a conexão direta com o cabo?)`}
-                                                    className="w-full px-2.5 py-1.5 text-xs text-gray-800 bg-transparent focus:bg-white border border-transparent focus:border-red-500 rounded-lg outline-none resize-none transition-all"
+                                                    className="w-full px-2.5 py-1.5 text-xs text-primary-hub bg-transparent focus:bg-surface border border-transparent focus:border-red-500 rounded-lg outline-none resize-none transition-all"
                                                 />
                                             </div>
 
@@ -532,7 +532,7 @@ function QaProcessModalContent({
                                                     disabled={index === 0}
                                                     onClick={() => handleMoveItem(index, -1)}
                                                     title="Mover para cima"
-                                                    className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                                    className="p-1.5 text-muted-hub hover:text-secondary-hub disabled:opacity-20 hover:bg-subtle rounded-lg transition-colors cursor-pointer"
                                                 >
                                                     <ArrowUp className="w-3.5 h-3.5" />
                                                 </button>
@@ -543,7 +543,7 @@ function QaProcessModalContent({
                                                     disabled={index === checklistItems.length - 1}
                                                     onClick={() => handleMoveItem(index, 1)}
                                                     title="Mover para baixo"
-                                                    className="p-1.5 text-gray-400 hover:text-gray-700 disabled:opacity-20 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                                                    className="p-1.5 text-muted-hub hover:text-secondary-hub disabled:opacity-20 hover:bg-subtle rounded-lg transition-colors cursor-pointer"
                                                 >
                                                     <ArrowDown className="w-3.5 h-3.5" />
                                                 </button>
@@ -553,7 +553,7 @@ function QaProcessModalContent({
                                                     type="button"
                                                     onClick={() => handleDuplicateItem(index)}
                                                     title="Duplicar pergunta"
-                                                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                                    className="p-1.5 text-muted-hub hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
                                                 >
                                                     <Copy className="w-3.5 h-3.5" />
                                                 </button>
@@ -563,7 +563,7 @@ function QaProcessModalContent({
                                                     type="button"
                                                     onClick={() => handleRemoveItem(index)}
                                                     title="Remover pergunta"
-                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                    className="p-1.5 text-muted-hub hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                                 >
                                                     <Trash2 className="w-3.5 h-3.5" />
                                                 </button>
@@ -575,23 +575,23 @@ function QaProcessModalContent({
                         </form>
                     ) : (
                         /* Aba: Prévia Interativa da Auditoria */
-                        <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-xs space-y-6">
-                            <div className="border-b border-gray-100 pb-4">
+                        <div className="bg-surface rounded-2xl p-6 border border-subtle shadow-xs space-y-6">
+                            <div className="border-b border-subtle pb-4">
                                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-red-100 text-red-700 mb-2">
                                     Simulação de Auditoria
                                 </div>
-                                <h3 className="text-xl font-black text-gray-900">
+                                <h3 className="text-xl font-black text-primary-hub">
                                     {processName || 'Nome do Processo'}
                                 </h3>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-secondary-hub mt-1">
                                     {description || 'Sem instruções adicionais.'}
                                 </p>
                             </div>
 
                             {/* Barra de Progresso Simulada */}
                             {validCount > 0 && (
-                                <div className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-2">
-                                    <div className="flex justify-between items-center text-xs font-bold text-gray-700">
+                                <div className="bg-subtle p-4 rounded-xl border border-subtle space-y-2">
+                                    <div className="flex justify-between items-center text-xs font-bold text-secondary-hub">
                                         <span>Itens em conformidade na simulação:</span>
                                         <span className="font-mono text-red-600">
                                             {Object.values(previewChecks).filter(Boolean).length} de {validCount} (
@@ -617,17 +617,17 @@ function QaProcessModalContent({
                                         className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
                                             previewChecks[idx]
                                                 ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950'
-                                                : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300'
+                                                : 'bg-surface border-subtle text-primary-hub hover:border-strong'
                                         }`}
                                     >
                                         <input
                                             type="checkbox"
                                             checked={!!previewChecks[idx]}
                                             onChange={(e) => setPreviewChecks({ ...previewChecks, [idx]: e.target.checked })}
-                                            className="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500 mt-0.5 cursor-pointer"
+                                            className="w-4 h-4 rounded text-emerald-600 border-strong focus:ring-emerald-500 mt-0.5 cursor-pointer"
                                         />
                                         <div className="text-xs flex-1">
-                                            <span className="font-bold text-gray-500 mr-2">{idx + 1}.</span>
+                                            <span className="font-bold text-secondary-hub mr-2">{idx + 1}.</span>
                                             <span className={previewChecks[idx] ? 'line-through opacity-80' : 'font-medium'}>
                                                 {item}
                                             </span>
@@ -636,7 +636,7 @@ function QaProcessModalContent({
                                 ))}
 
                                 {validCount === 0 && (
-                                    <div className="text-center py-8 text-gray-400 text-xs">
+                                    <div className="text-center py-8 text-muted-hub text-xs">
                                         Nenhum item válido na checklist para pré-visualizar. Volte para o construtor e adicione perguntas.
                                     </div>
                                 )}
@@ -646,9 +646,9 @@ function QaProcessModalContent({
                 </div>
 
                 {/* Rodapé de Ações */}
-                <div className="p-4 sm:p-5 bg-white border-t border-gray-200 flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
-                    <div className="text-xs text-gray-500 flex items-center gap-2">
-                        <HelpCircle className="w-4 h-4 text-gray-400" />
+                <div className="p-4 sm:p-5 bg-surface border-t border-subtle flex flex-col sm:flex-row justify-between items-center gap-3 shrink-0">
+                    <div className="text-xs text-secondary-hub flex items-center gap-2">
+                        <HelpCircle className="w-4 h-4 text-muted-hub" />
                         <span>
                             {validCount === 0 ? (
                                 <span className="text-red-500 font-semibold">Adicione pelo menos 1 pergunta válida</span>
@@ -663,7 +663,7 @@ function QaProcessModalContent({
                             type="button" 
                             onClick={onClose} 
                             disabled={isSaving}
-                            className="flex-1 sm:flex-none px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 font-bold text-xs transition-colors cursor-pointer"
+                            className="flex-1 sm:flex-none px-5 py-2.5 border border-strong text-secondary-hub rounded-xl hover:bg-subtle font-bold text-xs transition-colors cursor-pointer"
                         >
                             Cancelar
                         </button>

@@ -156,11 +156,11 @@ const DailySchedule = ({ readOnly = false }) => {
     };
 
     if (loading && collaborators.length === 0) {
-        return <div className="flex-1 flex items-center justify-center bg-gray-50 h-full"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
+        return <div className="flex-1 flex items-center justify-center bg-subtle h-full"><Loader2 className="w-8 h-8 text-red-600 animate-spin" /></div>;
     }
 
     return (
-        <div className="flex-1 p-6 h-full overflow-y-auto bg-gray-50 flex flex-col">
+        <div className="flex-1 p-6 h-full overflow-y-auto bg-subtle flex flex-col">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 shrink-0">
                 <div>
                     <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
@@ -191,17 +191,17 @@ const DailySchedule = ({ readOnly = false }) => {
                 {/* LADO ESQUERDO: Colaboradores Disponíveis */}
                 {!readOnly && (
                     <div 
-                        className="w-full lg:w-72 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden shrink-0"
+                        className="w-full lg:w-72 bg-surface rounded-xl border border-subtle shadow-sm flex flex-col overflow-hidden shrink-0"
                         onDragOver={handleDragOver}
                         onDrop={(e) => handleDrop(e, null, null)} // Soltar aqui remove
                     >
-                        <div className="p-4 border-b border-gray-100 bg-zinc-950 text-white flex items-center gap-2">
+                        <div className="p-4 border-b border-subtle bg-zinc-950 text-white flex items-center gap-2">
                             <Users className="w-5 h-5 text-red-500" />
                             <h3 className="font-bold">Equipe Ativa</h3>
                         </div>
                         
-                        <div className="p-3 overflow-y-auto flex-1 space-y-2 bg-gray-50">
-                            <p className="text-[11px] text-gray-500 mb-3 text-center leading-tight">
+                        <div className="p-3 overflow-y-auto flex-1 space-y-2 bg-subtle">
+                            <p className="text-[11px] text-secondary-hub mb-3 text-center leading-tight">
                                 Arraste os cards para as funções nos dias da semana.
                             </p>
                             {collaborators.map(colab => (
@@ -210,12 +210,12 @@ const DailySchedule = ({ readOnly = false }) => {
                                     draggable
                                     onDragStart={(e) => handleDragStart(e, colab, null, null)}
                                     onDragEnd={handleDragEnd}
-                                    className="bg-white border border-gray-200 p-2.5 rounded-lg shadow-sm flex items-center gap-3 cursor-grab hover:border-red-300 hover:shadow-md transition-all group"
+                                    className="bg-surface border border-subtle p-2.5 rounded-lg shadow-sm flex items-center gap-3 cursor-grab hover:border-red-300 hover:shadow-md transition-all group"
                                 >
-                                    <GripVertical className="w-4 h-4 text-gray-300 group-hover:text-red-400 shrink-0" />
+                                    <GripVertical className="w-4 h-4 text-muted-hub group-hover:text-red-400 shrink-0" />
                                     <div className="overflow-hidden">
-                                        <p className="font-bold text-[13px] text-gray-800 truncate" title={colab.name}>{colab.name}</p>
-                                        <p className="text-[9px] text-gray-500 uppercase">{colab.shift || 'Sem turno'}</p>
+                                        <p className="font-bold text-[13px] text-primary-hub truncate" title={colab.name}>{colab.name}</p>
+                                        <p className="text-[9px] text-secondary-hub uppercase">{colab.shift || 'Sem turno'}</p>
                                     </div>
                                 </div>
                             ))}
@@ -232,9 +232,9 @@ const DailySchedule = ({ readOnly = false }) => {
                             const dayData = schedule[day.id] || { telefonia: [], huggy: [], apoio: [] };
 
                             return (
-                                <div key={day.id} className="w-72 bg-gray-100 rounded-xl border border-gray-200 shadow-inner flex flex-col shrink-0 overflow-hidden">
-                                    <div className="p-3 bg-white border-b border-gray-200 flex justify-between items-center shrink-0">
-                                        <h3 className="font-black text-gray-900">{day.label}</h3>
+                                <div key={day.id} className="w-72 bg-subtle rounded-xl border border-subtle shadow-inner flex flex-col shrink-0 overflow-hidden">
+                                    <div className="p-3 bg-surface border-b border-subtle flex justify-between items-center shrink-0">
+                                        <h3 className="font-black text-primary-hub">{day.label}</h3>
                                     </div>
                                     
                                     <div className="flex-1 overflow-y-auto p-2 space-y-3">
@@ -280,16 +280,16 @@ const DailySchedule = ({ readOnly = false }) => {
                                                                     draggable={!readOnly}
                                                                     onDragStart={!readOnly ? (e) => handleDragStart(e, colab, day.id, role.key) : undefined}
                                                                     onDragEnd={!readOnly ? handleDragEnd : undefined}
-                                                                    className={`bg-white border border-black/10 p-2 rounded-lg shadow-sm flex justify-between items-center transition-all group ${!readOnly ? 'cursor-grab hover:shadow-md' : 'cursor-default'}`}
+                                                                    className={`bg-surface border border-black/10 p-2 rounded-lg shadow-sm flex justify-between items-center transition-all group ${!readOnly ? 'cursor-grab hover:shadow-md' : 'cursor-default'}`}
                                                                 >
                                                                     <div className="overflow-hidden pr-1">
-                                                                        <p className="font-bold text-[11px] text-gray-800 truncate" title={colab.name}>{colab.name}</p>
-                                                                        <p className="text-[9px] text-gray-400 uppercase leading-none mt-0.5">{colab.shift}</p>
+                                                                        <p className="font-bold text-[11px] text-primary-hub truncate" title={colab.name}>{colab.name}</p>
+                                                                        <p className="text-[9px] text-muted-hub uppercase leading-none mt-0.5">{colab.shift}</p>
                                                                     </div>
                                                                     {!readOnly && (
                                                                         <button 
                                                                             onClick={() => removeColab(day.id, role.key, colab.id)}
-                                                                            className="p-1 text-gray-300 hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                                                                            className="p-1 text-muted-hub hover:text-red-600 hover:bg-red-50 rounded transition-colors opacity-0 group-hover:opacity-100 shrink-0"
                                                                         >
                                                                             <X className="w-3.5 h-3.5" />
                                                                         </button>

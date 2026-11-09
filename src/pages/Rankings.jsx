@@ -335,7 +335,7 @@ const Rankings = () => {
             );
         }
         return (
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center font-bold text-xs border border-gray-200 shrink-0">
+            <div className="w-8 h-8 rounded-full bg-subtle text-secondary-hub flex items-center justify-center font-bold text-xs border border-subtle shrink-0">
                 {pos + 1}º
             </div>
         );
@@ -343,9 +343,9 @@ const Rankings = () => {
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 h-full p-8">
+            <div className="flex-1 flex flex-col items-center justify-center bg-subtle h-full p-8">
                 <Loader2 className="w-10 h-10 text-red-600 animate-spin mb-3" />
-                <p className="text-sm font-medium text-gray-600">Calculando indicadores e rankings da equipe...</p>
+                <p className="text-sm font-medium text-secondary-hub">Calculando indicadores e rankings da equipe...</p>
             </div>
         );
     }
@@ -437,32 +437,32 @@ const Rankings = () => {
             {/* ========================================== */}
             {/* BARRA DE FILTROS E MODOS DE VISUALIZAÇÃO   */}
             {/* ========================================== */}
-            <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-xs flex flex-col gap-4 shrink-0">
+            <div className="bg-surface p-4 rounded-xl border border-subtle shadow-xs flex flex-col gap-4 shrink-0">
                 <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                     
                     {/* Campo de Busca por Colaborador */}
                     <div className="flex-1 relative">
-                        <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
+                        <Search className="w-4 h-4 text-muted-hub absolute left-3.5 top-3" />
                         <input 
                             type="text" 
                             placeholder="Buscar por colaborador no ranking..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm transition-all bg-gray-50/50 focus:bg-white"
+                            className="w-full pl-10 pr-4 py-2 border border-strong rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm transition-all bg-gray-50/50 focus:bg-surface"
                         />
                         {searchTerm && (
-                            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600">
+                            <button onClick={() => setSearchTerm('')} className="absolute right-3 top-2.5 text-muted-hub hover:text-secondary-hub">
                                 <X className="w-4 h-4" />
                             </button>
                         )}
                     </div>
 
                     {/* Modos de Visualização (Podium, Table, Bars, Grid) */}
-                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0 self-start lg:self-auto">
+                    <div className="flex items-center bg-subtle p-1 rounded-xl border border-subtle shrink-0 self-start lg:self-auto">
                         <button 
                             onClick={() => setViewMode('podium')} 
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'podium' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'podium' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Visualização com Pódio"
                         >
@@ -472,7 +472,7 @@ const Rankings = () => {
                         <button 
                             onClick={() => setViewMode('table')} 
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'table' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'table' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Tabela Executiva"
                         >
@@ -482,7 +482,7 @@ const Rankings = () => {
                         <button 
                             onClick={() => setViewMode('bars')} 
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'bars' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'bars' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Comparativo em Barras"
                         >
@@ -492,7 +492,7 @@ const Rankings = () => {
                         <button 
                             onClick={() => setViewMode('grid')} 
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                                viewMode === 'grid' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                                viewMode === 'grid' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Grade de Cartões"
                         >
@@ -503,13 +503,13 @@ const Rankings = () => {
                 </div>
 
                 {/* Filtros Dropdowns */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-gray-100">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-subtle">
                     <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Período</label>
+                        <label className="block text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">Período</label>
                         <select 
                             value={periodFilter} 
                             onChange={(e) => setPeriodFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="w-full px-3 py-1.5 border border-strong rounded-lg text-xs font-medium text-secondary-hub bg-surface focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
                         >
                             <option value="all">Total Agregado (Todo o período)</option>
                             {filterOptions.months.length > 0 && (
@@ -526,11 +526,11 @@ const Rankings = () => {
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Turno</label>
+                        <label className="block text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">Turno</label>
                         <select 
                             value={shiftFilter} 
                             onChange={(e) => setShiftFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="w-full px-3 py-1.5 border border-strong rounded-lg text-xs font-medium text-secondary-hub bg-surface focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
                         >
                             <option value="all">Todos os Turnos</option>
                             <option value="Manhã I">Manhã I (08:00 às 14:15)</option>
@@ -541,11 +541,11 @@ const Rankings = () => {
                     </div>
 
                     <div>
-                        <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Faixa de Posição</label>
+                        <label className="block text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">Faixa de Posição</label>
                         <select 
                             value={tierFilter} 
                             onChange={(e) => setTierFilter(e.target.value)}
-                            className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
+                            className="w-full px-3 py-1.5 border border-strong rounded-lg text-xs font-medium text-secondary-hub bg-surface focus:ring-2 focus:ring-red-600 outline-none cursor-pointer"
                         >
                             <option value="all">Todos os Colaboradores</option>
                             <option value="top3">Pódio (Top 3)</option>
@@ -558,12 +558,12 @@ const Rankings = () => {
                         {hasActiveFilters ? (
                             <button 
                                 onClick={clearFilters}
-                                className="w-full px-3 py-1.5 border border-gray-200 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
+                                className="w-full px-3 py-1.5 border border-subtle text-secondary-hub hover:bg-subtle rounded-lg text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
                             >
                                 <RotateCcw className="w-3 h-3" /> Limpar Filtros
                             </button>
                         ) : (
-                            <div className="text-[11px] text-gray-400 py-1.5 pl-1">
+                            <div className="text-[11px] text-muted-hub py-1.5 pl-1">
                                 {finalRankingData.length} analistas exibidos
                             </div>
                         )}
@@ -725,17 +725,17 @@ const Rankings = () => {
                             )}
 
                             {/* LISTA COMPLETA DO RANKING */}
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
-                                <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-                                    <h4 className="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-2">
+                            <div className="bg-surface rounded-xl border border-subtle shadow-2xs overflow-hidden">
+                                <div className="p-4 border-b border-subtle flex justify-between items-center bg-gray-50/50">
+                                    <h4 className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-2">
                                         <Award className="w-4 h-4 text-red-600" /> Classificação Completa da Equipe
                                     </h4>
-                                    <span className="text-xs text-gray-400">
+                                    <span className="text-xs text-muted-hub">
                                         Clique em qualquer linha para ver a ficha completa
                                     </span>
                                 </div>
 
-                                <div className="divide-y divide-gray-100">
+                                <div className="divide-y divide-subtle">
                                     {finalRankingData.map((colab, index) => {
                                         const percent = maxScore > 0 ? Math.min(Math.round((colab.pontuacao / maxScore) * 100), 100) : 0;
                                         
@@ -743,24 +743,24 @@ const Rankings = () => {
                                             <div 
                                                 key={colab.id}
                                                 onClick={() => setSelectedColab(colab)}
-                                                className="p-4 hover:bg-gray-50/80 transition-colors flex items-center justify-between gap-4 cursor-pointer group"
+                                                className="p-4 hover:bg-subtle transition-colors flex items-center justify-between gap-4 cursor-pointer group"
                                             >
                                                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                                                     {renderMedal(index)}
                                                     
                                                     <div className="min-w-0 flex-1">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-sm text-gray-900 group-hover:text-red-600 transition-colors truncate">
+                                                            <span className="font-bold text-sm text-primary-hub group-hover:text-red-600 transition-colors truncate">
                                                                 {colab.name}
                                                             </span>
-                                                            <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                                            <span className="text-[10px] font-bold text-secondary-hub bg-subtle px-2 py-0.5 rounded border border-subtle">
                                                                 {colab.shift}
                                                             </span>
                                                         </div>
 
                                                         {/* Barra de Proporção em relação ao líder */}
                                                         {activeTab === 'pontuacao' && (
-                                                            <div className="w-full max-w-md bg-gray-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                                                            <div className="w-full max-w-md bg-subtle h-1.5 rounded-full mt-2 overflow-hidden">
                                                                 <div 
                                                                     className={`h-full rounded-full ${
                                                                         index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-amber-600' : 'bg-red-500'
@@ -774,18 +774,18 @@ const Rankings = () => {
 
                                                 <div className="flex items-center gap-6 shrink-0">
                                                     <div className="text-right">
-                                                        <span className="text-base font-black text-gray-900 block">
+                                                        <span className="text-base font-black text-primary-hub block">
                                                             {activeTab === 'pontuacao' && `${colab.pontuacao} pts`}
                                                             {activeTab === 'finalizacoes' && `${colab.finalizacoes} finalizações`}
                                                             {activeTab === 'tma_tel' && colab.tmaTel}
                                                             {activeTab === 'tma_huggy' && colab.tmaHuggy}
                                                         </span>
-                                                        <span className="text-[11px] text-gray-400">
+                                                        <span className="text-[11px] text-muted-hub">
                                                             {activeTab === 'pontuacao' ? `${colab.finalizacoes} finalizações` : `${colab.pontuacao} pts`}
                                                         </span>
                                                     </div>
 
-                                                    <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-600 group-hover:translate-x-0.5 transition-all" />
+                                                    <ChevronRight className="w-5 h-5 text-muted-hub group-hover:text-secondary-hub group-hover:translate-x-0.5 transition-all" />
                                                 </div>
                                             </div>
                                         );
@@ -799,9 +799,9 @@ const Rankings = () => {
                     {/* MODO 2: TABELA EXECUTIVA DETALHADA     */}
                     {/* -------------------------------------- */}
                     {viewMode === 'table' && (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden flex-1 flex flex-col">
+                        <div className="bg-surface rounded-xl border border-subtle shadow-2xs overflow-hidden flex-1 flex flex-col">
                             <div className="overflow-x-auto flex-1">
-                                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                                <table className="min-w-full divide-y divide-subtle text-sm">
                                     <thead className="bg-zinc-950 text-white sticky top-0 z-10">
                                         <tr>
                                             <th className="px-5 py-3.5 text-center font-bold text-xs uppercase tracking-wider w-16">Pos</th>
@@ -815,12 +815,12 @@ const Rankings = () => {
                                             <th className="px-5 py-3.5 text-center font-bold text-xs uppercase tracking-wider">Ações</th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200 bg-white">
+                                    <tbody className="divide-y divide-subtle bg-surface">
                                         {finalRankingData.map((colab, index) => (
                                             <tr 
                                                 key={colab.id} 
                                                 onClick={() => setSelectedColab(colab)}
-                                                className={`hover:bg-gray-50/80 transition-colors cursor-pointer ${
+                                                className={`hover:bg-subtle transition-colors cursor-pointer ${
                                                     index === 0 ? 'bg-yellow-50/20' : index === 1 ? 'bg-slate-50/40' : index === 2 ? 'bg-amber-50/20' : ''
                                                 }`}
                                             >
@@ -834,27 +834,27 @@ const Rankings = () => {
                                                         <div className="w-8 h-8 rounded-full bg-zinc-100 border border-zinc-200 flex items-center justify-center font-bold text-xs text-zinc-700">
                                                             {colab.name.charAt(0).toUpperCase()}
                                                         </div>
-                                                        <span className="font-bold text-gray-900 text-sm">
+                                                        <span className="font-bold text-primary-hub text-sm">
                                                             {colab.name}
                                                         </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-5 py-4 whitespace-nowrap text-center">
-                                                    <span className="text-[11px] uppercase font-bold text-gray-500 bg-gray-100 border border-gray-200 px-2.5 py-0.5 rounded-md">
+                                                    <span className="text-[11px] uppercase font-bold text-secondary-hub bg-subtle border border-subtle px-2.5 py-0.5 rounded-md">
                                                         {colab.shift}
                                                     </span>
                                                 </td>
-                                                <td className="px-5 py-4 whitespace-nowrap text-right font-mono font-bold text-gray-900">
+                                                <td className="px-5 py-4 whitespace-nowrap text-right font-mono font-bold text-primary-hub">
                                                     <span className={`px-2.5 py-1 rounded-lg text-xs ${
-                                                        index === 0 ? 'bg-yellow-100 text-yellow-800 font-black' : 'bg-gray-100 text-gray-800'
+                                                        index === 0 ? 'bg-yellow-100 text-yellow-800 font-black' : 'bg-subtle text-primary-hub'
                                                     }`}>
                                                         {colab.pontuacao} pts
                                                     </span>
                                                 </td>
-                                                <td className="px-5 py-4 whitespace-nowrap text-right font-medium text-gray-700">
+                                                <td className="px-5 py-4 whitespace-nowrap text-right font-medium text-secondary-hub">
                                                     {colab.finalizacoes}
                                                 </td>
-                                                <td className="px-5 py-4 whitespace-nowrap text-right font-medium text-gray-700">
+                                                <td className="px-5 py-4 whitespace-nowrap text-right font-medium text-secondary-hub">
                                                     {colab.ligAtendidas}
                                                 </td>
                                                 <td className="px-5 py-4 whitespace-nowrap text-right font-mono text-xs font-bold text-blue-700">
@@ -866,7 +866,7 @@ const Rankings = () => {
                                                 <td className="px-5 py-4 whitespace-nowrap text-center">
                                                     <button 
                                                         onClick={(e) => { e.stopPropagation(); setSelectedColab(colab); }}
-                                                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                        className="p-1.5 text-muted-hub hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                                         title="Ver Ficha Completa"
                                                     >
                                                         <Eye className="w-4 h-4" />
@@ -884,13 +884,13 @@ const Rankings = () => {
                     {/* MODO 3: COMPARATIVO EM BARRAS          */}
                     {/* -------------------------------------- */}
                     {viewMode === 'bars' && (
-                        <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-2xs space-y-4 flex-1">
-                            <div className="border-b border-gray-100 pb-3 flex justify-between items-center">
+                        <div className="bg-surface rounded-xl border border-subtle p-6 shadow-2xs space-y-4 flex-1">
+                            <div className="border-b border-subtle pb-3 flex justify-between items-center">
                                 <div>
-                                    <h4 className="text-sm font-bold text-gray-900">Comparativo Visual de Desempenho</h4>
-                                    <p className="text-xs text-gray-500">Proporção individual calculada em relação ao líder (100%)</p>
+                                    <h4 className="text-sm font-bold text-primary-hub">Comparativo Visual de Desempenho</h4>
+                                    <p className="text-xs text-secondary-hub">Proporção individual calculada em relação ao líder (100%)</p>
                                 </div>
-                                <span className="text-xs font-bold text-gray-400">
+                                <span className="text-xs font-bold text-muted-hub">
                                     Base: {activeTab === 'pontuacao' ? 'Pontuação' : 'Finalizações'}
                                 </span>
                             </div>
@@ -904,23 +904,23 @@ const Rankings = () => {
                                         <div 
                                             key={colab.id} 
                                             onClick={() => setSelectedColab(colab)}
-                                            className="p-3 rounded-xl hover:bg-gray-50/80 transition-all border border-transparent hover:border-gray-200 cursor-pointer"
+                                            className="p-3 rounded-xl hover:bg-subtle transition-all border border-transparent hover:border-subtle cursor-pointer"
                                         >
                                             <div className="flex justify-between items-center mb-1.5 text-xs">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-400 w-6">{index + 1}º</span>
-                                                    <span className="font-bold text-gray-900">{colab.name}</span>
-                                                    <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded font-medium">
+                                                    <span className="font-bold text-muted-hub w-6">{index + 1}º</span>
+                                                    <span className="font-bold text-primary-hub">{colab.name}</span>
+                                                    <span className="text-[10px] text-muted-hub bg-subtle px-2 py-0.5 rounded font-medium">
                                                         {colab.shift}
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center gap-2 font-mono font-bold">
-                                                    <span className="text-gray-900">{value}</span>
-                                                    <span className="text-gray-400 text-[10px]">({percent}%)</span>
+                                                    <span className="text-primary-hub">{value}</span>
+                                                    <span className="text-muted-hub text-[10px]">({percent}%)</span>
                                                 </div>
                                             </div>
 
-                                            <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                                            <div className="w-full bg-subtle h-2.5 rounded-full overflow-hidden">
                                                 <div 
                                                     className={`h-full rounded-full transition-all duration-500 ${
                                                         index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-slate-400' : index === 2 ? 'bg-amber-600' : 'bg-red-500'
@@ -944,42 +944,42 @@ const Rankings = () => {
                                 <div 
                                     key={colab.id}
                                     onClick={() => setSelectedColab(colab)}
-                                    className={`bg-white rounded-xl border p-5 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
-                                        index === 0 ? 'border-yellow-300 ring-1 ring-yellow-400/30' : 'border-gray-200 hover:border-gray-300'
+                                    className={`bg-surface rounded-xl border p-5 shadow-2xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 ${
+                                        index === 0 ? 'border-yellow-300 ring-1 ring-yellow-400/30' : 'border-subtle hover:border-strong'
                                     }`}
                                 >
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between">
                                             {renderMedal(index)}
-                                            <span className="text-[10px] uppercase font-bold text-gray-400 bg-gray-100 px-2 py-0.5 rounded border border-gray-200">
+                                            <span className="text-[10px] uppercase font-bold text-muted-hub bg-subtle px-2 py-0.5 rounded border border-subtle">
                                                 {colab.shift}
                                             </span>
                                         </div>
 
                                         <div>
-                                            <h4 className="text-base font-bold text-gray-900 line-clamp-1">
+                                            <h4 className="text-base font-bold text-primary-hub line-clamp-1">
                                                 {colab.name}
                                             </h4>
-                                            <span className="text-xs text-gray-400">
+                                            <span className="text-xs text-muted-hub">
                                                 {colab.role}
                                             </span>
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 text-xs">
-                                            <div className="bg-gray-50 p-2 rounded-lg">
-                                                <span className="text-[10px] text-gray-400 uppercase font-bold block">Pontos</span>
-                                                <span className="font-bold text-gray-900 text-sm">{colab.pontuacao}</span>
+                                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-subtle text-xs">
+                                            <div className="bg-subtle p-2 rounded-lg">
+                                                <span className="text-[10px] text-muted-hub uppercase font-bold block">Pontos</span>
+                                                <span className="font-bold text-primary-hub text-sm">{colab.pontuacao}</span>
                                             </div>
-                                            <div className="bg-gray-50 p-2 rounded-lg">
-                                                <span className="text-[10px] text-gray-400 uppercase font-bold block">Finalizados</span>
+                                            <div className="bg-subtle p-2 rounded-lg">
+                                                <span className="text-[10px] text-muted-hub uppercase font-bold block">Finalizados</span>
                                                 <span className="font-bold text-emerald-700 text-sm">{colab.finalizacoes}</span>
                                             </div>
-                                            <div className="bg-gray-50 p-2 rounded-lg">
-                                                <span className="text-[10px] text-gray-400 uppercase font-bold block">TMA Voz</span>
+                                            <div className="bg-subtle p-2 rounded-lg">
+                                                <span className="text-[10px] text-muted-hub uppercase font-bold block">TMA Voz</span>
                                                 <span className="font-mono text-xs font-bold text-blue-700">{colab.tmaTel}</span>
                                             </div>
-                                            <div className="bg-gray-50 p-2 rounded-lg">
-                                                <span className="text-[10px] text-gray-400 uppercase font-bold block">TMA Chat</span>
+                                            <div className="bg-subtle p-2 rounded-lg">
+                                                <span className="text-[10px] text-muted-hub uppercase font-bold block">TMA Chat</span>
                                                 <span className="font-mono text-xs font-bold text-purple-700">{colab.tmaHuggy}</span>
                                             </div>
                                         </div>
@@ -1001,7 +1001,7 @@ const Rankings = () => {
             {/* ========================================================================= */}
             {selectedColab && (
                 <div className="fixed inset-0 bg-zinc-950/70 flex items-center justify-center p-4 z-[80] backdrop-blur-xs">
-                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
                         
                         {/* Header do Modal */}
                         <div className="p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
@@ -1030,56 +1030,56 @@ const Rankings = () => {
                         </div>
 
                         {/* Corpo do Modal com Indicadores e Histórico */}
-                        <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-gray-50">
+                        <div className="p-6 overflow-y-auto flex-1 space-y-6 bg-subtle">
                             
                             {/* Grid de Estatísticas Acumuladas */}
                             <div>
-                                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3">
+                                <h4 className="text-xs font-bold text-primary-hub uppercase tracking-wider mb-3">
                                     Resumo do Período Selecionado
                                 </h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Pontuação Acumulada</span>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Pontuação Acumulada</span>
                                         <span className="text-xl font-black text-amber-600 mt-1 block">{selectedColab.pontuacao} pts</span>
                                     </div>
-                                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Finalizações</span>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Finalizações</span>
                                         <span className="text-xl font-black text-emerald-700 mt-1 block">{selectedColab.finalizacoes}</span>
                                     </div>
-                                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Ligações Atendidas</span>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Ligações Atendidas</span>
                                         <span className="text-xl font-black text-blue-700 mt-1 block">{selectedColab.ligAtendidas}</span>
                                     </div>
-                                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Ligações Perdidas</span>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Ligações Perdidas</span>
                                         <span className="text-xl font-black text-red-600 mt-1 block">{selectedColab.ligPerdidas}</span>
                                     </div>
-                                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TMA Telefonia (Média)</span>
-                                        <span className="text-lg font-mono font-bold text-gray-900 mt-1 block">{selectedColab.tmaTel}</span>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">TMA Telefonia (Média)</span>
+                                        <span className="text-lg font-mono font-bold text-primary-hub mt-1 block">{selectedColab.tmaTel}</span>
                                     </div>
-                                    <div className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">TMA Huggy (Média)</span>
-                                        <span className="text-lg font-mono font-bold text-gray-900 mt-1 block">{selectedColab.tmaHuggy}</span>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">TMA Huggy (Média)</span>
+                                        <span className="text-lg font-mono font-bold text-primary-hub mt-1 block">{selectedColab.tmaHuggy}</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Histórico Semanal Detalhado */}
                             <div>
-                                <h4 className="text-xs font-bold text-gray-900 uppercase tracking-wider mb-3 flex items-center justify-between">
+                                <h4 className="text-xs font-bold text-primary-hub uppercase tracking-wider mb-3 flex items-center justify-between">
                                     <span>Lançamentos que Compõem esta Nota ({selectedColab.weeklyRecords.length})</span>
-                                    <span className="text-[11px] font-normal text-gray-400">Ordenado por semana</span>
+                                    <span className="text-[11px] font-normal text-muted-hub">Ordenado por semana</span>
                                 </h4>
 
                                 {selectedColab.weeklyRecords.length === 0 ? (
-                                    <div className="bg-white p-6 rounded-xl border border-gray-200 text-center text-xs text-gray-400">
+                                    <div className="bg-surface p-6 rounded-xl border border-subtle text-center text-xs text-muted-hub">
                                         Nenhuma avaliação semanal individual encontrada no período.
                                     </div>
                                 ) : (
-                                    <div className="bg-white rounded-xl border border-gray-200 shadow-2xs overflow-hidden">
-                                        <table className="min-w-full text-xs divide-y divide-gray-200">
-                                            <thead className="bg-gray-50 text-gray-500 font-bold">
+                                    <div className="bg-surface rounded-xl border border-subtle shadow-2xs overflow-hidden">
+                                        <table className="min-w-full text-xs divide-y divide-subtle">
+                                            <thead className="bg-subtle text-secondary-hub font-bold">
                                                 <tr>
                                                     <th className="px-4 py-2.5 text-left">Semana</th>
                                                     <th className="px-4 py-2.5 text-right">Pontos</th>
@@ -1089,13 +1089,13 @@ const Rankings = () => {
                                                     <th className="px-4 py-2.5 text-right">TMA Chat</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-gray-100">
+                                            <tbody className="divide-y divide-subtle">
                                                 {selectedColab.weeklyRecords.map((rec, i) => (
-                                                    <tr key={i} className="hover:bg-gray-50">
-                                                        <td className="px-4 py-2.5 font-medium text-gray-900">{rec.date}</td>
+                                                    <tr key={i} className="hover:bg-subtle">
+                                                        <td className="px-4 py-2.5 font-medium text-primary-hub">{rec.date}</td>
                                                         <td className="px-4 py-2.5 text-right font-bold text-amber-600">{rec.pts} pts</td>
-                                                        <td className="px-4 py-2.5 text-right text-gray-700">{rec.finalizados}</td>
-                                                        <td className="px-4 py-2.5 text-right text-gray-700">{rec.ligAtendidas}</td>
+                                                        <td className="px-4 py-2.5 text-right text-secondary-hub">{rec.finalizados}</td>
+                                                        <td className="px-4 py-2.5 text-right text-secondary-hub">{rec.ligAtendidas}</td>
                                                         <td className="px-4 py-2.5 text-right font-mono text-blue-600">{rec.tmaTel}</td>
                                                         <td className="px-4 py-2.5 text-right font-mono text-purple-600">{rec.tmaHuggy}</td>
                                                     </tr>
@@ -1108,10 +1108,10 @@ const Rankings = () => {
                         </div>
 
                         {/* Rodapé do Modal */}
-                        <div className="p-4 bg-white border-t border-gray-200 flex justify-end shrink-0">
+                        <div className="p-4 bg-surface border-t border-subtle flex justify-end shrink-0">
                             <button 
                                 onClick={() => setSelectedColab(null)} 
-                                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-bold text-sm transition-colors cursor-pointer"
+                                className="px-6 py-2 bg-subtle hover:bg-gray-200 text-primary-hub rounded-xl font-bold text-sm transition-colors cursor-pointer"
                             >
                                 Fechar
                             </button>

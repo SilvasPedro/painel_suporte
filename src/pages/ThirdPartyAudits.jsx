@@ -8,7 +8,7 @@ import {
     Users, RefreshCw, Sparkles, ChevronRight, Upload, FileUp, FileSpreadsheet
 } from 'lucide-react';
 import { 
-    collection, doc, addDoc, updateDoc, deleteDoc, setDoc 
+    collection, doc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch 
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection, fetchQueryOnce } from '../services/dataCache';
@@ -924,18 +924,30 @@ export default function ThirdPartyAudits() {
                 return;
             }
 
-            // Persistência em lote no Firestore
-            for (const item of newAudits) {
-                await addDoc(collection(db, 'third_party_audits'), item);
-                if (item.operatorName) {
-                    const slug = item.operatorName.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                    const opId = item.company === LEGACY_COMPANY ? slug : `${item.company.toLowerCase()}_${slug}`;
-                    await setDoc(doc(db, 'third_party_operators', opId), {
-                        name: item.operatorName,
-                        company: item.company,
-                        lastUsedAt: new Date()
-                    }, { merge: true });
-                }
+            // Persistência em lote no Firestore: writeBatch (até 400 operações por commit)
+            // e um único registro por operador, em vez de um setDoc a cada linha do CSV.
+            const operatorsToSave = new Map();
+            const BATCH_SIZE = 400;
+            for (let i = 0; i < newAudits.length; i += BATCH_SIZE) {
+                const batch = writeBatch(db);
+                newAudits.slice(i, i + BATCH_SIZE).forEach((item) => {
+                    batch.set(doc(collection(db, 'third_party_audits')), item);
+                    if (item.operatorName) {
+                        const slug = item.operatorName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                        const opId = item.company === LEGACY_COMPANY ? slug : `${item.company.toLowerCase()}_${slug}`;
+                        operatorsToSave.set(opId, { name: item.operatorName, company: item.company });
+                    }
+                });
+                await batch.commit();
+            }
+
+            const operatorEntries = [...operatorsToSave.entries()];
+            for (let i = 0; i < operatorEntries.length; i += BATCH_SIZE) {
+                const batch = writeBatch(db);
+                operatorEntries.slice(i, i + BATCH_SIZE).forEach(([opId, data]) => {
+                    batch.set(doc(db, 'third_party_operators', opId), { ...data, lastUsedAt: new Date() }, { merge: true });
+                });
+                await batch.commit();
             }
 
             if (discardedCount > 0) {

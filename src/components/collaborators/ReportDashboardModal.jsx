@@ -548,7 +548,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
         >
             <div 
                 id="collaborator-report-dashboard-modal"
-                className="bg-gray-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden border border-gray-200"
+                className="bg-subtle rounded-2xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden border border-subtle"
             >
                 {/* ======================================================== */}
                 {/* CABEÇALHO DO RELATÓRIO INDIVIDUAL */}
@@ -622,10 +622,10 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                 {/* ======================================================== */}
                 {/* BARRA DE FILTROS AVANÇADOS: PERÍODO, MÊS E SEMANAS */}
                 {/* ======================================================== */}
-                <div id="report-filters-bar" className="bg-white px-4 sm:px-6 py-3 border-b border-gray-200 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shrink-0 shadow-2xs">
+                <div id="report-filters-bar" className="bg-surface px-4 sm:px-6 py-3 border-b border-subtle flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shrink-0 shadow-2xs">
                     {/* Botões de Atalho de Período */}
                     <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
+                        <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
                             <Calendar className="w-3.5 h-3.5 text-red-600" />
                             Período:
                         </span>
@@ -640,7 +640,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer flex items-center gap-1.5 ${
                                 periodType === 'current'
                                     ? 'bg-red-600 text-white shadow-2xs'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                             }`}
                         >
                             <Sparkles className="w-3 h-3" />
@@ -657,7 +657,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                                 periodType === 'previous'
                                     ? 'bg-red-600 text-white shadow-2xs'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                             }`}
                         >
                             Mês Anterior ({previousMonthKey})
@@ -673,7 +673,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                                 periodType === 'last_3'
                                     ? 'bg-red-600 text-white shadow-2xs'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                             }`}
                         >
                             Últimos 3 Meses
@@ -689,7 +689,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                                 periodType === 'all'
                                     ? 'bg-red-600 text-white shadow-2xs'
-                                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                    : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                             }`}
                         >
                             Todo o Histórico
@@ -700,7 +700,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                     <div className="flex items-center gap-2 flex-wrap">
                         {/* Seletor de Mês Específico */}
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-500 font-medium hidden lg:inline">Mês:</span>
+                            <span className="text-xs text-secondary-hub font-medium hidden lg:inline">Mês:</span>
                             <select
                                 id="select-report-custom-month"
                                 value={periodType === 'custom_month' ? selectedMonth : (periodType === 'current' ? currentMonthKey : (periodType === 'previous' ? previousMonthKey : ''))}
@@ -711,7 +711,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                         setSelectedWeek('all');
                                     }
                                 }}
-                                className="px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
+                                className="px-2.5 py-1.5 bg-subtle border border-strong rounded-lg text-xs font-semibold text-primary-hub outline-none focus:ring-2 focus:ring-red-500 cursor-pointer"
                             >
                                 <option value="" disabled>Selecionar Mês...</option>
                                 {availableMonths.map(m => (
@@ -724,13 +724,13 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
 
                         {/* Seletor de Semana / Data Específica de Avaliação */}
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs text-gray-500 font-medium hidden lg:inline">Semana:</span>
+                            <span className="text-xs text-secondary-hub font-medium hidden lg:inline">Semana:</span>
                             <select
                                 id="select-report-week"
                                 value={selectedWeek}
                                 onChange={(e) => setSelectedWeek(e.target.value)}
                                 disabled={availableWeeksInPeriod.length === 0}
-                                className="px-2.5 py-1.5 bg-gray-50 border border-gray-300 rounded-lg text-xs font-semibold text-gray-800 outline-none focus:ring-2 focus:ring-red-500 cursor-pointer disabled:opacity-50"
+                                className="px-2.5 py-1.5 bg-subtle border border-strong rounded-lg text-xs font-semibold text-primary-hub outline-none focus:ring-2 focus:ring-red-500 cursor-pointer disabled:opacity-50"
                             >
                                 <option value="all">Todas as Semanas ({availableWeeksInPeriod.length})</option>
                                 {availableWeeksInPeriod.map(w => (
@@ -746,7 +746,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                 {/* ======================================================== */}
                 {/* ABAS DE FOCO DE DADOS (DADOS ESPECÍFICOS) */}
                 {/* ======================================================== */}
-                <div id="report-focus-tabs" className="bg-gray-100/70 px-4 sm:px-6 py-2 border-b border-gray-200 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+                <div id="report-focus-tabs" className="bg-subtle px-4 sm:px-6 py-2 border-b border-subtle flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
                     <div className="flex items-center gap-1">
                         <button
                             id="tab-focus-all"
@@ -754,8 +754,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={() => setFocusTab('all')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 focusTab === 'all'
-                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                    ? 'bg-surface text-primary-hub shadow-2xs border border-subtle'
+                                    : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                             }`}
                         >
                             <BarChart2 className="w-3.5 h-3.5 text-red-500" />
@@ -768,8 +768,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={() => setFocusTab('telefonia')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 focusTab === 'telefonia'
-                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                    ? 'bg-surface text-primary-hub shadow-2xs border border-subtle'
+                                    : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                             }`}
                         >
                             <Phone className="w-3.5 h-3.5 text-blue-500" />
@@ -782,8 +782,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={() => setFocusTab('huggy')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 focusTab === 'huggy'
-                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                    ? 'bg-surface text-primary-hub shadow-2xs border border-subtle'
+                                    : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                             }`}
                         >
                             <MessageSquare className="w-3.5 h-3.5 text-purple-500" />
@@ -796,8 +796,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={() => setFocusTab('pontuacao')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 focusTab === 'pontuacao'
-                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                    ? 'bg-surface text-primary-hub shadow-2xs border border-subtle'
+                                    : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                             }`}
                         >
                             <Award className="w-3.5 h-3.5 text-amber-500" />
@@ -810,8 +810,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={() => setFocusTab('qa')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 focusTab === 'qa'
-                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                    ? 'bg-surface text-primary-hub shadow-2xs border border-subtle'
+                                    : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                             }`}
                         >
                             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
@@ -824,8 +824,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={() => setFocusTab('feedbacks')}
                             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 ${
                                 focusTab === 'feedbacks'
-                                    ? 'bg-white text-gray-900 shadow-2xs border border-gray-200'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200/60'
+                                    ? 'bg-surface text-primary-hub shadow-2xs border border-subtle'
+                                    : 'text-secondary-hub hover:text-primary-hub hover:bg-gray-200/60'
                             }`}
                         >
                             <ThumbsUp className="w-3.5 h-3.5 text-blue-500" />
@@ -833,8 +833,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                         </button>
                     </div>
 
-                    <div className="text-[11px] text-gray-500 font-medium shrink-0 hidden sm:block">
-                        Mostrando: <strong className="text-gray-800">{displayedEvals.length}</strong> semana(s) avaliada(s)
+                    <div className="text-[11px] text-secondary-hub font-medium shrink-0 hidden sm:block">
+                        Mostrando: <strong className="text-primary-hub">{displayedEvals.length}</strong> semana(s) avaliada(s)
                     </div>
                 </div>
 
@@ -872,10 +872,10 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                     )}
 
                     {displayedEvals.length === 0 && periodType !== 'current' ? (
-                        <div className="text-center py-20 flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-200 p-8 shadow-2xs">
-                            <FileText className="w-14 h-14 text-gray-300 mb-3" />
-                            <h3 className="text-base font-bold text-gray-800">Nenhum dado encontrado para o filtro selecionado</h3>
-                            <p className="text-xs text-gray-500 mt-1 max-w-md">
+                        <div className="text-center py-20 flex flex-col items-center justify-center bg-surface rounded-2xl border border-subtle p-8 shadow-2xs">
+                            <FileText className="w-14 h-14 text-muted-hub mb-3" />
+                            <h3 className="text-base font-bold text-primary-hub">Nenhum dado encontrado para o filtro selecionado</h3>
+                            <p className="text-xs text-secondary-hub mt-1 max-w-md">
                                 Não há avaliações semanais cadastradas com os parâmetros de data ou semana definidos.
                             </p>
                             <button
@@ -896,33 +896,33 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             {/* ======================================================== */}
                             <div id="report-primary-metric-cards" className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3">
                                 {/* CARD 1: PONTUAÇÃO CONSOLIDADA */}
-                                <div id="metric-card-pontuacao" className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                                <div id="metric-card-pontuacao" className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs flex flex-col justify-between">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[10px] font-extrabold text-muted-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <Award className="w-3.5 h-3.5 text-amber-500" />
                                             {selectedWeek !== 'all' ? 'Pontos da Semana' : 'Pontuação Total'}
                                         </span>
                                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                             metricsSummary.totalPontuacao >= 500 
                                                 ? 'bg-emerald-100 text-emerald-700' 
-                                                : (metricsSummary.totalPontuacao >= 250 ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-700')
+                                                : (metricsSummary.totalPontuacao >= 250 ? 'bg-blue-100 text-blue-700' : 'bg-subtle text-secondary-hub')
                                         }`}>
                                             {selectedWeek !== 'all' ? 'Semana Focada' : `${metricsSummary.count} sem.`}
                                         </span>
                                     </div>
-                                    <div className="text-2xl font-black text-gray-900 tracking-tight">
-                                        {metricsSummary.totalPontuacao.toLocaleString('pt-BR')} <span className="text-xs font-bold text-gray-400">pts</span>
+                                    <div className="text-2xl font-black text-primary-hub tracking-tight">
+                                        {metricsSummary.totalPontuacao.toLocaleString('pt-BR')} <span className="text-xs font-bold text-muted-hub">pts</span>
                                     </div>
-                                    <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                                    <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                                         <span>Média Semanal:</span>
-                                        <strong className="text-gray-800">{metricsSummary.avgPontuacao} pts/sem</strong>
+                                        <strong className="text-primary-hub">{metricsSummary.avgPontuacao} pts/sem</strong>
                                     </div>
                                 </div>
 
                                 {/* CARD 2: FINALIZADOS */}
-                                <div id="metric-card-finalizados" className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                                <div id="metric-card-finalizados" className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs flex flex-col justify-between">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[10px] font-extrabold text-muted-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
                                             Finalizados
                                         </span>
@@ -933,16 +933,16 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     <div className="text-2xl font-black text-emerald-600 tracking-tight">
                                         {metricsSummary.totalFinalizados.toLocaleString('pt-BR')}
                                     </div>
-                                    <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                                    <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                                         <span>Média Semanal:</span>
-                                        <strong className="text-gray-800">{metricsSummary.avgFinalizados} atend.</strong>
+                                        <strong className="text-primary-hub">{metricsSummary.avgFinalizados} atend.</strong>
                                     </div>
                                 </div>
 
                                 {/* CARD 3: TELEFONIA (ATENDIDAS VS PERDIDAS) */}
-                                <div id="metric-card-telefonia" className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                                <div id="metric-card-telefonia" className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs flex flex-col justify-between">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[10px] font-extrabold text-muted-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <Phone className="w-3.5 h-3.5 text-blue-500" />
                                             Voz (Atendidas / Perd.)
                                         </span>
@@ -954,23 +954,23 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                         <span className="text-2xl font-black text-blue-600 tracking-tight">
                                             {metricsSummary.totalLigAtendidas}
                                         </span>
-                                        <span className="text-xs font-bold text-gray-400">atend.</span>
+                                        <span className="text-xs font-bold text-muted-hub">atend.</span>
                                         {metricsSummary.totalLigPerdidas > 0 && (
                                             <span className="text-xs font-bold text-red-600 ml-auto bg-red-50 px-1.5 py-0.5 rounded">
                                                 -{metricsSummary.totalLigPerdidas} perd.
                                             </span>
                                         )}
                                     </div>
-                                    <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                                    <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                                         <span>Média Ligações:</span>
-                                        <strong className="text-gray-800">{metricsSummary.avgLigAtendidas}/sem</strong>
+                                        <strong className="text-primary-hub">{metricsSummary.avgLigAtendidas}/sem</strong>
                                     </div>
                                 </div>
 
                                 {/* CARD 4: VOLUME HUGGY CHAT */}
-                                <div id="metric-card-huggy" className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs flex flex-col justify-between">
+                                <div id="metric-card-huggy" className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs flex flex-col justify-between">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span className="text-[10px] font-extrabold text-muted-hub uppercase tracking-wider flex items-center gap-1.5">
                                             <MessageSquare className="w-3.5 h-3.5 text-purple-500" />
                                             Volume Huggy (Chat)
                                         </span>
@@ -981,49 +981,49 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     <div className="text-2xl font-black text-purple-600 tracking-tight">
                                         {metricsSummary.totalHuggy.toLocaleString('pt-BR')}
                                     </div>
-                                    <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between text-[11px] text-gray-500">
+                                    <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-secondary-hub">
                                         <span>Média Chat:</span>
-                                        <strong className="text-gray-800">{metricsSummary.avgHuggy} conv./sem</strong>
+                                        <strong className="text-primary-hub">{metricsSummary.avgHuggy} conv./sem</strong>
                                     </div>
                                 </div>
                             </div>
 
                             {/* LINHA SECUNDÁRIA DE CARDS: TEMPOS MÉDIOS E QUALIDADE */}
                             <div id="report-secondary-metric-cards" className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                                <div id="metric-card-tma-tel" className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                    <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                <div id="metric-card-tma-tel" className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">
                                         <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-blue-500" /> TMA Voz</span>
-                                        <span className="text-gray-400 font-normal">Médio</span>
+                                        <span className="text-muted-hub font-normal">Médio</span>
                                     </div>
                                     <div className="text-lg font-black text-blue-600 font-mono">
                                         {formatTime(metricsSummary.avgTmaTel)}
                                     </div>
                                 </div>
 
-                                <div id="metric-card-tma-huggy" className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                    <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                <div id="metric-card-tma-huggy" className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">
                                         <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-purple-500" /> TMA Huggy</span>
-                                        <span className="text-gray-400 font-normal">Médio</span>
+                                        <span className="text-muted-hub font-normal">Médio</span>
                                     </div>
                                     <div className="text-lg font-black text-purple-600 font-mono">
                                         {formatTime(metricsSummary.avgTmaHuggy)}
                                     </div>
                                 </div>
 
-                                <div id="metric-card-tme-tel" className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                    <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
-                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-gray-500" /> TME Telefonia</span>
-                                        <span className="text-gray-400 font-normal">Espera</span>
+                                <div id="metric-card-tme-tel" className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">
+                                        <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-secondary-hub" /> TME Telefonia</span>
+                                        <span className="text-muted-hub font-normal">Espera</span>
                                     </div>
-                                    <div className="text-lg font-black text-gray-800 font-mono">
+                                    <div className="text-lg font-black text-primary-hub font-mono">
                                         {formatTime(metricsSummary.avgTme)}
                                     </div>
                                 </div>
 
-                                <div id="metric-card-qa-conformidade" className="bg-white p-3.5 rounded-xl border border-gray-200 shadow-2xs">
-                                    <div className="flex items-center justify-between text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">
+                                <div id="metric-card-qa-conformidade" className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                    <div className="flex items-center justify-between text-[10px] font-bold text-muted-hub uppercase tracking-wider mb-1">
                                         <span className="flex items-center gap-1"><ShieldCheck className="w-3 h-3 text-emerald-500" /> Conformidade QA</span>
-                                        <span className="text-gray-400 font-normal">{qaMetrics.total} audits</span>
+                                        <span className="text-muted-hub font-normal">{qaMetrics.total} audits</span>
                                     </div>
                                     <div className="text-lg font-black text-emerald-600">
                                         {qaMetrics.total > 0 ? `${qaMetrics.taxaConformidade}%` : '--'}
@@ -1037,14 +1037,14 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             {(focusTab === 'all' || focusTab === 'pontuacao') && (
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {/* Gráfico 1: Produção Semanal */}
-                                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
+                                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs">
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
                                                     <BarChart2 className="w-4 h-4 text-red-600" />
                                                     Evolução de Produção por Semana
                                                 </h3>
-                                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                                <p className="text-[11px] text-secondary-hub mt-0.5">
                                                     Comparativo de Finalizados, Voz Atendidas e Huggy
                                                 </p>
                                             </div>
@@ -1069,14 +1069,14 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     </div>
 
                                     {/* Gráfico 2: Curva de Pontuação */}
-                                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
+                                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs">
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
                                                     <TrendingUp className="w-4 h-4 text-amber-500" />
                                                     Curva de Pontuação Semanal
                                                 </h3>
-                                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                                <p className="text-[11px] text-secondary-hub mt-0.5">
                                                     Pontos acumulados conforme fórmula oficial
                                                 </p>
                                             </div>
@@ -1115,14 +1115,14 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             {(focusTab === 'all' || focusTab === 'telefonia' || focusTab === 'huggy') && (
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                                     {/* Gráfico 3: Telefonia Atendidas vs Perdidas */}
-                                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
+                                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs">
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
                                                     <Phone className="w-4 h-4 text-blue-500" />
                                                     Desempenho Telefonia (Atendidas vs Perdidas)
                                                 </h3>
-                                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                                <p className="text-[11px] text-secondary-hub mt-0.5">
                                                     Detalhamento de volume de ligações recebidas
                                                 </p>
                                             </div>
@@ -1143,14 +1143,14 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     </div>
 
                                     {/* Gráfico 4: Tempos Médios (TMA Telefonia vs TMA Huggy vs TME) */}
-                                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
+                                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs">
                                         <div className="flex items-center justify-between mb-4">
                                             <div>
-                                                <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
                                                     <Clock className="w-4 h-4 text-purple-500" />
                                                     Evolução dos Tempos Médios (TMA & TME)
                                                 </h3>
-                                                <p className="text-[11px] text-gray-500 mt-0.5">
+                                                <p className="text-[11px] text-secondary-hub mt-0.5">
                                                     Tempo Médio de Atendimento e Espera em minutos
                                                 </p>
                                             </div>
@@ -1179,18 +1179,18 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             {/* ======================================================== */}
                             {/* TABELA DE EXTRATO DETALHADO SEMANA A SEMANA */}
                             {/* ======================================================== */}
-                            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-2xs">
-                                <div className="p-4 sm:p-5 border-b border-gray-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                            <div className="bg-surface rounded-2xl border border-subtle overflow-hidden shadow-2xs">
+                                <div className="p-4 sm:p-5 border-b border-subtle flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                     <div>
-                                        <h3 className="text-xs font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                        <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
                                             <Calendar className="w-4 h-4 text-red-600" />
                                             Extrato das Avaliações Semanais no Período
                                         </h3>
-                                        <p className="text-[11px] text-gray-500 mt-0.5">
+                                        <p className="text-[11px] text-secondary-hub mt-0.5">
                                             Relação completa de todos os lançamentos que compõem este relatório
                                         </p>
                                     </div>
-                                    <span className="text-xs font-bold text-gray-600 bg-gray-100 px-2.5 py-1 rounded-lg border border-gray-200">
+                                    <span className="text-xs font-bold text-secondary-hub bg-subtle px-2.5 py-1 rounded-lg border border-subtle">
                                         Total: {displayedEvals.length} semanas
                                     </span>
                                 </div>
@@ -1198,7 +1198,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse text-xs">
                                         <thead>
-                                            <tr className="bg-gray-50/80 border-b border-gray-200 text-gray-500 font-bold text-[10px] uppercase tracking-wider">
+                                            <tr className="bg-subtle border-b border-subtle text-secondary-hub font-bold text-[10px] uppercase tracking-wider">
                                                 <th className="py-3 px-4">Semana / Data</th>
                                                 <th className="py-3 px-3 text-center">Finalizados</th>
                                                 <th className="py-3 px-3 text-center">Lig. Atendidas</th>
@@ -1210,14 +1210,14 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                 <th className="py-3 px-4 text-right">Pontuação</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-gray-100">
+                                        <tbody className="divide-y divide-subtle">
                                             {displayedEvals.map((week, idx) => (
                                                 <tr 
                                                     key={week.id || idx}
                                                     onClick={() => setSelectedWeekModal(week)}
                                                     className="hover:bg-red-50/40 transition-colors cursor-pointer group"
                                                 >
-                                                    <td className="py-3 px-4 font-bold text-gray-900 flex items-center gap-2">
+                                                    <td className="py-3 px-4 font-bold text-primary-hub flex items-center gap-2">
                                                         <span className="w-2 h-2 rounded-full bg-red-500 group-hover:scale-125 transition-transform"></span>
                                                         {week.date}
                                                     </td>
@@ -1233,17 +1233,17 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                     <td className="py-3 px-3 text-center font-semibold text-purple-700">
                                                         {week.huggyVol}
                                                     </td>
-                                                    <td className="py-3 px-3 text-center font-mono text-gray-600">
+                                                    <td className="py-3 px-3 text-center font-mono text-secondary-hub">
                                                         {formatTime(week.tmaTel)}
                                                     </td>
-                                                    <td className="py-3 px-3 text-center font-mono text-gray-600">
+                                                    <td className="py-3 px-3 text-center font-mono text-secondary-hub">
                                                         {formatTime(week.tmaHuggy)}
                                                     </td>
-                                                    <td className="py-3 px-3 text-center font-mono text-gray-500">
+                                                    <td className="py-3 px-3 text-center font-mono text-secondary-hub">
                                                         {formatTime(week.tme)}
                                                     </td>
-                                                    <td className="py-3 px-4 text-right font-black text-gray-900">
-                                                        <span className="px-2 py-0.5 rounded-md bg-gray-100 group-hover:bg-amber-100 text-amber-900 border border-gray-200 transition-colors">
+                                                    <td className="py-3 px-4 text-right font-black text-primary-hub">
+                                                        <span className="px-2 py-0.5 rounded-md bg-subtle group-hover:bg-amber-100 text-amber-900 border border-subtle transition-colors">
                                                             {week.pontuacao} pts
                                                         </span>
                                                     </td>
@@ -1251,8 +1251,8 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                             ))}
                                         </tbody>
                                         <tfoot>
-                                            <tr className="bg-gray-50 font-bold border-t border-gray-200 text-gray-900">
-                                                <td className="py-3 px-4 uppercase text-[10px] tracking-wider text-gray-600">
+                                            <tr className="bg-subtle font-bold border-t border-subtle text-primary-hub">
+                                                <td className="py-3 px-4 uppercase text-[10px] tracking-wider text-secondary-hub">
                                                     Média / Total Consolidado
                                                 </td>
                                                 <td className="py-3 px-3 text-center text-emerald-700">
@@ -1267,13 +1267,13 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                 <td className="py-3 px-3 text-center text-purple-700">
                                                     {metricsSummary.totalHuggy}
                                                 </td>
-                                                <td className="py-3 px-3 text-center font-mono text-gray-700">
+                                                <td className="py-3 px-3 text-center font-mono text-secondary-hub">
                                                     {formatTime(metricsSummary.avgTmaTel)}
                                                 </td>
-                                                <td className="py-3 px-3 text-center font-mono text-gray-700">
+                                                <td className="py-3 px-3 text-center font-mono text-secondary-hub">
                                                     {formatTime(metricsSummary.avgTmaHuggy)}
                                                 </td>
-                                                <td className="py-3 px-3 text-center font-mono text-gray-600">
+                                                <td className="py-3 px-3 text-center font-mono text-secondary-hub">
                                                     {formatTime(metricsSummary.avgTme)}
                                                 </td>
                                                 <td className="py-3 px-4 text-right font-black text-amber-700">
@@ -1290,15 +1290,15 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             {/* ======================================================== */}
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                                 {/* Bloco QA Audits */}
-                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
-                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-gray-100">
+                                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs">
+                                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-subtle">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                                                 <ShieldCheck className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <h4 className="text-xs font-bold text-gray-900">Monitoria de Qualidade (QA)</h4>
-                                                <p className="text-[10px] text-gray-400">Auditorias vinculadas ao período</p>
+                                                <h4 className="text-xs font-bold text-primary-hub">Monitoria de Qualidade (QA)</h4>
+                                                <p className="text-[10px] text-muted-hub">Auditorias vinculadas ao período</p>
                                             </div>
                                         </div>
                                         <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
@@ -1307,19 +1307,19 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     </div>
 
                                     {periodAudits.length === 0 ? (
-                                        <p className="text-xs text-gray-400 text-center py-6 italic">
+                                        <p className="text-xs text-muted-hub text-center py-6 italic">
                                             Nenhuma auditoria QA registrada neste período para este colaborador.
                                         </p>
                                     ) : (
                                         <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                                             {periodAudits.map((a, i) => (
-                                                <div key={a.id || i} className="p-2.5 rounded-xl border border-gray-100 bg-gray-50/50 flex items-center justify-between text-xs">
+                                                <div key={a.id || i} className="p-2.5 rounded-xl border border-subtle bg-gray-50/50 flex items-center justify-between text-xs">
                                                     <div>
-                                                        <div className="font-bold text-gray-900 flex items-center gap-1.5">
+                                                        <div className="font-bold text-primary-hub flex items-center gap-1.5">
                                                             <span>{a.processName || 'Processo Operacional'}</span>
-                                                            <span className="text-[10px] text-gray-400 font-normal">({a.protocol || 'Sem protocolo'})</span>
+                                                            <span className="text-[10px] text-muted-hub font-normal">({a.protocol || 'Sem protocolo'})</span>
                                                         </div>
-                                                        <span className="text-[10px] text-gray-500">Data: {a.date || '--'} &bull; Auditor: {a.evaluatorName || 'QA'}</span>
+                                                        <span className="text-[10px] text-secondary-hub">Data: {a.date || '--'} &bull; Auditor: {a.evaluatorName || 'QA'}</span>
                                                     </div>
                                                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
                                                         a.status === 'Conforme' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
@@ -1333,26 +1333,26 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                 </div>
 
                                 {/* Bloco Feedbacks */}
-                                <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 pb-2 border-b border-gray-100 gap-2">
+                                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 pb-2 border-b border-subtle gap-2">
                                         <div className="flex items-center gap-2">
                                             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
                                                 <ThumbsUp className="w-4 h-4" />
                                             </div>
                                             <div>
-                                                <h4 className="text-xs font-bold text-gray-900">Feedbacks da Liderança</h4>
-                                                <p className="text-[10px] text-gray-400">Orientações e reconhecimentos</p>
+                                                <h4 className="text-xs font-bold text-primary-hub">Feedbacks da Liderança</h4>
+                                                <p className="text-[10px] text-muted-hub">Orientações e reconhecimentos</p>
                                             </div>
                                         </div>
 
                                         <div className="flex items-center gap-1.5 flex-wrap">
                                             {selectedWeek !== 'all' && (
-                                                <div className="flex items-center bg-gray-100 p-0.5 rounded-lg text-[10px]">
+                                                <div className="flex items-center bg-subtle p-0.5 rounded-lg text-[10px]">
                                                     <button
                                                         type="button"
                                                         onClick={() => setFeedbackScopeFilter('all')}
                                                         className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
-                                                            feedbackScopeFilter === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500'
+                                                            feedbackScopeFilter === 'all' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub'
                                                         }`}
                                                     >
                                                         Período
@@ -1361,7 +1361,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                         type="button"
                                                         onClick={() => setFeedbackScopeFilter('week')}
                                                         className={`px-2 py-0.5 rounded font-bold transition-colors cursor-pointer ${
-                                                            feedbackScopeFilter === 'week' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-500'
+                                                            feedbackScopeFilter === 'week' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub'
                                                         }`}
                                                     >
                                                         Semana
@@ -1385,7 +1385,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                 className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer whitespace-nowrap ${
                                                     feedbackTypeFilter === t
                                                         ? 'bg-blue-600 text-white'
-                                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                                        : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                                                 }`}
                                             >
                                                 {t === 'all' ? 'Todos' : t}
@@ -1394,7 +1394,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     </div>
 
                                     {periodFeedbacks.length === 0 ? (
-                                        <p className="text-xs text-gray-400 text-center py-6 italic">
+                                        <p className="text-xs text-muted-hub text-center py-6 italic">
                                             Nenhum feedback registrado neste período para este colaborador.
                                         </p>
                                     ) : (
@@ -1407,32 +1407,32 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                     : 'bg-blue-100 text-blue-800 border-blue-200';
 
                                                 return (
-                                                    <div key={f.id || i} className="p-3 rounded-xl border border-gray-100 bg-gray-50/60 text-xs space-y-1.5 hover:border-gray-200 transition-colors">
+                                                    <div key={f.id || i} className="p-3 rounded-xl border border-subtle bg-subtle text-xs space-y-1.5 hover:border-subtle transition-colors">
                                                         <div className="flex items-center justify-between gap-2">
                                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                                 <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${typeColor}`}>
                                                                     {f.type || 'Orientação'}
                                                                 </span>
                                                                 {f.method && (
-                                                                    <span className="text-[10px] text-gray-500 font-medium bg-white px-1.5 py-0.5 rounded border border-gray-200">
+                                                                    <span className="text-[10px] text-secondary-hub font-medium bg-surface px-1.5 py-0.5 rounded border border-subtle">
                                                                         {f.method}
                                                                     </span>
                                                                 )}
                                                                 {f.protocol && f.protocol !== 'N/A' && (
-                                                                    <span className="text-[10px] font-mono text-gray-500">
+                                                                    <span className="text-[10px] font-mono text-secondary-hub">
                                                                         #{f.protocol}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <span className="text-[10px] text-gray-500 whitespace-nowrap font-medium">
+                                                            <span className="text-[10px] text-secondary-hub whitespace-nowrap font-medium">
                                                                 {formatFeedbackDate(f)}
                                                             </span>
                                                         </div>
-                                                        <p className="text-gray-700 text-[11px] leading-relaxed whitespace-pre-wrap">
+                                                        <p className="text-secondary-hub text-[11px] leading-relaxed whitespace-pre-wrap">
                                                             {f.comment || 'Sem comentário adicional.'}
                                                         </p>
                                                         {f.createdBy && (
-                                                            <div className="text-[9px] text-gray-400 text-right pt-0.5">
+                                                            <div className="text-[9px] text-muted-hub text-right pt-0.5">
                                                                 Por: {resolveUserName(f.createdBy)}
                                                             </div>
                                                         )}
@@ -1446,15 +1446,15 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
 
                             {/* SEÇÃO DEDICADA DE FEEDBACKS SE FOCUS TAB FOR FEEDBACKS */}
                             {focusTab === 'feedbacks' && (
-                                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs space-y-5 pt-4">
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+                                <div className="bg-surface p-6 rounded-2xl border border-subtle shadow-2xs space-y-5 pt-4">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-4">
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
                                                 <ThumbsUp className="w-5 h-5" />
                                             </div>
                                             <div>
-                                                <h3 className="text-sm font-bold text-gray-900">Histórico de Feedbacks da Liderança</h3>
-                                                <p className="text-xs text-gray-500">
+                                                <h3 className="text-sm font-bold text-primary-hub">Histórico de Feedbacks da Liderança</h3>
+                                                <p className="text-xs text-secondary-hub">
                                                     Registros de elogios, orientações e pontos de melhoria de {colab.name}
                                                 </p>
                                             </div>
@@ -1469,7 +1469,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                     className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                                         feedbackTypeFilter === t
                                                             ? 'bg-blue-600 text-white shadow-2xs'
-                                                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                                            : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                                                     }`}
                                                 >
                                                     {t === 'all' ? `Todos (${periodFeedbacks.length})` : t}
@@ -1481,23 +1481,23 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     {/* Barra de busca e escopo de semana */}
                                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                                         <div className="relative flex-1">
-                                            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                                            <Search className="w-4 h-4 text-muted-hub absolute left-3 top-2.5" />
                                             <input
                                                 type="text"
                                                 value={feedbackSearchTerm}
                                                 onChange={(e) => setFeedbackSearchTerm(e.target.value)}
                                                 placeholder="Buscar por comentário, protocolo, líder..."
-                                                className="w-full pl-9 pr-3 py-2 bg-gray-50 border border-gray-300 rounded-xl text-xs outline-none focus:bg-white focus:ring-2 focus:ring-blue-500"
+                                                className="w-full pl-9 pr-3 py-2 bg-subtle border border-strong rounded-xl text-xs outline-none focus:bg-surface focus:ring-2 focus:ring-blue-500"
                                             />
                                         </div>
 
                                         {selectedWeek !== 'all' && (
-                                            <div className="flex items-center gap-1.5 self-start sm:self-auto bg-gray-100 p-1 rounded-xl">
+                                            <div className="flex items-center gap-1.5 self-start sm:self-auto bg-subtle p-1 rounded-xl">
                                                 <button
                                                     type="button"
                                                     onClick={() => setFeedbackScopeFilter('all')}
                                                     className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                                                        feedbackScopeFilter === 'all' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600'
+                                                        feedbackScopeFilter === 'all' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub'
                                                     }`}
                                                 >
                                                     Todo o Mês/Período
@@ -1506,7 +1506,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                     type="button"
                                                     onClick={() => setFeedbackScopeFilter('week')}
                                                     className={`px-3 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer ${
-                                                        feedbackScopeFilter === 'week' ? 'bg-white text-gray-900 shadow-2xs' : 'text-gray-600'
+                                                        feedbackScopeFilter === 'week' ? 'bg-surface text-primary-hub shadow-2xs' : 'text-secondary-hub'
                                                     }`}
                                                 >
                                                     Semana {selectedWeek}
@@ -1517,10 +1517,10 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
 
                                     {/* Lista de cards detalhados */}
                                     {periodFeedbacks.length === 0 ? (
-                                        <div className="py-12 text-center flex flex-col items-center justify-center space-y-2 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-                                            <ThumbsUp className="w-10 h-10 text-gray-300" />
-                                            <h4 className="text-sm font-bold text-gray-700">Nenhum feedback encontrado</h4>
-                                            <p className="text-xs text-gray-400 max-w-sm">
+                                        <div className="py-12 text-center flex flex-col items-center justify-center space-y-2 bg-subtle rounded-xl border border-dashed border-subtle">
+                                            <ThumbsUp className="w-10 h-10 text-muted-hub" />
+                                            <h4 className="text-sm font-bold text-secondary-hub">Nenhum feedback encontrado</h4>
+                                            <p className="text-xs text-muted-hub max-w-sm">
                                                 Não há feedbacks registrados com os filtros atuais para este período.
                                             </p>
                                         </div>
@@ -1534,14 +1534,14 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                     : 'bg-blue-50 text-blue-800 border-blue-200';
                                                 
                                                 return (
-                                                    <div key={f.id || i} className="p-4 rounded-xl border border-gray-200 bg-white shadow-2xs space-y-3">
+                                                    <div key={f.id || i} className="p-4 rounded-xl border border-subtle bg-surface shadow-2xs space-y-3">
                                                         <div className="flex items-start justify-between gap-2">
                                                             <div className="flex flex-wrap items-center gap-1.5">
                                                                 <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${typeColor}`}>
                                                                     {f.type || 'Orientação'}
                                                                 </span>
                                                                 {f.method && (
-                                                                    <span className="px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[10px] font-medium border border-gray-200">
+                                                                    <span className="px-2 py-0.5 rounded-md bg-subtle text-secondary-hub text-[10px] font-medium border border-subtle">
                                                                         {f.method}
                                                                     </span>
                                                                 )}
@@ -1551,17 +1551,17 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <span className="text-[11px] font-semibold text-gray-500 whitespace-nowrap">
+                                                            <span className="text-[11px] font-semibold text-secondary-hub whitespace-nowrap">
                                                                 {formatFeedbackDate(f)}
                                                             </span>
                                                         </div>
 
-                                                        <p className="text-xs text-gray-800 leading-relaxed bg-gray-50/70 p-3 rounded-xl border border-gray-100 whitespace-pre-wrap">
+                                                        <p className="text-xs text-primary-hub leading-relaxed bg-subtle p-3 rounded-xl border border-subtle whitespace-pre-wrap">
                                                             {f.comment || 'Sem comentários adicionais.'}
                                                         </p>
 
-                                                        <div className="flex items-center justify-between text-[11px] text-gray-400 pt-1 border-t border-gray-50">
-                                                            <span>Líder: <strong className="text-gray-700">{resolveUserName(f.createdBy)}</strong></span>
+                                                        <div className="flex items-center justify-between text-[11px] text-muted-hub pt-1 border-t border-gray-50">
+                                                            <span>Líder: <strong className="text-secondary-hub">{resolveUserName(f.createdBy)}</strong></span>
                                                         </div>
                                                     </div>
                                                 );
@@ -1587,7 +1587,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                     <div 
                         id="selected-week-modal-content"
                         onClick={(e) => e.stopPropagation()}
-                        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-200 flex flex-col animate-in zoom-in-95 duration-150"
+                        className="bg-surface rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-subtle flex flex-col animate-in zoom-in-95 duration-150"
                     >
                         <div className="p-4 bg-zinc-950 text-white flex justify-between items-center border-b border-zinc-800 shrink-0">
                             <div className="flex items-center gap-2.5">
@@ -1619,46 +1619,46 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             </div>
 
                             <div className="grid grid-cols-2 gap-3 text-xs">
-                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                    <span className="text-gray-500 block mb-0.5 text-[10px] uppercase font-bold">Atendimentos Finalizados</span>
+                                <div className="p-3 bg-subtle rounded-xl border border-subtle">
+                                    <span className="text-secondary-hub block mb-0.5 text-[10px] uppercase font-bold">Atendimentos Finalizados</span>
                                     <span className="text-lg font-bold text-emerald-600">{selectedWeekModal.finalizados}</span>
                                 </div>
-                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                    <span className="text-gray-500 block mb-0.5 text-[10px] uppercase font-bold">Chat Huggy</span>
+                                <div className="p-3 bg-subtle rounded-xl border border-subtle">
+                                    <span className="text-secondary-hub block mb-0.5 text-[10px] uppercase font-bold">Chat Huggy</span>
                                     <span className="text-lg font-bold text-purple-600">{selectedWeekModal.huggyVol}</span>
                                 </div>
-                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                    <span className="text-gray-500 block mb-0.5 text-[10px] uppercase font-bold">Ligações Atendidas</span>
+                                <div className="p-3 bg-subtle rounded-xl border border-subtle">
+                                    <span className="text-secondary-hub block mb-0.5 text-[10px] uppercase font-bold">Ligações Atendidas</span>
                                     <span className="text-lg font-bold text-blue-600">{selectedWeekModal.ligAtendidas}</span>
                                 </div>
-                                <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-                                    <span className="text-gray-500 block mb-0.5 text-[10px] uppercase font-bold">Ligações Perdidas</span>
+                                <div className="p-3 bg-subtle rounded-xl border border-subtle">
+                                    <span className="text-secondary-hub block mb-0.5 text-[10px] uppercase font-bold">Ligações Perdidas</span>
                                     <span className="text-lg font-bold text-red-600">{selectedWeekModal.ligPerdidas}</span>
                                 </div>
                             </div>
 
-                            <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-2 text-xs">
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block">Tempos Médios Registrados</span>
-                                <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
-                                    <span className="text-gray-600">TMA Telefonia (Voz):</span>
+                            <div className="p-3 bg-subtle rounded-xl border border-subtle space-y-2 text-xs">
+                                <span className="text-[10px] font-bold text-secondary-hub uppercase tracking-wider block">Tempos Médios Registrados</span>
+                                <div className="flex justify-between items-center border-b border-subtle pb-1.5">
+                                    <span className="text-secondary-hub">TMA Telefonia (Voz):</span>
                                     <span className="font-mono font-bold text-blue-600">{formatTime(selectedWeekModal.tmaTel)}</span>
                                 </div>
-                                <div className="flex justify-between items-center border-b border-gray-200 pb-1.5">
-                                    <span className="text-gray-600">TMA Huggy (Chat):</span>
+                                <div className="flex justify-between items-center border-b border-subtle pb-1.5">
+                                    <span className="text-secondary-hub">TMA Huggy (Chat):</span>
                                     <span className="font-mono font-bold text-purple-600">{formatTime(selectedWeekModal.tmaHuggy)}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
-                                    <span className="text-gray-600">TME Telefonia (Espera):</span>
-                                    <span className="font-mono font-bold text-gray-700">{formatTime(selectedWeekModal.tme)}</span>
+                                    <span className="text-secondary-hub">TME Telefonia (Espera):</span>
+                                    <span className="font-mono font-bold text-secondary-hub">{formatTime(selectedWeekModal.tme)}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end shrink-0">
+                        <div className="p-4 bg-subtle border-t border-subtle flex justify-end shrink-0">
                             <button
                                 type="button"
                                 onClick={() => setSelectedWeekModal(null)}
-                                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-primary-hub rounded-xl text-xs font-bold transition-colors cursor-pointer"
                             >
                                 Fechar Detalhes
                             </button>

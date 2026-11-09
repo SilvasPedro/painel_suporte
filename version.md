@@ -4,6 +4,25 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.2.1] - 2026-11-09
+
+### 🎯 Destaque Principal
+Segunda fase da otimização: menos leituras no perfil do colaborador, importação CSV em lotes e migração de 15 telas e modais para os tokens de tema.
+
+---
+
+### ⚡ Performance (Changed)
+- **Meu Perfil**: os emblemas passam a usar apenas as auditorias QA do colaborador exibido (`where('colabId', '==', id)`). A leitura de `third_party_audits` foi removida, pois o cálculo dos emblemas só atribui auditorias por `colabId` ou nome do colaborador e as terceirizadas não possuem esses campos (resultado inalterado).
+- **Importação CSV da Auditoria Terceirizada**: gravação com `writeBatch` (até 400 operações por commit) e um único registro por operador, em vez de dois `await` sequenciais por linha.
+
+### 🎨 Interface (Changed)
+- **Migração para tokens de tema** (`bg-surface`, `bg-subtle`, `border-subtle`, `border-strong`, `divide-subtle`, `text-primary-hub`, `text-secondary-hub`, `text-muted-hub`) em: Gerenciador de Dados, Rankings, KPIs do Setor, Escalas (Operacionais, Diária e Domingos), Painel do Colaborador, Relatório do Colaborador, Extensões Flutuantes e nos modais de criação/edição de colaborador, feedback, processo QA (edição e prévia) e alteração de senha. Textos cinza em cartões escuros foram preservados para manter o contraste.
+
+### ⚠️ Observações
+- `monthly_evaluations` e `sector_kpis` permanecem sem limite de propósito: ordenar por `createdAt` ocultaria documentos antigos sem o campo (feedbacks 1:1 históricos são dado de conformidade). O volume já caiu com as consultas escopadas da v4.2.0.
+
+---
+
 ## [v4.2.0] - 2026-11-09
 
 ### 🎯 Destaque Principal

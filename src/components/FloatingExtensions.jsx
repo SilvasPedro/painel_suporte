@@ -115,7 +115,7 @@ export default function FloatingExtensions() {
       <div
         ref={modalRef}
         id="extensions-modal-window"
-        className={`fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200/90 z-50 origin-bottom-right transition-all duration-200 ${
+        className={`fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-subtle z-50 origin-bottom-right transition-all duration-200 ${
           isOpen
             ? 'scale-100 opacity-100 pointer-events-auto'
             : 'scale-90 opacity-0 pointer-events-none'
@@ -147,21 +147,21 @@ export default function FloatingExtensions() {
         </div>
 
         {/* Barra de Pesquisa Rápida */}
-        <div className="p-3 bg-gray-50/90 border-b border-gray-100 shrink-0">
+        <div className="p-3 bg-gray-50/90 border-b border-subtle shrink-0">
           <div className="relative">
-            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <Search className="w-4 h-4 text-muted-hub absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               id="search-extensions-input"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por setor ou número..."
-              className="w-full pl-9 pr-7 py-2 bg-white rounded-xl border border-gray-200 text-xs text-gray-800 placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs"
+              className="w-full pl-9 pr-7 py-2 bg-surface rounded-xl border border-subtle text-xs text-primary-hub placeholder-gray-400 focus:outline-hidden focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all shadow-2xs"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold p-1 cursor-pointer"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-hub hover:text-secondary-hub text-xs font-bold p-1 cursor-pointer"
                 title="Limpar pesquisa"
               >
                 ✕
@@ -171,11 +171,11 @@ export default function FloatingExtensions() {
         </div>
 
         {/* Lista de Ramais */}
-        <div className="p-4 overflow-y-auto flex-1 bg-white text-gray-800 space-y-5 divide-y divide-gray-100">
+        <div className="p-4 overflow-y-auto flex-1 bg-surface text-primary-hub space-y-5 divide-y divide-subtle">
           {filteredGroups.length === 0 ? (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-muted-hub">
               <Search className="w-8 h-8 mx-auto mb-2 opacity-30" />
-              <p className="text-xs font-medium text-gray-600">Nenhum ramal encontrado para &quot;{searchQuery}&quot;</p>
+              <p className="text-xs font-medium text-secondary-hub">Nenhum ramal encontrado para &quot;{searchQuery}&quot;</p>
               <button 
                 onClick={() => setSearchQuery('')}
                 className="text-[11px] font-bold text-red-600 hover:underline mt-1 cursor-pointer"
@@ -187,10 +187,10 @@ export default function FloatingExtensions() {
             filteredGroups.map((group, groupIdx) => (
               <div key={group.category} className={groupIdx > 0 ? 'pt-4' : ''}>
                 <div className="flex items-center justify-between mb-2.5">
-                  <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-wider">
+                  <h4 className="text-[11px] font-black text-muted-hub uppercase tracking-wider">
                     {group.category}
                   </h4>
-                  <span className="text-[10px] text-gray-400 font-medium">
+                  <span className="text-[10px] text-muted-hub font-medium">
                     {group.items.length} {group.items.length === 1 ? 'ramal' : 'ramais'}
                   </span>
                 </div>
@@ -205,20 +205,20 @@ export default function FloatingExtensions() {
                         className={`group p-2.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
                           isCopied 
                             ? 'bg-emerald-50/90 border-emerald-300 ring-2 ring-emerald-500/20 shadow-2xs' 
-                            : 'bg-gray-50/60 hover:bg-red-50/40 border-gray-100 hover:border-red-200 shadow-2xs'
+                            : 'bg-subtle hover:bg-red-50/40 border-subtle hover:border-red-200 shadow-2xs'
                         }`}
                         title="Clique para copiar o número do ramal"
                       >
                         <div className="min-w-0 pr-2">
                           <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-gray-900 truncate group-hover:text-red-700 transition-colors">
+                            <span className="text-xs font-bold text-primary-hub truncate group-hover:text-red-700 transition-colors">
                               {item.name}
                             </span>
-                            <span className="px-1.5 py-0.2 rounded-md bg-gray-200/60 text-gray-600 text-[9px] font-semibold">
+                            <span className="px-1.5 py-0.2 rounded-md bg-gray-200/60 text-secondary-hub text-[9px] font-semibold">
                               {item.tag}
                             </span>
                           </div>
-                          <p className="text-[10px] text-gray-500 truncate mt-0.5">
+                          <p className="text-[10px] text-secondary-hub truncate mt-0.5">
                             {item.desc}
                           </p>
                         </div>
@@ -250,7 +250,7 @@ export default function FloatingExtensions() {
 
           {/* Orientações de Transferência e Horários */}
           <div className="pt-4 space-y-3">
-            <h4 className="text-[11px] font-black text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            <h4 className="text-[11px] font-black text-muted-hub uppercase tracking-wider flex items-center gap-1.5">
               <ArrowRightLeft className="w-3.5 h-3.5 text-red-600" /> Como Transferir no Telefone
             </h4>
 
@@ -259,32 +259,32 @@ export default function FloatingExtensions() {
                 <span className="font-mono text-xs font-black text-red-700 bg-red-200/70 px-1.5 py-0.5 rounded w-fit mb-1">
                   ##
                 </span>
-                <span className="text-[11px] font-bold text-gray-900 leading-tight">Direta (Cega)</span>
-                <span className="text-[9px] text-gray-500 mt-0.5 leading-tight">Transfere imediatamente sem consultar</span>
+                <span className="text-[11px] font-bold text-primary-hub leading-tight">Direta (Cega)</span>
+                <span className="text-[9px] text-secondary-hub mt-0.5 leading-tight">Transfere imediatamente sem consultar</span>
               </div>
 
               <div className="bg-amber-50/80 p-2.5 rounded-xl border border-amber-100/80 flex flex-col justify-between">
                 <span className="font-mono text-xs font-black text-amber-700 bg-amber-200/70 px-1.5 py-0.5 rounded w-fit mb-1">
                   **
                 </span>
-                <span className="text-[11px] font-bold text-gray-900 leading-tight">Assistida</span>
-                <span className="text-[9px] text-gray-500 mt-0.5 leading-tight">Consulta antes com o analista</span>
+                <span className="text-[11px] font-bold text-primary-hub leading-tight">Assistida</span>
+                <span className="text-[9px] text-secondary-hub mt-0.5 leading-tight">Consulta antes com o analista</span>
               </div>
             </div>
 
             {/* Horários e Contato ETECC Resolve */}
-            <div className="bg-gray-50 p-3 rounded-xl border border-gray-200/80 space-y-2">
+            <div className="bg-subtle p-3 rounded-xl border border-subtle space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-gray-700 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5 text-gray-500" /> Horários de Atendimento ETECC Resolve
+                <span className="text-[11px] font-bold text-secondary-hub flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-secondary-hub" /> Horários de Atendimento ETECC Resolve
                 </span>
                 <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded-full">
                   Operacional
                 </span>
               </div>
-              <div className="text-[10px] text-gray-600 space-y-0.5 font-medium">
-                <p className="flex justify-between"><span>Segunda a Sexta:</span> <strong className="text-gray-900">08:30 às 17:00</strong></p>
-                <p className="flex justify-between"><span>Sábado:</span> <strong className="text-gray-900">08:30 às 16:00</strong></p>
+              <div className="text-[10px] text-secondary-hub space-y-0.5 font-medium">
+                <p className="flex justify-between"><span>Segunda a Sexta:</span> <strong className="text-primary-hub">08:30 às 17:00</strong></p>
+                <p className="flex justify-between"><span>Sábado:</span> <strong className="text-primary-hub">08:30 às 16:00</strong></p>
               </div>
 
               {/* Telefone ETECC Resolve */}
@@ -294,10 +294,10 @@ export default function FloatingExtensions() {
                     <Phone className="w-3.5 h-3.5" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-semibold text-gray-500 block leading-tight">Telefone ETECC Resolve</span>
+                    <span className="text-[10px] font-semibold text-secondary-hub block leading-tight">Telefone ETECC Resolve</span>
                     <a
                       href="tel:1334211980"
-                      className="text-xs font-black text-gray-900 font-mono hover:text-red-600 transition-colors"
+                      className="text-xs font-black text-primary-hub font-mono hover:text-red-600 transition-colors"
                       title="Clique para ligar"
                     >
                       (13) 3421-1980
@@ -311,7 +311,7 @@ export default function FloatingExtensions() {
                   className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer shadow-2xs ${
                     copiedExt === '(13) 3421-1980'
                       ? 'bg-emerald-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-700 hover:border-red-300 hover:text-red-700'
+                      : 'bg-surface border border-subtle text-secondary-hub hover:border-red-300 hover:text-red-700'
                   }`}
                   title="Copiar telefone do ETECC Resolve"
                 >
@@ -322,7 +322,7 @@ export default function FloatingExtensions() {
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3 h-3 text-gray-400 group-hover:text-red-600" />
+                      <Copy className="w-3 h-3 text-muted-hub group-hover:text-red-600" />
                       <span>Copiar</span>
                     </>
                   )}
@@ -333,11 +333,11 @@ export default function FloatingExtensions() {
         </div>
 
         {/* Rodapé Informativo Rápido */}
-        <div className="px-4 py-2 bg-gray-50 border-t border-gray-100 flex items-center justify-between text-[10px] text-gray-500 shrink-0">
+        <div className="px-4 py-2 bg-subtle border-t border-subtle flex items-center justify-between text-[10px] text-secondary-hub shrink-0">
           <span className="flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-red-500" /> Toque no número para copiar
           </span>
-          <span className="font-mono text-[9px] text-gray-400">Hubdesk Telecom</span>
+          <span className="font-mono text-[9px] text-muted-hub">Hubdesk Telecom</span>
         </div>
       </div>
     </>

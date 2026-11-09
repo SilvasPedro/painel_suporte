@@ -429,9 +429,9 @@ const SectorKPIs = () => {
 
     if (loading) {
         return (
-            <div className="flex-1 flex flex-col items-center justify-center bg-gray-50 h-full gap-3">
+            <div className="flex-1 flex flex-col items-center justify-center bg-subtle h-full gap-3">
                 <Loader2 className="w-8 h-8 text-red-600 animate-spin" />
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+                <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider">
                     Sincronizando Gestão de KPIs do Setor...
                 </span>
             </div>
@@ -444,7 +444,7 @@ const SectorKPIs = () => {
     const isLatestRecOk = latestKpi ? latestKpi.reincidencia <= goals.recurrence : true;
 
     return (
-        <div className="flex-1 p-6 bg-gray-50 h-full overflow-y-auto space-y-6">
+        <div className="flex-1 p-6 bg-subtle h-full overflow-y-auto space-y-6">
             
             {/* ========================================================================= */}
             {/* CABEÇALHO PRINCIPAL COM IDENTIDADE HUBDESK                                 */}
@@ -502,10 +502,10 @@ const SectorKPIs = () => {
                     <button
                         type="button"
                         onClick={handleExportCSV}
-                        className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 font-bold text-xs transition-colors shadow-2xs cursor-pointer"
+                        className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-subtle bg-surface hover:bg-subtle text-secondary-hub font-bold text-xs transition-colors shadow-2xs cursor-pointer"
                         title="Exportar dados filtrados em formato CSV"
                     >
-                        <Download className="w-4 h-4 text-gray-600" />
+                        <Download className="w-4 h-4 text-secondary-hub" />
                         <span className="hidden sm:inline">Exportar CSV</span>
                     </button>
 
@@ -698,9 +698,9 @@ const SectorKPIs = () => {
             {isFormOpen && (
                 <div 
                     ref={formRef}
-                    className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm transition-all duration-300 ease-in-out animate-in slide-in-from-top-4"
+                    className="bg-surface p-6 rounded-2xl border border-subtle shadow-sm transition-all duration-300 ease-in-out animate-in slide-in-from-top-4"
                 >
-                    <div className="flex items-center justify-between border-b border-gray-100 pb-4 mb-5">
+                    <div className="flex items-center justify-between border-b border-subtle pb-4 mb-5">
                         <div className="flex items-center gap-2.5">
                             <div className={`p-2 rounded-xl border ${
                                 editingId 
@@ -710,10 +710,10 @@ const SectorKPIs = () => {
                                 {editingId ? <Edit3 className="w-5 h-5" /> : <Rocket className="w-5 h-5" />}
                             </div>
                             <div>
-                                <h2 className="text-base font-bold text-gray-900">
+                                <h2 className="text-base font-bold text-primary-hub">
                                     {editingId ? 'Editando Lançamento de KPI' : 'Novo Lançamento Semanal de KPIs'}
                                 </h2>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-secondary-hub">
                                     {editingId 
                                         ? 'Atualize os valores e confirme as alterações no banco.' 
                                         : 'Registre os indicadores consolidados da semana de atendimento.'}
@@ -725,7 +725,7 @@ const SectorKPIs = () => {
                             <button
                                 type="button"
                                 onClick={handleCancelEdit}
-                                className="text-xs font-bold text-gray-500 hover:text-gray-800 px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                                className="text-xs font-bold text-secondary-hub hover:text-primary-hub px-3 py-1.5 rounded-lg border border-subtle hover:bg-subtle transition-colors"
                             >
                                 Cancelar Edição
                             </button>
@@ -738,7 +738,7 @@ const SectorKPIs = () => {
                             {/* Data de Referência */}
                             <div>
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    <label className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                         Semana Referência *
                                     </label>
                                     <button 
@@ -754,15 +754,15 @@ const SectorKPIs = () => {
                                     required
                                     value={kpiForm.date}
                                     onChange={(e) => setKpiForm({ ...kpiForm, date: e.target.value })}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition-all"
+                                    className="w-full p-2.5 bg-subtle border border-subtle rounded-xl text-sm font-semibold text-primary-hub focus:bg-surface focus:ring-2 focus:ring-red-600 focus:border-transparent outline-none transition-all"
                                 />
-                                <span className="text-[10px] text-gray-400 block mt-1">Data final do fechamento semanal</span>
+                                <span className="text-[10px] text-muted-hub block mt-1">Data final do fechamento semanal</span>
                             </div>
 
                             {/* TMR */}
                             <div>
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    <label className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                         TMR Setorial *
                                     </label>
                                     <span className="text-[10px] font-mono text-purple-600 font-bold">Meta: ≤ {goals.tmr}</span>
@@ -773,10 +773,10 @@ const SectorKPIs = () => {
                                     placeholder="00:20:00"
                                     value={kpiForm.tmr}
                                     onChange={(e) => handleTmrInputChange(e.target.value)}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-all"
+                                    className="w-full p-2.5 bg-subtle border border-subtle rounded-xl text-sm font-semibold text-primary-hub focus:bg-surface focus:ring-2 focus:ring-purple-600 focus:border-transparent outline-none transition-all"
                                 />
                                 <div className="flex justify-between items-center mt-1 text-[10px]">
-                                    <span className="text-gray-400">Formato: HH:MM:SS</span>
+                                    <span className="text-muted-hub">Formato: HH:MM:SS</span>
                                     {kpiForm.tmr && (
                                         <span className={`font-bold ${
                                             timeToDecimal(kpiForm.tmr) <= timeToDecimal(goals.tmr)
@@ -792,7 +792,7 @@ const SectorKPIs = () => {
                             {/* FCR */}
                             <div>
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    <label className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                         FCR (%) *
                                     </label>
                                     <span className="text-[10px] font-mono text-emerald-600 font-bold">Meta: ≥ {goals.fcr}%</span>
@@ -806,10 +806,10 @@ const SectorKPIs = () => {
                                     placeholder="85.0"
                                     value={kpiForm.fcr}
                                     onChange={(e) => setKpiForm({ ...kpiForm, fcr: e.target.value })}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
+                                    className="w-full p-2.5 bg-subtle border border-subtle rounded-xl text-sm font-semibold text-primary-hub focus:bg-surface focus:ring-2 focus:ring-emerald-600 focus:border-transparent outline-none transition-all"
                                 />
                                 <div className="flex justify-between items-center mt-1 text-[10px]">
-                                    <span className="text-gray-400">Primeiro contato</span>
+                                    <span className="text-muted-hub">Primeiro contato</span>
                                     {kpiForm.fcr !== '' && (
                                         <span className={`font-bold ${
                                             Number(kpiForm.fcr) >= goals.fcr ? 'text-emerald-600' : 'text-amber-500'
@@ -823,7 +823,7 @@ const SectorKPIs = () => {
                             {/* Reincidência */}
                             <div>
                                 <div className="flex justify-between items-center mb-1">
-                                    <label className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                    <label className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                         Reincidência (%) *
                                     </label>
                                     <span className="text-[10px] font-mono text-blue-600 font-bold">Meta: ≤ {goals.recurrence}%</span>
@@ -837,10 +837,10 @@ const SectorKPIs = () => {
                                     placeholder="18.5"
                                     value={kpiForm.recurrence}
                                     onChange={(e) => setKpiForm({ ...kpiForm, recurrence: e.target.value })}
-                                    className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-semibold text-gray-800 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
+                                    className="w-full p-2.5 bg-subtle border border-subtle rounded-xl text-sm font-semibold text-primary-hub focus:bg-surface focus:ring-2 focus:ring-blue-600 focus:border-transparent outline-none transition-all"
                                 />
                                 <div className="flex justify-between items-center mt-1 text-[10px]">
-                                    <span className="text-gray-400">Retorno de chamados</span>
+                                    <span className="text-muted-hub">Retorno de chamados</span>
                                     {kpiForm.recurrence !== '' && (
                                         <span className={`font-bold ${
                                             Number(kpiForm.recurrence) <= goals.recurrence ? 'text-emerald-600' : 'text-red-500'
@@ -853,14 +853,14 @@ const SectorKPIs = () => {
 
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center justify-end gap-3 pt-3 border-t border-subtle">
                             <button
                                 type="button"
                                 onClick={() => {
                                     handleCancelEdit();
                                     setIsFormOpen(false);
                                 }}
-                                className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-bold text-xs transition-colors"
+                                className="px-4 py-2.5 rounded-xl border border-subtle text-secondary-hub hover:bg-subtle font-bold text-xs transition-colors"
                             >
                                 Fechar
                             </button>
@@ -886,12 +886,12 @@ const SectorKPIs = () => {
             {/* ========================================================================= */}
             {/* BARRA DE FILTROS OTIMIZADA & SELETOR DE VISUALIZAÇÃO                       */}
             {/* ========================================================================= */}
-            <div className="bg-white p-4 rounded-2xl border border-gray-200 shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-2xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 
                 {/* Pílulas de Seleção Rápida de Período */}
                 <div className="flex items-center gap-1.5 flex-wrap w-full md:w-auto">
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5 mr-2">
-                        <Filter className="w-3.5 h-3.5 text-gray-400" /> Período:
+                    <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5 mr-2">
+                        <Filter className="w-3.5 h-3.5 text-muted-hub" /> Período:
                     </span>
                     <button
                         type="button"
@@ -899,7 +899,7 @@ const SectorKPIs = () => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             filterPeriod === 'all'
                                 ? 'bg-zinc-950 text-white shadow-2xs'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                         }`}
                     >
                         Todo Histórico
@@ -910,7 +910,7 @@ const SectorKPIs = () => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             filterPeriod === '90days'
                                 ? 'bg-zinc-950 text-white shadow-2xs'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                         }`}
                     >
                         Últimos 90 Dias
@@ -921,7 +921,7 @@ const SectorKPIs = () => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             filterPeriod === '30days'
                                 ? 'bg-zinc-950 text-white shadow-2xs'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                         }`}
                     >
                         Últimos 30 Dias
@@ -932,7 +932,7 @@ const SectorKPIs = () => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             filterPeriod === 'year'
                                 ? 'bg-zinc-950 text-white shadow-2xs'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                         }`}
                     >
                         Ano Vigente
@@ -943,7 +943,7 @@ const SectorKPIs = () => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             filterPeriod === 'month'
                                 ? 'bg-zinc-950 text-white shadow-2xs'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
                         }`}
                     >
                         Por Mês
@@ -953,26 +953,26 @@ const SectorKPIs = () => {
                 {/* Seletores Auxiliares (Mês específico e Modo de Gráficos) */}
                 <div className="flex items-center gap-2.5 w-full md:w-auto justify-between md:justify-end">
                     {filterPeriod === 'month' && (
-                        <div className="flex items-center gap-2 bg-gray-50 border border-gray-200 px-2.5 py-1.5 rounded-xl">
-                            <Calendar className="w-3.5 h-3.5 text-gray-500" />
+                        <div className="flex items-center gap-2 bg-subtle border border-subtle px-2.5 py-1.5 rounded-xl">
+                            <Calendar className="w-3.5 h-3.5 text-secondary-hub" />
                             <input
                                 type="month"
                                 value={selectedMonth}
                                 onChange={(e) => setSelectedMonth(e.target.value)}
-                                className="bg-transparent text-xs font-bold text-gray-800 outline-none"
+                                className="bg-transparent text-xs font-bold text-primary-hub outline-none"
                             />
                         </div>
                     )}
 
                     {/* Alternador de Modo de Gráficos */}
-                    <div className="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200 shrink-0">
+                    <div className="flex items-center bg-subtle p-1 rounded-xl border border-subtle shrink-0">
                         <button
                             type="button"
                             onClick={() => setChartViewMode('cards')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                 chartViewMode === 'cards'
-                                    ? 'bg-white text-gray-900 shadow-2xs'
-                                    : 'text-gray-500 hover:text-gray-900'
+                                    ? 'bg-surface text-primary-hub shadow-2xs'
+                                    : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Visualizar em 3 cards individuais"
                         >
@@ -984,8 +984,8 @@ const SectorKPIs = () => {
                             onClick={() => setChartViewMode('consolidated')}
                             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                                 chartViewMode === 'consolidated'
-                                    ? 'bg-white text-gray-900 shadow-2xs'
-                                    : 'text-gray-500 hover:text-gray-900'
+                                    ? 'bg-surface text-primary-hub shadow-2xs'
+                                    : 'text-secondary-hub hover:text-primary-hub'
                             }`}
                             title="Visualizar em gráfico consolidado comparativo"
                         >
@@ -1001,15 +1001,15 @@ const SectorKPIs = () => {
             {/* SEÇÃO DE GRÁFICOS DINÂMICOS                                               */}
             {/* ========================================================================= */}
             {filteredKpis.length === 0 ? (
-                <div className="bg-white p-12 rounded-2xl border border-dashed border-gray-300 text-center flex flex-col items-center justify-center gap-3">
-                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-gray-400">
+                <div className="bg-surface p-12 rounded-2xl border border-dashed border-strong text-center flex flex-col items-center justify-center gap-3">
+                    <div className="p-4 bg-subtle rounded-2xl border border-subtle text-muted-hub">
                         <AlertTriangle className="w-8 h-8 text-amber-500" />
                     </div>
                     <div>
-                        <h3 className="text-base font-bold text-gray-800">
+                        <h3 className="text-base font-bold text-primary-hub">
                             Nenhum Lançamento Encontrado
                         </h3>
-                        <p className="text-xs text-gray-500 mt-1 max-w-sm">
+                        <p className="text-xs text-secondary-hub mt-1 max-w-sm">
                             Não encontramos registros de KPIs para o filtro selecionado. Tente alterar o período ou crie um novo lançamento semanal.
                         </p>
                     </div>
@@ -1029,20 +1029,20 @@ const SectorKPIs = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     
                     {/* Gráfico 1: FCR */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs flex flex-col justify-between hover:border-emerald-300 transition-all">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs flex flex-col justify-between hover:border-emerald-300 transition-all">
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                     <Target className="w-4 h-4 text-emerald-500" /> First Call Resolution (FCR)
                                 </span>
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-100">
                                     Média: {periodStats.fcrAvg}%
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-3">
-                                <span>Mín: <strong className="text-gray-700">{periodStats.fcrMin}%</strong></span>
+                            <div className="flex items-center gap-3 text-[11px] text-muted-hub mb-3">
+                                <span>Mín: <strong className="text-secondary-hub">{periodStats.fcrMin}%</strong></span>
                                 <span>•</span>
-                                <span>Máx: <strong className="text-gray-700">{periodStats.fcrMax}%</strong></span>
+                                <span>Máx: <strong className="text-secondary-hub">{periodStats.fcrMax}%</strong></span>
                                 <span>•</span>
                                 <span>Meta: <strong className="text-emerald-600">≥ {goals.fcr}%</strong></span>
                             </div>
@@ -1083,17 +1083,17 @@ const SectorKPIs = () => {
                     </div>
 
                     {/* Gráfico 2: TMR */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs flex flex-col justify-between hover:border-purple-300 transition-all">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs flex flex-col justify-between hover:border-purple-300 transition-all">
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                     <Clock className="w-4 h-4 text-purple-500" /> Tempo Médio de Resposta (TMR)
                                 </span>
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold border border-purple-100">
                                     Média: {periodStats.tmrAvgFormatted}
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-3">
+                            <div className="flex items-center gap-3 text-[11px] text-muted-hub mb-3">
                                 <span>Meta: <strong className="text-purple-600">≤ {goals.tmr}</strong></span>
                                 <span>•</span>
                                 <span>Em minutos decimais</span>
@@ -1135,20 +1135,20 @@ const SectorKPIs = () => {
                     </div>
 
                     {/* Gráfico 3: REINCIDÊNCIA */}
-                    <div className="bg-white p-5 rounded-2xl border border-gray-200 shadow-2xs flex flex-col justify-between hover:border-blue-300 transition-all">
+                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-2xs flex flex-col justify-between hover:border-blue-300 transition-all">
                         <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-gray-600 uppercase tracking-wider flex items-center gap-1.5">
+                                <span className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                     <Activity className="w-4 h-4 text-blue-500" /> Taxa de Reincidência
                                 </span>
                                 <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold border border-blue-100">
                                     Média: {periodStats.recAvg}%
                                 </span>
                             </div>
-                            <div className="flex items-center gap-3 text-[11px] text-gray-400 mb-3">
-                                <span>Mín: <strong className="text-gray-700">{periodStats.recMin}%</strong></span>
+                            <div className="flex items-center gap-3 text-[11px] text-muted-hub mb-3">
+                                <span>Mín: <strong className="text-secondary-hub">{periodStats.recMin}%</strong></span>
                                 <span>•</span>
-                                <span>Máx: <strong className="text-gray-700">{periodStats.recMax}%</strong></span>
+                                <span>Máx: <strong className="text-secondary-hub">{periodStats.recMax}%</strong></span>
                                 <span>•</span>
                                 <span>Meta: <strong className="text-blue-600">≤ {goals.recurrence}%</strong></span>
                             </div>
@@ -1191,13 +1191,13 @@ const SectorKPIs = () => {
                 </div>
             ) : (
                 /* VISÃO CONSOLIDADA COMPARATIVA MULTI-SÉRIE */
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-2xs">
+                <div className="bg-surface p-6 rounded-2xl border border-subtle shadow-2xs">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                         <div>
-                            <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
+                            <h3 className="text-base font-bold text-primary-hub flex items-center gap-2">
                                 <Layers className="w-5 h-5 text-blue-600" /> Evolução Consolidada dos Indicadores
                             </h3>
-                            <p className="text-xs text-gray-500 mt-0.5">
+                            <p className="text-xs text-secondary-hub mt-0.5">
                                 Cruzamento temporal entre FCR (Resolução), Reincidência e TMR em linha do tempo.
                             </p>
                         </div>
@@ -1270,18 +1270,18 @@ const SectorKPIs = () => {
             {/* ========================================================================= */}
             {/* TABELA DE GESTÃO DE HISTÓRICO & AÇÕES CRUD                                */}
             {/* ========================================================================= */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-2xs overflow-hidden">
+            <div className="bg-surface rounded-2xl border border-subtle shadow-2xs overflow-hidden">
                 
-                <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div className="p-5 border-b border-subtle flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div className="flex items-center gap-2.5">
-                        <div className="p-2 bg-gray-50 rounded-xl border border-gray-200 text-gray-600">
+                        <div className="p-2 bg-subtle rounded-xl border border-subtle text-secondary-hub">
                             <Clock className="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 className="text-base font-bold text-gray-900">
+                            <h3 className="text-base font-bold text-primary-hub">
                                 Histórico Detalhado de Fechamentos
                             </h3>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-secondary-hub">
                                 Mostrando {filteredKpis.length} registros cadastrados no período.
                             </p>
                         </div>
@@ -1290,10 +1290,10 @@ const SectorKPIs = () => {
                     <button
                         type="button"
                         onClick={() => setSortAsc(!sortAsc)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-50 text-xs font-bold text-gray-600 transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-subtle hover:bg-subtle text-xs font-bold text-secondary-hub transition-colors"
                         title="Inverter ordem de exibição das datas"
                     >
-                        <ArrowUpDown className="w-3.5 h-3.5 text-gray-500" />
+                        <ArrowUpDown className="w-3.5 h-3.5 text-secondary-hub" />
                         <span>{sortAsc ? 'Mais antigos primeiro' : 'Mais recentes primeiro'}</span>
                     </button>
                 </div>
@@ -1301,7 +1301,7 @@ const SectorKPIs = () => {
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-gray-50/80 border-b border-gray-100 text-[11px] font-bold uppercase tracking-wider text-gray-500">
+                            <tr className="bg-subtle border-b border-subtle text-[11px] font-bold uppercase tracking-wider text-secondary-hub">
                                 <th className="py-3 px-4">Semana Referência</th>
                                 <th className="py-3 px-4">TMR Setorial</th>
                                 <th className="py-3 px-4">FCR (%)</th>
@@ -1310,10 +1310,10 @@ const SectorKPIs = () => {
                                 <th className="py-3 px-4 text-right">Ações</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 text-xs">
+                        <tbody className="divide-y divide-subtle text-xs">
                             {filteredKpis.length === 0 ? (
                                 <tr>
-                                    <td colSpan="6" className="py-8 text-center text-gray-400">
+                                    <td colSpan="6" className="py-8 text-center text-muted-hub">
                                         Nenhum registro para exibir nesta listagem.
                                     </td>
                                 </tr>
@@ -1328,14 +1328,14 @@ const SectorKPIs = () => {
                                     return (
                                         <tr 
                                             key={kpi.id} 
-                                            className={`hover:bg-gray-50/70 transition-colors ${
+                                            className={`hover:bg-subtle transition-colors ${
                                                 editingId === kpi.id ? 'bg-amber-50/50' : ''
                                             }`}
                                         >
                                             {/* Data de Referência */}
                                             <td className="py-3.5 px-4">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-900">
+                                                    <span className="font-bold text-primary-hub">
                                                         {formatDateWithWeekday(kpi.fullDate)}
                                                     </span>
                                                     {isLatestRow && (
@@ -1349,7 +1349,7 @@ const SectorKPIs = () => {
                                             {/* TMR */}
                                             <td className="py-3.5 px-4 font-mono">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-800">{kpi.tmr}</span>
+                                                    <span className="font-bold text-primary-hub">{kpi.tmr}</span>
                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border ${
                                                         tmrOk 
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -1363,7 +1363,7 @@ const SectorKPIs = () => {
                                             {/* FCR */}
                                             <td className="py-3.5 px-4 font-mono">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-800">{kpi.fcr}%</span>
+                                                    <span className="font-bold text-primary-hub">{kpi.fcr}%</span>
                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border ${
                                                         fcrOk 
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -1377,7 +1377,7 @@ const SectorKPIs = () => {
                                             {/* Reincidência */}
                                             <td className="py-3.5 px-4 font-mono">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="font-bold text-gray-800">{kpi.reincidencia}%</span>
+                                                    <span className="font-bold text-primary-hub">{kpi.reincidencia}%</span>
                                                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold border ${
                                                         recOk 
                                                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
@@ -1408,7 +1408,7 @@ const SectorKPIs = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => handleStartEdit(kpi)}
-                                                        className="p-1.5 text-gray-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                        className="p-1.5 text-secondary-hub hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
                                                         title="Editar este lançamento"
                                                     >
                                                         <Edit3 className="w-4 h-4" />
@@ -1416,7 +1416,7 @@ const SectorKPIs = () => {
                                                     <button
                                                         type="button"
                                                         onClick={() => setDeleteModalItem(kpi)}
-                                                        className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                        className="p-1.5 text-secondary-hub hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
                                                         title="Excluir este lançamento"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
@@ -1442,7 +1442,7 @@ const SectorKPIs = () => {
                     onClick={() => !deletingId && setDeleteModalItem(null)}
                 >
                     <div 
-                        className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-gray-100 animate-in zoom-in-95 duration-200"
+                        className="bg-surface rounded-2xl max-w-md w-full p-6 shadow-2xl border border-subtle animate-in zoom-in-95 duration-200"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <div className="flex items-center gap-3 mb-4">
@@ -1450,17 +1450,17 @@ const SectorKPIs = () => {
                                 <Trash2 className="w-6 h-6" />
                             </div>
                             <div>
-                                <h3 className="text-base font-black text-gray-900">
+                                <h3 className="text-base font-black text-primary-hub">
                                     Excluir Lançamento de KPI?
                                 </h3>
-                                <p className="text-xs text-gray-500">
+                                <p className="text-xs text-secondary-hub">
                                     Semana: {formatDateWithWeekday(deleteModalItem.fullDate)}
                                 </p>
                             </div>
                         </div>
 
-                        <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-                            Tem certeza de que deseja remover este lançamento? Os dados de TMR (<strong className="text-gray-900">{deleteModalItem.tmr}</strong>), FCR (<strong className="text-gray-900">{deleteModalItem.fcr}%</strong>) e Reincidência (<strong className="text-gray-900">{deleteModalItem.reincidencia}%</strong>) serão excluídos permanentemente do histórico do setor.
+                        <p className="text-sm text-secondary-hub mb-6 leading-relaxed">
+                            Tem certeza de que deseja remover este lançamento? Os dados de TMR (<strong className="text-primary-hub">{deleteModalItem.tmr}</strong>), FCR (<strong className="text-primary-hub">{deleteModalItem.fcr}%</strong>) e Reincidência (<strong className="text-primary-hub">{deleteModalItem.reincidencia}%</strong>) serão excluídos permanentemente do histórico do setor.
                         </p>
 
                         <div className="flex justify-end gap-3">
@@ -1468,7 +1468,7 @@ const SectorKPIs = () => {
                                 type="button"
                                 disabled={Boolean(deletingId)}
                                 onClick={() => setDeleteModalItem(null)}
-                                className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-700 font-bold text-xs hover:bg-gray-50 transition-colors"
+                                className="px-4 py-2.5 rounded-xl border border-subtle text-secondary-hub font-bold text-xs hover:bg-subtle transition-colors"
                             >
                                 Cancelar
                             </button>

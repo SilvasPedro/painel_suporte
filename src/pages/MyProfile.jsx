@@ -76,7 +76,6 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     // Coleções necessárias para cálculo automático dos 6 emblemas oficiais
     const [weeklyEvals, setWeeklyEvals] = useState([]);
     const [qaAuditsList, setQaAuditsList] = useState([]);
-    const [thirdPartyAuditsList, setThirdPartyAuditsList] = useState([]);
 
     // Carrega a lista completa de colaboradores e métricas da operação
     useEffect(() => {
@@ -90,19 +89,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             setWeeklyEvals(items || []);
         });
 
-        const unsubAudits = subscribeSharedCollection('qa_audits', (items) => {
-            setQaAuditsList(items || []);
-        });
-
-        const unsubThirdParty = subscribeSharedCollection('third_party_audits', (items) => {
-            setThirdPartyAuditsList(items || []);
-        });
-
         return () => {
             unsubColabs();
             unsubEvals();
-            unsubAudits();
-            unsubThirdParty();
         };
     }, []);
 
@@ -125,6 +114,16 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     const isViewingOther = Boolean(activeSelectedColab && (activeSelectedColab.id !== (myAuthUser?.firestoreId || myAuthUser?.uid || currentUserId)));
     const user = activeSelectedColab || myAuthUser;
+
+    // Auditorias QA apenas do colaborador exibido (o cálculo dos emblemas só usa as dele).
+    // As auditorias terceirizadas não entram: não possuem colabId e nunca eram atribuídas a um colaborador.
+    const badgeColabId = user?.id || user?.firestoreId || user?.uid;
+    useEffect(() => {
+        if (!badgeColabId) return;
+        return subscribeSharedCollection('qa_audits', (items) => {
+            setQaAuditsList(items || []);
+        }, { where: [['colabId', '==', badgeColabId]] });
+    }, [badgeColabId]);
 
     const isGestor = isMasterAdmin || normalizedRole === 'gestor';
 
@@ -196,10 +195,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
             allCollaborators: collaboratorsList,
             weeklyEvaluations: weeklyEvals,
             qaAudits: qaAuditsList,
-            thirdPartyAudits: thirdPartyAuditsList,
+            thirdPartyAudits: [],
             manualBadges: []
         });
-    }, [user, formData.shift, collaboratorsList, weeklyEvals, qaAuditsList, thirdPartyAuditsList]);
+    }, [user, formData.shift, collaboratorsList, weeklyEvals, qaAuditsList]);
 
     // Insígnias ativas no momento (100% automatizadas pelas avaliações e auditorias)
     const activeBadgeList = useMemo(() => {

@@ -43,7 +43,7 @@ export default function QaProcessPreviewModal({
         >
             <div 
                 id="qa-preview-modal-card"
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-gray-200"
+                className="bg-surface rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] border border-subtle"
             >
                 {/* Header */}
                 <div className="p-5 bg-zinc-950 text-white flex justify-between items-center shrink-0 border-b border-zinc-800">
@@ -84,14 +84,14 @@ export default function QaProcessPreviewModal({
                     )}
 
                     {/* Barra de Progresso Interativa */}
-                    <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-2xs space-y-3">
+                    <div className="bg-surface p-4 rounded-xl border border-subtle shadow-2xs space-y-3">
                         <div className="flex justify-between items-center text-xs">
-                            <span className="font-bold text-gray-700">Simulação de Conformidade:</span>
+                            <span className="font-bold text-secondary-hub">Simulação de Conformidade:</span>
                             <span className="font-mono font-bold text-red-600">
                                 {checkedCount} de {totalCount} ({progressPercent}%)
                             </span>
                         </div>
-                        <div className="w-full h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div className="w-full h-2.5 bg-subtle rounded-full overflow-hidden">
                             <div 
                                 className="h-full bg-emerald-500 transition-all duration-300 rounded-full"
                                 style={{ width: `${progressPercent}%` }}
@@ -105,11 +105,11 @@ export default function QaProcessPreviewModal({
                             >
                                 Marcar Todos
                             </button>
-                            <span className="text-gray-300">&bull;</span>
+                            <span className="text-muted-hub">&bull;</span>
                             <button
                                 type="button"
                                 onClick={handleClearAll}
-                                className="text-[11px] font-bold text-gray-500 hover:underline cursor-pointer"
+                                className="text-[11px] font-bold text-secondary-hub hover:underline cursor-pointer"
                             >
                                 Desmarcar Todos
                             </button>
@@ -119,10 +119,10 @@ export default function QaProcessPreviewModal({
                     {/* Lista de Itens com Checkbox Interativo */}
                     <div className="space-y-2.5">
                         <div className="flex items-center justify-between px-1">
-                            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                            <span className="text-xs font-bold uppercase tracking-wider text-secondary-hub">
                                 Critérios de Avaliação ({totalCount})
                             </span>
-                            <span className="text-[11px] text-gray-400">
+                            <span className="text-[11px] text-muted-hub">
                                 Clique para testar o comportamento
                             </span>
                         </div>
@@ -134,7 +134,7 @@ export default function QaProcessPreviewModal({
                                 className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer select-none ${
                                     checkedItems[idx]
                                         ? 'bg-emerald-50/70 border-emerald-300 text-emerald-950 shadow-2xs'
-                                        : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300'
+                                        : 'bg-surface border-subtle text-primary-hub hover:border-strong'
                                 }`}
                             >
                                 <div className="pt-0.5 shrink-0">
@@ -142,11 +142,11 @@ export default function QaProcessPreviewModal({
                                         type="checkbox"
                                         checked={!!checkedItems[idx]}
                                         onChange={() => {}} // tratado no onClick do container
-                                        className="w-4 h-4 rounded text-emerald-600 border-gray-300 focus:ring-emerald-500 cursor-pointer"
+                                        className="w-4 h-4 rounded text-emerald-600 border-strong focus:ring-emerald-500 cursor-pointer"
                                     />
                                 </div>
                                 <div className="text-xs flex-1 leading-relaxed">
-                                    <span className="font-mono font-bold text-gray-400 mr-2">{idx + 1}.</span>
+                                    <span className="font-mono font-bold text-muted-hub mr-2">{idx + 1}.</span>
                                     <span className={checkedItems[idx] ? 'font-medium' : 'font-normal'}>
                                         {item}
                                     </span>
@@ -157,11 +157,11 @@ export default function QaProcessPreviewModal({
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-white border-t border-gray-200 flex justify-between items-center shrink-0">
+                <div className="p-4 bg-surface border-t border-subtle flex justify-between items-center shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 font-bold text-xs transition-colors cursor-pointer"
+                        className="px-4 py-2 border border-strong text-secondary-hub rounded-xl hover:bg-subtle font-bold text-xs transition-colors cursor-pointer"
                     >
                         Fechar
                     </button>
