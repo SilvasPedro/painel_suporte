@@ -4,6 +4,16 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.5.1 (Correção do Changelog)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.5.0` para `4.5.1`. |
+| **Alterado** | `src/data/changelogData.js` | Importação do ícone `Target` (ausente na entrada da v4.5.0), `CURRENT_VERSION` para `v4.5.1` e nova entrada do changelog. |
+| **Alterado** | `version.md` / `log-att.md` | Registro desta correção. |
+
+---
+
 ## [09/11/2026] — Versão v4.5.0 (Meu Desempenho: Aproveitamento, Finalizações e Tipos de Gráfico)
 
 | Ação | Arquivo | Descrição da Alteração |

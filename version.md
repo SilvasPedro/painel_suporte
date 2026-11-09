@@ -4,6 +4,13 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.5.1] - 2026-11-09
+
+### 🐛 Correções (Fixed)
+- **Tela de Novidades (changelog)**: o ícone `Target` usado na entrada da v4.5.0 não estava importado em `changelogData.js`, o que causaria erro ao abrir o histórico de versões. Import adicionado.
+
+---
+
 ## [v4.5.0] - 2026-11-09
 
 ### 🎯 Destaque Principal

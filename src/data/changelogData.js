@@ -1,13 +1,29 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.5.0';
+export const CURRENT_VERSION = 'v4.5.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.5.0',
+    version: 'v4.5.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.5.1: correção do histórico de versões, que passa a abrir normalmente (ícone ausente na entrada da v4.5.0).',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Correção na Tela de Novidades',
+        category: 'Correção',
+        description: 'O ícone usado na entrada da v4.5.0 não estava importado e poderia impedir a abertura do histórico de versões. A importação foi adicionada e o arquivo passou por verificação de identificadores não definidos.'
+      }
+    ]
+  },
+  {
+    version: 'v4.5.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.5.0: a tela Meu Desempenho ganha os indicadores de aproveitamento Huggy e de finalizações com médias calculadas pelos lançamentos semanais e um seletor de tipo de gráfico (suave, área, linha, barras e degraus).',
     items: [
       {
@@ -30,7 +46,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.4.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.4.0: perfil do usuário com capa ajustável. Agora é possível reposicionar e ampliar a imagem de capa, com pré-visualização ao vivo, e a opção de biografia foi removida.',
     items: [
       {
