@@ -174,8 +174,9 @@ const WeeklyMetrics = () => {
 
     // --- FUNÇÕES DE IMPORTAÇÃO E EXPORTAÇÃO CSV ---
     const downloadTemplate = () => {
-        const headers = ["Nome", "Ligacoes_Atendidas", "Ligacoes_Perdidas", "TMA_Telefonia", "TME_Telefonia", "Huggy_Iniciados", "TMA_Huggy", "Atendimentos_Finalizados", "Ligacoes_Realizadas", "Huggy_Finalizados"];
-        const rows = collaborators.map(c => [c.name, "0", "0", "00:00:00", "00:00:00", "0", "00:00:00", "0", "0", "0"]);
+        // Mesma ordem das colunas da tela de lançamento (a importação lê pelo nome do cabeçalho)
+        const headers = ["Nome", "Ligacoes_Atendidas", "Ligacoes_Perdidas", "Ligacoes_Realizadas", "TMA_Telefonia", "TME_Telefonia", "Huggy_Iniciados", "Huggy_Finalizados", "TMA_Huggy", "Atendimentos_Finalizados"];
+        const rows = collaborators.map(c => [c.name, "0", "0", "0", "00:00:00", "00:00:00", "0", "0", "00:00:00", "0"]);
         
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
         

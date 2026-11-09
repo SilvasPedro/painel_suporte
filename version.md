@@ -4,6 +4,14 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.3.1] - 2026-11-09
+
+### 🔄 Alterações (Changed)
+- **Modelo de métricas (CSV de download)** reordenado para seguir as colunas da tela de lançamento semanal: `Nome; Ligacoes_Atendidas; Ligacoes_Perdidas; Ligacoes_Realizadas; TMA_Telefonia; TME_Telefonia; Huggy_Iniciados; Huggy_Finalizados; TMA_Huggy; Atendimentos_Finalizados`.
+- A importação continua lendo as colunas pelo nome do cabeçalho (com fallback às posições do modelo antigo), portanto modelos já baixados seguem sendo aceitos; colunas ausentes entram zeradas.
+
+---
+
 ## [v4.3.0] - 2026-11-09
 
 ### 🎯 Destaque Principal

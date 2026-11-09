@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.3.1 (Modelo de Métricas na Ordem da Tela)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.3.0` para `4.3.1`. |
+| **Alterado** | `src/pages/WeeklyMetrics.jsx` | Cabeçalhos e linhas do CSV de modelo reordenados para seguir a tela de lançamento. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.3.1` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.3.1`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.3.0 (Ligações Realizadas e Huggy Iniciados x Finalizados)
 
 | Ação | Arquivo | Descrição da Alteração |

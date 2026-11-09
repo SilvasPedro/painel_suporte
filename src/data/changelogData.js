@@ -1,13 +1,29 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.3.0';
+export const CURRENT_VERSION = 'v4.3.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.3.0',
+    version: 'v4.3.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.3.1: o modelo de métricas para download passa a seguir a mesma ordem de colunas da tela de lançamento semanal, com Ligações Realizadas e Huggy Iniciados/Finalizados agrupados de forma lógica.',
+    items: [
+      {
+        icon: FileSpreadsheet,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Modelo de Métricas Reorganizado',
+        category: 'Avaliações Semanais',
+        description: 'O CSV de modelo agora segue a ordem da tela: Ligações Atendidas, Perdidas e Realizadas, TMA e TME de Telefonia, Huggy Iniciados e Finalizados, TMA Huggy e Atendimentos Finalizados. A importação lê as colunas pelo nome do cabeçalho, então modelos antigos continuam aceitos.'
+      }
+    ]
+  },
+  {
+    version: 'v4.3.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.3.0: novas métricas nas avaliações semanais. Ligações Realizadas passam a ser lançadas e valem 1 ponto, e o Huggy ganha Iniciados x Finalizados com cálculo do % de aproveitamento (0,5 ponto por 1%). Registros antigos mantêm a pontuação original.',
     items: [
       {
@@ -37,7 +53,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.2.2',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.2.2: lançamento de avaliações semanais mais seguro. Nova tela de confirmação mostra quem não receberá avaliação antes de salvar, a gravação passa a ser atômica em lote, a importação CSV avisa nomes não encontrados e o texto do botão de turnos "Todos" voltou a ser legível.',
     items: [
       {
