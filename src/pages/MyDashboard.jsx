@@ -1,14 +1,18 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useId } from 'react';
 import {
     Clock, Target, RefreshCw, Star, Phone, MessageSquare,
     ShieldCheck, Rocket, User, Hourglass, Users, CheckCircle,
     CheckCircle2, TrendingUp, TrendingDown, CalendarDays, Coffee, Calendar, 
-    ChevronRight, LifeBuoy, Activity, Sparkles, Layers, Shield, FileText
+    ChevronRight, LifeBuoy, Activity, Sparkles, Layers, Shield, FileText,
+    Spline, LineChart as LineChartIcon, BarChart3, AreaChart as AreaChartIcon, Footprints
 } from 'lucide-react';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+    AreaChart, Area, LineChart, Line, BarChart, Bar, Legend,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from 'recharts';
 import { timeToDecimal, formatTime } from '../utils/timeCalculations';
-import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 import { Card, Badge, StatCard, EmptyState } from '../components/ui';
 import { BorderBeam } from '../components/magicui';
 import { cn } from '../utils/cn';
@@ -110,6 +114,98 @@ const TrendIndicator = ({ type, current, previous }) => {
     );
 };
 
+// Tipos de gráfico disponíveis para a evolução semanal
+const CHART_TYPES = [
+    { id: 'smooth', label: 'Suave', icon: Spline },
+    { id: 'area', label: 'Área', icon: AreaChartIcon },
+    { id: 'line', label: 'Linha', icon: LineChartIcon },
+    { id: 'bar', label: 'Barras', icon: BarChart3 },
+    { id: 'step', label: 'Degraus', icon: Footprints }
+];
+
+const CHART_TYPE_STORAGE_KEY = 'hubdesk_mydashboard_chart_type';
+
+const loadChartType = () => {
+    try {
+        const saved = localStorage.getItem(CHART_TYPE_STORAGE_KEY);
+        return CHART_TYPES.some(t => t.id === saved) ? saved : 'smooth';
+    } catch {
+        return 'smooth';
+    }
+};
+
+const TOOLTIP_STYLE = {
+    backgroundColor: 'var(--bg-surface)',
+    borderColor: 'var(--border-subtle)',
+    borderRadius: '12px',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+    color: 'var(--text-primary)'
+};
+
+// Gráfico de evolução reutilizável: aceita uma ou mais séries e troca o desenho conforme o tipo escolhido
+const EvolutionChart = ({ data, series, type = 'smooth', yFormatter, tooltipFormatter, yDomain }) => {
+    const uid = useId().replace(/:/g, '');
+    const axisProps = {
+        axisLine: false,
+        tickLine: false,
+        tick: { fill: 'var(--text-muted)', fontSize: 11 }
+    };
+    const common = { data, margin: { top: 10, right: 10, left: -20, bottom: 0 } };
+    const grid = <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />;
+    const xAxis = <XAxis dataKey="date" {...axisProps} dy={10} />;
+    const yAxis = <YAxis {...axisProps} tickFormatter={yFormatter} domain={yDomain} />;
+    const tooltip = <Tooltip contentStyle={TOOLTIP_STYLE} formatter={tooltipFormatter} />;
+    const legend = series.length > 1 ? <Legend wrapperStyle={{ fontSize: 11 }} /> : null;
+
+    let chart;
+    if (type === 'bar') {
+        chart = (
+            <BarChart {...common}>
+                {grid}{xAxis}{yAxis}{tooltip}{legend}
+                {series.map(sr => (
+                    <Bar key={sr.key} dataKey={sr.key} name={sr.name} fill={sr.color} radius={[6, 6, 0, 0]} maxBarSize={28} />
+                ))}
+            </BarChart>
+        );
+    } else if (type === 'line') {
+        chart = (
+            <LineChart {...common}>
+                {grid}{xAxis}{yAxis}{tooltip}{legend}
+                {series.map(sr => (
+                    <Line key={sr.key} type="linear" dataKey={sr.key} name={sr.name} stroke={sr.color} strokeWidth={2.5}
+                        dot={{ r: 3, strokeWidth: 0, fill: sr.color }} activeDot={{ r: 5 }} connectNulls />
+                ))}
+            </LineChart>
+        );
+    } else {
+        // 'smooth' (curva suave), 'area' (área reta) e 'step' (degraus) compartilham o desenho de área
+        const curve = type === 'smooth' ? 'monotone' : type === 'step' ? 'stepAfter' : 'linear';
+        chart = (
+            <AreaChart {...common}>
+                <defs>
+                    {series.map(sr => (
+                        <linearGradient key={sr.key} id={`${uid}-${sr.key}`} x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={sr.color} stopOpacity={0.3} />
+                            <stop offset="95%" stopColor={sr.color} stopOpacity={0} />
+                        </linearGradient>
+                    ))}
+                </defs>
+                {grid}{xAxis}{yAxis}{tooltip}{legend}
+                {series.map(sr => (
+                    <Area key={sr.key} type={curve} dataKey={sr.key} name={sr.name} stroke={sr.color} strokeWidth={2.5}
+                        fill={`url(#${uid}-${sr.key})`} connectNulls />
+                ))}
+            </AreaChart>
+        );
+    }
+
+    return (
+        <ResponsiveContainer width="100%" height="100%">
+            {chart}
+        </ResponsiveContainer>
+    );
+};
+
 const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
     <div className="bg-surface rounded-2xl shadow-xs p-5 border border-subtle hover:border-subtle/80 hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden h-full group">
         <div>
@@ -138,6 +234,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
     const [prevGlobalKpi, setPrevGlobalKpi] = useState(null);
     const [goals, setGoals] = useState({ tmr: '00:20:00', fcr: 80, recurrence: 20 });
     const [allEvals, setAllEvals] = useState([]);
+    const [chartType, setChartType] = useState(loadChartType);
     const [colabsFull, setColabsFull] = useState({});
 
     const [myTaskToday, setMyTaskToday] = useState(null);
@@ -304,17 +401,33 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
         return { total, taxa };
     }, [myAudits]);
 
+    const handleChartType = (id) => {
+        setChartType(id);
+        try { localStorage.setItem(CHART_TYPE_STORAGE_KEY, id); } catch { /* armazenamento indisponível */ }
+    };
+
     const nextSundayInfo = useMemo(() => formatNextDateInfo(nextSundayShift, 'plantao'), [nextSundayShift]);
     const nextDayOffInfo = useMemo(() => formatNextDateInfo(nextDayOff, 'folga'), [nextDayOff]);
 
     const { myStats, chartData, shiftAvgPts } = useMemo(() => {
-        const defaultStats = { totalPoints: 0, avgPoints: '0.0', avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00' };
+        const defaultStats = {
+            totalPoints: 0, avgPoints: '0.0', avgTmaTel: '00:00:00', avgTmaHuggy: '00:00:00',
+            weeks: 0, avgAproveitamento: null, weightedAproveitamento: null, aproveitamentoWeeks: 0,
+            totalHuggyIniciados: 0, totalHuggyFinalizados: 0, avgHuggyFinalizados: '0.0',
+            totalFinalizacoes: 0, avgFinalizacoes: '0.0'
+        };
         if (allEvals.length === 0) return { myStats: defaultStats, chartData: [], shiftAvgPts: 0 };
 
         const myEvals = allEvals.filter(e => e.colabId === currentUserId || e.collaboratorId === currentUserId);
         let sumPoints = 0;
         let sumTmaTel = 0;
         let sumTmaHuggy = 0;
+        let sumFinalizacoes = 0;
+        let sumHuggyVolume = 0;       // finalizados de todos os lançamentos (inclui legado)
+        let sumHuggyIniciados = 0;    // apenas lançamentos no formato novo
+        let sumHuggyFinalizadosNovo = 0;
+        let sumPercentual = 0;
+        let weeksWithPercent = 0;
         const formattedChartData = [];
 
         myEvals.forEach(e => {
@@ -324,7 +437,26 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             sumPoints += pts; 
             sumTmaTel += telDec; 
             sumTmaHuggy += huggyDec;
-            formattedChartData.push({ date: formatChartDate(e.date), pontos: pts, tmaTelDec: telDec, tmaHuggyDec: huggyDec });
+            const hs = getHuggyStats(e);
+            const finalizacoes = Number(e.Atendimentos_Finalizados) || 0;
+            sumFinalizacoes += finalizacoes;
+            sumHuggyVolume += hs.volume;
+            if (!hs.legado) {
+                sumHuggyIniciados += hs.iniciados;
+                sumHuggyFinalizadosNovo += hs.finalizados;
+                sumPercentual += hs.percentual;
+                weeksWithPercent++;
+            }
+            formattedChartData.push({
+                date: formatChartDate(e.date),
+                pontos: pts,
+                tmaTelDec: telDec,
+                tmaHuggyDec: huggyDec,
+                aproveitamento: hs.legado ? null : hs.percentual,
+                huggyIniciados: hs.legado ? null : hs.iniciados,
+                huggyFinalizados: hs.volume,
+                finalizacoes
+            });
         });
 
         const count = myEvals.length || 1;
@@ -361,7 +493,20 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                 totalPoints: sumPoints, 
                 avgPoints: (sumPoints / count).toFixed(1), 
                 avgTmaTel: formatTime(sumTmaTel / count), 
-                avgTmaHuggy: formatTime(sumTmaHuggy / count) 
+                avgTmaHuggy: formatTime(sumTmaHuggy / count),
+                weeks: myEvals.length,
+                // Média simples dos percentuais de cada lançamento (somente formato novo)
+                avgAproveitamento: weeksWithPercent > 0 ? (sumPercentual / weeksWithPercent).toFixed(1) : null,
+                // Aproveitamento ponderado: total finalizados ÷ total iniciados do período
+                weightedAproveitamento: sumHuggyIniciados > 0
+                    ? Math.min(100, (sumHuggyFinalizadosNovo / sumHuggyIniciados) * 100).toFixed(1)
+                    : null,
+                aproveitamentoWeeks: weeksWithPercent,
+                totalHuggyIniciados: sumHuggyIniciados,
+                totalHuggyFinalizados: sumHuggyVolume,
+                avgHuggyFinalizados: (sumHuggyVolume / count).toFixed(1),
+                totalFinalizacoes: sumFinalizacoes,
+                avgFinalizacoes: (sumFinalizacoes / count).toFixed(1)
             },
             chartData: formattedChartData,
             shiftAvgPts: shiftCount > 0 ? Math.round(shiftSum / shiftCount) : 0
@@ -598,7 +743,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                         Minhas Médias & Indicadores Pessoais
                     </h2>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <DashboardCard 
                         title="Pontuação Total" 
                         value={myStats.totalPoints} 
@@ -622,6 +767,29 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                         value={myStats.avgTmaHuggy} 
                         subtitle="Tempo médio Huggy" 
                         icon={<MessageSquare className="w-5 h-5 text-indigo-500" />} 
+                    />
+                    <DashboardCard
+                        title="Aproveitamento Huggy"
+                        value={myStats.avgAproveitamento !== null ? `${myStats.avgAproveitamento}%` : '--'}
+                        subtitle={
+                            myStats.aproveitamentoWeeks > 0
+                                ? <span>{myStats.totalHuggyFinalizados} finalizados de {myStats.totalHuggyIniciados} iniciados ({myStats.weightedAproveitamento}%)</span>
+                                : 'Sem lançamentos no novo formato'
+                        }
+                        goalText={myStats.aproveitamentoWeeks > 0 ? `${myStats.aproveitamentoWeeks} sem.` : undefined}
+                        icon={<Target className="w-5 h-5 text-emerald-500" />}
+                    />
+                    <DashboardCard
+                        title="Huggy Finalizados"
+                        value={myStats.avgHuggyFinalizados}
+                        subtitle={<span>Média semanal • Total: <strong>{myStats.totalHuggyFinalizados}</strong></span>}
+                        icon={<MessageSquare className="w-5 h-5 text-blue-500" />}
+                    />
+                    <DashboardCard
+                        title="Finalizações"
+                        value={myStats.avgFinalizacoes}
+                        subtitle={<span>Média semanal • Total: <strong>{myStats.totalFinalizacoes}</strong></span>}
+                        icon={<CheckCircle2 className="w-5 h-5 text-purple-500" />}
                     />
                     <DashboardCard 
                         title="Conformidade QA" 
@@ -670,11 +838,38 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
             {/* GRÁFICOS DE EVOLUÇÃO TEMPORAL */}
             <div>
-                <div className="flex items-center gap-2 mb-3">
-                    <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
-                        Minha Evolução nas Avaliações Semanais
-                    </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-emerald-500" />
+                        <h2 className="text-xs font-bold text-primary-hub uppercase tracking-wider">
+                            Minha Evolução nas Avaliações Semanais
+                        </h2>
+                    </div>
+
+                    {/* Seletor do tipo de gráfico */}
+                    <div className="inline-flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle self-start sm:self-auto" role="group" aria-label="Tipo de gráfico">
+                        {CHART_TYPES.map((option) => {
+                            const { id, label } = option;
+                            const Icon = option.icon;
+                            return (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => handleChartType(id)}
+                                aria-pressed={chartType === id}
+                                className={cn(
+                                    "flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-bold transition-all cursor-pointer",
+                                    chartType === id
+                                        ? "bg-surface text-primary-hub shadow-xs"
+                                        : "text-secondary-hub hover:text-primary-hub"
+                                )}
+                            >
+                                <Icon className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">{label}</span>
+                            </button>
+                            );
+                        })}
+                    </div>
                 </div>
 
                 {chartData.length === 0 ? (
@@ -686,63 +881,65 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                         <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
                             <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">Produtividade (Pontos)</h3>
                             <div className="flex-1 min-h-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorPts" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', color: 'var(--text-primary)' }} />
-                                        <Area type="monotone" dataKey="pontos" stroke="#10b981" strokeWidth={2.5} fill="url(#colorPts)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                                <EvolutionChart
+                                    data={chartData}
+                                    type={chartType}
+                                    series={[{ key: 'pontos', name: 'Pontos', color: '#10b981' }]}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
+                            <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">Aproveitamento Huggy (%)</h3>
+                            <div className="flex-1 min-h-0">
+                                <EvolutionChart
+                                    data={chartData}
+                                    type={chartType}
+                                    yDomain={[0, 100]}
+                                    yFormatter={(v) => `${v}%`}
+                                    tooltipFormatter={(v) => (v === null || v === undefined ? ['--', 'Aproveitamento'] : [`${v}%`, 'Aproveitamento'])}
+                                    series={[{ key: 'aproveitamento', name: 'Aproveitamento', color: '#3b82f6' }]}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
+                            <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">Finalizações</h3>
+                            <div className="flex-1 min-h-0">
+                                <EvolutionChart
+                                    data={chartData}
+                                    type={chartType}
+                                    series={[
+                                        { key: 'huggyFinalizados', name: 'Huggy finalizados', color: '#8b5cf6' },
+                                        { key: 'finalizacoes', name: 'Finalizações', color: '#f59e0b' }
+                                    ]}
+                                />
                             </div>
                         </div>
 
                         <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
                             <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">TMA Telefonia (Minutos)</h3>
                             <div className="flex-1 min-h-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorTel" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={formatTime} />
-                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', color: 'var(--text-primary)' }} formatter={val => [formatTime(val), "TMA Tel"]} />
-                                        <Area type="monotone" dataKey="tmaTelDec" stroke="#3b82f6" strokeWidth={2.5} fill="url(#colorTel)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                                <EvolutionChart
+                                    data={chartData}
+                                    type={chartType}
+                                    yFormatter={formatTime}
+                                    tooltipFormatter={(v) => [formatTime(v), 'TMA Telefonia']}
+                                    series={[{ key: 'tmaTelDec', name: 'TMA Telefonia', color: '#3b82f6' }]}
+                                />
                             </div>
                         </div>
 
                         <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs h-72 flex flex-col">
                             <h3 className="text-xs font-bold text-primary-hub mb-2 shrink-0">TMA Huggy (Minutos)</h3>
                             <div className="flex-1 min-h-0">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                                        <defs>
-                                            <linearGradient id="colorHuggy" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                                                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                                            </linearGradient>
-                                        </defs>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-subtle)" opacity={0.6} />
-                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} dy={10} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} tickFormatter={formatTime} />
-                                        <Tooltip contentStyle={{ backgroundColor: 'var(--bg-surface)', borderColor: 'var(--border-subtle)', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.15)', color: 'var(--text-primary)' }} formatter={val => [formatTime(val), "TMA Huggy"]} />
-                                        <Area type="monotone" dataKey="tmaHuggyDec" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#colorHuggy)" />
-                                    </AreaChart>
-                                </ResponsiveContainer>
+                                <EvolutionChart
+                                    data={chartData}
+                                    type={chartType}
+                                    yFormatter={formatTime}
+                                    tooltipFormatter={(v) => [formatTime(v), 'TMA Huggy']}
+                                    series={[{ key: 'tmaHuggyDec', name: 'TMA Huggy', color: '#8b5cf6' }]}
+                                />
                             </div>
                         </div>
                     </div>

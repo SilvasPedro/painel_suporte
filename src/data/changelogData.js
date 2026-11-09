@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.4.0';
+export const CURRENT_VERSION = 'v4.5.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.4.0',
+    version: 'v4.5.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.5.0: a tela Meu Desempenho ganha os indicadores de aproveitamento Huggy e de finalizações com médias calculadas pelos lançamentos semanais e um seletor de tipo de gráfico (suave, área, linha, barras e degraus).',
+    items: [
+      {
+        icon: Target,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Aproveitamento Huggy e Finalizações com Médias',
+        category: 'Meu Desempenho',
+        description: 'Novos cartões de Aproveitamento Huggy (média dos percentuais por lançamento e aproveitamento ponderado do período), Huggy Finalizados e Finalizações, com média semanal e total. Lançamentos antigos, sem o percentual, ficam fora da média de aproveitamento.'
+      },
+      {
+        icon: BarChart3,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Gráficos com Tipos Alternáveis',
+        category: 'Meu Desempenho',
+        description: 'Seletor com cinco estilos de gráfico: Suave, Área, Linha, Barras e Degraus, aplicado a todos os gráficos da evolução semanal e lembrado pelo navegador. Foram adicionados os gráficos de Aproveitamento Huggy (eixo de 0 a 100%) e de Finalizações com duas séries.'
+      }
+    ]
+  },
+  {
+    version: 'v4.4.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.4.0: perfil do usuário com capa ajustável. Agora é possível reposicionar e ampliar a imagem de capa, com pré-visualização ao vivo, e a opção de biografia foi removida.',
     items: [
       {
@@ -30,7 +53,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.3.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.3.1: o modelo de métricas para download passa a seguir a mesma ordem de colunas da tela de lançamento semanal, com Ligações Realizadas e Huggy Iniciados/Finalizados agrupados de forma lógica.',
     items: [
       {

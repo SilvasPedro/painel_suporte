@@ -4,6 +4,26 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.5.0] - 2026-11-09
+
+### 🎯 Destaque Principal
+**Meu Desempenho** com os novos indicadores de **aproveitamento Huggy** e **finalizações** (médias calculadas pelos lançamentos semanais) e **gráficos com tipos alternáveis**.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Cartão Aproveitamento Huggy**: média simples dos percentuais de cada lançamento (formato novo), com o total de finalizados sobre iniciados e o aproveitamento ponderado do período; indica quantas semanas entraram na média.
+- **Cartões Huggy Finalizados e Finalizações**: média por lançamento e total (`getHuggyStats` e `Atendimentos_Finalizados`).
+- **Seletor de tipo de gráfico**: Suave (curva), Área, Linha (com pontos), Barras e Degraus, aplicado a todos os gráficos de evolução semanal; a escolha é lembrada no navegador.
+- **Novos gráficos**: Aproveitamento Huggy (%) com eixo fixo de 0 a 100% e Finalizações com duas séries (Huggy finalizados e Finalizações).
+- Componente reutilizável `EvolutionChart`, que redesenha o gráfico conforme o tipo escolhido; os gráficos de Pontos, TMA Telefonia e TMA Huggy passam a usá-lo.
+
+### 🔄 Alterações (Changed)
+- Grade de "Minhas Médias & Indicadores Pessoais" passa a 4 colunas para acomodar os novos cartões.
+- Lançamentos anteriores à v4.3.0 (sem percentual) ficam fora da média de aproveitamento, mas o volume continua contando em Huggy Finalizados; semanas sem percentual aparecem como lacuna no gráfico.
+
+---
+
 ## [v4.4.0] - 2026-11-09
 
 ### 🎯 Destaque Principal

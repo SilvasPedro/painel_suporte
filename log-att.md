@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.5.0 (Meu Desempenho: Aproveitamento, Finalizações e Tipos de Gráfico)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.4.0` para `4.5.0`. |
+| **Alterado** | `src/pages/MyDashboard.jsx` | Cartões de aproveitamento Huggy, Huggy finalizados e finalizações com médias; seletor de tipo de gráfico (suave, área, linha, barras e degraus) e componente `EvolutionChart`; novos gráficos de aproveitamento e finalizações. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.5.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.5.0`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.4.0 (Capa Ajustável e Remoção da Biografia)
 
 | Ação | Arquivo | Descrição da Alteração |
