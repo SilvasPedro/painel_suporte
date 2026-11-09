@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
                                 ...data,
                                 active: data.active !== false && String(data.status || '').toLowerCase() !== 'inativo',
                                 isInactive,
-                                role: data.role || (hasAdminAccess ? 'Gestor' : 'Colaborador') 
+                                role: data.role || (hasAdminAccess ? 'Gestor' : 'Operacional') 
                             });
                         };
 

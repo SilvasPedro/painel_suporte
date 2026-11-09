@@ -4,6 +4,29 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.6.0] - 2026-11-09
+
+### 🎯 Destaque Principal
+**Tour guiado** no primeiro acesso, com dois roteiros por perfil, e **renomeação do cargo Colaborador para Operacional**.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Tour guiado** (`ProductTour`): escurece a tela, destaca o elemento com um retângulo e explica sua função em um cartão posicionado automaticamente, sem sair da tela. Navegação por Voltar/Próximo/Pular ou teclado (setas, Enter e Esc), barra de progresso e suporte aos temas claro, morno e escuro.
+- **Dois roteiros** (`tourSteps`): **Operacional e Apoio** (desempenho, histórico, rankings, solicitações, escalas, organograma) e **Gestor e Supervisor** (KPIs, Hub da Equipe, avaliações semanais e mensais, auditorias, KPIs do setor, gestão de dados e configurações). Passos filtrados pelas permissões RBAC do usuário; busca rápida, notificações e tema em ambos.
+- **Exibição única no primeiro acesso**: controle local (`localStorage`) e campos `tourVersion`, `tourType` e `tourCompletedAt` no perfil do colaborador. Incrementar `TOUR_VERSION` reapresenta o tour a todos.
+- **Botão "Tour guiado"** no rodapé do menu lateral para rever a apresentação.
+- **Celular**: o menu lateral é oculto, então as telas são resumidas em um único passo e o tour destaca o botão do menu.
+
+### 🔄 Alterações (Changed)
+- **Cargo "Colaborador" passa a "Operacional"** em cadastro, edição, filtro do Hub da Equipe, matriz de permissões, perfil, relatório do colaborador e comentários de chamados. O identificador interno `colaborador` foi mantido para preservar a matriz de permissões salva.
+- Nova função `getRoleLabel`: registros antigos ("Colaborador") e vazios aparecem como "Operacional"; cargos fora do padrão (ex.: NOC) são exibidos como cadastrados. Sem migração de dados.
+
+### 🧪 Testes
+- Testes dos roteiros (tipo por cargo, filtro por permissão, alvos válidos, versão mobile e chave de persistência) e do rótulo de cargo.
+
+---
+
 ## [v4.5.1] - 2026-11-09
 
 ### 🐛 Correções (Fixed)

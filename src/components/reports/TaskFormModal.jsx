@@ -254,7 +254,7 @@ export default function TaskFormModal({
                     uid: String(found.uid || fId),
                     name: String(found.name || found.email || fId),
                     email: String(found.email || ''),
-                    role: String(found.role || 'Colaborador'),
+                    role: String(found.role || 'Operacional'),
                     addedAt: new Date().toISOString(),
                     addedBy: user?.name || user?.email || 'Usuário'
                 }
@@ -322,7 +322,7 @@ export default function TaskFormModal({
                     uid: String(matchedCollab.uid || aId),
                     name: String(matchedCollab.name || matchedCollab.email || aId),
                     email: String(matchedCollab.email || ''),
-                    role: String(matchedCollab.role || 'Colaborador'),
+                    role: String(matchedCollab.role || 'Operacional'),
                     assignedAt: new Date().toISOString(),
                     assignedBy: user?.name || user?.email || 'Liderança'
                 };

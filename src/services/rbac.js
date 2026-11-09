@@ -28,11 +28,12 @@ export const ROLES = [
         description: 'Suporte à operação e monitoria de filas diárias, controle de escalas e auxílio nos lançamentos operacionais.'
     },
     {
+        // O id interno 'colaborador' é mantido (a matriz de permissões já salva usa essa chave)
         id: 'colaborador',
-        label: 'Colaborador',
+        label: 'Operacional',
         badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         activeBadgeColor: 'bg-emerald-600 text-white',
-        description: 'Analista de atendimento. Consulta escalas de trabalho, organograma da equipe e rankings de desempenho.'
+        description: 'Analista de atendimento operacional. Consulta escalas de trabalho, organograma da equipe e rankings de desempenho.'
     }
 ];
 
@@ -274,6 +275,15 @@ export const normalizeRole = (roleString) => {
         return 'apoio';
     }
     return 'colaborador';
+};
+
+// Nome de exibição do cargo. Registros antigos guardam "Colaborador": aparecem como "Operacional".
+// Cargos fora do padrão (ex.: NOC) são exibidos exatamente como foram cadastrados.
+export const getRoleLabel = (roleString) => {
+    const raw = String(roleString || '').trim();
+    const lower = raw.toLowerCase();
+    if (!lower || lower === 'colaborador' || lower === 'operacional') return 'Operacional';
+    return raw;
 };
 
 // -------------------------------------------------------------

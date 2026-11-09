@@ -26,7 +26,7 @@ const BADGE_ICONS = {
 };
 
 const ROLE_CARDS = [
-    { id: 'Colaborador', title: 'Colaborador', icon: User, badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    { id: 'Operacional', title: 'Operacional', icon: User, badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
     { id: 'Apoio', title: 'Apoio', icon: Users, badge: 'bg-blue-100 text-blue-800 border-blue-200' },
     { id: 'Supervisor', title: 'Supervisor', icon: ShieldCheck, badge: 'bg-amber-100 text-amber-800 border-amber-200' },
     { id: 'Gestor', title: 'Gestor', icon: Shield, badge: 'bg-red-100 text-red-700 border-red-200' }
@@ -44,7 +44,8 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
     const initialShift = colab.shift === 'Manhã' ? 'Manhã I' : (colab.shift === 'Noite' ? 'Noturno' : (colab.shift || 'Manhã I'));
     const [formData, setFormData] = useState({
         name: colab.name || '',
-        role: colab.role || 'Colaborador',
+        // Registros antigos usam "Colaborador": o cartão selecionado passa a ser "Operacional"
+        role: ['', 'colaborador', 'operacional'].includes(String(colab.role || '').trim().toLowerCase()) ? 'Operacional' : colab.role,
         shift: initialShift,
         active: colab.active !== false,
         badges: Array.isArray(colab.badges) 

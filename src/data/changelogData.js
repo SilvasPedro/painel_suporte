@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.5.1';
+export const CURRENT_VERSION = 'v4.6.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.5.1',
+    version: 'v4.6.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.6.0: tour guiado no primeiro acesso, com dois roteiros (Operacional e Apoio; Gestor e Supervisor), e renomeação do cargo Colaborador para Operacional.',
+    items: [
+      {
+        icon: Sparkles,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Tour Guiado no Primeiro Acesso',
+        category: 'Onboarding',
+        description: 'Ao entrar pela primeira vez, o sistema escurece a tela, destaca com um retângulo cada área importante (menu, telas, busca, notificações e tema) e explica sua função. São dois roteiros: Operacional e Apoio, e Gestor e Supervisor, mostrando apenas as telas que o usuário pode acessar. Navegação por botões ou teclado e opção de rever o tour pelo botão Tour guiado no menu lateral.'
+      },
+      {
+        icon: User,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Cargo Colaborador Agora é Operacional',
+        category: 'Cargos & Permissões',
+        description: 'O nome do cargo passou a ser Operacional em cadastros, edição, filtros, matriz de permissões, perfil e comentários de chamados. Registros antigos salvos como Colaborador continuam funcionando e são exibidos como Operacional, sem necessidade de migração.'
+      }
+    ]
+  },
+  {
+    version: 'v4.5.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.5.1: correção do histórico de versões, que passa a abrir normalmente (ícone ausente na entrada da v4.5.0).',
     items: [
       {
@@ -23,7 +46,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.5.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.5.0: a tela Meu Desempenho ganha os indicadores de aproveitamento Huggy e de finalizações com médias calculadas pelos lançamentos semanais e um seletor de tipo de gráfico (suave, área, linha, barras e degraus).',
     items: [
       {

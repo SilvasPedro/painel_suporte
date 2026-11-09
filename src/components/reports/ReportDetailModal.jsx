@@ -25,6 +25,7 @@ import {
     isUserTaskCreator
 } from '../../types/request.types';
 import { resolveUserName } from '../../utils/userResolvers';
+import { getRoleLabel } from '../../services/rbac';
 
 /**
  * ReportDetailModal (Hubdesk v4.0.0)
@@ -184,7 +185,7 @@ export default function ReportDetailModal({
                         uid: String(matchedCollab.uid || aId),
                         name: String(matchedCollab.name || matchedCollab.email || aId),
                         email: String(matchedCollab.email || ''),
-                        role: String(matchedCollab.role || 'Colaborador'),
+                        role: String(matchedCollab.role || 'Operacional'),
                         assignedAt: new Date().toISOString(),
                         assignedBy: user?.name || user?.email || 'Liderança'
                     };
@@ -261,7 +262,7 @@ export default function ReportDetailModal({
                 uid: String(found.uid || fId),
                 name: String(found.name || found.email || fId),
                 email: String(found.email || ''),
-                role: String(found.role || 'Colaborador'),
+                role: String(found.role || 'Operacional'),
                 addedAt: new Date().toISOString(),
                 addedBy: user?.name || user?.email || 'Liderança'
             };
@@ -310,7 +311,7 @@ export default function ReportDetailModal({
         try {
             const userUid = currentUser?.firestoreId || currentUser?.uid || 'user';
             const userName = currentUser?.name || currentUser?.displayName || resolveUserName(currentUser?.email) || 'Usuário';
-            const userRole = currentUser?.role || 'Colaborador';
+            const userRole = currentUser?.role || 'Operacional';
 
             const newComment = {
                 id: 'cmt_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8),
@@ -1037,7 +1038,7 @@ export default function ReportDetailModal({
                                                                 </span>
                                                             ) : (
                                                                 <span className="px-1.5 py-0.2 rounded-md text-[10px] font-medium bg-subtle text-muted-hub border border-subtle">
-                                                                    {comment.authorRole || 'Colaborador'}
+                                                                    {getRoleLabel(comment.authorRole)}
                                                                 </span>
                                                             )}
                                                         </div>

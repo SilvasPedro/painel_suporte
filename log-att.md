@@ -4,6 +4,26 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.6.0 (Tour Guiado e Cargo Operacional)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.5.1` para `4.6.0`. |
+| **Criado** | `src/components/tour/ProductTour.jsx` | Componente do tour: fundo escurecido, retângulo de destaque, cartão posicionado automaticamente, navegação por teclado e barra de progresso. |
+| **Criado** | `src/data/tourSteps.js` | Roteiros (Operacional/Apoio e Gestor/Supervisor), filtro por permissão, versão mobile e chave de persistência. |
+| **Criado** | `src/data/tourSteps.test.js` | Testes dos roteiros e do rótulo do cargo Operacional. |
+| **Alterado** | `src/pages/AdminDashboard.jsx` | Abertura automática do tour no primeiro acesso, marcadores `data-tour`, gravação da conclusão no perfil e botão "Tour guiado". |
+| **Alterado** | `src/services/rbac.js` | Rótulo do cargo para Operacional e função `getRoleLabel`. |
+| **Alterado** | `src/context/AuthContext.jsx` | Cargo padrão passa a "Operacional". |
+| **Alterado** | `src/components/collaborators/CreateCollaboratorModal.jsx`, `EditCollaboratorModal.jsx`, `ReportDashboardModal.jsx` | Cargo Operacional em cadastro, edição e relatório do colaborador. |
+| **Alterado** | `src/pages/CollaboratorsHub.jsx` | Filtro e rótulos do cargo Operacional. |
+| **Alterado** | `src/components/reports/ReportDetailModal.jsx`, `TaskFormModal.jsx` | Cargo padrão e exibição do cargo nos comentários de chamados. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.6.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.6.0`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.5.1 (Correção do Changelog)
 
 | Ação | Arquivo | Descrição da Alteração |

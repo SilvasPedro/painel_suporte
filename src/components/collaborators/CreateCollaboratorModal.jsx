@@ -11,9 +11,9 @@ import { db } from '../../services/firebase';
 
 const ROLE_CARDS = [
     {
-        id: 'Colaborador',
+        id: 'Operacional',
         roleKey: 'colaborador',
-        title: 'Colaborador',
+        title: 'Operacional',
         tag: 'Analista',
         description: 'Acesso padrão. Visualiza escalas, organograma e rankings operacionais.',
         color: 'border-emerald-500 bg-emerald-50/50 text-emerald-900',
@@ -93,7 +93,7 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
         name: '',
         email: '',
         password: '',
-        role: 'Colaborador',
+        role: 'Operacional',
         shift: 'Manhã I',
         active: true
     });

@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { resolveUserName } from '../../utils/userResolvers';
 import { calculatePerformanceScore, getHuggyStats } from '../../utils/scoringCalculations';
+import { getRoleLabel } from '../../services/rbac';
 
 // --- UTILITÁRIOS DE CONVERSÃO E FORMATAÇÃO ROBUSTOS ---
 const parseDateObj = (dateStr) => {
@@ -573,7 +574,7 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                                     {colab.name}
                                 </h2>
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
-                                    {colab.role || 'Colaborador'}
+                                    {getRoleLabel(colab.role)}
                                 </span>
                                 {colab.active !== false ? (
                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">

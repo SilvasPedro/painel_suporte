@@ -6,13 +6,17 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { logout } from '../services/auth';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import ProductTour from '../components/tour/ProductTour';
+import { TOUR_VERSION, getTourType, getTourStorageKey, buildTourSteps } from '../data/tourSteps';
 
 // Carregamento sob demanda (Code-Splitting) para máxima performance de inicialização
 const DashboardOverview = lazy(() => import('./DashboardOverview'));
@@ -56,7 +60,7 @@ import faviconLogo from '../assets/favicon_red.png';
 const logo = faviconLogo;
 
 const AdminDashboard = () => {
-    const { canView, canEdit, activeRoleInfo, normalizedRole } = usePermissions();
+    const { canView, canEdit, activeRoleInfo, normalizedRole, isMasterAdmin } = usePermissions();
     const { currentUser } = useAuth();
     const { 
         showToast, 
@@ -122,6 +126,61 @@ const AdminDashboard = () => {
         escalas: true,
         gestao: true
     });
+
+    // ---------------------------------------------------------------------
+    // TOUR GUIADO DO PRIMEIRO ACESSO (Operacional/Apoio x Gestor/Supervisor)
+    // ---------------------------------------------------------------------
+    const [tourOpen, setTourOpen] = useState(false);
+    const [tourIsMobile, setTourIsMobile] = useState(false);
+    const tourType = getTourType({ normalizedRole, isMasterAdmin });
+    const tourUserId = currentUser?.firestoreId || currentUser?.uid;
+
+    const tourSteps = useMemo(
+        () => buildTourSteps(tourType, canView, tourIsMobile),
+        [tourType, canView, tourIsMobile]
+    );
+
+    // Abre sozinho apenas na primeira vez (controle local + campo gravado no perfil do colaborador)
+    useEffect(() => {
+        if (!tourUserId || currentUser?.isInactive) return undefined;
+        let seenLocally = false;
+        try { seenLocally = localStorage.getItem(getTourStorageKey(tourUserId)) === '1'; } catch { /* sem acesso ao armazenamento */ }
+        const seenInProfile = Number(currentUser?.tourVersion || 0) >= TOUR_VERSION;
+        if (seenLocally || seenInProfile) return undefined;
+
+        const timer = setTimeout(() => {
+            setTourIsMobile(window.innerWidth < 768);
+            setTourOpen(true);
+        }, 900);
+        return () => clearTimeout(timer);
+    }, [tourUserId, currentUser?.isInactive, currentUser?.tourVersion]);
+
+    // Prepara a tela para o passo atual: menu lateral aberto e grupo do item expandido
+    const handleTourBeforeStep = useCallback((step) => {
+        if (step.target && !step.target.includes('mobile-menu')) setIsSidebarCollapsed(false);
+        if (step.menu) setExpandedMenus(prev => (prev[step.menu] ? prev : { ...prev, [step.menu]: true }));
+    }, [setIsSidebarCollapsed, setExpandedMenus]);
+
+    const handleTourFinish = useCallback(async () => {
+        setTourOpen(false);
+        if (!tourUserId) return;
+        try { localStorage.setItem(getTourStorageKey(tourUserId), '1'); } catch { /* sem acesso ao armazenamento */ }
+        try {
+            await updateDoc(doc(db, 'collaborators', tourUserId), {
+                tourVersion: TOUR_VERSION,
+                tourType,
+                tourCompletedAt: new Date().toISOString()
+            });
+        } catch {
+            // Sem permissão ou sem documento de colaborador: o controle local já evita repetir o tour
+        }
+    }, [tourUserId, tourType]);
+
+    const handleReplayTour = useCallback(() => {
+        setIsMobileMenuOpen(false);
+        setTourIsMobile(window.innerWidth < 768);
+        setTourOpen(true);
+    }, [setIsMobileMenuOpen]);
 
     const toggleMenu = (menuId) => {
         if (isSidebarCollapsed) {
@@ -290,7 +349,7 @@ const AdminDashboard = () => {
     return (
         <div className="h-screen bg-gray-50 flex overflow-hidden">
             {/* BARRA LATERAL ULTRA-MODERNA (MAGIC DESIGN SYSTEM) */}
-            <aside className={cn(
+            <aside data-tour="sidebar" className={cn(
                 "app-sidebar bg-zinc-950/95 text-white flex flex-col hidden md:flex shrink-0 border-r border-zinc-800/80 transition-all duration-300 relative z-20 backdrop-blur-xl select-none overflow-hidden",
                 isSidebarCollapsed ? "w-20" : "w-64"
             )}>
@@ -380,7 +439,7 @@ const AdminDashboard = () => {
                     <div className="px-3 pt-2 relative z-10">
                         <button 
                             type="button"
-                            onClick={() => setActiveTab('my_profile')}
+                            data-tour="profile" onClick={() => setActiveTab('my_profile')}
                             className={cn(
                                 "w-full p-2.5 rounded-2xl flex items-center gap-3 transition-all text-left cursor-pointer group relative overflow-hidden",
                                 isProfileActive 
@@ -435,7 +494,7 @@ const AdminDashboard = () => {
                         <div className="relative">
                             <button 
                                 type="button"
-                                onClick={() => setActiveTab('my_profile')}
+                                data-tour="profile" onClick={() => setActiveTab('my_profile')}
                                 className={cn(
                                     "w-10 h-10 rounded-xl flex items-center justify-center font-brand font-black text-xs overflow-hidden cursor-pointer transition-all",
                                     isProfileActive
@@ -497,6 +556,7 @@ const AdminDashboard = () => {
                                         return (
                                             <button 
                                                 key={item.id}
+                                                data-tour={`nav-${item.id}`}
                                                 onClick={() => {
                                                     setActiveTab(item.id);
                                                     if (isHistory) clearPulseHistory();
@@ -588,6 +648,21 @@ const AdminDashboard = () => {
                             {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Sair</span>}
                         </button>
                     </div>
+
+                    {/* Rever o tour guiado */}
+                    <button
+                        type="button"
+                        data-tour="tour-replay"
+                        onClick={handleReplayTour}
+                        className={cn(
+                            "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                            isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                        )}
+                        title="Rever o tour guiado"
+                    >
+                        <Compass className="w-3.5 h-3.5 shrink-0" />
+                        {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Tour guiado</span>}
+                    </button>
 
                     {/* Versão do Sistema & Trigger do Changelog */}
                     <button
@@ -777,7 +852,7 @@ const AdminDashboard = () => {
                     <div className="flex items-center gap-3 min-w-0">
                         <button 
                             type="button"
-                            onClick={() => setIsMobileMenuOpen(true)} 
+                            data-tour="mobile-menu" onClick={() => setIsMobileMenuOpen(true)} 
                             className="p-2 rounded-lg text-secondary-hub hover:text-primary-hub hover:bg-subtle md:hidden transition-colors cursor-pointer shrink-0" 
                             title="Abrir Menu de Navegação"
                         >
@@ -796,6 +871,7 @@ const AdminDashboard = () => {
                         {/* Botão de Busca Rápida / Command Palette (Ctrl+K) */}
                         <button
                             type="button"
+                            data-tour="search"
                             onClick={() => setIsCommandPaletteOpen(true)}
                             className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-subtle hover:bg-surface border border-subtle text-xs text-secondary-hub hover:text-primary-hub transition-all cursor-pointer shadow-2xs"
                             title="Buscar ou navegar (Ctrl + K)"
@@ -815,8 +891,12 @@ const AdminDashboard = () => {
                             <Search className="w-4 h-4" />
                         </button>
 
-                        <NotificationBell />
-                        <ThemeSelector variant="compact" />
+                        <div data-tour="notifications" className="flex items-center">
+                            <NotificationBell />
+                        </div>
+                        <div data-tour="theme" className="flex items-center">
+                            <ThemeSelector variant="compact" />
+                        </div>
                     </div>
                 </header>
 
@@ -826,6 +906,15 @@ const AdminDashboard = () => {
                     </Suspense>
                 </div>
             </main>
+
+            {/* Tour guiado (primeiro acesso ou sob demanda) */}
+            {tourOpen && (
+                <ProductTour
+                    steps={tourSteps}
+                    onBeforeStep={handleTourBeforeStep}
+                    onFinish={handleTourFinish}
+                />
+            )}
 
             {/* Command Palette Global (Ctrl + K) */}
             <CommandPalette

@@ -13,7 +13,7 @@ import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { ROLES, normalizeRole } from '../services/rbac';
+import { ROLES, normalizeRole, getRoleLabel } from '../services/rbac';
 import { Card, Badge, Button, Tabs, EmptyState, Input } from '../components/ui';
 import { ShineBorder, BorderBeam, AnimatedShinyText, MagicCard } from '../components/magicui';
 import { cn } from '../utils/cn';
@@ -128,7 +128,7 @@ const getRoleMeta = (roleString) => {
     if (found) return found;
     return {
         id: 'colaborador',
-        label: roleString || 'Colaborador',
+        label: getRoleLabel(roleString),
         badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         activeBadgeColor: 'bg-emerald-600 text-white'
     };
@@ -431,7 +431,7 @@ const CollaboratorsHub = () => {
                                         {mvpCollaborator.colab.name}
                                     </h4>
                                     <p className="text-[11px] text-muted-hub truncate mt-0.5">
-                                        {mvpCollaborator.colab.role || 'Colaborador'} • {mvpCollaborator.colab.shift || 'Turno Geral'}
+                                        {getRoleLabel(mvpCollaborator.colab.role)} • {mvpCollaborator.colab.shift || 'Turno Geral'}
                                     </p>
                                 </div>
                             </div>
@@ -686,7 +686,7 @@ const CollaboratorsHub = () => {
                             <option value="Gestor">Gestor</option>
                             <option value="Supervisor">Supervisor</option>
                             <option value="Apoio">Apoio</option>
-                            <option value="Colaborador">Colaborador</option>
+                            <option value="Operacional">Operacional</option>
                         </select>
 
                         {/* Filtro Status */}
@@ -954,7 +954,7 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
 
                     <div className="flex flex-col items-end gap-1.5">
                         <Badge variant="outline" size="sm" className="font-semibold">
-                            {roleMeta.label || colab.role || 'Colaborador'}
+                            {roleMeta.label || getRoleLabel(colab.role)}
                         </Badge>
                         <Badge 
                             variant="neutral" 
@@ -1125,7 +1125,7 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                                     {/* Cargo */}
                                     <td className="py-3.5 px-4">
                                         <Badge variant="outline" size="sm" className="font-semibold">
-                                            {roleMeta.label || colab.role || 'Colaborador'}
+                                            {roleMeta.label || getRoleLabel(colab.role)}
                                         </Badge>
                                     </td>
 
@@ -1255,7 +1255,7 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                     <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-brand font-bold text-xs text-primary-hub truncate" title={colab.name}>{colab.name}</h4>
                         <Badge variant="outline" size="sm">
-                            {roleMeta.label || colab.role || 'Colaborador'}
+                            {roleMeta.label || getRoleLabel(colab.role)}
                         </Badge>
                         {(() => {
                             const shiftStyle = getShiftBadgeStyle(colab.shift);
