@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.1.1';
+export const CURRENT_VERSION = 'v4.2.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.1.1',
+    version: 'v4.2.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.2.0: otimização de leituras do Firestore. Cada usuário passa a baixar apenas os próprios registros, os limites de coleções volumosas agora vêm acompanhados de ordenação por mais recentes e a Auditoria Terceirizada lê somente os dados da empresa selecionada.',
+    items: [
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Consultas Escopadas por Colaborador',
+        category: 'Performance',
+        description: 'Notificações, Meu Histórico e Meu Desempenho deixaram de baixar coleções inteiras (feedbacks, avaliações mensais, auditorias e chamados) e passaram a consultar apenas os registros do próprio usuário, reduzindo drasticamente as leituras por sessão e corrigindo a falha de permissão em feedbacks para colaboradores.'
+      },
+      {
+        icon: Layers,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Limites com Ordenação (Mais Recentes Primeiro)',
+        category: 'Performance',
+        description: 'Coleções volumosas (avaliações semanais, auditorias QA, feedbacks, chamados, auditorias terceirizadas e demanda diária) agora combinam limit com orderBy, evitando que registros novos sejam descartados quando o limite é atingido. Há fallback automático caso um índice esteja ausente.'
+      },
+      {
+        icon: Headphones,
+        iconColor: 'text-red-500 bg-red-500/10 border-red-500/20',
+        title: 'Auditoria Terceirizada Otimizada por Empresa',
+        category: 'Performance',
+        description: 'A ATSOC usa listener em tempo real restrito aos próprios documentos; a UpCall (histórico) é lida uma única vez com cache de 45 minutos, sem listener aberto. A Visão Geral passa a exibir os indicadores da terceirizada somente da ATSOC.'
+      }
+    ]
+  },
+  {
+    version: 'v4.1.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.1.1: reformulação completa do tema Morno (sépia). Paleta de linho, creme e café espresso aplicada à tela inteira, com barra lateral, cartões de destaque, modais, formulários, tabelas, badges, gráficos e botões de ação em terracota, finalmente harmonizados.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.1.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.1.0: Auditoria Terceirizada com seletor de empresa (ATSOC atual e UpCall como histórico somente leitura), modal de Auditorias QA redesenhado com filtros, atalhos e data da auditoria corrigida, calendário de folgas em cards quadrados e padronização dos títulos de 12 telas no estilo de Tarefas & Relatórios.',
     items: [
       {

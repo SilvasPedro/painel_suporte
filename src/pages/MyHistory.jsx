@@ -202,7 +202,7 @@ const MyHistory = ({ currentUserId }) => {
 
             setData(res);
             setLoading(false);
-        });
+        }, { where: [['colabId', '==', currentUserId]] });
 
         return () => { 
             unsubQA(); 

@@ -11,7 +11,7 @@ import {
     collection, doc, addDoc, updateDoc, deleteDoc, setDoc 
 } from 'firebase/firestore';
 import { db } from '../services/firebase';
-import { subscribeSharedCollection } from '../services/dataCache';
+import { subscribeSharedCollection, fetchQueryOnce } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -64,7 +64,7 @@ export default function ThirdPartyAudits() {
     // Estados de dados
     const [allAudits, setAllAudits] = useState([]);
     const [savedOperators, setSavedOperators] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loadedFor, setLoadedFor] = useState(null); // empresa cujos dados estão em allAudits
     const [saving, setSaving] = useState(false);
     const [deletingId, setDeletingId] = useState(null);
 
@@ -125,32 +125,47 @@ export default function ThirdPartyAudits() {
     };
     const [formData, setFormData] = useState(initialFormState);
 
-    // 1. Escuta em tempo real das auditorias
-    useEffect(() => {
-        const unsubAudits = subscribeSharedCollection('third_party_audits', (items) => {
-            const list = [...items];
-            // Ordena da mais recente para a mais antiga
-            list.sort((a, b) => {
-                const dateA = a.date || '';
-                const dateB = b.date || '';
-                return dateB.localeCompare(dateA);
-            });
-            setAllAudits(list);
-            setLoading(false);
-        });
+    // Contagem de auditorias por empresa (preenchida conforme cada base é carregada)
+    const [companyCounts, setCompanyCounts] = useState({});
 
-        // 2. Escuta operadores salvos (guarda a empresa de cada um)
-        const unsubOperators = subscribeSharedCollection('third_party_operators', (items) => {
+    const loading = loadedFor !== selectedCompany;
+
+    const sortByDateDesc = (items) => [...items].sort((x, y) => (y.date || '').localeCompare(x.date || ''));
+
+    // 1. Auditorias da empresa selecionada.
+    // ATSOC (atual): listener em tempo real restrito aos documentos da empresa.
+    // UpCall (histórico, somente leitura): leitura única com cache, sem listener aberto.
+    useEffect(() => {
+        if (selectedCompany === DEFAULT_COMPANY) {
+            return subscribeSharedCollection('third_party_audits', (items) => {
+                setAllAudits(sortByDateDesc(items));
+                setCompanyCounts(prev => ({ ...prev, [DEFAULT_COMPANY]: items.length }));
+                setLoadedFor(DEFAULT_COMPANY);
+            }, { where: [['company', '==', DEFAULT_COMPANY]] });
+        }
+
+        let cancelled = false;
+        // Registros legados não têm o campo "company", então não dá para filtrar na query:
+        // lê a coleção uma vez e separa no cliente.
+        fetchQueryOnce('third_party_audits').then((items) => {
+            if (cancelled) return;
+            const legacy = items.filter(a => getAuditCompany(a) === selectedCompany);
+            setAllAudits(sortByDateDesc(legacy));
+            setCompanyCounts(prev => ({ ...prev, [selectedCompany]: legacy.length }));
+            setLoadedFor(selectedCompany);
+        });
+        return () => { cancelled = true; };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedCompany]);
+
+    // 2. Operadores salvos (guarda a empresa de cada um)
+    useEffect(() => {
+        return subscribeSharedCollection('third_party_operators', (items) => {
             const ops = items
                 .map(i => ({ name: i.name || i.id, company: i.company || LEGACY_COMPANY }))
                 .filter(o => o.name);
             setSavedOperators(ops);
         });
-
-        return () => {
-            unsubAudits();
-            unsubOperators();
-        };
     }, []);
 
     // Lista unificada e única de operadores (salvos + encontrados nas auditorias)
@@ -159,17 +174,6 @@ export default function ThirdPartyAudits() {
         () => allAudits.filter(a => getAuditCompany(a) === selectedCompany),
         [allAudits, selectedCompany]
     );
-
-    // Contagem total por empresa para o seletor
-    const companyCounts = useMemo(() => {
-        const counts = {};
-        COMPANIES.forEach(c => { counts[c.id] = 0; });
-        allAudits.forEach(a => {
-            const c = getAuditCompany(a);
-            counts[c] = (counts[c] || 0) + 1;
-        });
-        return counts;
-    }, [allAudits]);
 
     // Ao trocar de empresa, limpa filtros que dependem dos dados da empresa anterior
     const handleSelectCompany = (companyId) => {
@@ -1101,7 +1105,7 @@ export default function ThirdPartyAudits() {
                                     <span className={`w-2 h-2 rounded-full ${c.archived ? 'bg-zinc-400' : 'bg-emerald-500'}`}></span>
                                     <span>{c.label}</span>
                                     <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-subtle text-secondary-hub border border-subtle">
-                                        {companyCounts[c.id] || 0}
+                                        {companyCounts[c.id] ?? '—'}
                                     </span>
                                 </button>
                             ))}

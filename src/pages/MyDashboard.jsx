@@ -266,7 +266,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                 if (data.status === 'Resolvido') resolved++;
             });
             setReportCounts({ pending, inProgress, resolved });
-        });
+        }, currentUserId ? { where: [['creatorId', '==', currentUserId]] } : {});
 
         const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
             let unreadCount = 0;
@@ -276,12 +276,12 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                 }
             });
             setUnreadFeedbacks(unreadCount);
-        });
+        }, currentUserId ? { where: [['colabId', '==', currentUserId]] } : {});
 
         const unsubAudits = subscribeSharedCollection("qa_audits", (items) => {
             const fetched = items.filter(d => d.colabId === currentUserId || d.collaboratorId === currentUserId);
             setMyAudits(fetched);
-        });
+        }, currentUserId ? { where: [['colabId', '==', currentUserId]] } : {});
 
         return () => { 
             unsubKpi(); 

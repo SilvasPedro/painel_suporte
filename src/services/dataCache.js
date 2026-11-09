@@ -1,4 +1,4 @@
-import { collection, onSnapshot, doc, getDocs, query, limit } from "firebase/firestore";
+import { collection, onSnapshot, doc, getDocs, query, limit, where, orderBy, documentId } from "firebase/firestore";
 import { db } from "./firebase";
 import { useState, useEffect, useRef } from "react";
 
@@ -8,10 +8,12 @@ import { useState, useEffect, useRef } from "react";
  * Garante operação segura abaixo do teto de 50.000 leituras/dia do plano Spark:
  * 1. L1 RAM Cache com TTL e Stale-While-Revalidate (SWR).
  * 2. Deduplicação Singleton: no máximo 1 listener ativo por recurso em todo o app.
- * 3. Classificação Semiestática: dados institucionais (processos, tags, setores, operadores)
- *    são cacheados com TTL longo (45 min) e não mantêm stream onSnapshot aberto o tempo todo.
- * 4. Suporte a queries restritas com cursores e limites de segurança.
- * 5. L2 Persistence espelhada em sessionStorage para retenção entre reloads.
+ * 3. Coleções volumosas usam limit() SEMPRE combinado com orderBy (mais recentes primeiro),
+ *    evitando que o limite descarte registros novos de forma arbitrária.
+ * 4. Queries escopadas (options.where): quem só precisa dos próprios registros baixa apenas
+ *    esses documentos, em vez da coleção inteira (cada escopo tem sua própria chave de cache).
+ * 5. fetchQueryOnce: leitura única com TTL, sem listener aberto, para dados históricos.
+ * 6. L2 Persistence espelhada em sessionStorage para retenção entre reloads.
  */
 
 // Memória RAM volátil da aplicação (compartilhada entre abas e componentes)
@@ -40,6 +42,44 @@ const DEFAULT_COLLECTION_LIMITS = {
     qa_audits: 300,
     third_party_audits: 300,
     feedbacks: 300,
+};
+
+// Ordenação padrão aplicada junto com o limite (mais recentes primeiro).
+// dailyDemand usa o ID do documento (data YYYY-MM-DD), que todo documento possui.
+const DEFAULT_COLLECTION_ORDER = {
+    critical_reports: { field: 'createdAt' },
+    dailyDemand: { field: documentId() },
+    weekly_evaluations: { field: 'createdAt' },
+    qa_audits: { field: 'createdAt' },
+    third_party_audits: { field: 'createdAt' },
+    feedbacks: { field: 'createdAt' },
+};
+
+// Chave de cache/listener: nome da coleção, ou nome + filtros quando a query é escopada
+export const buildCollectionKey = (collectionName, options = {}) => {
+    if (options.where && options.where.length > 0) {
+        return `${collectionName}?${JSON.stringify(options.where)}`;
+    }
+    return collectionName;
+};
+
+// Monta a query respeitando filtros, ordenação e limites de FinOps
+const buildQuery = (collectionName, options = {}, { withOrder = true } = {}) => {
+    const colRef = collection(db, collectionName);
+    const constraints = [];
+    const scoped = Boolean(options.where && options.where.length > 0);
+
+    if (scoped) {
+        options.where.forEach(([field, op, value]) => constraints.push(where(field, op, value)));
+        if (options.limitCount) constraints.push(limit(options.limitCount));
+    } else if (options.limitCount || (!options.disableLimit && DEFAULT_COLLECTION_LIMITS[collectionName])) {
+        const count = options.limitCount || DEFAULT_COLLECTION_LIMITS[collectionName];
+        const order = options.orderBy || DEFAULT_COLLECTION_ORDER[collectionName];
+        if (order && withOrder) constraints.push(orderBy(order.field, order.dir || 'desc'));
+        constraints.push(limit(count));
+    }
+
+    return constraints.length > 0 ? query(colRef, ...constraints) : colRef;
 };
 
 // Duração do Keep-Alive: 15 minutos de inatividade antes de desligar um stream
@@ -163,68 +203,67 @@ const notifySubscribers = (key, data) => {
  * Entrega imediatamente dados de L1 Cache (0ms).
  */
 export const subscribeSharedCollection = (collectionName, callback, options = {}) => {
+    const key = buildCollectionKey(collectionName, options);
+
     // 1. Cancela timer de desligamento pendente
-    if (TIMERS.has(collectionName)) {
-        clearTimeout(TIMERS.get(collectionName));
-        TIMERS.delete(collectionName);
+    if (TIMERS.has(key)) {
+        clearTimeout(TIMERS.get(key));
+        TIMERS.delete(key);
     }
 
     // 2. Registra o callback
-    if (!SUBSCRIBERS.has(collectionName)) {
-        SUBSCRIBERS.set(collectionName, new Set());
+    if (!SUBSCRIBERS.has(key)) {
+        SUBSCRIBERS.set(key, new Set());
     }
-    const subs = SUBSCRIBERS.get(collectionName);
+    const subs = SUBSCRIBERS.get(key);
     subs.add(callback);
 
     // 3. Entrega cache instantaneamente se existir
-    const cachedData = getCachedCollection(collectionName);
+    const cachedData = getCachedCollection(key);
     if (cachedData && cachedData.length > 0) {
         callback(cachedData);
     }
 
-    // 4. Se já existe um listener ativo para esta coleção no Firestore, não cria outro
-    if (LISTENERS.has(collectionName)) {
-        return () => unsubscribeComponent(collectionName, callback);
+    // 4. Se já existe um listener ativo para esta query no Firestore, não cria outro
+    if (LISTENERS.has(key)) {
+        return () => unsubscribeComponent(key, callback);
     }
 
-    // 5. Inicia O ÚNICO listener do Firestore para a coleção
-    try {
-        let queryRef;
-        const colRef = collection(db, collectionName);
+    // 5. Inicia O ÚNICO listener do Firestore para a query
+    const attach = (withOrder) => {
+        const queryRef = buildQuery(collectionName, options, { withOrder });
 
-        // Aplica limites de segurança e FinOps para coleções operacionais volumosas
-        if (options.limitCount) {
-            queryRef = query(colRef, limit(options.limitCount));
-        } else if (!options.disableLimit && DEFAULT_COLLECTION_LIMITS[collectionName]) {
-            // Limite padrão seguro calibrado para cada coleção operacional
-            queryRef = query(colRef, limit(DEFAULT_COLLECTION_LIMITS[collectionName]));
-        } else {
-            queryRef = colRef;
-        }
-
-        const unsubscribeFirestore = onSnapshot(queryRef, (snapshot) => {
+        return onSnapshot(queryRef, (snapshot) => {
             const items = [];
             snapshot.forEach((docSnap) => {
                 items.push({ id: docSnap.id, ...docSnap.data() });
             });
 
             // Atualiza L1 (RAM) e L2 (Storage)
-            MEMORY_CACHE.set(collectionName, items);
-            TIMESTAMP_CACHE.set(collectionName, Date.now());
-            saveToSessionStorage(collectionName, items);
+            MEMORY_CACHE.set(key, items);
+            TIMESTAMP_CACHE.set(key, Date.now());
+            saveToSessionStorage(key, items);
 
             // Notifica todos os inscritos
-            notifySubscribers(collectionName, items);
+            notifySubscribers(key, items);
         }, (error) => {
-            console.warn(`Aviso no listener compartilhado da coleção "${collectionName}":`, error);
+            // Sem índice para a ordenação: refaz a query sem orderBy em vez de deixar a tela vazia
+            if (withOrder && error?.code === 'failed-precondition') {
+                console.warn(`Índice ausente para "${key}"; usando consulta sem ordenação.`, error);
+                LISTENERS.set(key, attach(false));
+                return;
+            }
+            console.warn(`Aviso no listener compartilhado "${key}":`, error);
         });
+    };
 
-        LISTENERS.set(collectionName, unsubscribeFirestore);
+    try {
+        LISTENERS.set(key, attach(true));
     } catch (err) {
-        console.error(`Falha ao conectar listener Firestore para "${collectionName}":`, err);
+        console.error(`Falha ao conectar listener Firestore para "${key}":`, err);
     }
 
-    return () => unsubscribeComponent(collectionName, callback);
+    return () => unsubscribeComponent(key, callback);
 };
 
 /**
@@ -263,14 +302,15 @@ const unsubscribeComponent = (key, callback) => {
  * Hook React customizado para consumir coleções com cache singleton e deduplicação
  */
 export const useSharedCollection = (collectionName, options = {}) => {
-    const [data, setData] = useState(() => getCachedCollection(collectionName));
+    const [data, setData] = useState(() => getCachedCollection(buildCollectionKey(collectionName, options)));
     const [loading, setLoading] = useState(() => {
-        const cached = getCachedCollection(collectionName);
+        const cached = getCachedCollection(buildCollectionKey(collectionName, options));
         return !cached || cached.length === 0;
     });
     const isMountedRef = useRef(true);
     const limitCount = options.limitCount;
     const disableLimit = options.disableLimit;
+    const whereKey = JSON.stringify(options.where || []);
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -280,13 +320,13 @@ export const useSharedCollection = (collectionName, options = {}) => {
                 setData(freshData);
                 setLoading(false);
             }
-        }, { limitCount, disableLimit });
+        }, { limitCount, disableLimit, where: JSON.parse(whereKey) });
 
         return () => {
             isMountedRef.current = false;
             unsubscribe();
         };
-    }, [collectionName, limitCount, disableLimit]);
+    }, [collectionName, limitCount, disableLimit, whereKey]);
 
     return { data, loading };
 };
@@ -390,14 +430,44 @@ export const fetchCollectionOnce = async (collectionName, maxAgeMs = 15 * 60 * 1
 };
 
 /**
+ * Leitura única (getDocs) com TTL e SEM listener aberto. Ideal para dados históricos/arquivados.
+ * Usa chave de cache própria para não conflitar com o listener da mesma coleção.
+ */
+export const fetchQueryOnce = async (collectionName, options = {}, maxAgeMs = 45 * 60 * 1000) => {
+    const key = `${buildCollectionKey(collectionName, options)}::once`;
+    const timestamp = TIMESTAMP_CACHE.get(key);
+    if (MEMORY_CACHE.has(key) && timestamp && (Date.now() - timestamp < maxAgeMs)) {
+        return MEMORY_CACHE.get(key);
+    }
+
+    try {
+        const snap = await getDocs(buildQuery(collectionName, { ...options, disableLimit: options.disableLimit ?? true }));
+        const items = [];
+        snap.forEach(d => items.push({ id: d.id, ...d.data() }));
+
+        MEMORY_CACHE.set(key, items);
+        TIMESTAMP_CACHE.set(key, Date.now());
+        return items;
+    } catch (err) {
+        console.warn(`Erro ao buscar ${key} sob demanda:`, err);
+        return MEMORY_CACHE.get(key) || [];
+    }
+};
+
+/**
  * Força a limpeza e re-sincronização do cache
  */
 export const invalidateCollectionCache = (collectionName) => {
     if (collectionName) {
-        MEMORY_CACHE.delete(collectionName);
-        TIMESTAMP_CACHE.delete(collectionName);
+        const matches = (k) => k === collectionName || k.startsWith(`${collectionName}?`) || k.startsWith(`${collectionName}::`);
+        [...MEMORY_CACHE.keys()].filter(matches).forEach(k => {
+            MEMORY_CACHE.delete(k);
+            TIMESTAMP_CACHE.delete(k);
+        });
         if (typeof window !== 'undefined') {
-            sessionStorage.removeItem(`${STORAGE_PREFIX}${collectionName}`);
+            Object.keys(sessionStorage).forEach(k => {
+                if (k.startsWith(STORAGE_PREFIX) && matches(k.slice(STORAGE_PREFIX.length))) sessionStorage.removeItem(k);
+            });
         }
     } else {
         MEMORY_CACHE.clear();

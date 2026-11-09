@@ -156,12 +156,12 @@ const DashboardOverview = ({ onNavigate }) => {
             setAuditsList(fetched);
         });
 
-        // Auditorias da Terceirizada
+        // Auditorias da Terceirizada atual (ATSOC)
         const unsubThirdParty = subscribeSharedCollection("third_party_audits", (items) => {
             const fetched = [...items];
             fetched.sort((a, b) => parseDateSort(a.date) - parseDateSort(b.date));
             setThirdPartyAudits(fetched);
-        });
+        }, { where: [['company', '==', 'ATSOC']] });
 
         return () => {
             unsubGoals();

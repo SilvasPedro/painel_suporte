@@ -4,6 +4,32 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.2.0] - 2026-11-09
+
+### 🎯 Destaque Principal
+Otimização de **leituras do Firestore** para operar com folga dentro da cota diária: cada usuário baixa somente os próprios registros, coleções volumosas passam a ter limite com ordenação por mais recentes e a Auditoria Terceirizada lê apenas os dados da empresa selecionada.
+
+---
+
+### ⚡ Performance (Changed)
+- **Consultas escopadas por colaborador**: `NotificationManager`, `NotificationContext`, `MyHistory` e `MyDashboard` usam `where('colabId' | 'creatorId', '==', uid)` em `feedbacks`, `monthly_evaluations`, `qa_audits` e `critical_reports` em vez de baixar a coleção inteira e filtrar na tela. Gestores mantêm a lista completa de chamados (compartilhada com a tela de Relatórios).
+- **`limit` sempre com `orderBy`** em `dataCache`: `weekly_evaluations`, `qa_audits`, `feedbacks`, `critical_reports` e `third_party_audits` ordenam por `createdAt` decrescente; `dailyDemand` ordena pelo ID do documento (data). Fallback automático sem ordenação se faltar índice.
+- **Chaves de cache por query** (`buildCollectionKey`): cada escopo tem listener e cache próprios, com deduplicação preservada.
+- **`fetchQueryOnce`**: leitura única com TTL de 45 minutos e sem listener aberto, usada para dados históricos.
+- **Auditoria Terceirizada**: ATSOC com listener restrito a `company == 'ATSOC'`; UpCall lida uma vez (registros legados não possuem o campo) e filtrada no cliente. Contagem por empresa preenchida conforme cada base é carregada.
+- **Visão Geral**: indicadores da terceirizada passam a considerar somente a ATSOC, compartilhando o mesmo listener da tela de Auditoria Terceirizada.
+- `invalidateCollectionCache` passa a limpar também as chaves escopadas e de leitura única da coleção.
+
+### 🐛 Correções (Fixed)
+- **Notificações de feedback para colaboradores comuns**: a consulta sem filtro era negada pelas regras do Firestore; com o filtro por `colabId` ela passa a ser aceita.
+- **Limite descartando registros recentes**: antes o `limit` sem ordenação podia deixar de fora auditorias e avaliações novas quando a coleção ultrapassava o teto.
+
+### ⚠️ Observações
+- Documentos sem o campo `createdAt` não aparecem nas coleções ordenadas; registros antigos sem `colabId` ou `creatorId` não geram notificação nem aparecem em "Meu Histórico".
+- Pendentes para a próxima fase: `MyProfile` (emblemas), `monthly_evaluations` e `sector_kpis` sem limite e importação CSV em lote (`writeBatch`).
+
+---
+
 ## [v4.1.1] - 2026-11-06
 
 ### 🎯 Destaque Principal

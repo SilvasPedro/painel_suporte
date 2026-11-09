@@ -102,7 +102,7 @@ export const NotificationProvider = ({ children }) => {
             if (hasUnread) {
                 setPulseHistory(true);
             }
-        });
+        }, { where: [['colabId', '==', currentUserId]] });
 
         const unsubMonthly = subscribeSharedCollection('monthly_evaluations', (items) => {
             if (!Array.isArray(items)) return;
@@ -113,7 +113,7 @@ export const NotificationProvider = ({ children }) => {
             if (hasUnread) {
                 setPulseHistory(true);
             }
-        });
+        }, { where: [['colabId', '==', currentUserId]] });
 
         return () => {
             unsubFeedbacks();

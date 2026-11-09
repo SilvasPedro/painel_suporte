@@ -4,6 +4,24 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.2.0 (Otimização de Leituras do Firestore)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.1.1` para `4.2.0`. |
+| **Alterado** | `src/services/dataCache.js` | Queries escopadas (`options.where`) com chave de cache própria, `limit` combinado com `orderBy`, fallback sem ordenação em `failed-precondition`, novo `fetchQueryOnce` e limpeza de cache por prefixo. |
+| **Alterado** | `src/components/NotificationManager.jsx` | Listeners de `feedbacks`, `monthly_evaluations` e `critical_reports` restritos ao usuário (gestores mantêm a lista completa de chamados). |
+| **Alterado** | `src/context/NotificationContext.jsx` | Indicadores de não lidos consultam apenas os registros do usuário. |
+| **Alterado** | `src/pages/MyHistory.jsx` | Coleções de histórico consultadas com `where('colabId', '==', uid)`. |
+| **Alterado** | `src/pages/MyDashboard.jsx` | Chamados, feedbacks e auditorias consultados apenas do usuário. |
+| **Alterado** | `src/pages/DashboardOverview.jsx` | Indicadores da terceirizada restritos à ATSOC. |
+| **Alterado** | `src/pages/ThirdPartyAudits.jsx` | ATSOC com listener escopado e UpCall com leitura única em cache; contagem por empresa e estado de carregamento derivado. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.2.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.2.0`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [06/11/2026] — Versão v4.1.1 (Melhoria Substancial do Tema Morno / Sépia)
 
 | Ação | Arquivo | Descrição da Alteração |

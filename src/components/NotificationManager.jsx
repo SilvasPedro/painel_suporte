@@ -235,6 +235,8 @@ export const NotificationManager = () => {
             return false;
         };
 
+        if (!currentUserId) return;
+
         const unsubscribe = subscribeSharedCollection('feedbacks', (items) => {
             if (!Array.isArray(items)) return;
 
@@ -287,7 +289,7 @@ export const NotificationManager = () => {
                     });
                 }
             });
-        });
+        }, { where: [['colabId', '==', currentUserId]] });
 
         return () => {
             unsubscribe();
@@ -310,6 +312,8 @@ export const NotificationManager = () => {
             if (currentName && (item.colabName?.toLowerCase() === currentName || item.collaboratorName?.toLowerCase() === currentName)) return true;
             return false;
         };
+
+        if (!currentUserId) return;
 
         const unsubscribe = subscribeSharedCollection('monthly_evaluations', (items) => {
             if (!Array.isArray(items)) return;
@@ -364,7 +368,7 @@ export const NotificationManager = () => {
                     }));
                 }
             });
-        });
+        }, { where: [['colabId', '==', currentUserId]] });
 
         return () => unsubscribe();
     }, [currentUser, isInactive, notify]);
@@ -513,7 +517,7 @@ export const NotificationManager = () => {
                     }
                 }
             });
-        });
+        }, (!isGestor && currentUserId) ? { where: [['creatorId', '==', currentUserId]] } : {});
 
         return () => {
             unsubscribe();
