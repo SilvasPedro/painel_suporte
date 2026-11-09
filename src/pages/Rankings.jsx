@@ -6,7 +6,7 @@ import {
     Flame, ChevronRight, ArrowUpRight, CheckCircle2, RotateCcw
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
-import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 import { Tabs, Card, Badge, EmptyState } from '../components/ui';
 
 // --- FUNÇÕES DE CONVERSÃO DE TEMPO ---
@@ -152,7 +152,9 @@ const Rankings = () => {
                     finalizacoes: 0,
                     ligAtendidas: 0,
                     ligPerdidas: 0,
+                    ligRealizadas: 0,
                     huggyAtendimentos: 0,
+                    huggyIniciados: 0,
                     tmaTelSecTotal: 0,
                     tmaTelCount: 0,
                     tmaHuggySecTotal: 0,
@@ -167,7 +169,10 @@ const Rankings = () => {
             colabStats[colabId].finalizacoes += Number(e.Atendimentos_Finalizados) || 0;
             colabStats[colabId].ligAtendidas += Number(e.Ligacoes_Atendidas) || 0;
             colabStats[colabId].ligPerdidas += Number(e.Ligacoes_Perdidas) || 0;
-            colabStats[colabId].huggyAtendimentos += Number(e.Atendimentos_Huggy) || 0;
+            colabStats[colabId].ligRealizadas += Number(e.Ligacoes_Realizadas) || 0;
+            const huggyStats = getHuggyStats(e);
+            colabStats[colabId].huggyAtendimentos += huggyStats.volume;
+            colabStats[colabId].huggyIniciados += huggyStats.iniciados || 0;
 
             // TMA Telefonia
             const telSec = timeToSeconds(e.TMA_Telefonia);
@@ -190,7 +195,10 @@ const Rankings = () => {
                 finalizados: Number(e.Atendimentos_Finalizados) || 0,
                 ligAtendidas: Number(e.Ligacoes_Atendidas) || 0,
                 ligPerdidas: Number(e.Ligacoes_Perdidas) || 0,
-                huggy: Number(e.Atendimentos_Huggy) || 0,
+                ligRealizadas: Number(e.Ligacoes_Realizadas) || 0,
+                huggy: huggyStats.volume,
+                huggyIniciados: huggyStats.iniciados,
+                huggyAproveitamento: huggyStats.percentual,
                 tmaTel: e.TMA_Telefonia || '--:--:--',
                 tmaHuggy: e.TMA_Huggy || '--:--:--'
             });
@@ -278,7 +286,7 @@ const Rankings = () => {
 
     // Exportação em CSV
     const exportCSV = () => {
-        const headers = ["Posição", "Nome", "Turno", "Pontuação", "Finalizações", "Ligações Atendidas", "Ligações Perdidas", "Huggy", "TMA Telefonia", "TMA Huggy"];
+        const headers = ["Posição", "Nome", "Turno", "Pontuação", "Finalizações", "Ligações Atendidas", "Ligações Realizadas", "Ligações Perdidas", "Huggy Iniciados", "Huggy Finalizados", "% Aproveitamento Huggy", "TMA Telefonia", "TMA Huggy"];
         const rows = finalRankingData.map((c, i) => [
             `${i + 1}º`,
             `"${c.name}"`,
@@ -286,8 +294,11 @@ const Rankings = () => {
             c.pontuacao,
             c.finalizacoes,
             c.ligAtendidas,
+            c.ligRealizadas,
             c.ligPerdidas,
+            c.huggyIniciados,
             c.huggyAtendimentos,
+            c.huggyIniciados > 0 ? Math.min(100, Math.floor((c.huggyAtendimentos * 100) / c.huggyIniciados)) : 0,
             c.tmaTel,
             c.tmaHuggy
         ]);
@@ -810,6 +821,7 @@ const Rankings = () => {
                                             <th className="px-5 py-3.5 text-right font-bold text-xs uppercase tracking-wider">Pontuação</th>
                                             <th className="px-5 py-3.5 text-right font-bold text-xs uppercase tracking-wider">Finalizações</th>
                                             <th className="px-5 py-3.5 text-right font-bold text-xs uppercase tracking-wider">Ligações Atend.</th>
+                                            <th className="px-5 py-3.5 text-right font-bold text-xs uppercase tracking-wider">Ligações Real.</th>
                                             <th className="px-5 py-3.5 text-right font-bold text-xs uppercase tracking-wider">TMA Voz</th>
                                             <th className="px-5 py-3.5 text-right font-bold text-xs uppercase tracking-wider">TMA Chat</th>
                                             <th className="px-5 py-3.5 text-center font-bold text-xs uppercase tracking-wider">Ações</th>
@@ -856,6 +868,9 @@ const Rankings = () => {
                                                 </td>
                                                 <td className="px-5 py-4 whitespace-nowrap text-right font-medium text-secondary-hub">
                                                     {colab.ligAtendidas}
+                                                </td>
+                                                <td className="px-5 py-4 whitespace-nowrap text-right font-medium text-secondary-hub">
+                                                    {colab.ligRealizadas}
                                                 </td>
                                                 <td className="px-5 py-4 whitespace-nowrap text-right font-mono text-xs font-bold text-blue-700">
                                                     {colab.tmaTel}
@@ -1051,6 +1066,10 @@ const Rankings = () => {
                                         <span className="text-xl font-black text-blue-700 mt-1 block">{selectedColab.ligAtendidas}</span>
                                     </div>
                                     <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Ligações Realizadas</span>
+                                        <span className="text-xl font-black text-teal-700 mt-1 block">{selectedColab.ligRealizadas}</span>
+                                    </div>
+                                    <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs">
                                         <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">Ligações Perdidas</span>
                                         <span className="text-xl font-black text-red-600 mt-1 block">{selectedColab.ligPerdidas}</span>
                                     </div>
@@ -1085,6 +1104,7 @@ const Rankings = () => {
                                                     <th className="px-4 py-2.5 text-right">Pontos</th>
                                                     <th className="px-4 py-2.5 text-right">Finalizados</th>
                                                     <th className="px-4 py-2.5 text-right">Lig. Atendidas</th>
+                                                    <th className="px-4 py-2.5 text-right">Lig. Realizadas</th>
                                                     <th className="px-4 py-2.5 text-right">TMA Voz</th>
                                                     <th className="px-4 py-2.5 text-right">TMA Chat</th>
                                                 </tr>
@@ -1096,6 +1116,7 @@ const Rankings = () => {
                                                         <td className="px-4 py-2.5 text-right font-bold text-amber-600">{rec.pts} pts</td>
                                                         <td className="px-4 py-2.5 text-right text-secondary-hub">{rec.finalizados}</td>
                                                         <td className="px-4 py-2.5 text-right text-secondary-hub">{rec.ligAtendidas}</td>
+                                                        <td className="px-4 py-2.5 text-right text-secondary-hub">{rec.ligRealizadas}</td>
                                                         <td className="px-4 py-2.5 text-right font-mono text-blue-600">{rec.tmaTel}</td>
                                                         <td className="px-4 py-2.5 text-right font-mono text-purple-600">{rec.tmaHuggy}</td>
                                                     </tr>

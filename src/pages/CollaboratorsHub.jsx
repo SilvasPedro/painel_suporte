@@ -23,6 +23,7 @@ import CreateCollaboratorModal from '../components/collaborators/CreateCollabora
 import EditCollaboratorModal from '../components/collaborators/EditCollaboratorModal';
 import FeedbackModal from '../components/collaborators/FeedbackModal';
 import ReportDashboardModal from '../components/collaborators/ReportDashboardModal';
+import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 
 // --- FUNÇÕES AUXILIARES ---
 const parseDateObj = (dateStr) => {
@@ -40,11 +41,15 @@ const parseDateObj = (dateStr) => {
 
 const calcularPontuacao = (metrics) => {
     if (!metrics) return null;
-    const ptsFinalizados = (Number(metrics.finalizados) || Number(metrics.Atendimentos_Finalizados) || 0) * 1;
-    const ptsLigacoes = (Number(metrics.ligAtendidas) || Number(metrics.Ligacoes_Atendidas) || 0) * 2;
-    const ptsHuggy = (Number(metrics.huggyVol) || Number(metrics.Atendimentos_Huggy) || 0) * 1;
-    const ptsPerdidas = (Number(metrics.ligPerdidas) || Number(metrics.Ligacoes_Perdidas) || 0) * -5;
-    return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
+    return calculatePerformanceScore({
+        Atendimentos_Finalizados: metrics.finalizados ?? metrics.Atendimentos_Finalizados,
+        Ligacoes_Atendidas: metrics.ligAtendidas ?? metrics.Ligacoes_Atendidas,
+        Ligacoes_Realizadas: metrics.ligRealizadas ?? metrics.Ligacoes_Realizadas,
+        Ligacoes_Perdidas: metrics.ligPerdidas ?? metrics.Ligacoes_Perdidas,
+        Atendimentos_Huggy: metrics.huggyVol ?? metrics.Atendimentos_Huggy,
+        Huggy_Iniciados: metrics.huggyIniciados ?? metrics.Huggy_Iniciados,
+        Huggy_Finalizados: metrics.huggyFinalizados ?? metrics.Huggy_Finalizados
+    });
 };
 
 // Helper visual e de turnos oficiais (Manhã I, Manhã II, Tarde, Noturno)
@@ -988,7 +993,7 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
                     <div className="px-1">
                         <span className="text-[10px] uppercase font-bold text-muted-hub block tracking-wider">Chat</span>
                         <span className="font-brand text-xs font-black text-primary-hub tabular-nums mt-0.5 block">
-                            {latestEval?.Atendimentos_Huggy ?? latestEval?.huggyVol ?? '—'}
+                            {latestEval ? getHuggyStats(latestEval).volume : '—'}
                         </span>
                     </div>
                 </div>

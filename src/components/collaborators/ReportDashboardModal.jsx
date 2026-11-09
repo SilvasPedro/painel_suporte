@@ -12,6 +12,7 @@ import {
     XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend 
 } from 'recharts';
 import { resolveUserName } from '../../utils/userResolvers';
+import { calculatePerformanceScore, getHuggyStats } from '../../utils/scoringCalculations';
 
 // --- UTILITÁRIOS DE CONVERSÃO E FORMATAÇÃO ROBUSTOS ---
 const parseDateObj = (dateStr) => {
@@ -148,11 +149,15 @@ const formatTime = (decimalMinutes) => {
 
 const calcularPontuacao = (metrics) => {
     if (!metrics) return 0;
-    const ptsFinalizados = (Number(metrics.finalizados) || Number(metrics.Atendimentos_Finalizados) || 0) * 1;
-    const ptsLigacoes = (Number(metrics.ligAtendidas) || Number(metrics.Ligacoes_Atendidas) || 0) * 2;
-    const ptsHuggy = (Number(metrics.huggyVol) || Number(metrics.Atendimentos_Huggy) || 0) * 1;
-    const ptsPerdidas = (Number(metrics.ligPerdidas) || Number(metrics.Ligacoes_Perdidas) || 0) * -5;
-    return ptsFinalizados + ptsLigacoes + ptsHuggy + ptsPerdidas;
+    return calculatePerformanceScore({
+        Atendimentos_Finalizados: metrics.finalizados ?? metrics.Atendimentos_Finalizados,
+        Ligacoes_Atendidas: metrics.ligAtendidas ?? metrics.Ligacoes_Atendidas,
+        Ligacoes_Realizadas: metrics.ligRealizadas ?? metrics.Ligacoes_Realizadas,
+        Ligacoes_Perdidas: metrics.ligPerdidas ?? metrics.Ligacoes_Perdidas,
+        Atendimentos_Huggy: metrics.huggyVol ?? metrics.Atendimentos_Huggy,
+        Huggy_Iniciados: metrics.huggyIniciados ?? metrics.Huggy_Iniciados,
+        Huggy_Finalizados: metrics.huggyFinalizados ?? metrics.Huggy_Finalizados
+    });
 };
 
 export const ReportDashboardModal = ({ colab, onClose }) => {
@@ -209,7 +214,11 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                         finalizados: Number(d.Atendimentos_Finalizados) || 0,
                         ligAtendidas: Number(d.Ligacoes_Atendidas) || 0,
                         ligPerdidas: Number(d.Ligacoes_Perdidas) || 0,
-                        huggyVol: Number(d.Atendimentos_Huggy) || 0,
+                        ligRealizadas: Number(d.Ligacoes_Realizadas) || 0,
+                        huggyVol: getHuggyStats(d).volume,
+                        huggyIniciados: d.Huggy_Iniciados,
+                        huggyFinalizados: d.Huggy_Finalizados,
+                        huggyAproveitamento: getHuggyStats(d).percentual,
                         tmaTel: timeToDecimal(d.TMA_Telefonia),
                         tmaHuggy: timeToDecimal(d.TMA_Huggy),
                         tme: timeToDecimal(d.TME_Telefonia),

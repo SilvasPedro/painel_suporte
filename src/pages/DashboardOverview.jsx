@@ -15,7 +15,7 @@ import {
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useTheme } from '../context/ThemeContext';
 import { timeToDecimal, formatTime, formatDateBR, parseDateSort } from '../utils/timeCalculations';
-import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 import { StatCard, Tabs, Card, Badge } from '../components/ui';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 
@@ -456,7 +456,8 @@ const DashboardOverview = ({ onNavigate }) => {
                     if (currentPts === undefined) {
                         currentPts = (vol * 1) +
                             (Number(e.Ligacoes_Atendidas || 0) * 2) +
-                            (Number(e.Atendimentos_Huggy || 0) * 1) +
+                            (Number(e.Ligacoes_Realizadas || 0) * 1) +
+                            getHuggyStats(e).pontos +
                             (Number(e.Ligacoes_Perdidas || 0) * -5);
                     }
 

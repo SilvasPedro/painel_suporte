@@ -4,6 +4,26 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.3.0 (Ligações Realizadas e Huggy Iniciados x Finalizados)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.2.2` para `4.3.0`. |
+| **Alterado** | `src/utils/scoringCalculations.js` | Peso das ligações realizadas, função `getHuggyStats` (aproveitamento com 0,5 pt por 1% e modo legado) e atualização de `calculatePerformanceScore` e `calculateScoreBreakdown`. |
+| **Alterado** | `src/pages/WeeklyMetrics.jsx` | Colunas Lig. Realizadas, Huggy Iniciados, Huggy Finalizados e % Aproveit.; validação, gravação em lote com os novos campos, modelo CSV e importação por nome de coluna. |
+| **Alterado** | `src/pages/Rankings.jsx` | Ligações realizadas e Huggy iniciados/finalizados/aproveitamento em tabela, modal, histórico e CSV. |
+| **Alterado** | `src/pages/MyHistory.jsx` | Cartão Realizadas, detalhe e exportação com os novos campos. |
+| **Alterado** | `src/components/history/WeeklyMetricDetailModal.jsx` | Cartões e extrato da fórmula com ligações realizadas e aproveitamento Huggy. |
+| **Alterado** | `src/pages/DataManager.jsx` | Rótulos, filtro, cartões, composição do cálculo e formulário de edição com os novos campos. |
+| **Alterado** | `src/pages/CollaboratorsHub.jsx`, `src/pages/DashboardOverview.jsx`, `src/components/collaborators/ReportDashboardModal.jsx` | Fórmulas duplicadas substituídas pelo cálculo central. |
+| **Alterado** | `src/utils/dataExport.js` | Colunas de ligações realizadas e de Huggy nas exportações. |
+| **Alterado** | `src/utils/scoringCalculations.test.js`, `src/utils/dataExport.test.js` | Novos testes de pontuação e teste de exportação independente da posição da coluna. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.3.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.3.0`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.2.2 (Validação do Lançamento Semanal e Correção dos Filtros de Turno)
 
 | Ação | Arquivo | Descrição da Alteração |

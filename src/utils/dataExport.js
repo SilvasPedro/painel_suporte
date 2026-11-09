@@ -4,7 +4,7 @@
  * Otimizado para planilhas e para anexar na pasta __dados_colaboradores para análise mensal de IA.
  */
 
-import { calculatePerformanceScore } from './scoringCalculations';
+import { calculatePerformanceScore, getHuggyStats } from './scoringCalculations';
 
 /**
  * Escapa valores para formato CSV padrão RFC 4180
@@ -281,8 +281,11 @@ export const prepareDataManagerExport = ({
             'Data Referência',
             'Colaborador',
             'Atendimentos Finalizados',
-            'Atendimentos Huggy',
+            'Huggy Iniciados',
+            'Huggy Finalizados',
+            '% Aproveitamento Huggy',
             'Ligações Atendidas',
+            'Ligações Realizadas',
             'Ligações Perdidas',
             'TMA Telefonia',
             'TMA Huggy',
@@ -296,8 +299,11 @@ export const prepareDataManagerExport = ({
             getFormattedDate(item),
             getColabName(item),
             Number(item.Atendimentos_Finalizados) || 0,
-            Number(item.Atendimentos_Huggy) || 0,
+            getHuggyStats(item).iniciados ?? '',
+            getHuggyStats(item).volume,
+            getHuggyStats(item).percentual ?? '',
             Number(item.Ligacoes_Atendidas) || 0,
+            Number(item.Ligacoes_Realizadas) || 0,
             Number(item.Ligacoes_Perdidas) || 0,
             item.TMA_Telefonia || '-',
             item.TMA_Huggy || '-',
@@ -313,8 +319,11 @@ export const prepareDataManagerExport = ({
                 Colaborador: getColabName(item),
                 'Data de Referência': getFormattedDate(item),
                 'Atendimentos Finalizados': item.Atendimentos_Finalizados || 0,
-                'Atendimentos Huggy': item.Atendimentos_Huggy || 0,
+                'Huggy Iniciados': getHuggyStats(item).iniciados ?? '-',
+                'Huggy Finalizados': getHuggyStats(item).volume,
+                'Aproveitamento Huggy': getHuggyStats(item).percentual === null ? '-' : `${getHuggyStats(item).percentual}%`,
                 'Ligações Atendidas': item.Ligacoes_Atendidas || 0,
+                'Ligações Realizadas': item.Ligacoes_Realizadas || 0,
                 'Ligações Perdidas': item.Ligacoes_Perdidas || 0,
                 'TMA Telefonia': item.TMA_Telefonia || '-',
                 'TMA Huggy': item.TMA_Huggy || '-',
@@ -330,7 +339,7 @@ export const prepareDataManagerExport = ({
         let sumScore = 0;
         data.forEach((i) => {
             sumFinalizados += Number(i.Atendimentos_Finalizados) || 0;
-            sumHuggy += Number(i.Atendimentos_Huggy) || 0;
+            sumHuggy += getHuggyStats(i).volume;
             sumScore += calculatePerformanceScore(i);
         });
 

@@ -181,7 +181,9 @@ describe('dataExport - Utilitários de Exportação', () => {
             expect(prep.headers).toContain('Pontuação (Score)');
             expect(prep.rows.length).toBe(1);
             expect(prep.rows[0][1]).toBe('Carlos Silva');
-            expect(typeof prep.rows[0][9]).toBe('number');
+            // A coluna é localizada pelo cabeçalho para não depender da posição
+            expect(typeof prep.rows[0][prep.headers.indexOf('Pontuação (Score)')]).toBe('number');
+            expect(prep.headers).toContain('Ligações Realizadas');
             expect(prep.detailedItems[0].properties['Pontuação Estimada']).toContain('pts');
         });
     });

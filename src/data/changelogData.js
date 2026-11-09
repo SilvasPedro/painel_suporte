@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.2.2';
+export const CURRENT_VERSION = 'v4.3.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.2.2',
+    version: 'v4.3.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.3.0: novas métricas nas avaliações semanais. Ligações Realizadas passam a ser lançadas e valem 1 ponto, e o Huggy ganha Iniciados x Finalizados com cálculo do % de aproveitamento (0,5 ponto por 1%). Registros antigos mantêm a pontuação original.',
+    items: [
+      {
+        icon: Headphones,
+        iconColor: 'text-teal-500 bg-teal-500/10 border-teal-500/20',
+        title: 'Ligações Realizadas nas Avaliações Semanais',
+        category: 'Avaliações Semanais',
+        description: 'Novo campo de ligações realizadas (ativas) no lançamento, valendo +1 ponto por ligação. O dado aparece em Rankings, Meu Histórico, desempenho semanal detalhado, Gerenciador de Dados (filtro, cartão, edição e composição do cálculo) e em todas as exportações. O modelo CSV ganhou a coluna e arquivos antigos continuam sendo importados.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Huggy Iniciados x Finalizados com % de Aproveitamento',
+        category: 'Avaliações Semanais',
+        description: 'O campo Atendimentos Huggy foi substituído por Huggy Iniciados e Huggy Finalizados. O aproveitamento (finalizados ÷ iniciados, inteiro e limitado a 100%) vale 0,5 ponto por 1%, até 50 pontos. A tela de lançamento calcula o percentual e os pontos em tempo real e a confirmação avisa quando finalizados supera iniciados.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Cálculo Centralizado e Compatível com o Histórico',
+        category: 'Pontuação',
+        description: 'Fórmula única em scoringCalculations (usada por lançamento, Visão Geral, Hub, relatórios, rankings e exportações). Registros antigos, que possuem apenas Atendimentos Huggy, mantêm +1 ponto por atendimento e a pontuação já gravada. A importação CSV passou a ler as colunas pelo nome do cabeçalho.'
+      }
+    ]
+  },
+  {
+    version: 'v4.2.2',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.2.2: lançamento de avaliações semanais mais seguro. Nova tela de confirmação mostra quem não receberá avaliação antes de salvar, a gravação passa a ser atômica em lote, a importação CSV avisa nomes não encontrados e o texto do botão de turnos "Todos" voltou a ser legível.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.2.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.2.1: segunda fase da otimização. O perfil deixa de baixar auditorias de toda a equipe, a importação CSV da Auditoria Terceirizada passa a gravar em lotes e 15 telas e modais migraram das cores fixas para os tokens de tema (claro, morno e escuro).',
     items: [
       {

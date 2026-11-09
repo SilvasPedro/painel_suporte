@@ -4,6 +4,7 @@ import {
     CheckCircle2, Clock, Calculator, ShieldCheck, Target, Award
 } from 'lucide-react';
 import { BorderBeam } from '../magicui';
+import { getHuggyStats } from '../../utils/scoringCalculations';
 
 export default function WeeklyMetricDetailModal({
     isOpen,
@@ -14,12 +15,13 @@ export default function WeeklyMetricDetailModal({
 
     const ligAtendidas = Number(metrics.Ligacoes_Atendidas || 0);
     const ligPerdidas = Number(metrics.Ligacoes_Perdidas || 0);
-    const atendHuggy = Number(metrics.Atendimentos_Huggy || 0);
+    const ligRealizadas = Number(metrics.Ligacoes_Realizadas || 0);
+    const huggy = getHuggyStats(metrics);
     const atendFinalizados = Number(metrics.Atendimentos_Finalizados || 0);
 
     const calculatedScore = metrics.pontuacao !== undefined 
         ? Number(metrics.pontuacao)
-        : (ligAtendidas * 2 + atendFinalizados * 1 + atendHuggy * 1 - ligPerdidas * 5);
+        : (ligAtendidas * 2 + ligRealizadas * 1 + atendFinalizados * 1 + huggy.pontos - ligPerdidas * 5);
 
     const totalLigacoes = ligAtendidas + ligPerdidas;
     const taxaAtendimentoTelefonia = totalLigacoes > 0 
@@ -138,6 +140,15 @@ export default function WeeklyMetricDetailModal({
 
                                 <div className="bg-subtle rounded-xl p-3 border border-subtle">
                                     <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                        Realizadas
+                                    </span>
+                                    <span className="text-xl font-black text-primary-hub mt-1 block">
+                                        {ligRealizadas}
+                                    </span>
+                                </div>
+
+                                <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
                                         Taxa de Atendimento
                                     </span>
                                     <span className="font-mono font-bold text-primary-hub text-sm mt-1 block">
@@ -167,14 +178,43 @@ export default function WeeklyMetricDetailModal({
                             </div>
 
                             <div className="grid grid-cols-2 gap-2.5 text-xs">
-                                <div className="bg-subtle rounded-xl p-3 border border-subtle">
-                                    <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
-                                        Atendimentos Huggy
-                                    </span>
-                                    <span className="text-xl font-black text-primary-hub mt-1 block">
-                                        {atendHuggy}
-                                    </span>
-                                </div>
+                                {huggy.legado ? (
+                                    <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                        <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                            Atendimentos Huggy
+                                        </span>
+                                        <span className="text-xl font-black text-primary-hub mt-1 block">
+                                            {huggy.volume}
+                                        </span>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                            <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                                Huggy Iniciados
+                                            </span>
+                                            <span className="text-xl font-black text-primary-hub mt-1 block">
+                                                {huggy.iniciados}
+                                            </span>
+                                        </div>
+                                        <div className="bg-subtle rounded-xl p-3 border border-subtle">
+                                            <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block">
+                                                Huggy Finalizados
+                                            </span>
+                                            <span className="text-xl font-black text-primary-hub mt-1 block">
+                                                {huggy.finalizados}
+                                            </span>
+                                        </div>
+                                        <div className="bg-blue-500/10 rounded-xl p-3 border border-blue-500/30 text-blue-600 dark:text-blue-400">
+                                            <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
+                                                % Aproveitamento
+                                            </span>
+                                            <span className="text-xl font-black mt-1 block">
+                                                {huggy.percentual}%
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
 
                                 <div className="bg-emerald-500/10 rounded-xl p-3 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400">
                                     <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
@@ -210,8 +250,16 @@ export default function WeeklyMetricDetailModal({
                                 <span className="font-mono font-bold text-emerald-500">+{ligAtendidas * 2} pts</span>
                             </div>
                             <div className="py-2.5 flex justify-between items-center">
-                                <span className="text-secondary-hub">Atendimentos Huggy ({atendHuggy} &times; 1 pt)</span>
-                                <span className="font-mono font-bold text-emerald-500">+{atendHuggy * 1} pts</span>
+                                <span className="text-secondary-hub">Ligações Realizadas ({ligRealizadas} &times; 1 pt)</span>
+                                <span className="font-mono font-bold text-emerald-500">+{ligRealizadas * 1} pts</span>
+                            </div>
+                            <div className="py-2.5 flex justify-between items-center">
+                                <span className="text-secondary-hub">
+                                    {huggy.legado
+                                        ? `Atendimentos Huggy (${huggy.volume} \u00d7 1 pt)`
+                                        : `Aproveitamento Huggy (${huggy.percentual}% \u00d7 0,5 pt)`}
+                                </span>
+                                <span className="font-mono font-bold text-emerald-500">+{huggy.pontos} pts</span>
                             </div>
                             <div className="py-2.5 flex justify-between items-center">
                                 <span className="text-secondary-hub">Atendimentos Finalizados ({atendFinalizados} &times; 1 pt)</span>

@@ -16,7 +16,7 @@ import FeedbackDetailModal from '../components/history/FeedbackDetailModal';
 import WeeklyMetricDetailModal from '../components/history/WeeklyMetricDetailModal';
 import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluationDetailModal';
 import { resolveUserName } from '../utils/userResolvers';
-import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 import { useAuth } from '../context/AuthContext';
 import { isLegacy4PillarsFeedback, buildMarkAsReadPayload } from '../types/feedback.types';
 
@@ -289,18 +289,21 @@ const MyHistory = ({ currentUserId }) => {
             let totalScore = 0;
             let maxScore = 0;
             let totalCalls = 0;
+            let totalOutbound = 0;
             data.forEach(i => {
                 const score = Number(i.pontuacao !== undefined ? i.pontuacao : calculatePerformanceScore(i));
                 totalScore += score;
                 if (score > maxScore) maxScore = score;
                 totalCalls += Number(i.Ligacoes_Atendidas || 0);
+                totalOutbound += Number(i.Ligacoes_Realizadas || 0);
             });
             const avgScore = total > 0 ? Math.round(totalScore / total) : 0;
             return [
                 { label: 'Avaliações', value: total, icon: TrendingUp, color: 'text-amber-500', bg: 'bg-amber-500/10' },
                 { label: 'Média Score', value: `${avgScore} pts`, icon: Sparkles, color: 'text-emerald-500', bg: 'bg-emerald-500/10' },
                 { label: 'Maior Score', value: `${maxScore} pts`, icon: Award, color: 'text-blue-500', bg: 'bg-blue-500/10' },
-                { label: 'Ligações', value: totalCalls, icon: Phone, color: 'text-rose-500', bg: 'bg-rose-500/10' }
+                { label: 'Ligações', value: totalCalls, icon: Phone, color: 'text-rose-500', bg: 'bg-rose-500/10' },
+                { label: 'Realizadas', value: totalOutbound, icon: Phone, color: 'text-teal-500', bg: 'bg-teal-500/10' }
             ];
         }
 
@@ -510,13 +513,16 @@ const MyHistory = ({ currentUserId }) => {
                 `"${(i.notes || '').replace(/"/g, '""')}"`
             ]);
         } else if (activeTab === 'metrics') {
-            headers = ['Semana / Data', 'Pontuação', 'Atendimentos Finalizados', 'Ligações Atendidas', 'Atendimentos Huggy', 'Ligações Perdidas', 'TMA'];
+            headers = ['Semana / Data', 'Pontuação', 'Atendimentos Finalizados', 'Ligações Atendidas', 'Ligações Realizadas', 'Huggy Iniciados', 'Huggy Finalizados', '% Aproveitamento Huggy', 'Ligações Perdidas', 'TMA'];
             rows = filteredData.map(i => [
                 getSafeDateString(i),
                 i.pontuacao || 0,
                 i.Atendimentos_Finalizados || 0,
                 i.Ligacoes_Atendidas || 0,
-                i.Atendimentos_Huggy || 0,
+                i.Ligacoes_Realizadas || 0,
+                getHuggyStats(i).iniciados ?? '',
+                getHuggyStats(i).volume,
+                getHuggyStats(i).percentual ?? '',
                 i.Ligacoes_Perdidas || 0,
                 i.TMA_Telefonia || '--'
             ]);
@@ -627,7 +633,7 @@ const MyHistory = ({ currentUserId }) => {
 
             {/* FAIXA RESUMO ESTATÍSTICO COMPACTO (COLAPSÁVEL) */}
             {showSummary && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 shrink-0 animate-in fade-in duration-150">
+                <div className={`grid grid-cols-2 ${summaryStats.length >= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-3 shrink-0 animate-in fade-in duration-150`}>
                     {summaryStats.map((stat, idx) => {
                         const IconComponent = stat.icon;
                         return (
@@ -968,7 +974,7 @@ const MyHistory = ({ currentUserId }) => {
                                                         Pontuação: <strong className="text-primary-hub font-mono font-black text-xs">{item.pontuacao || 0} pts</strong>
                                                     </span>
                                                     <span className="text-xs text-muted-hub">
-                                                        &bull; Ligações: <strong className="text-secondary-hub">{item.Ligacoes_Atendidas || 0}</strong> | Huggy: <strong className="text-secondary-hub">{item.Atendimentos_Huggy || 0}</strong>
+                                                        &bull; Ligações: <strong className="text-secondary-hub">{item.Ligacoes_Atendidas || 0}</strong> | Realizadas: <strong className="text-secondary-hub">{item.Ligacoes_Realizadas || 0}</strong> | Huggy: <strong className="text-secondary-hub">{getHuggyStats(item).volume || 0}</strong>
                                                     </span>
                                                 </div>
                                             )}
@@ -1168,8 +1174,20 @@ const MyHistory = ({ currentUserId }) => {
                                                 <strong className="text-primary-hub font-mono">{item.Ligacoes_Atendidas || 0}</strong>
                                             </div>
                                             <div className="flex justify-between">
-                                                <span>Atendimentos Huggy:</span>
-                                                <strong className="text-primary-hub font-mono">{item.Atendimentos_Huggy || 0}</strong>
+                                                <span>Ligações Realizadas:</span>
+                                                <strong className="text-primary-hub font-mono">{item.Ligacoes_Realizadas || 0}</strong>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Huggy Iniciados:</span>
+                                                <strong className="text-primary-hub font-mono">{getHuggyStats(item).iniciados ?? '--'}</strong>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>Huggy Finalizados:</span>
+                                                <strong className="text-primary-hub font-mono">{getHuggyStats(item).volume}</strong>
+                                            </div>
+                                            <div className="flex justify-between">
+                                                <span>% Aproveitamento Huggy:</span>
+                                                <strong className="text-primary-hub font-mono">{getHuggyStats(item).percentual === null ? '--' : `${getHuggyStats(item).percentual}%`}</strong>
                                             </div>
                                             <div className="flex justify-between">
                                                 <span>TMA Telefonia:</span>

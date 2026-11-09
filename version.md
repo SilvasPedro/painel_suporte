@@ -4,6 +4,35 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.3.0] - 2026-11-09
+
+### 🎯 Destaque Principal
+Novas métricas nas **Avaliações Semanais**: **Ligações Realizadas** (+1 ponto) e **Huggy Iniciados x Finalizados** com cálculo do **% de aproveitamento** (0,5 ponto por 1%).
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Ligações Realizadas** (`Ligacoes_Realizadas`): novo campo no lançamento semanal, valendo +1 ponto por ligação. Presente em Rankings (tabela, modal, histórico semanal e CSV), Meu Histórico (resumo, detalhe e exportação), desempenho semanal detalhado (cartão e extrato da fórmula), Gerenciador de Dados (rótulo, filtro "Com Ligações Realizadas", cartões, formulário de edição e composição do cálculo) e exportações.
+- **Huggy Iniciados e Huggy Finalizados** (`Huggy_Iniciados`, `Huggy_Finalizados`, `Huggy_Aproveitamento`): aproveitamento = finalizados ÷ iniciados, inteiro (arredonda para baixo) e limitado a 100%; **0,5 ponto por 1%** (máximo de 50 pontos). Sem iniciados, 0%. A tela de lançamento calcula o percentual e os pontos em tempo real.
+- **Validação do lançamento**: a confirmação antes de salvar avisa quando Huggy Finalizados é maior que Iniciados (aproveitamento limitado a 100%).
+- **Função central `getHuggyStats`** em `scoringCalculations`, usada por todas as telas e exportações.
+
+### 🔄 Alterações (Changed)
+- O campo **Atendimentos Huggy** foi removido do lançamento (substituído pelos dois novos). O antigo +1 ponto por atendimento não vale mais para lançamentos novos.
+- **Registros antigos** (apenas `Atendimentos_Huggy`) preservam a pontuação gravada e, quando recalculados, mantêm +1 ponto por atendimento; o volume aparece como "finalizados" sem percentual.
+- **Fórmula centralizada**: Visão Geral, Hub da Equipe, relatório do colaborador e lançamento passaram a usar `calculatePerformanceScore` em vez de fórmulas duplicadas.
+- **Importação CSV** do lançamento semanal lê as colunas pelo nome do cabeçalho (com fallback às posições antigas). O modelo novo inclui `Huggy_Iniciados`, `Huggy_Finalizados` e `Ligacoes_Realizadas`; arquivos antigos com `Atendimentos_Huggy` continuam sendo importados (o valor passa a ser Huggy Finalizados).
+- Exportações (CSV/PDF/Markdown) com as colunas "Ligações Realizadas", "Huggy Iniciados", "Huggy Finalizados" e "% Aproveitamento Huggy".
+
+### 🧪 Testes
+- Novos testes de pontuação: ligações realizadas, aproveitamento Huggy (arredondamento, limite de 100%, sem iniciados), soma na pontuação total e compatibilidade com registros antigos. O teste de exportação passou a localizar a coluna de pontuação pelo cabeçalho.
+
+### ⚠️ Observações
+- A pontuação semanal pode terminar em ",5" quando o % de aproveitamento é ímpar.
+- A coluna **Finalizados** (`Atendimentos_Finalizados`, +1 ponto) foi mantida; se representar o mesmo dado de Huggy Finalizados, há contagem em duplicidade.
+
+---
+
 ## [v4.2.2] - 2026-11-09
 
 ### 🎯 Destaque Principal

@@ -11,6 +11,7 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { normalizeRole } from '../services/rbac';
 import { BorderBeam } from '../components/magicui/BorderBeam';
+import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 
 const SHIFT_BADGES = {
     'Manhã I': {
@@ -39,13 +40,15 @@ const SHIFT_BADGES = {
 const METRIC_FIELDS = [
     ['Ligacoes_Atendidas', 'Lig. Atendidas'],
     ['Ligacoes_Perdidas', 'Lig. Perdidas'],
+    ['Ligacoes_Realizadas', 'Lig. Realizadas'],
     ['TMA_Telefonia', 'TMA Telefonia'],
     ['TME_Telefonia', 'TME Telefonia'],
-    ['Atendimentos_Huggy', 'Atend. Huggy'],
+    ['Huggy_Iniciados', 'Huggy Iniciados'],
+    ['Huggy_Finalizados', 'Huggy Finalizados'],
     ['TMA_Huggy', 'TMA Huggy'],
     ['Atendimentos_Finalizados', 'Finalizados']
 ];
-const COUNT_FIELDS = ['Ligacoes_Atendidas', 'Ligacoes_Perdidas', 'Atendimentos_Huggy', 'Atendimentos_Finalizados'];
+const COUNT_FIELDS = ['Ligacoes_Atendidas', 'Ligacoes_Perdidas', 'Ligacoes_Realizadas', 'Huggy_Iniciados', 'Huggy_Finalizados', 'Atendimentos_Finalizados'];
 const TIME_FIELDS = ['TMA_Telefonia', 'TME_Telefonia', 'TMA_Huggy'];
 const FIELD_LABELS = Object.fromEntries(METRIC_FIELDS);
 const TIME_REGEX = /^\d{1,2}:\d{2}:\d{2}$/;
@@ -114,9 +117,11 @@ const WeeklyMetrics = () => {
                 initialMetrics[data.id] = {
                     Ligacoes_Atendidas: '',
                     Ligacoes_Perdidas: '',
+                    Ligacoes_Realizadas: '',
                     TMA_Telefonia: '',
                     TME_Telefonia: '',
-                    Atendimentos_Huggy: '',
+                    Huggy_Iniciados: '',
+                    Huggy_Finalizados: '',
                     TMA_Huggy: '',
                     Atendimentos_Finalizados: ''
                 };
@@ -153,9 +158,11 @@ const WeeklyMetrics = () => {
                 next[c.id] = {
                     Ligacoes_Atendidas: cur.Ligacoes_Atendidas !== '' ? cur.Ligacoes_Atendidas : '0',
                     Ligacoes_Perdidas: cur.Ligacoes_Perdidas !== '' ? cur.Ligacoes_Perdidas : '0',
+                    Ligacoes_Realizadas: cur.Ligacoes_Realizadas !== '' && cur.Ligacoes_Realizadas !== undefined ? cur.Ligacoes_Realizadas : '0',
                     TMA_Telefonia: cur.TMA_Telefonia !== '' ? cur.TMA_Telefonia : '00:00:00',
                     TME_Telefonia: cur.TME_Telefonia !== '' ? cur.TME_Telefonia : '00:00:00',
-                    Atendimentos_Huggy: cur.Atendimentos_Huggy !== '' ? cur.Atendimentos_Huggy : '0',
+                    Huggy_Iniciados: cur.Huggy_Iniciados !== '' && cur.Huggy_Iniciados !== undefined ? cur.Huggy_Iniciados : '0',
+                    Huggy_Finalizados: cur.Huggy_Finalizados !== '' && cur.Huggy_Finalizados !== undefined ? cur.Huggy_Finalizados : '0',
                     TMA_Huggy: cur.TMA_Huggy !== '' ? cur.TMA_Huggy : '00:00:00',
                     Atendimentos_Finalizados: cur.Atendimentos_Finalizados !== '' ? cur.Atendimentos_Finalizados : '0'
                 };
@@ -167,8 +174,8 @@ const WeeklyMetrics = () => {
 
     // --- FUNÇÕES DE IMPORTAÇÃO E EXPORTAÇÃO CSV ---
     const downloadTemplate = () => {
-        const headers = ["Nome", "Ligacoes_Atendidas", "Ligacoes_Perdidas", "TMA_Telefonia", "TME_Telefonia", "Atendimentos_Huggy", "TMA_Huggy", "Atendimentos_Finalizados"];
-        const rows = collaborators.map(c => [c.name, "0", "0", "00:00:00", "00:00:00", "0", "00:00:00", "0"]);
+        const headers = ["Nome", "Ligacoes_Atendidas", "Ligacoes_Perdidas", "TMA_Telefonia", "TME_Telefonia", "Huggy_Iniciados", "TMA_Huggy", "Atendimentos_Finalizados", "Ligacoes_Realizadas", "Huggy_Finalizados"];
+        const rows = collaborators.map(c => [c.name, "0", "0", "00:00:00", "00:00:00", "0", "00:00:00", "0", "0", "0"]);
         
         let csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [headers.join(';'), ...rows.map(e => e.join(';'))].join('\n');
         
@@ -199,6 +206,26 @@ const WeeklyMetrics = () => {
             const newMetrics = { ...metricsData };
             let importedCount = 0;
             const notFound = [];
+            const normHeader = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/gi, '').toLowerCase();
+            const headerRow = lines[0].split(delimiter).map(normHeader);
+            // Procura a coluna pelo nome; se não houver, usa a posição do modelo antigo (quando existir)
+            const colIndex = (aliases, fallback = -1) => {
+                const idx = headerRow.findIndex(h => aliases.includes(h));
+                return idx >= 0 ? idx : fallback;
+            };
+            const IDX = {
+                atendidas: colIndex(['ligacoesatendidas'], 1),
+                perdidas: colIndex(['ligacoesperdidas'], 2),
+                tmaTel: colIndex(['tmatelefonia'], 3),
+                tmeTel: colIndex(['tmetelefonia'], 4),
+                iniciados: colIndex(['huggyiniciados']),
+                // Modelos antigos tinham só "Atendimentos_Huggy": passa a valer como Huggy Finalizados
+                finalizadosHuggy: colIndex(['huggyfinalizados', 'atendimentoshuggy']),
+                tmaHuggy: colIndex(['tmahuggy'], 6),
+                finalizados: colIndex(['atendimentosfinalizados'], 7),
+                realizadas: colIndex(['ligacoesrealizadas'], 8)
+            };
+            const cell = (row, idx, fallback) => (idx >= 0 && row[idx] ? row[idx] : fallback);
             const norm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 
             for (let i = 1; i < lines.length; i++) {
@@ -210,13 +237,15 @@ const WeeklyMetrics = () => {
                 
                 if (colab) {
                     newMetrics[colab.id] = {
-                        Ligacoes_Atendidas: row[1] || '0',
-                        Ligacoes_Perdidas: row[2] || '0',
-                        TMA_Telefonia: row[3] || '00:00:00',
-                        TME_Telefonia: row[4] || '00:00:00',
-                        Atendimentos_Huggy: row[5] || '0',
-                        TMA_Huggy: row[6] || '00:00:00',
-                        Atendimentos_Finalizados: row[7] || '0'
+                        Ligacoes_Atendidas: cell(row, IDX.atendidas, '0'),
+                        Ligacoes_Perdidas: cell(row, IDX.perdidas, '0'),
+                        TMA_Telefonia: cell(row, IDX.tmaTel, '00:00:00'),
+                        TME_Telefonia: cell(row, IDX.tmeTel, '00:00:00'),
+                        Huggy_Iniciados: cell(row, IDX.iniciados, '0'),
+                        Huggy_Finalizados: cell(row, IDX.finalizadosHuggy, '0'),
+                        TMA_Huggy: cell(row, IDX.tmaHuggy, '00:00:00'),
+                        Atendimentos_Finalizados: cell(row, IDX.finalizados, '0'),
+                        Ligacoes_Realizadas: cell(row, IDX.realizadas, '0')
                     };
                     importedCount++;
                 } else {
@@ -267,6 +296,11 @@ const WeeklyMetrics = () => {
                     warnings.push(`${FIELD_LABELS[key]}: formato esperado HH:MM:SS (${m[key]})`);
                 }
             });
+            const hIni = Number(m.Huggy_Iniciados) || 0;
+            const hFin = Number(m.Huggy_Finalizados) || 0;
+            if (hFin > hIni) {
+                warnings.push(`Huggy Finalizados (${hFin}) maior que Iniciados (${hIni}): aproveitamento limitado a 100%`);
+            }
             if (warnings.length > 0) issues.push({ colab, warnings });
         });
 
@@ -314,10 +348,19 @@ const WeeklyMetrics = () => {
                     const finalizados = Number(metrics.Atendimentos_Finalizados) || 0;
                     const ligAtendidas = Number(metrics.Ligacoes_Atendidas) || 0;
                     const ligPerdidas = Number(metrics.Ligacoes_Perdidas) || 0;
-                    const huggy = Number(metrics.Atendimentos_Huggy) || 0;
+                    const ligRealizadas = Number(metrics.Ligacoes_Realizadas) || 0;
+                    const huggyIniciados = Number(metrics.Huggy_Iniciados) || 0;
+                    const huggyFinalizados = Number(metrics.Huggy_Finalizados) || 0;
 
-                    // Fórmula oficial de pontuação
-                    const pontuacaoTotal = (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
+                    // Fórmula oficial de pontuação (pesos centralizados em scoringCalculations)
+                    const pontuacaoTotal = calculatePerformanceScore({
+                        Atendimentos_Finalizados: finalizados,
+                        Ligacoes_Atendidas: ligAtendidas,
+                        Ligacoes_Realizadas: ligRealizadas,
+                        Huggy_Iniciados: huggyIniciados,
+                        Huggy_Finalizados: huggyFinalizados,
+                        Ligacoes_Perdidas: ligPerdidas
+                    });
 
                     batch.set(doc(collection(db, "weekly_evaluations")), {
                         colabId: colab.id,
@@ -327,7 +370,10 @@ const WeeklyMetrics = () => {
                         Atendimentos_Finalizados: finalizados,
                         Ligacoes_Atendidas: ligAtendidas,
                         Ligacoes_Perdidas: ligPerdidas,
-                        Atendimentos_Huggy: huggy,
+                        Ligacoes_Realizadas: ligRealizadas,
+                        Huggy_Iniciados: huggyIniciados,
+                        Huggy_Finalizados: huggyFinalizados,
+                        Huggy_Aproveitamento: getHuggyStats({ Huggy_Iniciados: huggyIniciados, Huggy_Finalizados: huggyFinalizados }).percentual,
                         TMA_Telefonia: String(metrics.TMA_Telefonia || '').trim() || "00:00:00",
                         TMA_Huggy: String(metrics.TMA_Huggy || '').trim() || "00:00:00",
                         TME_Telefonia: String(metrics.TME_Telefonia || '').trim() || "00:00:00",
@@ -350,8 +396,8 @@ const WeeklyMetrics = () => {
             const resetMetrics = {};
             collaborators.forEach(c => {
                 resetMetrics[c.id] = {
-                    Ligacoes_Atendidas: '', Ligacoes_Perdidas: '', TMA_Telefonia: '',
-                    TME_Telefonia: '', Atendimentos_Huggy: '', TMA_Huggy: '', Atendimentos_Finalizados: ''
+                    Ligacoes_Atendidas: '', Ligacoes_Perdidas: '', Ligacoes_Realizadas: '', TMA_Telefonia: '',
+                    TME_Telefonia: '', Huggy_Iniciados: '', Huggy_Finalizados: '', TMA_Huggy: '', Atendimentos_Finalizados: ''
                 };
             });
             setMetricsData(resetMetrics);
@@ -399,11 +445,17 @@ const WeeklyMetrics = () => {
                 const fin = Number(m.Atendimentos_Finalizados) || 0;
                 const ligAt = Number(m.Ligacoes_Atendidas) || 0;
                 const ligPerd = Number(m.Ligacoes_Perdidas) || 0;
-                const hug = Number(m.Atendimentos_Huggy) || 0;
-                totalScore += (fin * 1) + (ligAt * 2) + (hug * 1) + (ligPerd * -5);
+                totalScore += calculatePerformanceScore({
+                    Atendimentos_Finalizados: fin,
+                    Ligacoes_Atendidas: ligAt,
+                    Ligacoes_Realizadas: Number(m.Ligacoes_Realizadas) || 0,
+                    Huggy_Iniciados: Number(m.Huggy_Iniciados) || 0,
+                    Huggy_Finalizados: Number(m.Huggy_Finalizados) || 0,
+                    Ligacoes_Perdidas: ligPerd
+                });
                 totalCalls += ligAt;
                 totalLostCalls += ligPerd;
-                totalHuggy += hug;
+                totalHuggy += Number(m.Huggy_Finalizados) || 0;
                 totalTickets += fin;
             }
         });
@@ -660,10 +712,19 @@ const WeeklyMetrics = () => {
                                     <th className="px-3 py-3.5 text-center font-bold tracking-wider w-24">
                                         Lig. Perdidas<br/><span className="text-[10px] text-rose-500 font-semibold">(-5 pts)</span>
                                     </th>
+                                    <th className="px-3 py-3.5 text-center font-bold tracking-wider w-24">
+                                        Lig. Realizadas<br/><span className="text-[10px] text-teal-500 font-semibold">(+1 pt)</span>
+                                    </th>
                                     <th className="px-3 py-3.5 text-center font-bold tracking-wider w-28">TMA Telefonia</th>
                                     <th className="px-3 py-3.5 text-center font-bold tracking-wider w-28">TME Telefonia</th>
                                     <th className="px-3 py-3.5 text-center font-bold tracking-wider w-24">
-                                        Atend. Huggy<br/><span className="text-[10px] text-blue-500 font-semibold">(+1 pt)</span>
+                                        Huggy<br/>Iniciados
+                                    </th>
+                                    <th className="px-3 py-3.5 text-center font-bold tracking-wider w-24">
+                                        Huggy<br/>Finalizados
+                                    </th>
+                                    <th className="px-3 py-3.5 text-center font-bold tracking-wider w-28">
+                                        % Aproveit.<br/><span className="text-[10px] text-blue-500 font-semibold">(0,5 pt por 1%)</span>
                                     </th>
                                     <th className="px-3 py-3.5 text-center font-bold tracking-wider w-28">TMA Huggy</th>
                                     <th className="px-3 py-3.5 text-center font-bold tracking-wider w-28">
@@ -684,8 +745,18 @@ const WeeklyMetrics = () => {
                                     const finalizados = Number(metrics.Atendimentos_Finalizados) || 0;
                                     const ligAtendidas = Number(metrics.Ligacoes_Atendidas) || 0;
                                     const ligPerdidas = Number(metrics.Ligacoes_Perdidas) || 0;
-                                    const huggy = Number(metrics.Atendimentos_Huggy) || 0;
-                                    const rowScore = (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
+                                    const huggyStats = getHuggyStats({
+                                        Huggy_Iniciados: Number(metrics.Huggy_Iniciados) || 0,
+                                        Huggy_Finalizados: Number(metrics.Huggy_Finalizados) || 0
+                                    });
+                                    const rowScore = calculatePerformanceScore({
+                                        Atendimentos_Finalizados: finalizados,
+                                        Ligacoes_Atendidas: ligAtendidas,
+                                        Ligacoes_Realizadas: Number(metrics.Ligacoes_Realizadas) || 0,
+                                        Huggy_Iniciados: Number(metrics.Huggy_Iniciados) || 0,
+                                        Huggy_Finalizados: Number(metrics.Huggy_Finalizados) || 0,
+                                        Ligacoes_Perdidas: ligPerdidas
+                                    });
                                     const hasEntries = Object.values(metrics).some(isFilled);
                                     const needsReview = highlightIds.has(colab.id) && !hasEntries;
 
@@ -743,6 +814,18 @@ const WeeklyMetrics = () => {
                                                 />
                                             </td>
 
+                                            {/* Ligações Realizadas (ativas) */}
+                                            <td className="px-2 py-2">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={metrics.Ligacoes_Realizadas || ''}
+                                                    onChange={(e) => handleInputChange(colab.id, 'Ligacoes_Realizadas', e.target.value)}
+                                                    className="w-full px-2 py-1.5 text-center font-bold text-teal-700 dark:text-teal-400 bg-teal-500/5 border border-teal-500/20 rounded-xl focus:bg-surface focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all"
+                                                />
+                                            </td>
+
                                             {/* TMA Telefonia */}
                                             <td className="px-2 py-2">
                                                 <input 
@@ -765,16 +848,38 @@ const WeeklyMetrics = () => {
                                                 />
                                             </td>
 
-                                            {/* Atendimentos Huggy */}
+                                            {/* Huggy Iniciados */}
                                             <td className="px-2 py-2">
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    placeholder="0" 
-                                                    value={metrics.Atendimentos_Huggy || ''} 
-                                                    onChange={(e) => handleInputChange(colab.id, 'Atendimentos_Huggy', e.target.value)}
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={metrics.Huggy_Iniciados || ''}
+                                                    onChange={(e) => handleInputChange(colab.id, 'Huggy_Iniciados', e.target.value)}
                                                     className="w-full px-2 py-1.5 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-500/5 border border-blue-500/20 rounded-xl focus:bg-surface focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
                                                 />
+                                            </td>
+
+                                            {/* Huggy Finalizados */}
+                                            <td className="px-2 py-2">
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    placeholder="0"
+                                                    value={metrics.Huggy_Finalizados || ''}
+                                                    onChange={(e) => handleInputChange(colab.id, 'Huggy_Finalizados', e.target.value)}
+                                                    className="w-full px-2 py-1.5 text-center font-bold text-blue-600 dark:text-blue-400 bg-blue-500/5 border border-blue-500/20 rounded-xl focus:bg-surface focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition-all"
+                                                />
+                                            </td>
+
+                                            {/* % de aproveitamento Huggy (calculado) */}
+                                            <td className="px-3 py-2 text-center">
+                                                <div className="inline-flex flex-col items-center leading-tight">
+                                                    <span className={`font-mono font-black text-sm ${huggyStats.percentual >= 80 ? 'text-emerald-600 dark:text-emerald-400' : huggyStats.percentual > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-hub'}`}>
+                                                        {huggyStats.percentual}%
+                                                    </span>
+                                                    <span className="text-[10px] text-muted-hub font-mono">+{huggyStats.pontos} pts</span>
+                                                </div>
                                             </td>
 
                                             {/* TMA Huggy */}

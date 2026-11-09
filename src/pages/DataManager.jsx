@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
     Database, Search, Calendar, Eye, Edit2, Trash2, X, Loader2, 
     MessageSquare, TrendingUp, Target, AlertTriangle, ShieldCheck, 
-    ShieldAlert, CheckCircle2, MessageCircle, PhoneCall, PhoneMissed, 
+    ShieldAlert, CheckCircle2, MessageCircle, PhoneCall, PhoneMissed, PhoneOutgoing, 
     Clock, Award, Sparkles, User, Hash, FileText, Check, BarChart2,
     LayoutGrid, Table, List, Filter, ArrowUpDown, SlidersHorizontal,
     Users, ChevronLeft, ChevronRight, RotateCcw, CheckCircle, AlertCircle,
@@ -21,7 +21,7 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { resolveUserName } from '../utils/userResolvers';
 import { usePermissions } from '../context/PermissionsContext';
-import { calculatePerformanceScore as calculateScore } from '../utils/scoringCalculations';
+import { calculatePerformanceScore as calculateScore, getHuggyStats } from '../utils/scoringCalculations';
 import { executeDataExport } from '../utils/dataExport';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 
@@ -40,8 +40,12 @@ const translateKey = (key) => {
         tmr: 'TMR',
         recurrence: 'Reincidência (%)',
         Atendimentos_Finalizados: 'Atendimentos Finalizados',
-        Atendimentos_Huggy: 'Atendimentos Huggy',
+        Atendimentos_Huggy: 'Atendimentos Huggy (legado)',
+        Huggy_Iniciados: 'Huggy Iniciados',
+        Huggy_Finalizados: 'Huggy Finalizados',
+        Huggy_Aproveitamento: 'Aproveitamento Huggy (%)',
         Ligacoes_Atendidas: 'Ligações Atendidas',
+        Ligacoes_Realizadas: 'Ligações Realizadas',
         Ligacoes_Perdidas: 'Ligações Perdidas',
         TMA_Telefonia: 'TMA Telefonia',
         TMA_Huggy: 'TMA Huggy',
@@ -246,6 +250,7 @@ const DataManager = () => {
                 { value: 'all', label: 'Todos os Desempenhos' },
                 { value: 'has_finalizados', label: 'Com Atendimentos (>0)' },
                 { value: 'has_calls', label: 'Com Ligações Atendidas' },
+                { value: 'has_outbound', label: 'Com Ligações Realizadas' },
                 { value: 'has_huggy', label: 'Com Atend. Huggy' },
                 { value: 'has_missed', label: 'Com Ligações Perdidas' }
             ];
@@ -305,7 +310,8 @@ const DataManager = () => {
                 } else if (activeTab === 'metrics') {
                     if (statusTypeFilter === 'has_finalizados' && (Number(item.Atendimentos_Finalizados) || 0) <= 0) return false;
                     if (statusTypeFilter === 'has_calls' && (Number(item.Ligacoes_Atendidas) || 0) <= 0) return false;
-                    if (statusTypeFilter === 'has_huggy' && (Number(item.Atendimentos_Huggy) || 0) <= 0) return false;
+                    if (statusTypeFilter === 'has_outbound' && (Number(item.Ligacoes_Realizadas) || 0) <= 0) return false;
+                    if (statusTypeFilter === 'has_huggy' && getHuggyStats(item).volume <= 0) return false;
                     if (statusTypeFilter === 'has_missed' && (Number(item.Ligacoes_Perdidas) || 0) <= 0) return false;
                 } else if (activeTab === 'kpis') {
                     const fcrNum = Number(item.fcr) || 0;
@@ -392,7 +398,7 @@ const DataManager = () => {
             let totalPontos = 0;
             filteredData.forEach(i => {
                 totalFinalizados += Number(i.Atendimentos_Finalizados) || 0;
-                totalHuggy += Number(i.Atendimentos_Huggy) || 0;
+                totalHuggy += getHuggyStats(i).volume;
                 totalPontos += calculateScore(i);
             });
             const avgPontos = total > 0 ? Math.round(totalPontos / total) : 0;
@@ -1093,11 +1099,15 @@ const DataManager = () => {
                                                                 </span>
                                                                 <span className="text-muted-hub">•</span>
                                                                 <span className="text-secondary-hub">
-                                                                    Huggy: <strong className="text-primary-hub">{item.Atendimentos_Huggy || 0}</strong>
+                                                                    Huggy: <strong className="text-primary-hub">{getHuggyStats(item).volume}</strong>{getHuggyStats(item).percentual !== null && <span className="text-muted-hub"> ({getHuggyStats(item).percentual}%)</span>}
                                                                 </span>
                                                                 <span className="text-muted-hub">•</span>
                                                                 <span className="text-secondary-hub">
                                                                     Voz: <strong className="text-primary-hub">{item.Ligacoes_Atendidas || 0}</strong>
+                                                                </span>
+                                                                <span className="text-muted-hub">•</span>
+                                                                <span className="text-secondary-hub">
+                                                                    Real.: <strong className="text-primary-hub">{item.Ligacoes_Realizadas || 0}</strong>
                                                                 </span>
                                                                 <span className="px-2.5 py-0.5 bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-500/20 rounded-md font-bold font-mono">
                                                                     {score} pts
@@ -1332,11 +1342,15 @@ const DataManager = () => {
                                                             </div>
                                                             <div className="bg-subtle p-2 rounded-xl border border-subtle">
                                                                 <span className="text-[10px] text-muted-hub block">Huggy</span>
-                                                                <span className="text-sm font-black text-primary-hub">{item.Atendimentos_Huggy || 0}</span>
+                                                                <span className="text-sm font-black text-primary-hub">{getHuggyStats(item).volume}</span>
                                                             </div>
                                                             <div className="bg-subtle p-2 rounded-xl border border-subtle">
                                                                 <span className="text-[10px] text-muted-hub block">Voz</span>
                                                                 <span className="text-sm font-black text-primary-hub">{item.Ligacoes_Atendidas || 0}</span>
+                                                            </div>
+                                                            <div className="bg-subtle p-2 rounded-xl border border-subtle">
+                                                                <span className="text-[10px] text-muted-hub block">Realiz.</span>
+                                                                <span className="text-sm font-black text-primary-hub">{item.Ligacoes_Realizadas || 0}</span>
                                                             </div>
                                                         </div>
                                                     )}
@@ -1452,7 +1466,7 @@ const DataManager = () => {
                                                     {activeTab === 'metrics' && (
                                                         <span className="flex items-center gap-2">
                                                             <span>Fin: <strong>{item.Atendimentos_Finalizados || 0}</strong></span>
-                                                            <span>Huggy: <strong>{item.Atendimentos_Huggy || 0}</strong></span>
+                                                            <span>Huggy: <strong>{getHuggyStats(item).volume}</strong></span>
                                                             <span className="px-1.5 py-0.2 rounded bg-purple-100 text-purple-800 font-bold font-mono">
                                                                 {score} pts
                                                             </span>
@@ -1645,7 +1659,7 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
     const standardFields = [
         'id', 'createdAt', 'updatedAt', 'colabId', 'collaboratorId', 'colabName', 
         'read', 'evaluatorId', 'checklistResults', 'processId', 'date', 'pontuacao',
-        'Atendimentos_Finalizados', 'Atendimentos_Huggy', 'Ligacoes_Atendidas', 'Ligacoes_Perdidas',
+        'Atendimentos_Finalizados', 'Atendimentos_Huggy', 'Huggy_Iniciados', 'Huggy_Finalizados', 'Huggy_Aproveitamento', 'Ligacoes_Atendidas', 'Ligacoes_Realizadas', 'Ligacoes_Perdidas',
         'TMA_Telefonia', 'TME_Telefonia', 'TMA_Huggy', 'type', 'method', 'protocol', 
         'comment', 'createdBy', 'fcr', 'tmr', 'recurrence', 'status', 'evaluatorName', 'notes'
     ];
@@ -1750,7 +1764,7 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                     <span className="text-[11px] text-muted-hub">Chamadas e conversas computadas</span>
                                 </div>
 
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                                     {/* Finalizados */}
                                     <div className="bg-surface p-3.5 rounded-xl border border-blue-100/90 shadow-xs relative overflow-hidden">
                                         <div className="flex items-center justify-between mb-1.5">
@@ -1770,16 +1784,18 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                     {/* Huggy */}
                                     <div className="bg-surface p-3.5 rounded-xl border border-purple-100/90 shadow-xs relative overflow-hidden">
                                         <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-xs font-semibold text-secondary-hub">Huggy (Chat)</span>
+                                            <span className="text-xs font-semibold text-secondary-hub">Huggy Finalizados</span>
                                             <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center">
                                                 <MessageCircle className="w-3.5 h-3.5" />
                                             </div>
                                         </div>
                                         <div className="text-2xl font-black text-primary-hub tracking-tight">
-                                            {item.Atendimentos_Huggy ?? 0}
+                                            {getHuggyStats(item).volume}
                                         </div>
                                         <div className="mt-1.5 text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded w-fit">
-                                            +1 pt / chat
+                                            {getHuggyStats(item).legado
+                                                ? '+1 pt / chat (legado)'
+                                                : `${getHuggyStats(item).iniciados} iniciados • ${getHuggyStats(item).percentual}% = +${getHuggyStats(item).pontos} pts`}
                                         </div>
                                     </div>
 
@@ -1796,6 +1812,22 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                         </div>
                                         <div className="mt-1.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded w-fit">
                                             +2 pts / ligação
+                                        </div>
+                                    </div>
+
+                                    {/* Realizadas */}
+                                    <div className="bg-surface p-3.5 rounded-xl border border-teal-100/90 shadow-xs relative overflow-hidden">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                            <span className="text-xs font-semibold text-secondary-hub">Realizadas</span>
+                                            <div className="w-6 h-6 rounded-md bg-teal-50 text-teal-600 flex items-center justify-center">
+                                                <PhoneOutgoing className="w-3.5 h-3.5" />
+                                            </div>
+                                        </div>
+                                        <div className="text-2xl font-black text-primary-hub tracking-tight">
+                                            {item.Ligacoes_Realizadas ?? 0}
+                                        </div>
+                                        <div className="mt-1.5 text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded w-fit">
+                                            +1 pt / ligação
                                         </div>
                                     </div>
 
@@ -1872,9 +1904,11 @@ const ViewModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                 <div className="text-xs text-secondary-hub flex flex-wrap items-center gap-x-2 gap-y-1 font-mono bg-subtle p-2.5 rounded-lg border border-subtle">
                                     <span>({item.Atendimentos_Finalizados || 0} × 1)</span>
                                     <span>+</span>
-                                    <span>({item.Atendimentos_Huggy || 0} × 1)</span>
+                                    <span>{getHuggyStats(item).legado ? `(${getHuggyStats(item).volume} × 1)` : `(${getHuggyStats(item).percentual}% aprov. × 0,5)`}</span>
                                     <span>+</span>
                                     <span>({item.Ligacoes_Atendidas || 0} × 2)</span>
+                                    <span>+</span>
+                                    <span>({item.Ligacoes_Realizadas || 0} × 1)</span>
                                     <span>-</span>
                                     <span>({item.Ligacoes_Perdidas || 0} × 5)</span>
                                     <span>=</span>
@@ -2307,8 +2341,16 @@ const EditModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
         // Se for Desempenho (metrics), garante os tipos numéricos e atualiza a pontuação calculada
         if (activeTab === 'metrics') {
             dataToUpdate.Atendimentos_Finalizados = Number(formData.Atendimentos_Finalizados) || 0;
-            dataToUpdate.Atendimentos_Huggy = Number(formData.Atendimentos_Huggy) || 0;
+            if (formData.Huggy_Iniciados !== undefined || formData.Huggy_Finalizados !== undefined) {
+                dataToUpdate.Huggy_Iniciados = Number(formData.Huggy_Iniciados) || 0;
+                dataToUpdate.Huggy_Finalizados = Number(formData.Huggy_Finalizados) || 0;
+                dataToUpdate.Huggy_Aproveitamento = getHuggyStats(dataToUpdate).percentual;
+            } else {
+                // Registro legado: mantém o campo antigo de volume
+                dataToUpdate.Atendimentos_Huggy = Number(formData.Atendimentos_Huggy) || 0;
+            }
             dataToUpdate.Ligacoes_Atendidas = Number(formData.Ligacoes_Atendidas) || 0;
+            dataToUpdate.Ligacoes_Realizadas = Number(formData.Ligacoes_Realizadas) || 0;
             dataToUpdate.Ligacoes_Perdidas = Number(formData.Ligacoes_Perdidas) || 0;
             dataToUpdate.pontuacao = liveScore;
         }
@@ -2413,17 +2455,35 @@ const EditModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                             />
                                         </div>
 
-                                        {/* Huggy */}
+                                        {/* Huggy Iniciados */}
                                         <div className="bg-surface p-3.5 rounded-xl border border-purple-100 shadow-xs">
                                             <div className="flex items-center justify-between mb-1.5">
-                                                <label className="text-xs font-bold text-secondary-hub">Atendimentos Huggy (Chat)</label>
-                                                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">+1 pt</span>
+                                                <label className="text-xs font-bold text-secondary-hub">Huggy Iniciados</label>
+                                                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">base do %</span>
                                             </div>
-                                            <input 
+                                            <input
                                                 type="number"
                                                 min="0"
-                                                value={formData.Atendimentos_Huggy ?? ''}
-                                                onChange={(e) => handleChange('Atendimentos_Huggy', e.target.value === '' ? '' : Number(e.target.value))}
+                                                value={formData.Huggy_Iniciados ?? ''}
+                                                onChange={(e) => handleChange('Huggy_Iniciados', e.target.value === '' ? '' : Number(e.target.value))}
+                                                className="w-full p-2 text-base font-bold border border-strong rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Huggy Finalizados */}
+                                        <div className="bg-surface p-3.5 rounded-xl border border-purple-100 shadow-xs">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <label className="text-xs font-bold text-secondary-hub">Huggy Finalizados</label>
+                                                <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">
+                                                    {getHuggyStats(formData).legado ? 'legado: +1 pt' : `${getHuggyStats(formData).percentual}% = +${getHuggyStats(formData).pontos} pts`}
+                                                </span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.Huggy_Finalizados ?? (getHuggyStats(formData).legado ? (formData.Atendimentos_Huggy ?? '') : '')}
+                                                onChange={(e) => handleChange('Huggy_Finalizados', e.target.value === '' ? '' : Number(e.target.value))}
                                                 className="w-full p-2 text-base font-bold border border-strong rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
                                                 placeholder="0"
                                             />
@@ -2441,6 +2501,22 @@ const EditModal = ({ activeTab, item, collaboratorsMap, collaboratorsInfo, qaPro
                                                 value={formData.Ligacoes_Atendidas ?? ''}
                                                 onChange={(e) => handleChange('Ligacoes_Atendidas', e.target.value === '' ? '' : Number(e.target.value))}
                                                 className="w-full p-2 text-base font-bold border border-strong rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                                                placeholder="0"
+                                            />
+                                        </div>
+
+                                        {/* Ligações Realizadas */}
+                                        <div className="bg-surface p-3.5 rounded-xl border border-teal-100 shadow-xs">
+                                            <div className="flex items-center justify-between mb-1.5">
+                                                <label className="text-xs font-bold text-secondary-hub">Ligações Realizadas</label>
+                                                <span className="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded">+1 pt</span>
+                                            </div>
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={formData.Ligacoes_Realizadas ?? ''}
+                                                onChange={(e) => handleChange('Ligacoes_Realizadas', e.target.value === '' ? '' : Number(e.target.value))}
+                                                className="w-full p-2 text-base font-bold border border-strong rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
                                                 placeholder="0"
                                             />
                                         </div>
