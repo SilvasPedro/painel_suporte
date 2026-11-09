@@ -4,6 +4,26 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.2.2] - 2026-11-09
+
+### 🎯 Destaque Principal
+Lançamento de **Avaliações Semanais** mais seguro: antes de gravar, o sistema mostra quem não receberá avaliação e permite confirmar ou voltar para revisar.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Tela de confirmação ao salvar**: lista os colaboradores sem nenhuma métrica ("não receberão nada"), os pontos de atenção por colaborador (campos vazios gravados como 0, contagens decimais/negativas, tempos fora de HH:MM:SS) e os colaboradores ativos sem turno, que não aparecem no lançamento. Botões "Voltar e revisar" (destaca em amarelo as linhas vazias) e "Confirmar e salvar N avaliações".
+
+### 🐛 Correções (Fixed)
+- **Colaboradores sem avaliação após o lançamento**:
+  - Gravação em lote atômico (`writeBatch`, até 400 por commit): antes, uma falha parcial gravava parte das avaliações e, ao tentar de novo, duplicava as já salvas.
+  - Importação CSV: comparação de nomes sem distinção de acento/espaços e aviso dos nomes não encontrados (antes eram descartados em silêncio).
+  - Campos contendo apenas espaços deixam de contar como preenchidos.
+  - Gravação itera os colaboradores elegíveis atuais, não o estado acumulado do formulário.
+- **Botão "Todos" dos turnos com texto branco ilegível**: as classes `bg-primary-hub`, `bg-secondary-hub` e `bg-muted-hub` (incluindo `/30`) não existiam; foram criadas em `index.css`. Corrige também o mesmo padrão em Demanda & Fila Diária e nos seletores de Feedbacks 1:1.
+
+---
+
 ## [v4.2.1] - 2026-11-09
 
 ### 🎯 Destaque Principal

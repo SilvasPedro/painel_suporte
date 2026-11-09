@@ -115,6 +115,10 @@ table th {
   border-color: var(--border-subtle);
 }
 
+.bg-primary-hub { background-color: var(--text-primary); }
+.bg-secondary-hub { background-color: var(--text-secondary); }
+.bg-muted-hub { background-color: var(--text-muted); }
+.bg-muted-hub\/30 { background-color: color-mix(in srgb, var(--text-muted) 30%, transparent); }
 .text-primary-hub { color: var(--text-primary); }
 .text-secondary-hub { color: var(--text-secondary); }
 .text-muted-hub { color: var(--text-muted); }

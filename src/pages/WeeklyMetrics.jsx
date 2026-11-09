@@ -3,9 +3,9 @@ import {
     TrendingUp, Save, Loader2, Calendar, Upload, Download, 
     Search, Filter, Sun, Sunset, Moon, Users, Sparkles, Check, 
     ShieldAlert, Award, Hash, CheckCircle2, PhoneCall, PhoneOff,
-    MessageSquare, CheckSquare, Zap, RefreshCw, BarChart3, AlertCircle
+    MessageSquare, CheckSquare, Zap, RefreshCw, BarChart3, AlertCircle, AlertTriangle, X
 } from 'lucide-react';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
@@ -35,6 +35,24 @@ const SHIFT_BADGES = {
     }
 };
 
+// Campos lançados por colaborador (chave no banco, rótulo exibido na validação)
+const METRIC_FIELDS = [
+    ['Ligacoes_Atendidas', 'Lig. Atendidas'],
+    ['Ligacoes_Perdidas', 'Lig. Perdidas'],
+    ['TMA_Telefonia', 'TMA Telefonia'],
+    ['TME_Telefonia', 'TME Telefonia'],
+    ['Atendimentos_Huggy', 'Atend. Huggy'],
+    ['TMA_Huggy', 'TMA Huggy'],
+    ['Atendimentos_Finalizados', 'Finalizados']
+];
+const COUNT_FIELDS = ['Ligacoes_Atendidas', 'Ligacoes_Perdidas', 'Atendimentos_Huggy', 'Atendimentos_Finalizados'];
+const TIME_FIELDS = ['TMA_Telefonia', 'TME_Telefonia', 'TMA_Huggy'];
+const FIELD_LABELS = Object.fromEntries(METRIC_FIELDS);
+const TIME_REGEX = /^\d{1,2}:\d{2}:\d{2}$/;
+
+// Um campo só conta como preenchido se tiver conteúdo (espaços em branco não valem)
+const isFilled = (v) => v !== null && v !== undefined && String(v).trim() !== '';
+
 const getShiftBadge = (shift) => {
     if (!shift) return { icon: Sun, style: 'bg-subtle text-muted-hub border-subtle', dot: 'bg-zinc-400' };
     const s = String(shift).trim();
@@ -52,7 +70,10 @@ const WeeklyMetrics = () => {
     const [metricsData, setMetricsData] = useState({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    
+    const [hiddenNoShift, setHiddenNoShift] = useState([]); // ativos que não aparecem por falta de turno
+    const [review, setReview] = useState(null); // resultado da validação aguardando confirmação
+    const [highlightIds, setHighlightIds] = useState(() => new Set()); // linhas vazias a revisar
+
     const fileInputRef = useRef(null);
 
     // Filtros e busca
@@ -66,6 +87,7 @@ const WeeklyMetrics = () => {
         const unsubscribe = subscribeSharedCollection("collaborators", (items) => {
             const colabs = [];
             const initialMetrics = {};
+            const noShift = [];
             
             items.forEach((data) => {
                 // REGRA CRÍTICA: Ignora inativos, sem turno OU usuários com cargo de Gestor e Supervisão
@@ -79,7 +101,12 @@ const WeeklyMetrics = () => {
                     rawRole === 'manager'
                 );
 
-                if (data.active === false || !data.shift || data.shift.trim() === '' || isLideranca) {
+                if (data.active === false || isLideranca) {
+                    return;
+                }
+                if (!data.shift || data.shift.trim() === '') {
+                    // Ativo, mas sem turno: não aparece na lista e, por isso, não recebe avaliação
+                    noShift.push(data.name || data.email || data.id);
                     return;
                 }
 
@@ -98,6 +125,7 @@ const WeeklyMetrics = () => {
             colabs.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             
             setCollaborators(colabs);
+            setHiddenNoShift(noShift);
             // Preserva valores já preenchidos
             setMetricsData(prev => Object.keys(prev).length === 0 ? initialMetrics : prev);
             setLoading(false);
@@ -170,13 +198,15 @@ const WeeklyMetrics = () => {
             const delimiter = lines[0].includes(';') ? ';' : ',';
             const newMetrics = { ...metricsData };
             let importedCount = 0;
+            const notFound = [];
+            const norm = (t) => String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, ' ').trim().toLowerCase();
 
             for (let i = 1; i < lines.length; i++) {
                 const row = lines[i].split(delimiter).map(item => item?.trim() || '');
                 if (row.length < 2 || !row[0]) continue;
                 
                 const colabName = row[0];
-                const colab = collaborators.find(c => c.name.toLowerCase() === colabName.toLowerCase());
+                const colab = collaborators.find(c => norm(c.name) === norm(colabName));
                 
                 if (colab) {
                     newMetrics[colab.id] = {
@@ -189,57 +219,133 @@ const WeeklyMetrics = () => {
                         Atendimentos_Finalizados: row[7] || '0'
                     };
                     importedCount++;
+                } else {
+                    notFound.push(colabName);
                 }
             }
 
             setMetricsData(newMetrics);
             showToast(`${importedCount} colaboradores importados com sucesso!`, "success");
+            if (notFound.length > 0) {
+                showToast(`${notFound.length} nome(s) do arquivo não foram encontrados e NÃO serão lançados: ${notFound.slice(0, 5).join(', ')}${notFound.length > 5 ? '…' : ''}`, "warning");
+            }
         };
         
         reader.readAsText(file);
         e.target.value = null;
     };
 
-    const handleSaveMetrics = async () => {
+    // Analisa o lançamento atual: quem recebe avaliação, quem não recebe nada e possíveis problemas
+    const analyzeLaunch = () => {
+        const ready = [];
+        const empty = [];
+        const issues = [];
+
+        collaborators.forEach((colab) => {
+            const m = metricsData[colab.id] || {};
+            const filled = METRIC_FIELDS.filter(([key]) => isFilled(m[key]));
+
+            if (filled.length === 0) {
+                empty.push(colab);
+                return;
+            }
+            ready.push(colab);
+
+            const warnings = [];
+            const missing = METRIC_FIELDS.filter(([key]) => !isFilled(m[key])).map(([, label]) => label);
+            if (missing.length > 0) {
+                warnings.push(`Campos vazios (serão gravados como 0): ${missing.join(', ')}`);
+            }
+            COUNT_FIELDS.forEach((key) => {
+                if (isFilled(m[key])) {
+                    const n = Number(m[key]);
+                    if (!Number.isInteger(n) || n < 0) warnings.push(`${FIELD_LABELS[key]}: valor inválido (${m[key]})`);
+                }
+            });
+            TIME_FIELDS.forEach((key) => {
+                if (isFilled(m[key]) && !TIME_REGEX.test(String(m[key]).trim())) {
+                    warnings.push(`${FIELD_LABELS[key]}: formato esperado HH:MM:SS (${m[key]})`);
+                }
+            });
+            if (warnings.length > 0) issues.push({ colab, warnings });
+        });
+
+        return { ready, empty, issues };
+    };
+
+    // Clique em "Salvar": valida antes. Só segue direto se todos os colaboradores estiverem completos.
+    const handleSaveMetrics = () => {
+        if (saving) return;
+        const analysis = analyzeLaunch();
+
+        if (analysis.ready.length === 0) {
+            showToast('Nenhum colaborador tem dados preenchidos. Preencha as métricas antes de salvar.', 'warning');
+            return;
+        }
+
+        if (analysis.empty.length > 0 || analysis.issues.length > 0 || hiddenNoShift.length > 0) {
+            setReview(analysis);
+            return;
+        }
+
+        persistMetrics(analysis.ready);
+    };
+
+    // Volta para a tela destacando as linhas que ficaram sem lançamento
+    const handleBackToReview = () => {
+        if (review) setHighlightIds(new Set(review.empty.map(c => c.id)));
+        setShiftFilter('ALL');
+        setSearchQuery('');
+        setReview(null);
+    };
+
+    // Grava tudo em um único lote: ou todos recebem a avaliação, ou nenhum (sem duplicar em nova tentativa)
+    const persistMetrics = async (readyColabs) => {
         setSaving(true);
         try {
             const [year, month, day] = referenceDate.split('-');
             const dateString = `${day}/${month}/${year}`;
+            const BATCH_SIZE = 400;
 
-            const savePromises = Object.entries(metricsData).map(async ([colabId, metrics]) => {
-                const hasData = Object.values(metrics).some(val => val !== '' && val !== null && val !== undefined);
-                if (!hasData) return Promise.resolve();
+            for (let i = 0; i < readyColabs.length; i += BATCH_SIZE) {
+                const batch = writeBatch(db);
+                readyColabs.slice(i, i + BATCH_SIZE).forEach((colab) => {
+                    const metrics = metricsData[colab.id] || {};
+                    const finalizados = Number(metrics.Atendimentos_Finalizados) || 0;
+                    const ligAtendidas = Number(metrics.Ligacoes_Atendidas) || 0;
+                    const ligPerdidas = Number(metrics.Ligacoes_Perdidas) || 0;
+                    const huggy = Number(metrics.Atendimentos_Huggy) || 0;
 
-                const finalizados = Number(metrics.Atendimentos_Finalizados) || 0;
-                const ligAtendidas = Number(metrics.Ligacoes_Atendidas) || 0;
-                const ligPerdidas = Number(metrics.Ligacoes_Perdidas) || 0;
-                const huggy = Number(metrics.Atendimentos_Huggy) || 0;
+                    // Fórmula oficial de pontuação
+                    const pontuacaoTotal = (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
 
-                // Fórmula oficial de pontuação
-                const pontuacaoTotal = (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
-
-                const colabObj = collaborators.find(c => c.id === colabId);
-
-                return addDoc(collection(db, "weekly_evaluations"), {
-                    colabId: colabId,
-                    colabName: colabObj?.name || '',
-                    shift: colabObj?.shift || '',
-                    date: dateString,
-                    Atendimentos_Finalizados: finalizados,
-                    Ligacoes_Atendidas: ligAtendidas,
-                    Ligacoes_Perdidas: ligPerdidas,
-                    Atendimentos_Huggy: huggy,
-                    TMA_Telefonia: metrics.TMA_Telefonia || "00:00:00",
-                    TMA_Huggy: metrics.TMA_Huggy || "00:00:00",
-                    TME_Telefonia: metrics.TME_Telefonia || "00:00:00",
-                    pontuacao: pontuacaoTotal,
-                    createdAt: new Date() 
+                    batch.set(doc(collection(db, "weekly_evaluations")), {
+                        colabId: colab.id,
+                        colabName: colab.name || '',
+                        shift: colab.shift || '',
+                        date: dateString,
+                        Atendimentos_Finalizados: finalizados,
+                        Ligacoes_Atendidas: ligAtendidas,
+                        Ligacoes_Perdidas: ligPerdidas,
+                        Atendimentos_Huggy: huggy,
+                        TMA_Telefonia: String(metrics.TMA_Telefonia || '').trim() || "00:00:00",
+                        TMA_Huggy: String(metrics.TMA_Huggy || '').trim() || "00:00:00",
+                        TME_Telefonia: String(metrics.TME_Telefonia || '').trim() || "00:00:00",
+                        pontuacao: pontuacaoTotal,
+                        createdAt: new Date()
+                    });
                 });
-            });
+                await batch.commit();
+            }
 
-            await Promise.all(savePromises);
-            showToast("Avaliações salvas com sucesso no banco de dados!", "success");
-            
+            const skipped = collaborators.length - readyColabs.length;
+            showToast(
+                skipped > 0
+                    ? `${readyColabs.length} avaliações salvas. ${skipped} colaborador(es) ficaram sem avaliação nesta data.`
+                    : `${readyColabs.length} avaliações salvas com sucesso no banco de dados!`,
+                "success"
+            );
+
             // Limpa os campos após salvar
             const resetMetrics = {};
             collaborators.forEach(c => {
@@ -249,10 +355,12 @@ const WeeklyMetrics = () => {
                 };
             });
             setMetricsData(resetMetrics);
+            setHighlightIds(new Set());
+            setReview(null);
 
         } catch (error) {
             console.error(error);
-            showToast("Erro ao salvar avaliações: " + error.message, "error");
+            showToast("Erro ao salvar avaliações (nenhuma foi gravada, pode tentar novamente): " + error.message, "error");
         } finally {
             setSaving(false);
         }
@@ -272,7 +380,7 @@ const WeeklyMetrics = () => {
         let count = 0;
         collaborators.forEach(c => {
             const m = metricsData[c.id];
-            if (m && Object.values(m).some(v => v !== '')) count++;
+            if (m && Object.values(m).some(isFilled)) count++;
         });
         return count;
     }, [collaborators, metricsData]);
@@ -578,12 +686,13 @@ const WeeklyMetrics = () => {
                                     const ligPerdidas = Number(metrics.Ligacoes_Perdidas) || 0;
                                     const huggy = Number(metrics.Atendimentos_Huggy) || 0;
                                     const rowScore = (finalizados * 1) + (ligAtendidas * 2) + (huggy * 1) + (ligPerdidas * -5);
-                                    const hasEntries = Object.values(metrics).some(v => v !== '');
+                                    const hasEntries = Object.values(metrics).some(isFilled);
+                                    const needsReview = highlightIds.has(colab.id) && !hasEntries;
 
                                     return (
                                         <tr 
                                             key={colab.id} 
-                                            className="border-b border-subtle last:border-b-0 hover:bg-subtle/50 transition-colors"
+                                            className={`border-b border-subtle last:border-b-0 transition-colors ${needsReview ? 'bg-amber-500/10 ring-1 ring-inset ring-amber-500/40' : 'hover:bg-subtle/50'}`}
                                         >
                                             {/* Colaborador com Avatar e Nome */}
                                             <td className="px-4 py-3">
@@ -734,6 +843,122 @@ const WeeklyMetrics = () => {
                             >
                                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                 Salvar Todas as Avaliações
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* VALIDAÇÃO ANTES DE SALVAR: quem não receberá avaliação */}
+            {review && (
+                <div className="fixed inset-0 z-[90] flex items-center justify-center p-4 bg-zinc-950/70 backdrop-blur-xs">
+                    <div className="bg-surface border border-subtle rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+                        <div className="px-6 py-5 border-b border-subtle flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shrink-0">
+                                    <AlertTriangle className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="font-brand text-lg font-bold text-primary-hub">Confirmar lançamento</h2>
+                                    <p className="text-xs text-secondary-hub mt-0.5">
+                                        Data de referência: <strong className="text-primary-hub">{referenceDate.split('-').reverse().join('/')}</strong>.
+                                        {' '}Revise antes de gravar.
+                                    </p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setReview(null)}
+                                className="p-1.5 text-muted-hub hover:text-primary-hub hover:bg-subtle rounded-lg cursor-pointer"
+                                aria-label="Fechar"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="px-6 py-4 overflow-y-auto space-y-4 text-xs">
+                            <div className="grid grid-cols-3 gap-3">
+                                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-center">
+                                    <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{review.ready.length}</div>
+                                    <div className="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">receberão avaliação</div>
+                                </div>
+                                <div className={`rounded-2xl border p-3 text-center ${review.empty.length > 0 ? 'border-rose-500/30 bg-rose-500/10' : 'border-subtle bg-subtle'}`}>
+                                    <div className={`text-2xl font-black ${review.empty.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-hub'}`}>{review.empty.length}</div>
+                                    <div className="text-[11px] font-bold text-secondary-hub">não receberão nada</div>
+                                </div>
+                                <div className={`rounded-2xl border p-3 text-center ${review.issues.length > 0 ? 'border-amber-500/30 bg-amber-500/10' : 'border-subtle bg-subtle'}`}>
+                                    <div className={`text-2xl font-black ${review.issues.length > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-hub'}`}>{review.issues.length}</div>
+                                    <div className="text-[11px] font-bold text-secondary-hub">com pontos de atenção</div>
+                                </div>
+                            </div>
+
+                            {review.empty.length > 0 && (
+                                <section>
+                                    <h3 className="font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider text-[11px] mb-2">
+                                        Marcados para não receber avaliação ({review.empty.length})
+                                    </h3>
+                                    <p className="text-[11px] text-muted-hub mb-2">Nenhuma métrica foi preenchida para estes colaboradores.</p>
+                                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                        {review.empty.map(c => {
+                                            const badge = getShiftBadge(c.shift);
+                                            return (
+                                                <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-subtle border border-subtle">
+                                                    <span className="font-bold text-primary-hub truncate">{c.name}</span>
+                                                    <span className={`px-2 py-0.5 rounded-full border text-[10px] whitespace-nowrap ${badge.style}`}>{c.shift}</span>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </section>
+                            )}
+
+                            {review.issues.length > 0 && (
+                                <section>
+                                    <h3 className="font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider text-[11px] mb-2">
+                                        Pontos de atenção ({review.issues.length})
+                                    </h3>
+                                    <ul className="space-y-1.5">
+                                        {review.issues.map(({ colab, warnings }) => (
+                                            <li key={colab.id} className="px-3 py-2 rounded-xl bg-subtle border border-subtle">
+                                                <span className="font-bold text-primary-hub">{colab.name}</span>
+                                                <ul className="mt-0.5 list-disc list-inside text-[11px] text-secondary-hub">
+                                                    {warnings.map((w, i) => <li key={i}>{w}</li>)}
+                                                </ul>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </section>
+                            )}
+
+                            {hiddenNoShift.length > 0 && (
+                                <section className="rounded-2xl border border-subtle bg-subtle p-3">
+                                    <h3 className="font-bold text-secondary-hub uppercase tracking-wider text-[11px] mb-1">
+                                        Ativos fora desta lista ({hiddenNoShift.length})
+                                    </h3>
+                                    <p className="text-[11px] text-muted-hub">
+                                        Sem turno cadastrado, por isso não aparecem no lançamento e não receberão avaliação: <strong className="text-secondary-hub">{hiddenNoShift.join(', ')}</strong>.
+                                    </p>
+                                </section>
+                            )}
+                        </div>
+
+                        <div className="px-6 py-4 border-t border-subtle flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={handleBackToReview}
+                                disabled={saving}
+                                className="px-5 py-2.5 rounded-xl border border-strong text-secondary-hub hover:bg-subtle text-xs font-bold cursor-pointer disabled:opacity-50"
+                            >
+                                Voltar e revisar
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => persistMetrics(review.ready)}
+                                disabled={saving}
+                                className="px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                            >
+                                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                                <span>Confirmar e salvar {review.ready.length} avaliações</span>
                             </button>
                         </div>
                     </div>

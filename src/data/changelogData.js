@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.2.1';
+export const CURRENT_VERSION = 'v4.2.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.2.1',
+    version: 'v4.2.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.2.2: lançamento de avaliações semanais mais seguro. Nova tela de confirmação mostra quem não receberá avaliação antes de salvar, a gravação passa a ser atômica em lote, a importação CSV avisa nomes não encontrados e o texto do botão de turnos "Todos" voltou a ser legível.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Confirmação Antes de Salvar o Lançamento',
+        category: 'Avaliações Semanais',
+        description: 'Ao salvar, o sistema lista quais colaboradores estão marcados para não receber nada, os pontos de atenção (campos vazios gravados como 0, valores inválidos e tempos fora do formato HH:MM:SS) e os ativos sem turno que ficam fora da lista. É possível confirmar ou voltar para revisar, com as linhas vazias destacadas.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Gravação Atômica e Importação CSV Confiável',
+        category: 'Avaliações Semanais',
+        description: 'As avaliações são gravadas em um único lote (todas ou nenhuma), evitando duplicidades em nova tentativa após falha parcial. A importação CSV ignora diferenças de acento e espaços nos nomes e informa quais linhas não foram encontradas. Campos só com espaços deixam de contar como preenchidos.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+        title: 'Correção do Texto Branco nos Filtros de Turno',
+        category: 'UX / UI',
+        description: 'O botão ativo "Todos" ficava sem fundo e com texto branco, ilegível. Foram criadas as classes de fundo dos tokens de tema, corrigindo também o mesmo padrão em Demanda & Fila Diária e Feedbacks 1:1.'
+      }
+    ]
+  },
+  {
+    version: 'v4.2.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.2.1: segunda fase da otimização. O perfil deixa de baixar auditorias de toda a equipe, a importação CSV da Auditoria Terceirizada passa a gravar em lotes e 15 telas e modais migraram das cores fixas para os tokens de tema (claro, morno e escuro).',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.2.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.2.0: otimização de leituras do Firestore. Cada usuário passa a baixar apenas os próprios registros, os limites de coleções volumosas agora vêm acompanhados de ordenação por mais recentes e a Auditoria Terceirizada lê somente os dados da empresa selecionada.',
     items: [
       {

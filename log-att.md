@@ -4,6 +4,19 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [09/11/2026] — Versão v4.2.2 (Validação do Lançamento Semanal e Correção dos Filtros de Turno)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.2.1` para `4.2.2`. |
+| **Alterado** | `src/pages/WeeklyMetrics.jsx` | Tela de confirmação com colaboradores sem lançamento e pontos de atenção, gravação atômica com `writeBatch`, importação CSV com normalização de nomes e aviso de não encontrados, destaque das linhas vazias e lista de ativos sem turno. |
+| **Alterado** | `src/index.css` | Criação das classes `bg-primary-hub`, `bg-secondary-hub`, `bg-muted-hub` e `bg-muted-hub/30` (corrige texto branco sem fundo nos botões ativos de filtro). |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.2.2` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` | Notas de lançamento da versão `v4.2.2`. |
+| **Alterado** | `log-att.md` | Registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.2.1 (Otimização Fase 2 e Migração para Tokens de Tema)
 
 | Ação | Arquivo | Descrição da Alteração |
