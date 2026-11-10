@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.7.2';
+export const CURRENT_VERSION = 'v4.8.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.7.2',
+    version: 'v4.8.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.8.0: avisos por mensagem direta (DM) no Discord, enviados por um bot. Cada colaborador pode vincular o próprio ID do Discord no perfil e receber, em privado, o aviso de avaliação semanal, feedback e avaliação 1:1.',
+    items: [
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Avisos Privados por DM no Discord',
+        category: 'Notificações',
+        description: 'Ao lançar avaliação semanal, feedback ou 1:1 mensal, o bot do Hubdesk envia uma mensagem direta apenas ao colaborador vinculado. Por ser privada, a DM da avaliação semanal traz a pontuação da própria pessoa; feedback e 1:1 nunca trazem o conteúdo, apenas o aviso e o link para Meu Histórico. Quem lançou vê quantas DMs foram enviadas.'
+      },
+      {
+        icon: User,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Vínculo Opcional do Discord no Perfil',
+        category: 'Perfil',
+        description: 'Em Meu Perfil, o colaborador informa o próprio ID do Discord (com instruções de como encontrá-lo), envia uma DM de teste e pode remover o vínculo a qualquer momento apagando o ID. Só recebe DM quem vinculou a conta.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Envio Seguro pelo Servidor',
+        category: 'Segurança',
+        description: 'O token do bot fica apenas nas variáveis de ambiente da Vercel. A função valida o login do usuário, aceita avisos de eventos somente da gestão (o teste vale só para si mesmo) e lê o ID do Discord do cadastro, nunca do navegador. Em Configurações > Notificações, a gestão ativa a DM, escolhe os eventos e vê se o bot está configurado.'
+      }
+    ]
+  },
+  {
+    version: 'v4.7.2',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.7.2: diagnóstico do webhook do canal. Quem lança uma avaliação, um feedback ou um 1:1 passa a ver se o aviso ao canal saiu ou o motivo de não ter saído, a tela de configuração alerta sobre webhook desativado ou alterações não salvas e o intervalo entre avisos iguais é configurável.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.7.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.7.1: os avisos do webhook passam a ser genéricos, sem nomes, notas ou conteúdo, com o link de Meu Histórico, mensagens editáveis por evento e proteção contra repetição.',
     items: [
       {

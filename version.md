@@ -4,6 +4,38 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.8.0] - 2026-11-10
+
+### 🎯 Destaque Principal
+**Avisos por mensagem direta (DM) no Discord**, enviados por um bot, apenas a quem vinculou o próprio ID no perfil.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Função serverless `/api/notify-dm`** (Vercel, `api/_lib/dm.js`): envia a DM pelo bot do Discord. Valida o ID token do Firebase (assinatura RS256 com as chaves públicas do Google, emissor, projeto e validade), aceita avisos de eventos somente da gestão (mesma regra do Firestore) e permite o evento `test` a qualquer usuário logado, apenas para si mesmo. O ID do Discord é lido do Firestore com o token de quem chamou, nunca vem do navegador. `GET /api/notify-dm` informa se o bot está configurado, sem expor segredos.
+- **Mensagens**: avaliação semanal (pontuação da própria pessoa e data), feedback e 1:1 mensal (somente o aviso e o link para Meu Histórico, sem conteúdo) e teste. `allowed_mentions` vazio impede que a DM marque alguém.
+- **Vínculo opcional em Meu Perfil** (`discordUserId`): campo com validação (17 a 20 dígitos), instruções para obter o ID, botão "Enviar DM de teste" e remoção do vínculo apagando o ID.
+- **Configurações > Notificações**: bloco "DM no Discord (bot)" com o estado do bot, ativação, eventos (semanal, feedback e 1:1) e "Enviar DM de teste para mim".
+- **Disparo nos três eventos** (lançamento semanal, feedback e 1:1 mensal) e resumo na tela para quem lançou (ex.: "5 DM(s) enviada(s) • 25 sem Discord vinculado"), incluindo orientações para DM bloqueada, bot sem token e token recusado.
+- **Tratamento do Discord**: limite de requisições (429) com uma nova tentativa, DM bloqueada (50007), ID inválido, token recusado e envio com concorrência limitada.
+
+### 🔄 Alterações (Changed)
+- `server.ts` passa a expor `/api/notify-dm` no ambiente local; `.env.example` documenta `DISCORD_BOT_TOKEN` e `APP_URL` (sem valores).
+- A configuração do webhook (`integrations/team_webhook`) ganha o bloco `dm` (`enabled` e `events`).
+
+### 🔒 Segurança
+- O token do bot existe somente nas variáveis de ambiente da Vercel (`DISCORD_BOT_TOKEN`); nunca no código, no navegador ou no repositório.
+- IDs de destinatário são validados antes de montar caminhos do Firestore; limite de 100 destinatários por pedido.
+
+### ⚠️ Observações
+- O envio de DM funciona apenas no site publicado (Vercel). O colaborador precisa estar no mesmo servidor do bot e permitir mensagens diretas de membros do servidor.
+- Para ativar: criar `DISCORD_BOT_TOKEN` na Vercel e fazer um novo deploy; vincular o ID em Meu Perfil; marcar "Enviar DM aos colaboradores vinculados" em Configurações > Notificações e salvar.
+
+### 🧪 Testes
+- 38 novos testes (148 no total): validação do token do Firebase (válido, expirado, outro projeto, assinatura falsa, kid desconhecido), permissões (401, 403, master, teste para si), envio e erros do Discord, destinatários sem vínculo, inativos e IDs perigosos, e o serviço do app (ativação, eventos, login, falhas e mensagens).
+
+---
+
 ## [v4.7.2] - 2026-11-10
 
 ### 🎯 Destaque Principal

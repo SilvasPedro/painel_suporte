@@ -26,6 +26,7 @@ import {
     evaluateCollaboratorBadges
 } from '../services/userProfile';
 import { BorderBeam } from '../components/magicui';
+import { sendDiscordDms, isValidDiscordId } from '../services/discordDm';
 
 // Mapeamento de icones dos emblemas oficiais da v4.0.0
 const BADGE_ICONS = {
@@ -65,6 +66,7 @@ const getInitialFormData = (u) => {
         photoURL: u?.photoURL || u?.photoUrl || '',
         bannerColor: u?.bannerColor || 'carmim',
         bannerUrl: u?.bannerUrl || '',
+        discordUserId: u?.discordUserId || '',
         bannerPosX: u?.bannerPosX ?? 50,
         bannerPosY: u?.bannerPosY ?? 50,
         bannerZoom: u?.bannerZoom ?? 100,
@@ -146,6 +148,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const isGestor = isMasterAdmin || normalizedRole === 'gestor';
 
     const [saving, setSaving] = useState(false);
+    const [sendingDmTest, setSendingDmTest] = useState(false);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
     const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
@@ -401,6 +404,18 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     };
 
     // Salvar todas as alterações no Firebase Auth & Firestore
+    // DM de teste para o próprio usuário: a função lê o ID já SALVO no perfil, não o que está na tela
+    const handleSendDmTest = async () => {
+        const saved = String(user?.discordUserId || '').trim();
+        if (!saved || saved !== String(formData.discordUserId || '').trim()) {
+            showToast('Salve o perfil com o ID do Discord antes de enviar o teste.', 'warning');
+            return;
+        }
+        setSendingDmTest(true);
+        await sendDiscordDms({ event: 'test' });
+        setSendingDmTest(false);
+    };
+
     const handleSaveProfile = async (e) => {
         if (e) e.preventDefault();
         if (isViewingOther && !isGestor) {
@@ -873,6 +888,41 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                         className="w-full pl-8 pr-3 py-2 bg-subtle border border-subtle rounded-xl text-xs outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub transition-all"
                                     />
                                 </div>
+                            </div>
+
+                            {/* Discord: avisos por mensagem direta (opcional) */}
+                            <div className="pt-3 border-t border-subtle">
+                                <label className="text-[11px] font-bold text-secondary-hub block mb-1.5">
+                                    Discord (avisos por mensagem direta):
+                                </label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={20}
+                                    value={formData.discordUserId}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, discordUserId: e.target.value.replace(/\D/g, '') }))}
+                                    placeholder="Seu ID numérico, ex: 123456789012345678"
+                                    className="w-full px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub"
+                                />
+                                {formData.discordUserId && !isValidDiscordId(formData.discordUserId) && (
+                                    <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1">O ID do Discord tem de 17 a 20 números.</p>
+                                )}
+                                <p className="text-[11px] text-muted-hub mt-1.5 leading-relaxed">
+                                    Opcional. Com o ID informado, você recebe uma mensagem privada no Discord quando sair uma avaliação semanal, feedback ou 1:1.
+                                    Para achar o ID: Discord &gt; Configurações &gt; Avançado &gt; ative o <strong>Modo desenvolvedor</strong>, clique com o botão direito no seu nome e escolha <strong>Copiar ID do usuário</strong>.
+                                    Você precisa estar no servidor do bot e permitir mensagens diretas de membros do servidor. Para parar de receber, apague o ID e salve.
+                                </p>
+                                {!isViewingOther && (
+                                    <button
+                                        type="button"
+                                        onClick={handleSendDmTest}
+                                        disabled={sendingDmTest || !isValidDiscordId(formData.discordUserId)}
+                                        className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-strong text-secondary-hub hover:bg-subtle text-[11px] font-bold cursor-pointer disabled:opacity-50"
+                                    >
+                                        {sendingDmTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+                                        Enviar DM de teste
+                                    </button>
+                                )}
                             </div>
 
                             {/* E-mails Adicionais */}

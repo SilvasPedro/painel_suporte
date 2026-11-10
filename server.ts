@@ -4,6 +4,7 @@ import { createServer as createViteServer } from "vite";
 import insightsHandler from "./api/insights.js";
 
 import chatHandler from "./api/chat.js";
+import notifyDmHandler from "./api/notify-dm.js";
 
 async function startServer() {
   const app = express();
@@ -20,6 +21,15 @@ async function startServer() {
 
   app.post("/api/chat", (req, res) => {
     chatHandler(req, res);
+  });
+
+  // Avisos por DM no Discord (precisa de DISCORD_BOT_TOKEN no ambiente)
+  app.get("/api/notify-dm", (req, res) => {
+    notifyDmHandler(req, res);
+  });
+
+  app.post("/api/notify-dm", (req, res) => {
+    notifyDmHandler(req, res);
   });
 
   app.get("/api/health", (req, res) => {

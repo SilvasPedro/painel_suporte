@@ -4,6 +4,28 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.8.0 (Avisos por DM no Discord)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.7.2` para `4.8.0`. |
+| **Criado** | `api/notify-dm.js` | Função serverless que recebe o pedido de DM (POST) e informa se o bot está configurado (GET). |
+| **Criado** | `api/_lib/dm.js` | Validação do login do Firebase, permissões, leitura do ID do Discord no Firestore, mensagens e envio pelo bot com tratamento de erros e limites. |
+| **Criado** | `api/_lib/dm.test.js` | Testes da função (token, permissões, envio e erros). |
+| **Criado** | `src/services/discordDm.js` | Serviço do app: pedido de envio, regras de ativação, estado do bot e mensagens ao usuário. |
+| **Criado** | `src/services/discordDm.test.js` | Testes do serviço do app. |
+| **Alterado** | `src/pages/MyProfile.jsx` | Campo de vínculo do Discord, validação, instruções e DM de teste. |
+| **Alterado** | `src/services/userProfile.js` | Gravação do `discordUserId` no perfil. |
+| **Alterado** | `src/components/settings/TeamWebhookSettings.jsx` | Bloco "DM no Discord (bot)": estado do bot, ativação, eventos e DM de teste. |
+| **Alterado** | `src/components/NotificationManager.jsx` | Exibe ao gestor o resultado do envio de DMs. |
+| **Alterado** | `src/pages/WeeklyMetrics.jsx`, `src/services/adminAuth.js`, `src/pages/MonthlyEvaluations.jsx` | Disparo das DMs nos três eventos. |
+| **Alterado** | `src/services/notificationEvents.js` | Bloco `dm` na configuração padrão do webhook. |
+| **Alterado** | `server.ts` / `.env.example` | Rota local de `/api/notify-dm` e documentação das variáveis (sem valores). |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.8.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` / `log-att.md` | Notas de lançamento e registro desta atualização. |
+
+---
+
 ## [10/11/2026] — Versão v4.7.2 (Diagnóstico do Webhook do Canal)
 
 | Ação | Arquivo | Descrição da Alteração |

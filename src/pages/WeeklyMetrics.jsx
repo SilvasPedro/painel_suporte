@@ -14,6 +14,7 @@ import { normalizeRole } from '../services/rbac';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 import { buildNotification, addNotificationToBatch, dispatchTeamWebhook } from '../services/notificationEvents';
+import { sendDiscordDms } from '../services/discordDm';
 
 const SHIFT_BADGES = {
     'Manhã I': {
@@ -346,6 +347,7 @@ const WeeklyMetrics = () => {
             // Cada colaborador gera 2 documentos (avaliação + aviso): 200 colaboradores por lote
             const BATCH_SIZE = 200;
             const authorName = currentUser?.name || currentUser?.displayName || 'Liderança';
+            const dmRecipients = []; // quem recebe DM no Discord (a função só envia a quem vinculou o ID)
 
             for (let i = 0; i < readyColabs.length; i += BATCH_SIZE) {
                 const batch = writeBatch(db);
@@ -388,6 +390,8 @@ const WeeklyMetrics = () => {
                         createdAt: new Date()
                     });
 
+                    dmRecipients.push({ id: colab.id, params: { pontuacao: pontuacaoTotal, date: dateString } });
+
                     // Aviso pessoal gravado junto com a avaliação (o app do colaborador só escuta os próprios avisos)
                     addNotificationToBatch(batch, buildNotification({
                         event: 'weekly_evaluation',
@@ -405,6 +409,7 @@ const WeeklyMetrics = () => {
 
             // Aviso genérico ao canal da equipe (sem nomes ou notas); falhas não atrapalham o salvamento
             void dispatchTeamWebhook({ event: 'weekly_evaluation' });
+            void sendDiscordDms({ event: 'weekly_evaluation', recipients: dmRecipients });
 
             const skipped = collaborators.length - readyColabs.length;
             showToast(

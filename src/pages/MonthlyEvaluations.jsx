@@ -24,6 +24,7 @@ import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluatio
 import MarkdownRenderer from '../components/common/MarkdownRenderer';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 import { buildNotification, createNotification, dispatchTeamWebhook } from '../services/notificationEvents';
+import { sendDiscordDms } from '../services/discordDm';
 
 const MonthlyEvaluations = () => {
     const { showToast } = useNotification();
@@ -260,6 +261,10 @@ const MonthlyEvaluations = () => {
 
                 // Aviso genérico ao canal da equipe, sem nomes ou conteúdo
                 void dispatchTeamWebhook({ event: 'monthly_evaluation' });
+                void sendDiscordDms({
+                    event: 'monthly_evaluation',
+                    recipients: [{ id: formData.colabId, params: { refMonth: formData.referenceMonth } }]
+                });
 
                 showToast("Novo Feedback 1:1 em Markdown registrado e notificação enviada ao colaborador!", "success");
             }

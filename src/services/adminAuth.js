@@ -4,6 +4,7 @@ import { doc, setDoc, updateDoc, collection, writeBatch } from "firebase/firesto
 import { db, auth, firebaseConfig } from "./firebase";
 import { resolveUserName } from '../utils/userResolvers';
 import { buildNotification, addNotificationToBatch, dispatchTeamWebhook } from './notificationEvents';
+import { sendDiscordDms } from './discordDm';
 
 // Instância para criar a conta sem deslogar o Admin
 const adminApp = initializeApp(firebaseConfig, "AdminWorker");
@@ -99,4 +100,5 @@ export const registerFeedback = async (collaboratorId, feedbackData, loggedUser 
 
   // Aviso genérico ao canal da equipe, sem nomes ou conteúdo
   void dispatchTeamWebhook({ event: 'feedback' });
+  void sendDiscordDms({ event: 'feedback', recipients: [{ id: collaboratorId, params: {} }] });
 };

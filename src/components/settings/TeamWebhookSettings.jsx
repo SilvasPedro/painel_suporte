@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { doc, setDoc } from 'firebase/firestore';
-import { Webhook, Send, Save, Loader2, ShieldCheck, Eye, EyeOff, Info } from 'lucide-react';
+import { Webhook, Send, Save, Loader2, ShieldCheck, Eye, EyeOff, Info, Bot, Mail } from 'lucide-react';
 import { db } from '../../services/firebase';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
@@ -19,6 +19,7 @@ import {
     invalidateWebhookConfigCache,
     postToWebhook
 } from '../../services/notificationEvents';
+import { DEFAULT_DM_CONFIG, sendDiscordDms, fetchBotStatus } from '../../services/discordDm';
 
 /**
  * Configuração do webhook do canal da equipe (Configurações > Notificações).
@@ -31,6 +32,7 @@ const snapshotOf = (c) => JSON.stringify({
     url: (c.url || '').trim(),
     link: (c.link || '').trim(),
     cooldownMinutes: c.cooldownMinutes ?? null,
+    dm: { enabled: Boolean(c.dm?.enabled), events: c.dm?.events || {} },
     events: c.events || {},
     messages: Object.fromEntries(Object.entries(c.messages || {}).map(([k, v]) => [k, String(v || '').trim()]).filter(([, v]) => v))
 });
@@ -47,6 +49,8 @@ const TeamWebhookSettings = () => {
     const [testing, setTesting] = useState(false);
     const [showUrl, setShowUrl] = useState(false);
     const [savedSnapshot, setSavedSnapshot] = useState('');
+    const [botStatus, setBotStatus] = useState(null); // true = configurado, false = falta o token, null = indisponível
+    const [testingDm, setTestingDm] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
@@ -60,6 +64,21 @@ const TeamWebhookSettings = () => {
         });
         return () => { cancelled = true; };
     }, []);
+
+    useEffect(() => {
+        let cancelled = false;
+        fetchBotStatus().then((status) => { if (!cancelled) setBotStatus(status); });
+        return () => { cancelled = true; };
+    }, []);
+
+    const dm = { ...DEFAULT_DM_CONFIG, ...(config.dm || {}), events: { ...DEFAULT_DM_CONFIG.events, ...(config.dm?.events || {}) } };
+    const updateDm = (patch) => update({ dm: { ...dm, ...patch } });
+
+    const handleTestDm = async () => {
+        setTestingDm(true);
+        await sendDiscordDms({ event: 'test' });
+        setTestingDm(false);
+    };
 
     const provider = WEBHOOK_PROVIDERS.find(p => p.id === config.provider) || WEBHOOK_PROVIDERS[0];
     const urlIsValid = (() => {
@@ -85,6 +104,7 @@ const TeamWebhookSettings = () => {
                 url: config.url.trim(),
                 link: (config.link || '').trim(),
                 cooldownMinutes: config.cooldownMinutes === '' || config.cooldownMinutes === undefined ? null : config.cooldownMinutes,
+                dm: { enabled: Boolean(dm.enabled), events: dm.events },
                 messages: Object.fromEntries(
                     Object.entries(config.messages || {})
                         .map(([k, v]) => [k, String(v || '').trim()])
@@ -248,6 +268,66 @@ const TeamWebhookSettings = () => {
                             <p className="text-[11px] text-muted-hub mt-1.5">
                                 Deixe em branco para usar o texto padrão (mostrado em cinza). Use <span className="font-mono">{'{link}'}</span> onde o endereço deve aparecer; no Discord, também dá para incluir <span className="font-mono">@everyone</span> ou <span className="font-mono">@here</span>.
                             </p>
+                        </div>
+
+                        <div className="rounded-2xl border border-subtle bg-subtle p-4 space-y-3">
+                            <div className="flex items-center justify-between gap-2">
+                                <h3 className="text-xs font-bold text-primary-hub flex items-center gap-1.5">
+                                    <Bot className="w-4 h-4 text-indigo-500" /> DM no Discord (bot)
+                                </h3>
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                                    botStatus === true
+                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
+                                        : botStatus === false
+                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25'
+                                            : 'bg-subtle text-muted-hub border-subtle'
+                                }`}>
+                                    {botStatus === true ? 'Bot configurado' : botStatus === false ? 'Falta DISCORD_BOT_TOKEN na Vercel' : 'Indisponível neste ambiente'}
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-secondary-hub leading-relaxed">
+                                Envia uma mensagem privada ao colaborador, só para quem vinculou o próprio ID do Discord em Meu Perfil.
+                                Por ser privada, a DM pode trazer a pontuação da própria pessoa; nunca traz o conteúdo de feedbacks ou de 1:1.
+                            </p>
+
+                            <label className="flex items-center gap-2.5 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={Boolean(dm.enabled)}
+                                    disabled={!canManage}
+                                    onChange={(e) => updateDm({ enabled: e.target.checked })}
+                                    className="w-4 h-4"
+                                />
+                                <span className="text-xs font-semibold text-primary-hub">Enviar DM aos colaboradores vinculados</span>
+                            </label>
+
+                            <div className="space-y-1.5 pl-1">
+                                {NOTIFICATION_EVENT_IDS.map(eventId => (
+                                    <label key={eventId} className="flex items-center gap-2.5 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={dm.events[eventId] !== false}
+                                            disabled={!canManage || !dm.enabled}
+                                            onChange={() => updateDm({ events: { ...dm.events, [eventId]: dm.events[eventId] === false } })}
+                                            className="w-4 h-4"
+                                        />
+                                        <span className="text-[11px] font-semibold text-secondary-hub">
+                                            {NOTIFICATION_EVENTS[eventId].icon} {NOTIFICATION_EVENTS[eventId].label}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={handleTestDm}
+                                disabled={testingDm}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-strong text-secondary-hub hover:bg-surface text-xs font-bold cursor-pointer disabled:opacity-50"
+                            >
+                                {testingDm ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                                Enviar DM de teste para mim
+                            </button>
+                            <p className="text-[11px] text-muted-hub">O teste vai para o ID do Discord salvo no seu Meu Perfil.</p>
                         </div>
 
                         <div>

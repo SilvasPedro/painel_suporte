@@ -4,6 +4,7 @@ import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { NOTIFICATION_EVENTS, inboxOptions, describeWebhookResult } from '../services/notificationEvents';
+import { describeDmResult } from '../services/discordDm';
 import { registerMessagingServiceWorker } from '../services/browserNotifications';
 import { resolveUserName } from '../utils/userResolvers';
 
@@ -220,6 +221,17 @@ export const NotificationManager = () => {
         };
         window.addEventListener('HUBDESK_WEBHOOK_RESULT', handleWebhookResult);
         return () => window.removeEventListener('HUBDESK_WEBHOOK_RESULT', handleWebhookResult);
+    }, [showToast]);
+
+    // Resultado dos avisos por DM no Discord: quem lançou vê quantas DMs saíram (ou por que não)
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const handleDmResult = (e) => {
+            const info = describeDmResult(e.detail);
+            if (info) showToast(info.text, info.type);
+        };
+        window.addEventListener('HUBDESK_DM_RESULT', handleDmResult);
+        return () => window.removeEventListener('HUBDESK_DM_RESULT', handleDmResult);
     }, [showToast]);
 
     // 4. Caixa de avisos pessoal: o lançamento de feedback, avaliação semanal ou 1:1 mensal grava um
