@@ -1,5 +1,6 @@
 import { auth } from './firebase';
 import { getWebhookConfig } from './notificationEvents';
+import { getCachedCollection } from './dataCache';
 
 /**
  * AVISOS POR MENSAGEM DIRETA (DM) NO DISCORD
@@ -29,8 +30,20 @@ export const DEFAULT_DM_CONFIG = {
  * Texto para o usuário a partir do resultado do envio.
  * Retorna null quando não há o que dizer (ex.: função indisponível fora do site publicado).
  */
-export const describeDmResult = ({ event, httpStatus, error, summary } = {}) => {
+export const describeDmResult = ({ event, httpStatus, error, summary, reason, linked = 0 } = {}) => {
     const isTest = event === 'test';
+
+    // DM pulada por configuração: só avisa se alguém vinculou o Discord e deixaria de receber
+    if (reason === 'dm-desativado') {
+        return linked > 0
+            ? { type: 'warning', text: `${linked} colaborador(es) vinculou(aram) o Discord, mas o envio de DM está desativado. Em Configurações > Notificações, marque "Enviar DM aos colaboradores vinculados" e clique em "Salvar webhook".` }
+            : null;
+    }
+    if (reason === 'evento-desmarcado') {
+        return linked > 0
+            ? { type: 'info', text: `Este tipo de aviso está desmarcado nas DMs (Configurações > Notificações), então ${linked} colaborador(es) vinculado(s) não receberam.` }
+            : null;
+    }
 
     if (httpStatus === 404) {
         return isTest
@@ -89,6 +102,17 @@ const emitDmResult = (detail) => {
     }
 };
 
+// Quantos destinatários têm o Discord vinculado, usando a lista de colaboradores já carregada (sem leituras extras)
+const countLinkedRecipients = (recipients) => {
+    try {
+        const ids = new Set(recipients.map(r => String(r.id)));
+        return (getCachedCollection('collaborators') || [])
+            .filter(c => ids.has(String(c.id)) && isValidDiscordId(c.discordUserId)).length;
+    } catch {
+        return 0;
+    }
+};
+
 /**
  * Pede o envio de DMs. Nunca lança erro: uma falha aqui não pode atrapalhar o salvamento do item.
  * - Eventos reais (weekly_evaluation, feedback, monthly_evaluation): só saem se a gestão ativou
@@ -97,13 +121,21 @@ const emitDmResult = (detail) => {
  * @param {{ event: string, recipients?: Array<{ id: string, params?: object }> }} request
  */
 export const sendDiscordDms = async ({ event, recipients = [] }) => {
+    // Pula o envio e, se alguém vinculado deixaria de receber, avisa o gestor na tela
+    const skip = (reason) => {
+        const linked = countLinkedRecipients(recipients);
+        console.info(`[DM Discord] ${event}: não enviado (${reason}); vinculados entre os destinatários: ${linked}`);
+        if (linked > 0) emitDmResult({ event, reason, linked });
+        return { status: 'skipped', reason, linked };
+    };
+
     try {
         if (event !== 'test') {
             if (!recipients.length) return { status: 'skipped', reason: 'sem-destinatarios' };
             const config = await getWebhookConfig();
             const dm = config?.dm;
-            if (!dm?.enabled) return { status: 'skipped', reason: 'dm-desativado' };
-            if (dm.events && dm.events[event] === false) return { status: 'skipped', reason: 'evento-desmarcado' };
+            if (!dm?.enabled) return skip('dm-desativado');
+            if (dm.events && dm.events[event] === false) return skip('evento-desmarcado');
         }
 
         const user = auth.currentUser;

@@ -4,6 +4,27 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.8.2] - 2026-11-10
+
+### 🎯 Destaque Principal
+O envio de DM pulado por configuração deixa de ser silencioso: quem lança o item é avisado quando um colaborador com Discord vinculado deixaria de receber.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Aviso na tela quando a DM é pulada por configuração** (`describeDmResult` com `reason` e `linked`): se algum destinatário tem o Discord vinculado e o envio de DM está desativado (ou o bloco `dm` nem existe na configuração salva antes da v4.8.0), a tela orienta a marcar "Enviar DM aos colaboradores vinculados" e salvar em Configurações > Notificações. Se o tipo de aviso está desmarcado nas DMs, informa o motivo.
+- **Sem ruído para quem não usa DM**: se nenhum destinatário tem o Discord vinculado, nenhuma mensagem é exibida.
+- **Contagem de vinculados sem leituras extras**: usa a lista de colaboradores já carregada em memória (`getCachedCollection`).
+- **Registro no console** (`[DM Discord]`) de cada envio pulado, com o motivo e a quantidade de destinatários vinculados.
+
+### 🧪 Testes
+- 7 novos testes (169 no total): aviso com destinatário vinculado, configuração antiga sem o bloco `dm`, silêncio sem vinculados, evento desmarcado, lista de colaboradores indisponível e textos exibidos.
+
+### ⚠️ Observações
+- O botão "Enviar DM de teste" ignora a configuração da gestão (por isso funciona mesmo com a DM desativada), enquanto os avisos reais exigem "Enviar DM aos colaboradores vinculados" marcado e salvo.
+
+---
+
 ## [v4.8.1] - 2026-11-10
 
 ### 🎯 Destaque Principal

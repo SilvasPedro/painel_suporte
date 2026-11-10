@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const { getIdToken, authMock, getWebhookConfigMock } = vi.hoisted(() => {
+const { getIdToken, authMock, getWebhookConfigMock, getCachedCollectionMock } = vi.hoisted(() => {
     const getIdToken = vi.fn(async () => 'token-do-usuario');
     return {
         getIdToken,
         authMock: { currentUser: { getIdToken: (...args) => getIdToken(...args) } },
-        getWebhookConfigMock: vi.fn()
+        getWebhookConfigMock: vi.fn(),
+        getCachedCollectionMock: vi.fn(() => [])
     };
 });
 vi.mock('./firebase', () => ({ auth: authMock }));
 vi.mock('./notificationEvents', () => ({ getWebhookConfig: (...args) => getWebhookConfigMock(...args) }));
+vi.mock('./dataCache', () => ({ getCachedCollection: (...args) => getCachedCollectionMock(...args) }));
 
 import { describeDmResult, describeBotStatus, sendDiscordDms, fetchBotStatus, isValidDiscordId, DM_ENDPOINT } from './discordDm';
 
@@ -30,6 +32,8 @@ describe('sendDiscordDms', () => {
         emitted = [];
         getIdToken.mockClear();
         getWebhookConfigMock.mockReset();
+        getCachedCollectionMock.mockReset();
+        getCachedCollectionMock.mockReturnValue([]);
         authMock.currentUser = { getIdToken: (...args) => getIdToken(...args) };
         vi.stubGlobal('CustomEvent', class { constructor(type, init) { this.type = type; this.detail = init?.detail; } });
         vi.stubGlobal('window', { dispatchEvent: (e) => { emitted.push(e); return true; } });
@@ -181,5 +185,77 @@ describe('describeBotStatus', () => {
 
     it('a mensagem de envio com token recusado também orienta a correção', () => {
         expect(describeDmResult({ httpStatus: 502 }).text).toMatch(/Reset Token/);
+    });
+});
+
+describe('DM pulada por configuração: avisa quando alguém vinculado deixaria de receber', () => {
+    let emitted;
+
+    beforeEach(() => {
+        emitted = [];
+        getWebhookConfigMock.mockReset();
+        getCachedCollectionMock.mockReset();
+        vi.stubGlobal('CustomEvent', class { constructor(type, init) { this.type = type; this.detail = init?.detail; } });
+        vi.stubGlobal('window', { dispatchEvent: (e) => { emitted.push(e.detail); return true; } });
+        vi.stubGlobal('fetch', vi.fn());
+    });
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    const recipients = [{ id: 'ana' }];
+    const linkedColabs = [{ id: 'ana', discordUserId: '123456789012345678' }, { id: 'bia' }];
+
+    it('DM desativada e destinatário vinculado: emite o aviso com a contagem', async () => {
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: false } });
+        getCachedCollectionMock.mockReturnValue(linkedColabs);
+        const result = await sendDiscordDms({ event: 'feedback', recipients });
+        expect(result).toMatchObject({ status: 'skipped', reason: 'dm-desativado', linked: 1 });
+        expect(emitted[0]).toMatchObject({ event: 'feedback', reason: 'dm-desativado', linked: 1 });
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('configuração sem o bloco dm (salva antes da v4.8.0) também conta como desativada', async () => {
+        getWebhookConfigMock.mockResolvedValue({ enabled: true, url: 'https://x.example' });
+        getCachedCollectionMock.mockReturnValue(linkedColabs);
+        const result = await sendDiscordDms({ event: 'feedback', recipients });
+        expect(result.reason).toBe('dm-desativado');
+        expect(emitted).toHaveLength(1);
+    });
+
+    it('DM desativada, mas ninguém vinculado: silêncio (sem incomodar quem não usa DM)', async () => {
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: false } });
+        getCachedCollectionMock.mockReturnValue([{ id: 'bia' }, { id: 'ana' }]);
+        await sendDiscordDms({ event: 'feedback', recipients });
+        expect(emitted).toHaveLength(0);
+    });
+
+    it('evento desmarcado e destinatário vinculado: emite o aviso', async () => {
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: true, events: { feedback: false } } });
+        getCachedCollectionMock.mockReturnValue(linkedColabs);
+        const result = await sendDiscordDms({ event: 'feedback', recipients });
+        expect(result.reason).toBe('evento-desmarcado');
+        expect(emitted[0]).toMatchObject({ reason: 'evento-desmarcado', linked: 1 });
+    });
+
+    it('lista de colaboradores indisponível não quebra o envio', async () => {
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: false } });
+        getCachedCollectionMock.mockImplementation(() => { throw new Error('sem cache'); });
+        const result = await sendDiscordDms({ event: 'feedback', recipients });
+        expect(result).toMatchObject({ status: 'skipped', linked: 0 });
+    });
+});
+
+describe('describeDmResult: DM pulada por configuração', () => {
+    it('orienta a ativar quando há vinculados e fica em silêncio quando não há', () => {
+        const warn = describeDmResult({ event: 'feedback', reason: 'dm-desativado', linked: 2 });
+        expect(warn.type).toBe('warning');
+        expect(warn.text).toMatch(/2 colaborador/);
+        expect(warn.text).toMatch(/Enviar DM aos colaboradores vinculados/);
+        expect(warn.text).toMatch(/Salvar webhook/);
+        expect(describeDmResult({ event: 'feedback', reason: 'dm-desativado', linked: 0 })).toBeNull();
+    });
+
+    it('evento desmarcado explica o motivo', () => {
+        expect(describeDmResult({ event: 'feedback', reason: 'evento-desmarcado', linked: 1 }).text).toMatch(/desmarcado/i);
+        expect(describeDmResult({ event: 'feedback', reason: 'evento-desmarcado', linked: 0 })).toBeNull();
     });
 });

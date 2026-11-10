@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.8.1';
+export const CURRENT_VERSION = 'v4.8.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.8.1',
+    version: 'v4.8.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.8.2: quando um colaborador vinculou o Discord, mas a DM está desativada nas configurações (ou o tipo de aviso está desmarcado), quem lançou o item agora é avisado na tela em vez de o envio ser pulado em silêncio.',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Aviso Quando a DM Seria Enviada, Mas Está Desativada',
+        category: 'Notificações',
+        description: 'Ao lançar avaliação semanal, feedback ou 1:1, se algum destinatário tem o Discord vinculado e o envio de DM está desativado ou o tipo de aviso está desmarcado, o sistema informa na tela e indica onde ativar em Configurações > Notificações. Se ninguém tem Discord vinculado, nada é exibido.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Diagnóstico das DMs Puladas no Console',
+        category: 'Integrações',
+        description: 'Todo envio de DM pulado por configuração passa a ser registrado no console do navegador com o motivo e a quantidade de destinatários com Discord vinculado, facilitando o suporte.'
+      }
+    ]
+  },
+  {
+    version: 'v4.8.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.8.1: diagnóstico do bot do Discord. O token é limpo automaticamente (espaços, aspas e prefixo Bot), a tela de configuração mostra se o Discord aceita o token e, quando recusa, indica o passo a passo para corrigir.',
     items: [
       {
@@ -37,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.8.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.8.0: avisos por mensagem direta (DM) no Discord, enviados por um bot. Cada colaborador pode vincular o próprio ID do Discord no perfil e receber, em privado, o aviso de avaliação semanal, feedback e avaliação 1:1.',
     items: [
       {

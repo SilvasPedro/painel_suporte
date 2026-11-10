@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.8.2 (Aviso de DM Pulada por Configuração)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.8.1` para `4.8.2`. |
+| **Alterado** | `src/services/discordDm.js` | Detecção de DM pulada por configuração com contagem de destinatários vinculados, aviso na tela e registro no console. |
+| **Alterado** | `src/services/discordDm.test.js` | Novos testes das DMs puladas por configuração e dos textos exibidos. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.8.2` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` / `log-att.md` | Notas de lançamento e registro desta atualização. |
+
+---
+
 ## [10/11/2026] — Versão v4.8.1 (Diagnóstico do Bot do Discord)
 
 | Ação | Arquivo | Descrição da Alteração |
