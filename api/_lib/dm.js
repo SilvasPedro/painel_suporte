@@ -38,6 +38,65 @@ const isSafeDocId = (value) => /^[A-Za-z0-9_-]{1,128}$/.test(String(value || '')
 const b64urlToBuffer = (value) => Buffer.from(String(value).replace(/-/g, '+').replace(/_/g, '/'), 'base64');
 
 // -------------------------------------------------------------------------------------------
+// Token do bot: limpeza, formato e verificação
+// -------------------------------------------------------------------------------------------
+
+/**
+ * Deixa o token como o Discord espera, mesmo que tenha sido colado com sobras:
+ * espaços ou quebras de linha nas pontas, aspas ao redor ou o prefixo "Bot ".
+ */
+export const normalizeBotToken = (raw) => String(raw || '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '')
+    .trim()
+    .replace(/^Bot\s+/i, '')
+    .trim();
+
+// Token de bot tem 3 partes separadas por ponto. Client Secret, Public Key e ID do aplicativo NÃO têm.
+export const looksLikeBotToken = (token) => /^[\w-]+\.[\w-]+\.[\w-]+$/.test(String(token || ''));
+
+let botStatusCache = { at: 0, tokenKey: '', value: null };
+
+export const resetBotStatusCache = () => { botStatusCache = { at: 0, tokenKey: '', value: null }; };
+
+/**
+ * Diz se o bot está pronto, consultando o Discord (GET /users/@me) sem enviar mensagem.
+ * Não devolve segredos. Respostas definitivas ficam em cache por 60 s.
+ * Retorno: { configured, valid, reason?, botName? }
+ *   reason: 'formato-invalido' | 'recusado' | 'indisponivel'
+ */
+export const getBotStatus = async ({ env = {}, fetchImpl = fetch, now = Date.now() } = {}) => {
+    const token = normalizeBotToken(env.DISCORD_BOT_TOKEN);
+    if (!token) return { configured: false };
+    if (!looksLikeBotToken(token)) return { configured: true, valid: false, reason: 'formato-invalido' };
+
+    const tokenKey = token.slice(-8);
+    if (botStatusCache.value && botStatusCache.tokenKey === tokenKey && now - botStatusCache.at < 60 * 1000) {
+        return botStatusCache.value;
+    }
+
+    let value;
+    try {
+        const res = await fetchImpl(`${DISCORD_API}/users/@me`, {
+            headers: { Authorization: `Bot ${token}`, 'User-Agent': `DiscordBot (${DEFAULT_APP_URL}, 1.0)` }
+        });
+        if (res.status === 401) {
+            value = { configured: true, valid: false, reason: 'recusado' };
+        } else if (res.ok) {
+            const data = await res.json().catch(() => ({}));
+            value = { configured: true, valid: true, botName: data.username || '' };
+        } else {
+            return { configured: true, valid: null, reason: 'indisponivel' };
+        }
+    } catch {
+        return { configured: true, valid: null, reason: 'indisponivel' };
+    }
+
+    botStatusCache = { at: now, tokenKey, value };
+    return value;
+};
+
+// -------------------------------------------------------------------------------------------
 // Login do Firebase: validação do ID token
 // -------------------------------------------------------------------------------------------
 
@@ -242,8 +301,10 @@ const summarize = (results) => {
  * Processa um pedido de envio e devolve { status, json }, sem depender de req/res (testável).
  */
 export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fetch, origin = '', now = Date.now() }) => {
-    const token = env.DISCORD_BOT_TOKEN;
+    const token = normalizeBotToken(env.DISCORD_BOT_TOKEN);
     if (!token) return { status: 503, json: { error: 'bot-nao-configurado' } };
+    // Valor que nem tem cara de token (ex.: Client Secret): evita chamadas que o Discord vai recusar
+    if (!looksLikeBotToken(token)) return { status: 502, json: { error: 'token-do-bot-invalido', reason: 'formato-invalido' } };
 
     const projectId = env.FIREBASE_PROJECT_ID || env.VITE_FIREBASE_PROJECT_ID || DEFAULT_PROJECT_ID;
 
@@ -297,6 +358,6 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
         }
     });
 
-    if (tokenRejected) return { status: 502, json: { error: 'token-do-bot-invalido' } };
+    if (tokenRejected) return { status: 502, json: { error: 'token-do-bot-invalido', reason: 'recusado' } };
     return { status: 200, json: { event, summary: summarize(results), results } };
 };

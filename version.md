@@ -4,6 +4,28 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.8.1] - 2026-11-10
+
+### 🎯 Destaque Principal
+**Diagnóstico do bot do Discord**: o token é limpo automaticamente e a tela de configuração mostra se o Discord o aceita, com o passo a passo para corrigir quando é recusado.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Verificação do bot** (`getBotStatus`): `GET /api/notify-dm` consulta o Discord (`/users/@me`) sem enviar mensagem e devolve `{ configured, valid, reason?, botName? }`, com `reason` igual a `formato-invalido`, `recusado` ou `indisponivel`. Respostas definitivas ficam em cache por 60 segundos; o token nunca é devolvido.
+- **Estado do bot na tela** (`describeBotStatus`): "Bot conectado: nome", "Token recusado pelo Discord", "O valor configurado não parece um token de bot", "Falta DISCORD_BOT_TOKEN na Vercel" ou "Não foi possível verificar o bot agora", com orientação de correção.
+- **Passo a passo de correção** (`TOKEN_HELP`): copiar o token em Bot > Reset Token (não o Client Secret), atualizar `DISCORD_BOT_TOKEN` na Vercel sem aspas, espaços ou prefixo "Bot " e fazer um novo deploy. Também aparece na mensagem exibida a quem lança um item quando o Discord recusa o token.
+
+### 🔄 Alterações (Changed)
+- **Token tolerante** (`normalizeBotToken`): remove espaços e quebras de linha, aspas e o prefixo "Bot " antes do uso.
+- **Formato validado** (`looksLikeBotToken`): valores sem as 3 partes separadas por ponto (Client Secret, Public Key, ID do aplicativo) são barrados antes de chamar o Discord, com resposta `502` e `reason: formato-invalido`; token recusado responde `502` com `reason: recusado`.
+- `fetchBotStatus` passa a devolver o estado detalhado do bot (antes, apenas configurado ou não).
+
+### 🧪 Testes
+- 14 novos testes (162 no total): limpeza e formato do token, envio com token colado com sobras, motivos do 502, estado do bot (sem variável, formato inválido, aceito, recusado, indisponível e cache de 60 s) e textos da tela.
+
+---
+
 ## [v4.8.0] - 2026-11-10
 
 ### 🎯 Destaque Principal

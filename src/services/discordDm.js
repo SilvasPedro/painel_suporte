@@ -11,6 +11,10 @@ import { getWebhookConfig } from './notificationEvents';
 
 export const DM_ENDPOINT = '/api/notify-dm';
 
+// Passo a passo para corrigir um token recusado
+export const TOKEN_HELP = 'No portal do Discord, abra o aplicativo > Bot > Reset Token e copie o token (não o Client Secret). '
+    + 'Na Vercel, atualize DISCORD_BOT_TOKEN com apenas esse valor, sem aspas, sem espaços e sem o prefixo "Bot ", e faça um novo deploy.';
+
 // ID de usuário do Discord: 17 a 20 dígitos
 export const isValidDiscordId = (value) => /^\d{17,20}$/.test(String(value || '').trim());
 
@@ -43,7 +47,7 @@ export const describeDmResult = ({ event, httpStatus, error, summary } = {}) => 
         return { type: 'warning', text: 'Sem permissão para enviar avisos por DM.' };
     }
     if (httpStatus === 502 || error === 'token-do-bot-invalido') {
-        return { type: 'warning', text: 'O Discord recusou o token do bot. Gere um novo token e atualize DISCORD_BOT_TOKEN na Vercel.' };
+        return { type: 'warning', text: `O Discord recusou o token do bot. ${TOKEN_HELP}` };
     }
     if (!summary) {
         return httpStatus && httpStatus >= 400
@@ -126,16 +130,40 @@ export const sendDiscordDms = async ({ event, recipients = [] }) => {
 };
 
 /**
- * Informa se o bot está configurado no servidor (sem expor segredos).
- * @returns {Promise<boolean|null>} null quando a função não está disponível (ex.: ambiente local)
+ * Estado do bot no servidor (consulta o Discord, sem enviar mensagem e sem expor segredos).
+ * @returns {Promise<null|{configured:boolean, valid?:boolean|null, reason?:string, botName?:string}>}
+ *   null quando a função não está disponível (ex.: ambiente local)
  */
 export const fetchBotStatus = async () => {
     try {
         const response = await fetch(DM_ENDPOINT);
         if (!response.ok) return null;
         const data = await response.json();
-        return Boolean(data.configured);
+        return {
+            configured: Boolean(data.configured),
+            valid: data.valid ?? null,
+            reason: data.reason || '',
+            botName: data.botName || ''
+        };
     } catch {
         return null;
     }
+};
+
+// Texto do estado do bot para a tela de configuração
+export const describeBotStatus = (status) => {
+    if (!status) return { tone: 'neutral', label: 'Indisponível neste ambiente', hint: '' };
+    if (!status.configured) {
+        return { tone: 'warning', label: 'Falta DISCORD_BOT_TOKEN na Vercel', hint: 'Crie a variável DISCORD_BOT_TOKEN e faça um novo deploy.' };
+    }
+    if (status.valid === true) {
+        return { tone: 'success', label: status.botName ? `Bot conectado: ${status.botName}` : 'Bot conectado', hint: '' };
+    }
+    if (status.reason === 'formato-invalido') {
+        return { tone: 'danger', label: 'O valor configurado não parece um token de bot', hint: TOKEN_HELP };
+    }
+    if (status.reason === 'recusado') {
+        return { tone: 'danger', label: 'Token recusado pelo Discord', hint: TOKEN_HELP };
+    }
+    return { tone: 'neutral', label: 'Não foi possível verificar o bot agora', hint: '' };
 };

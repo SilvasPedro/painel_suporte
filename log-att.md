@@ -4,6 +4,21 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.8.1 (Diagnóstico do Bot do Discord)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.8.0` para `4.8.1`. |
+| **Alterado** | `api/_lib/dm.js` | Limpeza e validação do formato do token, verificação do bot no Discord com cache e motivos nas respostas de erro. |
+| **Alterado** | `api/notify-dm.js` | `GET` passa a devolver o estado detalhado do bot. |
+| **Alterado** | `src/services/discordDm.js` | Estado detalhado do bot, textos de orientação e passo a passo para corrigir o token. |
+| **Alterado** | `src/components/settings/TeamWebhookSettings.jsx` | Estado do bot por cor e texto, com a orientação de correção. |
+| **Alterado** | `api/_lib/dm.test.js`, `src/services/discordDm.test.js` | Testes do token, do estado do bot e dos textos. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.8.1` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` / `log-att.md` | Notas de lançamento e registro desta atualização. |
+
+---
+
 ## [10/11/2026] — Versão v4.8.0 (Avisos por DM no Discord)
 
 | Ação | Arquivo | Descrição da Alteração |

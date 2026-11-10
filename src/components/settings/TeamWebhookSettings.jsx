@@ -19,7 +19,7 @@ import {
     invalidateWebhookConfigCache,
     postToWebhook
 } from '../../services/notificationEvents';
-import { DEFAULT_DM_CONFIG, sendDiscordDms, fetchBotStatus } from '../../services/discordDm';
+import { DEFAULT_DM_CONFIG, sendDiscordDms, fetchBotStatus, describeBotStatus } from '../../services/discordDm';
 
 /**
  * Configuração do webhook do canal da equipe (Configurações > Notificações).
@@ -49,7 +49,7 @@ const TeamWebhookSettings = () => {
     const [testing, setTesting] = useState(false);
     const [showUrl, setShowUrl] = useState(false);
     const [savedSnapshot, setSavedSnapshot] = useState('');
-    const [botStatus, setBotStatus] = useState(null); // true = configurado, false = falta o token, null = indisponível
+    const [botStatus, setBotStatus] = useState(undefined); // undefined = verificando; null = indisponível
     const [testingDm, setTestingDm] = useState(false);
 
     useEffect(() => {
@@ -70,6 +70,16 @@ const TeamWebhookSettings = () => {
         fetchBotStatus().then((status) => { if (!cancelled) setBotStatus(status); });
         return () => { cancelled = true; };
     }, []);
+
+    const botInfo = botStatus === undefined
+        ? { tone: 'neutral', label: 'Verificando o bot...', hint: '' }
+        : describeBotStatus(botStatus);
+    const botToneClass = {
+        success: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25',
+        warning: 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25',
+        danger: 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/25',
+        neutral: 'bg-subtle text-muted-hub border-subtle'
+    }[botInfo.tone];
 
     const dm = { ...DEFAULT_DM_CONFIG, ...(config.dm || {}), events: { ...DEFAULT_DM_CONFIG.events, ...(config.dm?.events || {}) } };
     const updateDm = (patch) => update({ dm: { ...dm, ...patch } });
@@ -275,16 +285,13 @@ const TeamWebhookSettings = () => {
                                 <h3 className="text-xs font-bold text-primary-hub flex items-center gap-1.5">
                                     <Bot className="w-4 h-4 text-indigo-500" /> DM no Discord (bot)
                                 </h3>
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                                    botStatus === true
-                                        ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25'
-                                        : botStatus === false
-                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/25'
-                                            : 'bg-subtle text-muted-hub border-subtle'
-                                }`}>
-                                    {botStatus === true ? 'Bot configurado' : botStatus === false ? 'Falta DISCORD_BOT_TOKEN na Vercel' : 'Indisponível neste ambiente'}
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${botToneClass}`}>
+                                    {botInfo.label}
                                 </span>
                             </div>
+                            {botInfo.hint && (
+                                <p className="text-[11px] rounded-xl border border-subtle bg-surface px-3 py-2 text-secondary-hub leading-relaxed">{botInfo.hint}</p>
+                            )}
                             <p className="text-[11px] text-secondary-hub leading-relaxed">
                                 Envia uma mensagem privada ao colaborador, só para quem vinculou o próprio ID do Discord em Meu Perfil.
                                 Por ser privada, a DM pode trazer a pontuação da própria pessoa; nunca traz o conteúdo de feedbacks ou de 1:1.

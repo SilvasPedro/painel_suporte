@@ -5,11 +5,16 @@ import {
     isValidDiscordId,
     verifyFirebaseToken,
     resetJwksCache,
+    normalizeBotToken,
+    looksLikeBotToken,
+    getBotStatus,
+    resetBotStatusCache,
     buildDmContent,
     processDmRequest,
     MAX_RECIPIENTS
 } from './dm.js';
 
+const FAKE_TOKEN = 'MTIzNDU2.abcdEF.ghijKLmnop-qrst_uvw';
 const PROJECT = DEFAULT_PROJECT_ID;
 const NOW = Date.UTC(2026, 10, 10, 12, 0, 0);
 const nowSec = Math.floor(NOW / 1000);
@@ -85,6 +90,7 @@ let key;
 beforeEach(() => {
     key = key || makeKey('k1');
     resetJwksCache();
+    resetBotStatusCache();
 });
 
 describe('isValidDiscordId', () => {
@@ -159,7 +165,7 @@ describe('buildDmContent', () => {
 });
 
 describe('processDmRequest', () => {
-    const env = { DISCORD_BOT_TOKEN: 'bot-token-secreto', APP_URL: 'https://hub.example/' };
+    const env = { DISCORD_BOT_TOKEN: FAKE_TOKEN, APP_URL: 'https://hub.example/' };
     const run = async (overrides = {}, mock = {}) => {
         const { fetchImpl, calls } = makeFetch({ key, docs: staffDocs, ...mock });
         const result = await processDmRequest({
@@ -205,7 +211,7 @@ describe('processDmRequest', () => {
 
         const [open, message] = calls.discord;
         expect(open.body).toEqual({ recipient_id: DISCORD_ID_ANA });
-        expect(open.auth).toBe('Bot bot-token-secreto');
+        expect(open.auth).toBe(`Bot ${FAKE_TOKEN}`);
         expect(message.url).toContain('/channels/chan-123456789012345678/messages');
         expect(message.body.content).toContain('90 pts');
         expect(message.body.content).toContain('https://hub.example/home?tab=my_history');
@@ -283,5 +289,116 @@ describe('processDmRequest', () => {
             docs: { ...staffDocs, 'collaborators/uid-gestor': { role: 'Colaborador' } }
         });
         expect(status).toBe(200);
+    });
+});
+
+describe('token do bot: limpeza e formato', () => {
+    it('remove espaços, quebras de linha, aspas e o prefixo "Bot "', () => {
+        expect(normalizeBotToken(FAKE_TOKEN)).toBe(FAKE_TOKEN);
+        expect(normalizeBotToken(`  ${FAKE_TOKEN}\n`)).toBe(FAKE_TOKEN);
+        expect(normalizeBotToken(`"${FAKE_TOKEN}"`)).toBe(FAKE_TOKEN);
+        expect(normalizeBotToken(`'${FAKE_TOKEN}'`)).toBe(FAKE_TOKEN);
+        expect(normalizeBotToken(`Bot ${FAKE_TOKEN}`)).toBe(FAKE_TOKEN);
+        expect(normalizeBotToken(`  "Bot ${FAKE_TOKEN}"  `)).toBe(FAKE_TOKEN);
+        expect(normalizeBotToken(undefined)).toBe('');
+    });
+
+    it('só considera token o que tem as 3 partes separadas por ponto', () => {
+        expect(looksLikeBotToken(FAKE_TOKEN)).toBe(true);
+        expect(looksLikeBotToken('a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6')).toBe(false); // Client Secret / Public Key
+        expect(looksLikeBotToken('123456789012345678')).toBe(false);               // ID do aplicativo
+        expect(looksLikeBotToken('')).toBe(false);
+    });
+
+    it('um token colado com sobras ainda funciona no envio (e é enviado limpo ao Discord)', async () => {
+        const { fetchImpl, calls } = makeFetch({ key, docs: staffDocs });
+        const { status } = await processDmRequest({
+            body: { event: 'feedback', recipients: [{ id: 'ana' }] },
+            idToken: signToken(key),
+            env: { DISCORD_BOT_TOKEN: `  "Bot ${FAKE_TOKEN}"\n` },
+            fetchImpl,
+            now: NOW
+        });
+        expect(status).toBe(200);
+        expect(calls.discord[0].auth).toBe(`Bot ${FAKE_TOKEN}`);
+    });
+
+    it('valor que não parece token responde 502 com o motivo, sem chamar o Discord', async () => {
+        const { fetchImpl, calls } = makeFetch({ key, docs: staffDocs });
+        const { status, json: body } = await processDmRequest({
+            body: { event: 'feedback', recipients: [{ id: 'ana' }] },
+            idToken: signToken(key),
+            env: { DISCORD_BOT_TOKEN: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6' },
+            fetchImpl,
+            now: NOW
+        });
+        expect(status).toBe(502);
+        expect(body).toMatchObject({ error: 'token-do-bot-invalido', reason: 'formato-invalido' });
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('token recusado pelo Discord informa o motivo "recusado"', async () => {
+        const { fetchImpl } = makeFetch({ key, docs: staffDocs, discord: { channel: () => json(401, { message: '401: Unauthorized' }) } });
+        const { status, json: body } = await processDmRequest({
+            body: { event: 'feedback', recipients: [{ id: 'ana' }] },
+            idToken: signToken(key),
+            env: { DISCORD_BOT_TOKEN: FAKE_TOKEN },
+            fetchImpl,
+            now: NOW
+        });
+        expect(status).toBe(502);
+        expect(body.reason).toBe('recusado');
+    });
+});
+
+describe('getBotStatus', () => {
+    const statusFetch = (response) => {
+        const calls = [];
+        const fetchImpl = async (url, options) => { calls.push({ url, options }); return response; };
+        return { fetchImpl, calls };
+    };
+
+    it('sem variável: não configurado', async () => {
+        expect(await getBotStatus({ env: {}, now: NOW })).toEqual({ configured: false });
+    });
+
+    it('formato inválido: não consulta o Discord', async () => {
+        const { fetchImpl, calls } = statusFetch(json(200, {}));
+        const status = await getBotStatus({ env: { DISCORD_BOT_TOKEN: 'segredo-sem-pontos' }, fetchImpl, now: NOW });
+        expect(status).toEqual({ configured: true, valid: false, reason: 'formato-invalido' });
+        expect(calls).toHaveLength(0);
+    });
+
+    it('token aceito: informa o nome do bot e não vaza o token', async () => {
+        const { fetchImpl, calls } = statusFetch(json(200, { username: 'Hubdesk' }));
+        const status = await getBotStatus({ env: { DISCORD_BOT_TOKEN: FAKE_TOKEN }, fetchImpl, now: NOW });
+        expect(status).toEqual({ configured: true, valid: true, botName: 'Hubdesk' });
+        expect(JSON.stringify(status)).not.toContain(FAKE_TOKEN);
+        expect(calls[0].url).toContain('/users/@me');
+        expect(calls[0].options.headers.Authorization).toBe(`Bot ${FAKE_TOKEN}`);
+    });
+
+    it('token recusado (401): valid false com o motivo', async () => {
+        const { fetchImpl } = statusFetch(json(401, { message: '401: Unauthorized' }));
+        expect(await getBotStatus({ env: { DISCORD_BOT_TOKEN: FAKE_TOKEN }, fetchImpl, now: NOW }))
+            .toEqual({ configured: true, valid: false, reason: 'recusado' });
+    });
+
+    it('Discord fora do ar ou rede com falha: indisponível, sem cravar que o token é ruim', async () => {
+        const down = statusFetch(json(500, {}));
+        expect((await getBotStatus({ env: { DISCORD_BOT_TOKEN: FAKE_TOKEN }, fetchImpl: down.fetchImpl, now: NOW })).valid).toBeNull();
+        resetBotStatusCache();
+        const failing = async () => { throw new TypeError('offline'); };
+        expect((await getBotStatus({ env: { DISCORD_BOT_TOKEN: FAKE_TOKEN }, fetchImpl: failing, now: NOW })).reason).toBe('indisponivel');
+    });
+
+    it('guarda a resposta definitiva por 60 segundos', async () => {
+        const { fetchImpl, calls } = statusFetch(json(200, { username: 'Hubdesk' }));
+        const env = { DISCORD_BOT_TOKEN: FAKE_TOKEN };
+        await getBotStatus({ env, fetchImpl, now: NOW });
+        await getBotStatus({ env, fetchImpl, now: NOW + 30 * 1000 });
+        expect(calls).toHaveLength(1);
+        await getBotStatus({ env, fetchImpl, now: NOW + 61 * 1000 });
+        expect(calls).toHaveLength(2);
     });
 });

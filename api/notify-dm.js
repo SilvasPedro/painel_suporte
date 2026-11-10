@@ -1,10 +1,10 @@
-import { processDmRequest } from './_lib/dm.js';
+import { processDmRequest, getBotStatus } from './_lib/dm.js';
 
 /**
  * POST /api/notify-dm   { event, recipients: [{ id, params }] }
  *   Cabeçalho: Authorization: Bearer <ID token do Firebase de quem está logado>
  *
- * GET  /api/notify-dm   -> { configured: boolean }  (informa se o bot está configurado; sem segredos)
+ * GET  /api/notify-dm   -> { configured, valid, reason?, botName? }  (testa o token no Discord; sem segredos)
  *
  * Variáveis de ambiente (Vercel > Settings > Environment Variables):
  *   DISCORD_BOT_TOKEN  token do bot (obrigatório; nunca vai para o código ou para o navegador)
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
 
     if (req.method === 'GET') {
-        return res.status(200).json({ configured: Boolean(process.env.DISCORD_BOT_TOKEN) });
+        return res.status(200).json(await getBotStatus({ env: process.env }));
     }
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Método não permitido. Use POST.' });

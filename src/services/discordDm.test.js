@@ -11,7 +11,7 @@ const { getIdToken, authMock, getWebhookConfigMock } = vi.hoisted(() => {
 vi.mock('./firebase', () => ({ auth: authMock }));
 vi.mock('./notificationEvents', () => ({ getWebhookConfig: (...args) => getWebhookConfigMock(...args) }));
 
-import { describeDmResult, sendDiscordDms, fetchBotStatus, isValidDiscordId, DM_ENDPOINT } from './discordDm';
+import { describeDmResult, describeBotStatus, sendDiscordDms, fetchBotStatus, isValidDiscordId, DM_ENDPOINT } from './discordDm';
 
 const response = (status, body) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
 
@@ -106,11 +106,13 @@ describe('fetchBotStatus', () => {
     beforeEach(() => { vi.stubGlobal('fetch', vi.fn()); });
     afterEach(() => { vi.unstubAllGlobals(); });
 
-    it('informa se o bot está configurado', async () => {
-        fetch.mockResolvedValueOnce(response(200, { configured: true }));
-        expect(await fetchBotStatus()).toBe(true);
+    it('devolve o estado do bot informado pelo servidor', async () => {
+        fetch.mockResolvedValueOnce(response(200, { configured: true, valid: true, botName: 'Hubdesk' }));
+        expect(await fetchBotStatus()).toEqual({ configured: true, valid: true, reason: '', botName: 'Hubdesk' });
+        fetch.mockResolvedValueOnce(response(200, { configured: true, valid: false, reason: 'recusado' }));
+        expect(await fetchBotStatus()).toMatchObject({ configured: true, valid: false, reason: 'recusado' });
         fetch.mockResolvedValueOnce(response(200, { configured: false }));
-        expect(await fetchBotStatus()).toBe(false);
+        expect(await fetchBotStatus()).toMatchObject({ configured: false, valid: null });
     });
 
     it('retorna null quando a função não existe (ambiente local) ou a rede falha', async () => {
@@ -152,5 +154,32 @@ describe('describeDmResult', () => {
 
     it('quando ninguém foi afetado, não incomoda', () => {
         expect(describeDmResult({ event: 'feedback', httpStatus: 200, summary: { inactive: 2 } })).toBeNull();
+    });
+});
+
+describe('describeBotStatus', () => {
+    it('cada situação do bot tem texto e tom próprios', () => {
+        expect(describeBotStatus(null).tone).toBe('neutral');
+        expect(describeBotStatus({ configured: false }).label).toMatch(/Falta DISCORD_BOT_TOKEN/);
+        expect(describeBotStatus({ configured: true, valid: true, botName: 'Hubdesk' })).toMatchObject({ tone: 'success', label: 'Bot conectado: Hubdesk' });
+        expect(describeBotStatus({ configured: true, valid: true }).label).toBe('Bot conectado');
+        expect(describeBotStatus({ configured: true, valid: null, reason: 'indisponivel' }).tone).toBe('neutral');
+    });
+
+    it('token ruim traz o passo a passo para corrigir', () => {
+        const refused = describeBotStatus({ configured: true, valid: false, reason: 'recusado' });
+        expect(refused.tone).toBe('danger');
+        expect(refused.label).toMatch(/recusado/i);
+        expect(refused.hint).toMatch(/Reset Token/);
+        expect(refused.hint).toMatch(/Client Secret/);
+        expect(refused.hint).toMatch(/novo deploy/i);
+
+        const wrongKind = describeBotStatus({ configured: true, valid: false, reason: 'formato-invalido' });
+        expect(wrongKind.label).toMatch(/não parece um token/i);
+        expect(wrongKind.hint).toMatch(/Reset Token/);
+    });
+
+    it('a mensagem de envio com token recusado também orienta a correção', () => {
+        expect(describeDmResult({ httpStatus: 502 }).text).toMatch(/Reset Token/);
     });
 });

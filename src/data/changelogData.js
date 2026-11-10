@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.8.0';
+export const CURRENT_VERSION = 'v4.8.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.8.0',
+    version: 'v4.8.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.8.1: diagnóstico do bot do Discord. O token é limpo automaticamente (espaços, aspas e prefixo Bot), a tela de configuração mostra se o Discord aceita o token e, quando recusa, indica o passo a passo para corrigir.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Verificação do Bot Sem Enviar DM',
+        category: 'Notificações',
+        description: 'Em Configurações > Notificações, o bloco de DM consulta o Discord e informa se o bot está conectado (com o nome), se o token foi recusado, se o valor configurado não parece um token de bot ou se falta a variável na Vercel. O resultado é guardado por 60 segundos e nunca expõe o token.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Token Tolerante a Sobras de Colagem',
+        category: 'Integrações',
+        description: 'Espaços, quebras de linha, aspas e o prefixo Bot são removidos do token antes do uso. Valores que nem têm a forma de um token (como Client Secret, Public Key ou ID do aplicativo) são barrados sem chamar o Discord.'
+      },
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Orientação Clara Quando o Token é Recusado',
+        category: 'Notificações',
+        description: 'As mensagens de erro e o bloco de configuração trazem o passo a passo: copiar o token em Bot > Reset Token (não o Client Secret), atualizá-lo na Vercel sem aspas, espaços ou prefixo e fazer um novo deploy.'
+      }
+    ]
+  },
+  {
+    version: 'v4.8.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.8.0: avisos por mensagem direta (DM) no Discord, enviados por um bot. Cada colaborador pode vincular o próprio ID do Discord no perfil e receber, em privado, o aviso de avaliação semanal, feedback e avaliação 1:1.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.7.2',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.7.2: diagnóstico do webhook do canal. Quem lança uma avaliação, um feedback ou um 1:1 passa a ver se o aviso ao canal saiu ou o motivo de não ter saído, a tela de configuração alerta sobre webhook desativado ou alterações não salvas e o intervalo entre avisos iguais é configurável.',
     items: [
       {
