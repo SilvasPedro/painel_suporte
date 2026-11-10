@@ -97,11 +97,6 @@ export const registerFeedback = async (collaboratorId, feedbackData, loggedUser 
   }));
   await batch.commit();
 
-  // Resumo ao canal da equipe, sem o conteúdo do feedback
-  void dispatchTeamWebhook({
-    event: 'feedback',
-    title: '📢 Novo feedback registrado',
-    text: `${authorName || 'A liderança'} registrou um feedback (${payload.type || 'Desempenho'}).`,
-    link: typeof window !== 'undefined' ? window.location.origin : undefined
-  });
+  // Aviso genérico ao canal da equipe, sem nomes ou conteúdo
+  void dispatchTeamWebhook({ event: 'feedback' });
 };

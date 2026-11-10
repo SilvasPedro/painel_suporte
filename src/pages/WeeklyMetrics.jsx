@@ -403,13 +403,8 @@ const WeeklyMetrics = () => {
                 await batch.commit();
             }
 
-            // Resumo ao canal da equipe (sem enviar notas individuais); falhas não atrapalham o salvamento
-            void dispatchTeamWebhook({
-                event: 'weekly_evaluation',
-                title: '📊 Avaliações semanais lançadas',
-                text: `${authorName} lançou ${readyColabs.length} avaliação(ões) da semana de ${dateString}.`,
-                link: window.location.origin
-            });
+            // Aviso genérico ao canal da equipe (sem nomes ou notas); falhas não atrapalham o salvamento
+            void dispatchTeamWebhook({ event: 'weekly_evaluation' });
 
             const skipped = collaborators.length - readyColabs.length;
             showToast(

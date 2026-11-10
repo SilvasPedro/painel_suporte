@@ -26,7 +26,9 @@ import {
     buildWebhookRequest,
     postToWebhook,
     dispatchTeamWebhook,
-    invalidateWebhookConfigCache
+    invalidateWebhookConfigCache,
+    renderWebhookText,
+    DEFAULT_WEBHOOK_MESSAGES
 } from './notificationEvents';
 
 describe('buildNotification', () => {
@@ -67,11 +69,12 @@ describe('buildNotification', () => {
 describe('buildWebhookRequest', () => {
     const msg = { event: 'feedback', title: 'Título', text: 'Texto', link: 'https://hub.example' };
 
-    it('Discord envia um embed em JSON', () => {
+    it('Discord envia texto simples (permite mencionar @everyone) e não um embed', () => {
         const r = buildWebhookRequest('discord', msg);
         expect(r.contentType).toBe('application/json');
         const body = JSON.parse(r.body);
-        expect(body.embeds[0]).toMatchObject({ title: 'Título', description: 'Texto' });
+        expect(body.content).toBe('Texto');
+        expect(body.embeds).toBeUndefined();
     });
 
     it('Slack usa o formato payload= (requisição simples, sem pré-validação CORS)', () => {
@@ -175,5 +178,93 @@ describe('dispatchTeamWebhook', () => {
         await dispatchTeamWebhook({ event: 'feedback', title: 't', text: 'x' });
         await dispatchTeamWebhook({ event: 'feedback', title: 't', text: 'y' });
         expect(getDocMock).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('renderWebhookText', () => {
+    it('troca {link} pelo endereço, em qualquer posição', () => {
+        expect(renderWebhookText('Acessem {link} para ver!', 'https://hub.example/home?tab=my_history'))
+            .toBe('Acessem https://hub.example/home?tab=my_history para ver!');
+    });
+
+    it('sem {link} no modelo, acrescenta o endereço em nova linha', () => {
+        expect(renderWebhookText('Há novidades.', 'https://hub.example')).toBe('Há novidades.\nhttps://hub.example');
+    });
+
+    it('sem endereço, remove o {link} sem deixar espaços duplos', () => {
+        expect(renderWebhookText('Acessem {link} para ver!', '')).toBe('Acessem para ver!');
+    });
+});
+
+describe('mensagens genéricas dos avisos', () => {
+    it('os textos padrão não citam nomes, notas nem conteúdo e trazem o {link}', () => {
+        for (const message of Object.values(DEFAULT_WEBHOOK_MESSAGES)) {
+            expect(message.text).toContain('{link}');
+            // nenhuma nota, quantidade ou data (o "1:1" do nome da avaliação é a única exceção)
+            expect(message.text.replace('1:1', '')).not.toMatch(/\d/);
+        }
+        expect(DEFAULT_WEBHOOK_MESSAGES.weekly_evaluation.text).toMatch(/avaliações semanais/i);
+    });
+});
+
+describe('dispatchTeamWebhook: aviso genérico', () => {
+    const asDoc = (data) => ({ exists: () => true, data: () => data });
+    const sentBody = () => JSON.parse(fetch.mock.calls[0][1].body);
+    let storage;
+
+    beforeEach(() => {
+        invalidateWebhookConfigCache();
+        getDocMock.mockReset();
+        storage = {};
+        vi.stubGlobal('localStorage', {
+            getItem: (k) => (k in storage ? storage[k] : null),
+            setItem: (k, v) => { storage[k] = String(v); }
+        });
+        vi.stubGlobal('window', { location: { origin: 'https://hubdesk-etecc.vercel.app' } });
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    });
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    it('semanal: envia a mensagem padrão com o link de Meu Histórico, sem dados específicos', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w' }));
+        await dispatchTeamWebhook({ event: 'weekly_evaluation' });
+        const { content } = sentBody();
+        expect(content).toContain('Foram lançadas as avaliações semanais de desempenho');
+        expect(content).toContain('https://hubdesk-etecc.vercel.app/home?tab=my_history');
+        expect(content).not.toContain('{link}');
+    });
+
+    it('usa o texto e o link personalizados da configuração', async () => {
+        getDocMock.mockResolvedValue(asDoc({
+            enabled: true, provider: 'discord', url: 'https://discord.example/w',
+            link: 'https://outro.example/historico',
+            messages: { weekly_evaluation: '@everyone saiu a avaliação! {link}' }
+        }));
+        await dispatchTeamWebhook({ event: 'weekly_evaluation' });
+        expect(sentBody().content).toBe('@everyone saiu a avaliação! https://outro.example/historico');
+    });
+
+    it('não repete o mesmo aviso em menos de 10 minutos, mas reenvia depois', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w' }));
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('ok');
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('skipped');
+        expect(fetch).toHaveBeenCalledTimes(1);
+
+        storage['hubdesk_webhook_last_weekly_evaluation'] = String(Date.now() - 11 * 60 * 1000);
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('ok');
+        expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('o antirrepetição vale por tipo de evento', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w' }));
+        await dispatchTeamWebhook({ event: 'weekly_evaluation' });
+        expect(await dispatchTeamWebhook({ event: 'feedback' })).toBe('ok');
+    });
+
+    it('envio que falha não ativa o antirrepetição', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w' }));
+        fetch.mockRejectedValue(new TypeError('offline'));
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('error');
+        expect(storage['hubdesk_webhook_last_weekly_evaluation']).toBeUndefined();
     });
 });

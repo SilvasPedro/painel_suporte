@@ -4,6 +4,29 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.7.1] - 2026-11-10
+
+### 🎯 Destaque Principal
+Avisos do **webhook do canal** agora são **genéricos** (sem nomes, notas ou conteúdo), com o link de Meu Histórico, mensagens editáveis por evento e proteção contra repetição.
+
+---
+
+### 🔄 Alterações (Changed)
+- **Mensagens genéricas por evento** (`DEFAULT_WEBHOOK_MESSAGES`). Exemplo (avaliações semanais): "Atenção, pessoal! Foram lançadas as avaliações semanais de desempenho. Acessem {link} para visualizar!". O texto não cita pessoas, notas, quantidades ou datas.
+- **Avisos de feedback e de 1:1 mensal** também passam a ser genéricos: antes o texto do 1:1 citava o colaborador e quem lançou, o que não cabe em um canal aberto.
+- **Link dos avisos**: configurável; em branco, usa o endereço do site com `/home?tab=my_history` (Meu Histórico).
+- **Discord** passa a receber texto simples (`content`) em vez de um embed, permitindo `@everyone` e `@here` no modelo da mensagem. Slack, Teams, Google Chat e URL genérica mantêm seus formatos, agora com o link dentro do texto.
+- **Botão "Enviar teste"** envia um exemplo do aviso semanal real, marcado como teste.
+
+### 🚀 Novas Funcionalidades (Added)
+- **Mensagem personalizada por evento** em Configurações > Notificações, com `{link}` para posicionar o endereço (sem `{link}`, o endereço é acrescentado em nova linha) e campo para o link enviado.
+- **Proteção contra repetição** (`WEBHOOK_COOLDOWN_MS`): o mesmo evento não é reenviado em menos de 10 minutos (avaliações semanais) ou 30 minutos (feedbacks e 1:1); envios que falham não ativam a proteção.
+
+### 🧪 Testes
+- 9 novos testes: troca de `{link}`, textos padrão sem dados pessoais, envio com texto e link personalizados, proteção contra repetição por evento e envio que falha. Teste do Discord ajustado ao texto simples (102 testes no total).
+
+---
+
 ## [v4.7.0] - 2026-11-10
 
 ### 🎯 Destaque Principal

@@ -54,7 +54,49 @@ export const DEFAULT_WEBHOOK_CONFIG = {
     enabled: false,
     provider: 'discord',
     url: '',
+    link: '',      // endereço enviado nos avisos (vazio = endereço do site atual + /home?tab=my_history)
+    messages: {},  // textos personalizados por evento (vazio = texto padrão)
     events: { weekly_evaluation: true, feedback: true, monthly_evaluation: true }
+};
+
+// Mensagens genéricas para canais de aviso: nunca citam nomes, notas ou conteúdo.
+// {link} é substituído pelo endereço do Hubdesk.
+export const DEFAULT_WEBHOOK_MESSAGES = {
+    weekly_evaluation: {
+        title: '📊 Avaliações semanais disponíveis',
+        text: 'Atenção, pessoal! Foram lançadas as avaliações semanais de desempenho. Acessem {link} para visualizar!'
+    },
+    feedback: {
+        title: '📢 Novos feedbacks disponíveis',
+        text: 'Atenção, pessoal! Há novos feedbacks disponíveis. Acessem {link} para conferir!'
+    },
+    monthly_evaluation: {
+        title: '🎯 Avaliações 1:1 disponíveis',
+        text: 'Atenção, pessoal! Foram registradas novas avaliações 1:1 mensais. Acessem {link} para ler e confirmar ciência!'
+    }
+};
+
+// Evita repetir o mesmo aviso genérico várias vezes seguidas (ex.: vários feedbacks em sequência)
+export const WEBHOOK_COOLDOWN_MS = {
+    weekly_evaluation: 10 * 60 * 1000,
+    feedback: 30 * 60 * 1000,
+    monthly_evaluation: 30 * 60 * 1000
+};
+
+export const DEFAULT_LINK_PATH = '/home?tab=my_history';
+
+export const getDefaultLink = () => (
+    typeof window !== 'undefined' ? `${window.location.origin}${DEFAULT_LINK_PATH}` : ''
+);
+
+/**
+ * Monta o texto final: troca {link} pelo endereço; se o modelo não tiver {link}, acrescenta o endereço numa nova linha.
+ */
+export const renderWebhookText = (template, link) => {
+    const base = String(template || '').trim();
+    if (!link) return base.replace(/\s*\{link\}\s*/g, ' ').replace(/ +/g, ' ').trim();
+    if (base.includes('{link}')) return base.split('{link}').join(link);
+    return `${base}\n${link}`;
 };
 
 // Eventos que acendem o indicador de "Meu Histórico"
@@ -158,31 +200,21 @@ const isValidWebhookUrl = (url) => {
     }
 };
 
-// Corpo da mensagem no formato esperado por cada serviço
+// Corpo da mensagem no formato esperado por cada serviço.
+// O texto já vem com o endereço embutido (ver renderWebhookText); `link` serve ao botão do Teams e ao JSON genérico.
 export const buildWebhookRequest = (provider, { event, title, text, link }) => {
-    const def = NOTIFICATION_EVENTS[event] || { label: 'Evento', color: 0x64748b };
-
     switch (provider) {
         case 'discord':
+            // Texto simples (não incorporado): permite mencionar @everyone/@here no modelo da mensagem
             return {
                 contentType: 'application/json',
-                body: JSON.stringify({
-                    username: 'Hubdesk',
-                    embeds: [{
-                        title,
-                        description: text,
-                        color: def.color,
-                        timestamp: new Date().toISOString(),
-                        footer: { text: `Hubdesk • ${def.label}` },
-                        ...(link ? { url: link } : {})
-                    }]
-                })
+                body: JSON.stringify({ username: 'Hubdesk', content: text })
             };
         case 'slack':
             // Slack não aceita a pré-validação CORS: o formato "payload=" é uma requisição simples
             return {
                 contentType: 'application/x-www-form-urlencoded',
-                body: `payload=${encodeURIComponent(JSON.stringify({ text: `*${title}*\n${text}${link ? `\n<${link}|Abrir no Hubdesk>` : ''}` }))}`,
+                body: `payload=${encodeURIComponent(JSON.stringify({ text: `*${title}*\n${text}` }))}`,
                 simpleOnly: true
             };
         case 'teams':
@@ -206,7 +238,7 @@ export const buildWebhookRequest = (provider, { event, title, text, link }) => {
                 })
             };
         case 'googlechat':
-            return { contentType: 'application/json', body: JSON.stringify({ text: `*${title}*\n${text}${link ? `\n${link}` : ''}` }) };
+            return { contentType: 'application/json', body: JSON.stringify({ text: `*${title}*\n${text}` }) };
         default:
             return {
                 contentType: 'application/json',
@@ -247,17 +279,50 @@ export const postToWebhook = async (config, message) => {
     }
 };
 
+const cooldownKey = (event) => `hubdesk_webhook_last_${event}`;
+
+const isInCooldown = (event) => {
+    try {
+        const last = Number(localStorage.getItem(cooldownKey(event)) || 0);
+        return Date.now() - last < (WEBHOOK_COOLDOWN_MS[event] || 0);
+    } catch {
+        return false;
+    }
+};
+
+const markDispatched = (event) => {
+    try { localStorage.setItem(cooldownKey(event), String(Date.now())); } catch { /* sem armazenamento */ }
+};
+
 /**
- * Despacha um evento ao canal da equipe, se o webhook estiver ativo e o evento habilitado.
- * Nunca lança erro: a falha do webhook não pode atrapalhar o salvamento do item.
- * Por privacidade, o texto enviado ao canal é sempre um resumo (sem conteúdo de feedback ou 1:1).
+ * Despacha um aviso GENÉRICO do evento ao canal da equipe, se o webhook estiver ativo e o evento habilitado.
+ * - O texto vem da configuração (ou do padrão) e nunca contém dados de pessoas, notas ou conteúdo.
+ * - Repetições do mesmo evento em poucos minutos são ignoradas, para não lotar o canal.
+ * - Nunca lança erro: a falha do webhook não pode atrapalhar o salvamento do item.
+ * `title`, `text` e `link` são opcionais e sobrescrevem a configuração.
  */
 export const dispatchTeamWebhook = async ({ event, title, text, link }) => {
     try {
         const config = await getWebhookConfig();
         if (!config?.enabled || !config.url) return 'skipped';
         if (config.events && config.events[event] === false) return 'skipped';
-        return await postToWebhook(config, { event, title, text, link });
+        if (isInCooldown(event)) return 'skipped';
+
+        const defaults = DEFAULT_WEBHOOK_MESSAGES[event] || {
+            title: 'Hubdesk',
+            text: 'Atenção, pessoal! Há novidades no Hubdesk. Acessem {link}'
+        };
+        const finalLink = link || config.link || getDefaultLink();
+        const finalText = renderWebhookText(text || config.messages?.[event] || defaults.text, finalLink);
+
+        const result = await postToWebhook(config, {
+            event,
+            title: title || defaults.title,
+            text: finalText,
+            link: finalLink
+        });
+        if (result !== 'error') markDispatched(event);
+        return result;
     } catch {
         return 'error';
     }

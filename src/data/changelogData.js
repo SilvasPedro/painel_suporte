@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.7.0';
+export const CURRENT_VERSION = 'v4.7.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.7.0',
+    version: 'v4.7.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.7.1: os avisos do webhook passam a ser genéricos, sem nomes, notas ou conteúdo, com o link de Meu Histórico, mensagens editáveis por evento e proteção contra repetição.',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Avisos Genéricos para o Canal da Equipe',
+        category: 'Notificações',
+        description: 'O canal passa a receber uma mensagem geral, como: Atenção, pessoal! Foram lançadas as avaliações semanais de desempenho. Acessem o link para visualizar! Nenhum nome, nota ou conteúdo é enviado, inclusive nos avisos de feedback e de 1:1 mensal, que antes citavam as pessoas.'
+      },
+      {
+        icon: FileText,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Mensagem e Link Personalizáveis',
+        category: 'Integrações',
+        description: 'Em Configurações > Notificações é possível editar o texto de cada evento, usando {link} onde o endereço deve aparecer, e definir o link enviado (padrão: Meu Histórico do site). No Discord, a mensagem é texto simples e permite @everyone ou @here. O teste envia um exemplo do aviso real.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Proteção Contra Repetição',
+        category: 'Integrações',
+        description: 'O mesmo tipo de aviso não é reenviado em menos de 10 minutos (avaliações semanais) ou 30 minutos (feedbacks e 1:1), evitando dezenas de mensagens iguais quando vários itens são lançados em sequência.'
+      }
+    ]
+  },
+  {
+    version: 'v4.7.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.7.0: notificações otimizadas. Feedbacks, avaliações semanais e avaliações 1:1 geram um aviso pessoal para o colaborador, que passa a ler apenas os próprios avisos em vez de coleções inteiras, e a gestão pode enviar um resumo dos eventos a um canal da equipe (Discord, Slack, Teams, Google Chat ou URL genérica).',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.6.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.6.0: tour guiado no primeiro acesso, com dois roteiros (Operacional e Apoio; Gestor e Supervisor), e renomeação do cargo Colaborador para Operacional.',
     items: [
       {

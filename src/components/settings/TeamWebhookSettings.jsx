@@ -12,6 +12,9 @@ import {
     WEBHOOK_CONFIG_COLLECTION,
     WEBHOOK_CONFIG_DOC,
     DEFAULT_WEBHOOK_CONFIG,
+    DEFAULT_WEBHOOK_MESSAGES,
+    getDefaultLink,
+    renderWebhookText,
     getWebhookConfig,
     invalidateWebhookConfigCache,
     postToWebhook
@@ -49,6 +52,7 @@ const TeamWebhookSettings = () => {
     })();
 
     const update = (patch) => setConfig(prev => ({ ...prev, ...patch }));
+    const setMessage = (eventId, value) => update({ messages: { ...(config.messages || {}), [eventId]: value } });
     const toggleEvent = (eventId) => update({ events: { ...config.events, [eventId]: !config.events?.[eventId] } });
 
     const handleSave = async () => {
@@ -62,6 +66,12 @@ const TeamWebhookSettings = () => {
                 enabled: Boolean(config.enabled),
                 provider: config.provider,
                 url: config.url.trim(),
+                link: (config.link || '').trim(),
+                messages: Object.fromEntries(
+                    Object.entries(config.messages || {})
+                        .map(([k, v]) => [k, String(v || '').trim()])
+                        .filter(([, v]) => v)
+                ),
                 events: config.events,
                 updatedAt: new Date().toISOString(),
                 updatedBy: currentUser?.name || currentUser?.email || ''
@@ -81,11 +91,13 @@ const TeamWebhookSettings = () => {
             return;
         }
         setTesting(true);
+        const link = (config.link || '').trim() || getDefaultLink();
+        const sample = renderWebhookText(config.messages?.weekly_evaluation || DEFAULT_WEBHOOK_MESSAGES.weekly_evaluation.text, link);
         const result = await postToWebhook(config, {
-            event: 'feedback',
-            title: '✅ Teste do Hubdesk',
-            text: `Webhook configurado por ${currentUser?.name || 'um gestor'}. Se você está vendo esta mensagem, as notificações da equipe chegarão neste canal.`,
-            link: window.location.origin
+            event: 'weekly_evaluation',
+            title: DEFAULT_WEBHOOK_MESSAGES.weekly_evaluation.title,
+            text: `🧪 TESTE (exemplo do aviso real):\n${sample}`,
+            link
         });
         setTesting(false);
 
@@ -172,23 +184,51 @@ const TeamWebhookSettings = () => {
                         </div>
 
                         <div>
-                            <span className="block text-xs font-bold text-secondary-hub mb-2">Eventos enviados ao canal</span>
-                            <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-secondary-hub mb-1">Link enviado nos avisos</label>
+                            <input
+                                type="url"
+                                value={config.link || ''}
+                                disabled={!canManage}
+                                onChange={(e) => update({ link: e.target.value })}
+                                placeholder={getDefaultLink() || 'https://seu-site/home?tab=my_history'}
+                                className="w-full px-3 py-2.5 text-xs font-mono bg-subtle border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub"
+                            />
+                            <p className="text-[11px] text-muted-hub mt-1">
+                                Endereço que aparece no aviso. Em branco, usa o endereço do site com <span className="font-mono">/home?tab=my_history</span> (Meu Histórico).
+                            </p>
+                        </div>
+
+                        <div>
+                            <span className="block text-xs font-bold text-secondary-hub mb-2">Eventos e mensagens enviadas ao canal</span>
+                            <div className="space-y-2">
                                 {NOTIFICATION_EVENT_IDS.map(eventId => (
-                                    <label key={eventId} className="flex items-center gap-2.5 px-3 py-2 rounded-xl bg-subtle border border-subtle cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            checked={config.events?.[eventId] !== false}
-                                            disabled={!canManage}
-                                            onChange={() => toggleEvent(eventId)}
-                                            className="w-4 h-4"
+                                    <div key={eventId} className="rounded-xl bg-subtle border border-subtle p-3 space-y-2">
+                                        <label className="flex items-center gap-2.5 cursor-pointer">
+                                            <input
+                                                type="checkbox"
+                                                checked={config.events?.[eventId] !== false}
+                                                disabled={!canManage}
+                                                onChange={() => toggleEvent(eventId)}
+                                                className="w-4 h-4"
+                                            />
+                                            <span className="text-xs font-semibold text-primary-hub">
+                                                {NOTIFICATION_EVENTS[eventId].icon} {NOTIFICATION_EVENTS[eventId].label}
+                                            </span>
+                                        </label>
+                                        <textarea
+                                            rows={2}
+                                            value={config.messages?.[eventId] || ''}
+                                            disabled={!canManage || config.events?.[eventId] === false}
+                                            onChange={(e) => setMessage(eventId, e.target.value)}
+                                            placeholder={DEFAULT_WEBHOOK_MESSAGES[eventId].text}
+                                            className="w-full px-3 py-2 text-xs bg-surface border border-subtle rounded-lg outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub resize-none disabled:opacity-60"
                                         />
-                                        <span className="text-xs font-semibold text-primary-hub">
-                                            {NOTIFICATION_EVENTS[eventId].icon} {NOTIFICATION_EVENTS[eventId].label}
-                                        </span>
-                                    </label>
+                                    </div>
                                 ))}
                             </div>
+                            <p className="text-[11px] text-muted-hub mt-1.5">
+                                Deixe em branco para usar o texto padrão (mostrado em cinza). Use <span className="font-mono">{'{link}'}</span> onde o endereço deve aparecer; no Discord, também dá para incluir <span className="font-mono">@everyone</span> ou <span className="font-mono">@here</span>.
+                            </p>
                         </div>
 
                         {canManage ? (
@@ -223,7 +263,7 @@ const TeamWebhookSettings = () => {
                                 <ShieldCheck className="w-4 h-4 text-emerald-500" /> Privacidade
                             </h3>
                             <p className="text-[11px] text-secondary-hub leading-relaxed">
-                                O canal recebe apenas um resumo do evento (quem lançou e o tipo). O conteúdo de feedbacks e de avaliações 1:1 nunca é enviado.
+                                O canal recebe apenas um aviso genérico, sem nomes, notas ou conteúdo de feedbacks e avaliações. Cada colaborador vê os detalhes dele somente dentro do Hubdesk.
                                 A URL fica visível somente para a gestão, porque quem tem a URL consegue postar mensagens no canal.
                             </p>
                         </div>
@@ -236,6 +276,7 @@ const TeamWebhookSettings = () => {
                                 <li>Não há nova tentativa automática: se o envio falhar, a mensagem não é reenviada.</li>
                                 <li>Alguns serviços não permitem confirmar a entrega pelo navegador; use "Enviar teste" e confira o canal.</li>
                                 <li>Cada colaborador continua recebendo o próprio aviso dentro do Hubdesk, independentemente do webhook.</li>
+                                <li>Para não lotar o canal, o mesmo tipo de aviso não é repetido em menos de 10 minutos (avaliações semanais) ou 30 minutos (feedbacks e 1:1).</li>
                             </ul>
                         </div>
                     </div>

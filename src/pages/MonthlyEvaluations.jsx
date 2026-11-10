@@ -258,13 +258,8 @@ const MonthlyEvaluations = () => {
                     console.warn('[MonthlyEvaluations] Aviso ao registrar notificação persistente:', notifErr);
                 }
 
-                // Resumo ao canal da equipe, sem o conteúdo do 1:1
-                void dispatchTeamWebhook({
-                    event: 'monthly_evaluation',
-                    title: '🎯 Novo 1:1 mensal registrado',
-                    text: `${payload.evaluatorName} registrou o 1:1 de ${formatMonth(formData.referenceMonth)} de ${formData.colabName}.`,
-                    link: window.location.origin
-                });
+                // Aviso genérico ao canal da equipe, sem nomes ou conteúdo
+                void dispatchTeamWebhook({ event: 'monthly_evaluation' });
 
                 showToast("Novo Feedback 1:1 em Markdown registrado e notificação enviada ao colaborador!", "success");
             }

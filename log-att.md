@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.7.1 (Avisos Genéricos do Webhook)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.7.0` para `4.7.1`. |
+| **Alterado** | `src/services/notificationEvents.js` | Mensagens genéricas padrão, `renderWebhookText`, link configurável, Discord em texto simples e proteção contra repetição. |
+| **Alterado** | `src/components/settings/TeamWebhookSettings.jsx` | Campos de link e de mensagem por evento, teste com exemplo do aviso real e textos de privacidade. |
+| **Alterado** | `src/pages/WeeklyMetrics.jsx`, `src/services/adminAuth.js`, `src/pages/MonthlyEvaluations.jsx` | Disparo do aviso genérico, sem nomes ou dados. |
+| **Alterado** | `src/services/notificationEvents.test.js` | Novos testes das mensagens genéricas, do link e da proteção contra repetição. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.7.1` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` / `log-att.md` | Notas de lançamento e registro desta atualização. |
+
+---
+
 ## [10/11/2026] — Versão v4.7.0 (Notificações: Avisos Pessoais e Webhook do Canal)
 
 | Ação | Arquivo | Descrição da Alteração |
