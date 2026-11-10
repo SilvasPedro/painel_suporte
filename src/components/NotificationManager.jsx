@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
 import { subscribeSharedCollection } from '../services/dataCache';
+import { NOTIFICATION_EVENTS, inboxOptions } from '../services/notificationEvents';
 import { registerMessagingServiceWorker } from '../services/browserNotifications';
 import { resolveUserName } from '../utils/userResolvers';
 
@@ -18,13 +19,9 @@ export const NotificationManager = () => {
     const { normalizedRole, isMasterAdmin } = usePermissions();
     const { notify, requestPermission } = useNotification();
     
-    // Rastreia IDs conhecidos para feedbacks
-    const knownFeedbackIds = useRef(new Set());
-    const isFeedbackInitialized = useRef(false);
-
-    // Rastreia IDs conhecidos para avaliações mensais (1:1)
-    const knownMonthlyIds = useRef(new Set());
-    const isMonthlyInitialized = useRef(false);
+    // Rastreia os avisos pessoais já vistos (feedback, avaliação semanal e 1:1 mensal)
+    const knownInboxIds = useRef(new Set());
+    const isInboxInitialized = useRef(false);
 
     // Rastreia relatórios conhecidos e seus status anteriores: Map<reportId, { status: string, creatorId: string }>
     const knownReportsMap = useRef(new Map());
@@ -46,19 +43,14 @@ export const NotificationManager = () => {
     }, [currentUser, isInactive, requestPermission]);
 
     // 2. Funções utilitárias para abrir itens na aplicação
-        const openMonthlyInApp = (evaluationItem) => {
+    // Abre Meu Histórico na aba do aviso (feedbacks, métricas semanais ou 1:1 mensal)
+    const openHistoryInApp = (subtab) => {
         if (typeof window === 'undefined') return;
         window.focus();
-
-        window.dispatchEvent(new CustomEvent('HUBDESK_NAVIGATE_TAB', {
-            detail: { tab: 'history', subtab: 'monthly' }
-        }));
-
+        window.dispatchEvent(new CustomEvent('HUBDESK_NAVIGATE_TAB', { detail: { tab: 'history', subtab } }));
         setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('HUBDESK_OPEN_MONTHLY_EVALUATION', {
-                detail: { evaluation: evaluationItem }
-            }));
-        }, 150);
+            window.dispatchEvent(new CustomEvent('HUBDESK_OPEN_HISTORY_TAB', { detail: { subtab } }));
+        }, 200);
     };
 
     const openFeedbackInApp = (feedbackItem) => {
@@ -219,156 +211,57 @@ export const NotificationManager = () => {
         };
     }, [notify]);
 
-    // 4. Escuta em TEMPO REAL a coleção 'feedbacks' no Firestore
+    // 4. Caixa de avisos pessoal: o lançamento de feedback, avaliação semanal ou 1:1 mensal grava um
+    // aviso endereçado ao colaborador. Em vez de baixar as coleções inteiras, escutamos só os avisos
+    // dele ainda não lidos (poucos documentos).
     useEffect(() => {
         if (!currentUser || isInactive || currentUser.isInactive) return;
 
         const currentUserId = currentUser.firestoreId || currentUser.uid;
-        const currentEmail = currentUser.email?.toLowerCase();
-        const currentName = currentUser.name?.trim().toLowerCase();
-
-        const isTargetUser = (item) => {
-            if (!item) return false;
-            if (currentUserId && (item.colabId === currentUserId || item.collaboratorId === currentUserId)) return true;
-            if (currentEmail && (item.colabEmail?.toLowerCase() === currentEmail || item.email?.toLowerCase() === currentEmail)) return true;
-            if (currentName && (item.colabName?.toLowerCase() === currentName || item.collaboratorName?.toLowerCase() === currentName)) return true;
-            return false;
-        };
-
         if (!currentUserId) return;
 
-        const unsubscribe = subscribeSharedCollection('feedbacks', (items) => {
+        const unsubscribe = subscribeSharedCollection('notifications', (items) => {
             if (!Array.isArray(items)) return;
 
-            // Primeira execução: popula a lista de IDs existentes sem disparar notificações em massa
-            if (!isFeedbackInitialized.current) {
+            // Primeira execução: só memoriza o que já estava pendente (o indicador do menu cuida disso)
+            if (!isInboxInitialized.current) {
                 items.forEach(item => {
-                    if (item.id) knownFeedbackIds.current.add(item.id);
+                    if (item.id) knownInboxIds.current.add(item.id);
                 });
-                isFeedbackInitialized.current = true;
-                return;
-            }
-
-            // Execuções subsequentes: identifica feedbacks NOVOS criados para este colaborador
-            items.forEach((item) => {
-                if (!item || !item.id) return;
-
-                const isKnown = knownFeedbackIds.current.has(item.id);
-                if (isKnown) return;
-
-                knownFeedbackIds.current.add(item.id);
-
-                if (isTargetUser(item)) {
-                    if (currentEmail && item.createdBy && item.createdBy.toLowerCase() === currentEmail) {
-                        return;
-                    }
-
-                    const feedbackTitle = `📢 Novo Feedback: ${item.type || 'Desempenho'}`;
-                    const authorName = item.createdBy ? resolveUserName(item.createdBy) : 'Gestão';
-                    const author = authorName ? `De: ${authorName}\n` : '';
-                    const commentPreview = item.comment 
-                        ? (item.comment.length > 120 ? item.comment.substring(0, 117) + '...' : item.comment)
-                        : 'Você recebeu um novo feedback no sistema.';
-                    
-                    notify({
-                        title: feedbackTitle,
-                        body: `${author}"${commentPreview}"`,
-                        type: 'feedback',
-                        tag: `feedback-${item.id}`,
-                        data: {
-                            id: item.id,
-                            feedback: item,
-                            type: 'feedback',
-                            tab: 'history'
-                        },
-                        action: {
-                            label: 'Ver Feedback',
-                            onClick: () => openFeedbackInApp(item)
-                        },
-                        onClick: () => openFeedbackInApp(item)
-                    });
-                }
-            });
-        }, { where: [['colabId', '==', currentUserId]] });
-
-        return () => {
-            unsubscribe();
-        };
-    }, [currentUser, isInactive, notify]);
-
-    
-    // 4.1. Escuta em TEMPO REAL a coleção 'monthly_evaluations' no Firestore
-    useEffect(() => {
-        if (!currentUser || isInactive || currentUser.isInactive) return;
-
-        const currentUserId = currentUser.firestoreId || currentUser.uid;
-        const currentEmail = currentUser.email?.toLowerCase();
-        const currentName = currentUser.name?.trim().toLowerCase();
-
-        const isTargetUser = (item) => {
-            if (!item) return false;
-            if (currentUserId && (item.colabId === currentUserId || item.collaboratorId === currentUserId)) return true;
-            if (currentEmail && (item.colabEmail?.toLowerCase() === currentEmail || item.email?.toLowerCase() === currentEmail)) return true;
-            if (currentName && (item.colabName?.toLowerCase() === currentName || item.collaboratorName?.toLowerCase() === currentName)) return true;
-            return false;
-        };
-
-        if (!currentUserId) return;
-
-        const unsubscribe = subscribeSharedCollection('monthly_evaluations', (items) => {
-            if (!Array.isArray(items)) return;
-
-            if (!isMonthlyInitialized.current) {
-                items.forEach(item => {
-                    if (item.id) knownMonthlyIds.current.add(item.id);
-                });
-                isMonthlyInitialized.current = true;
+                isInboxInitialized.current = true;
                 return;
             }
 
             items.forEach((item) => {
-                if (!item || !item.id) return;
+                if (!item?.id || knownInboxIds.current.has(item.id)) return;
+                knownInboxIds.current.add(item.id);
+                if (item.read) return;
 
-                const isKnown = knownMonthlyIds.current.has(item.id);
-                if (isKnown) return;
+                const def = NOTIFICATION_EVENTS[item.event];
+                if (!def) return;
 
-                knownMonthlyIds.current.add(item.id);
+                const goToHistory = () => openHistoryInApp(def.subtab);
 
-                if (isTargetUser(item)) {
-                    if (currentEmail && item.evaluatorEmail && item.evaluatorEmail.toLowerCase() === currentEmail) {
-                        return;
-                    }
+                notify({
+                    title: item.title || `${def.icon} ${def.label}`,
+                    body: item.body || 'Você tem uma novidade no Hubdesk.',
+                    type: 'feedback',
+                    tag: `inbox-${item.id}`,
+                    data: {
+                        id: item.refId || item.id,
+                        type: item.event,
+                        tab: 'history',
+                        subtab: def.subtab
+                    },
+                    action: { label: 'Abrir', onClick: goToHistory },
+                    onClick: goToHistory
+                });
 
-                    const evaluatorName = item.evaluatorName ? resolveUserName(item.evaluatorName) : 'Liderança';
-                    const refMonth = item.referenceMonth 
-                        ? (item.referenceMonth.includes('-') ? item.referenceMonth.split('-').reverse().join('/') : item.referenceMonth)
-                        : 'recente';
-
-                    notify({
-                        title: '🎯 Novo Feedback 1:1 Disponível!',
-                        body: `Seu alinhamento mensal (${refMonth}) foi registrado por ${evaluatorName}. Abra para ler e confirmar ciência.`,
-                        type: 'feedback',
-                        tag: `monthly-${item.id}`,
-                        data: {
-                            id: item.id,
-                            evaluation: item,
-                            type: 'monthly_evaluation',
-                            tab: 'history',
-                            subtab: 'monthly'
-                        },
-                        action: {
-                            label: 'Ver Feedback 1:1',
-                            onClick: () => openMonthlyInApp(item)
-                        },
-                        onClick: () => openMonthlyInApp(item)
-                    });
-
-                    window.dispatchEvent(new CustomEvent('HUBDESK_TRIGGER_PULSE', {
-                        detail: { target: 'history' }
-                    }));
-                }
+                window.dispatchEvent(new CustomEvent('HUBDESK_TRIGGER_PULSE', {
+                    detail: { target: 'history' }
+                }));
             });
-        }, { where: [['colabId', '==', currentUserId]] });
+        }, inboxOptions(currentUserId));
 
         return () => unsubscribe();
     }, [currentUser, isInactive, notify]);

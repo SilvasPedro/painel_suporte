@@ -13,6 +13,7 @@ import { usePermissions } from '../context/PermissionsContext';
 import RbacSettingsTab from '../components/RbacSettingsTab';
 import QaProcessesTab from '../components/settings/QaProcessesTab';
 import FeedbackTagsTab from '../components/settings/FeedbackTagsTab';
+import TeamWebhookSettings from '../components/settings/TeamWebhookSettings';
 import { SYSTEM_SHIFTS, THIRD_PARTY_SCHEDULE_INFO, saveSystemShiftsInfo } from '../services/userProfile';
 
 const DEFAULT_SLA_PRESETS = {
@@ -1064,6 +1065,9 @@ const Settings = () => {
             {/* ========================================================================= */}
             {activeTab === 'notifications' && (
                 <div className="w-full space-y-6">
+                    {/* Webhook do canal da equipe */}
+                    <TeamWebhookSettings />
+
                     {/* Status da Permissão e Central de Notificações */}
                     <div className="w-full bg-surface rounded-3xl border border-subtle shadow-xs p-6 lg:p-8 space-y-6">
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-subtle pb-4">

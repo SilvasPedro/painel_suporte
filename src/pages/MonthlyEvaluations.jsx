@@ -23,6 +23,7 @@ import {
 import MonthlyEvaluationDetailModal from '../components/history/MonthlyEvaluationDetailModal';
 import MarkdownRenderer from '../components/common/MarkdownRenderer';
 import { BorderBeam } from '../components/magicui/BorderBeam';
+import { buildNotification, createNotification, dispatchTeamWebhook } from '../services/notificationEvents';
 
 const MonthlyEvaluations = () => {
     const { showToast } = useNotification();
@@ -241,30 +242,29 @@ const MonthlyEvaluations = () => {
                 payload.read = false; // Define como não lida ao criar
                 const docRef = await addDoc(collection(db, "monthly_evaluations"), payload);
 
-                // Dispara notificação persistente para o colaborador
+                // Aviso pessoal do colaborador (o app dele escuta só os próprios avisos)
                 try {
-                    await addDoc(collection(db, "notifications"), {
-                        userId: formData.colabId,
-                        recipientId: formData.colabId,
-                        recipientName: formData.colabName,
-                        type: 'feedback',
-                        subtab: 'monthly',
-                        evaluationId: docRef.id,
+                    await createNotification(buildNotification({
+                        event: 'monthly_evaluation',
+                        toUserId: formData.colabId,
+                        toUserName: formData.colabName,
+                        refId: docRef.id,
                         title: '🎯 Novo Feedback 1:1 Disponível!',
                         body: `Seu alinhamento mensal (${formatMonth(formData.referenceMonth)}) foi registrado por ${payload.evaluatorName}. Acesse Meu Histórico para ler e confirmar ciência.`,
-                        read: false,
-                        createdAt: now.toISOString(),
-                        date: now.toLocaleDateString('pt-BR'),
-                        data: {
-                            id: docRef.id,
-                            type: 'monthly_evaluation',
-                            subtab: 'monthly',
-                            evaluation: { ...payload, id: docRef.id }
-                        }
-                    });
+                        authorName: payload.evaluatorName,
+                        meta: { referenceMonth: formData.referenceMonth }
+                    }));
                 } catch (notifErr) {
                     console.warn('[MonthlyEvaluations] Aviso ao registrar notificação persistente:', notifErr);
                 }
+
+                // Resumo ao canal da equipe, sem o conteúdo do 1:1
+                void dispatchTeamWebhook({
+                    event: 'monthly_evaluation',
+                    title: '🎯 Novo 1:1 mensal registrado',
+                    text: `${payload.evaluatorName} registrou o 1:1 de ${formatMonth(formData.referenceMonth)} de ${formData.colabName}.`,
+                    link: window.location.origin
+                });
 
                 showToast("Novo Feedback 1:1 em Markdown registrado e notificação enviada ao colaborador!", "success");
             }

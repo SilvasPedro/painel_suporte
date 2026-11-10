@@ -1,8 +1,9 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc, updateDoc, collection, addDoc } from "firebase/firestore"
+import { doc, setDoc, updateDoc, collection, writeBatch } from "firebase/firestore"
 import { db, auth, firebaseConfig } from "./firebase";
 import { resolveUserName } from '../utils/userResolvers';
+import { buildNotification, addNotificationToBatch, dispatchTeamWebhook } from './notificationEvents';
 
 // Instância para criar a conta sem deslogar o Admin
 const adminApp = initializeApp(firebaseConfig, "AdminWorker");
@@ -81,5 +82,26 @@ export const registerFeedback = async (collaboratorId, feedbackData, loggedUser 
   };
 
   // Salva em uma coleção separada chamada 'feedbacks'
-  await addDoc(collection(db, "feedbacks"), payload);
+  // Feedback e aviso pessoal do colaborador gravados juntos (atômico)
+  const feedbackRef = doc(collection(db, "feedbacks"));
+  const batch = writeBatch(db);
+  batch.set(feedbackRef, payload);
+  addNotificationToBatch(batch, buildNotification({
+    event: 'feedback',
+    toUserId: collaboratorId,
+    refId: feedbackRef.id,
+    title: `📢 Novo Feedback: ${payload.type || 'Desempenho'}`,
+    body: `${authorName ? `De: ${authorName}. ` : ''}Você recebeu um novo feedback. Abra Meu Histórico para ler.`,
+    authorName,
+    meta: { type: payload.type || '' }
+  }));
+  await batch.commit();
+
+  // Resumo ao canal da equipe, sem o conteúdo do feedback
+  void dispatchTeamWebhook({
+    event: 'feedback',
+    title: '📢 Novo feedback registrado',
+    text: `${authorName || 'A liderança'} registrou um feedback (${payload.type || 'Desempenho'}).`,
+    link: typeof window !== 'undefined' ? window.location.origin : undefined
+  });
 };

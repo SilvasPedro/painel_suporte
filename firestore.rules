@@ -179,6 +179,35 @@ service cloud.firestore {
       allow write: if isStaffAdmin();
     }
 
+    // ==========================================
+    // COLEÇÃO: AVISOS PESSOAIS (notifications)
+    // Gravados por quem lança o item; lidos e marcados como lidos pelo destinatário.
+    // ==========================================
+    match /notifications/{notifId} {
+      allow read: if isSignedIn() && (
+        isStaffAdmin() ||
+        resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isStaffAdmin()
+        && incoming().toUserId is string
+        && incoming().event is string;
+      allow update: if isSignedIn() && (
+        isStaffAdmin() ||
+        (
+          resource.data.toUserId == request.auth.uid &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt'])
+        )
+      );
+      allow delete: if isStaffAdmin();
+    }
+
+    // ==========================================
+    // COLEÇÃO: INTEGRAÇÕES (webhook do canal da equipe) - somente gestão
+    // ==========================================
+    match /integrations/{integrationId} {
+      allow read, write: if isStaffAdmin();
+    }
+
     match /admins/{adminId} {
       allow read: if isSignedIn();
       allow write: if false; // Gerenciado apenas via console/backend seguro

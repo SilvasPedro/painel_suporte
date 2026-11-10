@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.6.0';
+export const CURRENT_VERSION = 'v4.7.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.6.0',
+    version: 'v4.7.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.7.0: notificações otimizadas. Feedbacks, avaliações semanais e avaliações 1:1 geram um aviso pessoal para o colaborador, que passa a ler apenas os próprios avisos em vez de coleções inteiras, e a gestão pode enviar um resumo dos eventos a um canal da equipe (Discord, Slack, Teams, Google Chat ou URL genérica).',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Avisos Pessoais com Leitura Mínima',
+        category: 'Notificações',
+        description: 'Ao lançar avaliação semanal, feedback ou 1:1 mensal, o sistema grava um aviso endereçado ao colaborador junto com o item. O app dele escuta somente os avisos ainda não lidos, o indicador de Meu Histórico acende por eles e o clique abre a aba certa do histórico. Os avisos viram lidos ao abrir o histórico, sem leituras extras no banco.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Webhook do Canal da Equipe',
+        category: 'Integrações',
+        description: 'Em Configurações > Notificações, a gestão cadastra a URL de um canal (Discord, Slack, Microsoft Teams, Google Chat ou URL genérica em JSON), escolhe quais eventos enviar e testa o envio. O canal recebe apenas um resumo do evento, nunca o conteúdo de feedbacks ou 1:1, e a URL fica visível somente para a gestão.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Novas Regras de Segurança',
+        category: 'Segurança',
+        description: 'Coleção de avisos com criação restrita à gestão e leitura restrita ao destinatário, que só pode marcar como lido, e coleção de integrações acessível apenas à gestão. As regras precisam ser publicadas no Firebase.'
+      }
+    ]
+  },
+  {
+    version: 'v4.6.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.6.0: tour guiado no primeiro acesso, com dois roteiros (Operacional e Apoio; Gestor e Supervisor), e renomeação do cargo Colaborador para Operacional.',
     items: [
       {
@@ -30,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.5.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.5.1: correção do histórico de versões, que passa a abrir normalmente (ícone ausente na entrada da v4.5.0).',
     items: [
       {

@@ -4,6 +4,27 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.7.0 (Notificações: Avisos Pessoais e Webhook do Canal)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.6.0` para `4.7.0`. |
+| **Criado** | `src/services/notificationEvents.js` | Eventos, montagem de avisos, marcação de lidos, formatos de webhook por serviço, envio com fallback de CORS e despacho ao canal da equipe. |
+| **Criado** | `src/services/notificationEvents.test.js` | Testes dos avisos e do webhook. |
+| **Criado** | `src/components/settings/TeamWebhookSettings.jsx` | Tela de configuração do webhook (serviço, URL, eventos, teste e avisos de privacidade). |
+| **Alterado** | `firestore.rules` | Regras de `notifications` e `integrations`. |
+| **Alterado** | `src/components/NotificationManager.jsx` | Listeners de feedbacks e 1:1 substituídos pela caixa de avisos pessoal. |
+| **Alterado** | `src/context/NotificationContext.jsx` | Indicador de Meu Histórico baseado nos avisos pendentes e marcação de lidos ao abrir o histórico. |
+| **Alterado** | `src/pages/WeeklyMetrics.jsx` | Aviso pessoal por colaborador no mesmo lote da avaliação e resumo ao canal da equipe. |
+| **Alterado** | `src/services/adminAuth.js` | Feedback e aviso gravados em lote e resumo ao canal. |
+| **Alterado** | `src/pages/MonthlyEvaluations.jsx` | Aviso pessoal no novo formato e resumo ao canal. |
+| **Alterado** | `src/pages/MyHistory.jsx` | Abertura da aba indicada pelo aviso. |
+| **Alterado** | `src/pages/Settings.jsx` | Inclusão do cartão de webhook na aba Notificações. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.7.0` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` / `log-att.md` | Notas de lançamento e registro desta atualização. |
+
+---
+
 ## [09/11/2026] — Versão v4.6.0 (Tour Guiado e Cargo Operacional)
 
 | Ação | Arquivo | Descrição da Alteração |

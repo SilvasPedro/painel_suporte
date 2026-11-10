@@ -9,9 +9,11 @@ import { collection, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 import { normalizeRole } from '../services/rbac';
 import { BorderBeam } from '../components/magicui/BorderBeam';
 import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
+import { buildNotification, addNotificationToBatch, dispatchTeamWebhook } from '../services/notificationEvents';
 
 const SHIFT_BADGES = {
     'Manhã I': {
@@ -69,6 +71,7 @@ const getShiftBadge = (shift) => {
 
 const WeeklyMetrics = () => {
     const { showToast } = useNotification();
+    const { currentUser } = useAuth();
     const [collaborators, setCollaborators] = useState([]);
     const [metricsData, setMetricsData] = useState({});
     const [loading, setLoading] = useState(true);
@@ -340,7 +343,9 @@ const WeeklyMetrics = () => {
         try {
             const [year, month, day] = referenceDate.split('-');
             const dateString = `${day}/${month}/${year}`;
-            const BATCH_SIZE = 400;
+            // Cada colaborador gera 2 documentos (avaliação + aviso): 200 colaboradores por lote
+            const BATCH_SIZE = 200;
+            const authorName = currentUser?.name || currentUser?.displayName || 'Liderança';
 
             for (let i = 0; i < readyColabs.length; i += BATCH_SIZE) {
                 const batch = writeBatch(db);
@@ -363,7 +368,8 @@ const WeeklyMetrics = () => {
                         Ligacoes_Perdidas: ligPerdidas
                     });
 
-                    batch.set(doc(collection(db, "weekly_evaluations")), {
+                    const evalRef = doc(collection(db, "weekly_evaluations"));
+                    batch.set(evalRef, {
                         colabId: colab.id,
                         colabName: colab.name || '',
                         shift: colab.shift || '',
@@ -381,9 +387,29 @@ const WeeklyMetrics = () => {
                         pontuacao: pontuacaoTotal,
                         createdAt: new Date()
                     });
+
+                    // Aviso pessoal gravado junto com a avaliação (o app do colaborador só escuta os próprios avisos)
+                    addNotificationToBatch(batch, buildNotification({
+                        event: 'weekly_evaluation',
+                        toUserId: colab.id,
+                        toUserName: colab.name || '',
+                        refId: evalRef.id,
+                        title: '📊 Nova Avaliação Semanal',
+                        body: `Sua avaliação da semana (${dateString}) foi lançada: ${pontuacaoTotal} pts. Veja os detalhes em Meu Histórico.`,
+                        authorName: authorName,
+                        meta: { date: dateString, pontuacao: pontuacaoTotal }
+                    }));
                 });
                 await batch.commit();
             }
+
+            // Resumo ao canal da equipe (sem enviar notas individuais); falhas não atrapalham o salvamento
+            void dispatchTeamWebhook({
+                event: 'weekly_evaluation',
+                title: '📊 Avaliações semanais lançadas',
+                text: `${authorName} lançou ${readyColabs.length} avaliação(ões) da semana de ${dateString}.`,
+                link: window.location.origin
+            });
 
             const skipped = collaborators.length - readyColabs.length;
             showToast(

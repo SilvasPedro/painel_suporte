@@ -142,6 +142,18 @@ const MyHistory = ({ currentUserId }) => {
         }
     };
 
+    // Abre a aba indicada por um aviso pessoal (feedbacks, métricas semanais, auditorias ou 1:1 mensal)
+    useEffect(() => {
+        const handleOpenTab = (e) => {
+            const target = e.detail?.subtab;
+            if (['feedbacks', 'metrics', 'audits', 'monthly'].includes(target)) {
+                setActiveTab(target);
+            }
+        };
+        window.addEventListener('HUBDESK_OPEN_HISTORY_TAB', handleOpenTab);
+        return () => window.removeEventListener('HUBDESK_OPEN_HISTORY_TAB', handleOpenTab);
+    }, []);
+
     // Abre feedback automaticamente se acionado por notificação push ou clique de alerta
     useEffect(() => {
         const handleOpenFeedback = (e) => {

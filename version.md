@@ -4,6 +4,39 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.7.0] - 2026-11-10
+
+### 🎯 Destaque Principal
+**Notificações otimizadas**: avisos pessoais por usuário (leitura mínima) e **webhook do canal da equipe** para novas avaliações semanais, feedbacks e avaliações 1:1 mensais.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Avisos pessoais** (`notifications`): quem lança a avaliação semanal, o feedback ou o 1:1 mensal grava um aviso endereçado ao colaborador. Na avaliação semanal e no feedback, o aviso é gravado no mesmo lote do item (atômico).
+- **Caixa de avisos no app**: `NotificationManager` e `NotificationContext` passam a escutar apenas os avisos não lidos do próprio usuário (`where toUserId == uid` e `read == false`), substituindo os listeners de `feedbacks` e `monthly_evaluations`. O indicador de Meu Histórico e o alerta em tempo real usam o mesmo listener compartilhado.
+- **Marcação de lidos sem leituras extras**: ao abrir Meu Histórico, os avisos pendentes são marcados como lidos a partir da lista já mantida em memória.
+- **Navegação pelo aviso**: o clique abre Meu Histórico na aba correta (feedbacks, métricas semanais ou 1:1 mensal) via `HUBDESK_OPEN_HISTORY_TAB`.
+- **Webhook do canal da equipe** (`integrations/team_webhook`): em Configurações > Notificações, a gestão cadastra a URL, escolhe o serviço (Discord, Slack, Microsoft Teams, Google Chat ou URL genérica em JSON), seleciona os eventos e envia um teste. Mensagens com formato próprio de cada serviço.
+- **Privacidade**: o canal recebe apenas um resumo do evento (quem lançou e o tipo), nunca o conteúdo de feedbacks ou 1:1; a URL é legível somente pela gestão.
+
+### 🔄 Alterações (Changed)
+- Lançamento semanal passa a gravar 2 documentos por colaborador (avaliação e aviso); lotes de 200 colaboradores.
+- Registro de feedback (`registerFeedback`) passa a usar `writeBatch`.
+- Removida a gravação antiga de notificação do 1:1 mensal (campos `userId` e `recipientId`), que nenhum trecho do sistema lia e que as regras bloqueavam.
+
+### 🔒 Segurança (Firestore Rules)
+- `notifications`: criação apenas pela gestão; leitura apenas pelo destinatário (ou gestão); o destinatário só altera `read` e `readAt`.
+- `integrations`: leitura e escrita apenas pela gestão. **As regras precisam ser publicadas** (console ou `firebase deploy --only firestore:rules`).
+
+### ⚠️ Observações
+- O projeto está no plano Spark, que não executa Cloud Functions; o envio ao canal sai do navegador de quem lança o item (melhor esforço, sem nova tentativa). Alguns serviços não confirmam a entrega pelo navegador; use "Enviar teste" e confira o canal. No plano Blaze, o envio poderá migrar para o servidor.
+- Feedbacks, avaliações semanais e 1:1 lançados antes desta versão não geram aviso retroativo.
+
+### 🧪 Testes
+- 18 novos testes: montagem dos avisos, formato por serviço, envio com e sem CORS, URL inválida, evento desmarcado, webhook desativado, usuário sem permissão e cache da configuração.
+
+---
+
 ## [v4.6.0] - 2026-11-09
 
 ### 🎯 Destaque Principal

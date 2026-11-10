@@ -12,6 +12,7 @@ import {
 import { isSoundEnabled, setSoundEnabled, playNotificationChime } from '../services/notificationSound';
 import { useAuth } from './AuthContext';
 import { subscribeSharedCollection } from '../services/dataCache';
+import { HISTORY_EVENT_IDS, inboxOptions, markNotificationsRead } from '../services/notificationEvents';
 
 const NotificationContext = createContext();
 
@@ -89,36 +90,19 @@ export const NotificationProvider = ({ children }) => {
         };
     }, [refreshPermission]);
 
-    // Monitora feedbacks não lidos do usuário para acionar a bolinha pulsante em "Meu Histórico"
+    // Indicador pulsante de "Meu Histórico": acende quando há aviso pessoal pendente
+    // (feedback, avaliação semanal ou 1:1 mensal). Usa o mesmo listener do NotificationManager.
     useEffect(() => {
         if (!currentUserId) return;
 
-        const unsubFeedbacks = subscribeSharedCollection('feedbacks', (items) => {
+        const unsubscribe = subscribeSharedCollection('notifications', (items) => {
             if (!Array.isArray(items)) return;
-            const hasUnread = items.some(f => 
-                (f.colabId === currentUserId || f.collaboratorId === currentUserId) && 
-                !f.read
-            );
-            if (hasUnread) {
+            if (items.some(n => HISTORY_EVENT_IDS.includes(n.event) && !n.read)) {
                 setPulseHistory(true);
             }
-        }, { where: [['colabId', '==', currentUserId]] });
+        }, inboxOptions(currentUserId));
 
-        const unsubMonthly = subscribeSharedCollection('monthly_evaluations', (items) => {
-            if (!Array.isArray(items)) return;
-            const hasUnread = items.some(f => 
-                (f.colabId === currentUserId || f.collaboratorId === currentUserId) && 
-                !f.read
-            );
-            if (hasUnread) {
-                setPulseHistory(true);
-            }
-        }, { where: [['colabId', '==', currentUserId]] });
-
-        return () => {
-            unsubFeedbacks();
-            unsubMonthly();
-        };
+        return () => unsubscribe();
     }, [currentUserId]);
 
     // Escuta eventos customizados de trigger e clear da bolinha pulsante
@@ -324,7 +308,9 @@ export const NotificationProvider = ({ children }) => {
 
     const clearPulseHistory = useCallback(() => {
         setPulseHistory(false);
-    }, []);
+        // Ao abrir o histórico, os avisos pendentes passam a lidos (sem leituras extras no banco)
+        markNotificationsRead(currentUserId).catch(() => {});
+    }, [currentUserId]);
 
     const clearPulseReports = useCallback(() => {
         setPulseReports(false);
