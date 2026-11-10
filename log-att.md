@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.7.2 (Diagnóstico do Webhook do Canal)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.7.1` para `4.7.2`. |
+| **Alterado** | `src/services/notificationEvents.js` | Resultado e motivo de cada envio (`describeWebhookResult`, evento `HUBDESK_WEBHOOK_RESULT`), intervalo configurável e cache mais curto para configuração desativada. |
+| **Alterado** | `src/components/NotificationManager.jsx` | Exibe ao gestor o resultado do aviso ao canal. |
+| **Alterado** | `src/components/settings/TeamWebhookSettings.jsx` | Campo de intervalo, faixa de alerta (desativado ou não salvo) e aviso ao salvar desativado. |
+| **Alterado** | `src/services/notificationEvents.test.js` | Novos testes de diagnóstico e do intervalo configurável. |
+| **Alterado** | `src/data/changelogData.js` | `CURRENT_VERSION` para `v4.7.2` e nova entrada do changelog oficial. |
+| **Alterado** | `version.md` / `log-att.md` | Notas de lançamento e registro desta atualização. |
+
+---
+
 ## [10/11/2026] — Versão v4.7.1 (Avisos Genéricos do Webhook)
 
 | Ação | Arquivo | Descrição da Alteração |

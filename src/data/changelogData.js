@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.7.1';
+export const CURRENT_VERSION = 'v4.7.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.7.1',
+    version: 'v4.7.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.7.2: diagnóstico do webhook do canal. Quem lança uma avaliação, um feedback ou um 1:1 passa a ver se o aviso ao canal saiu ou o motivo de não ter saído, a tela de configuração alerta sobre webhook desativado ou alterações não salvas e o intervalo entre avisos iguais é configurável.',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Resultado do Aviso ao Canal na Tela',
+        category: 'Notificações',
+        description: 'Após lançar um item, o sistema informa se o aviso foi enviado ao canal ou por que não foi: webhook desativado, sem permissão para ler a configuração (regras do Firestore), evento desmarcado ou aviso igual enviado há poucos minutos. O mesmo registro aparece no console do navegador.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Configuração Mais Clara e Intervalo Ajustável',
+        category: 'Integrações',
+        description: 'A tela do webhook avisa quando ele está desativado (o teste funciona mesmo assim, mas os avisos automáticos não) e quando há alterações não salvas. Novo campo define o intervalo mínimo entre avisos iguais, com 0 para sempre avisar.'
+      },
+      {
+        icon: RefreshCw,
+        iconColor: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+        title: 'Configuração Desativada é Relida em Segundos',
+        category: 'Integrações',
+        description: 'Quando o webhook está desativado, a configuração é relida a cada 15 segundos em vez de 5 minutos, então ativar o webhook e lançar em seguida passa a funcionar sem esperar.'
+      }
+    ]
+  },
+  {
+    version: 'v4.7.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.7.1: os avisos do webhook passam a ser genéricos, sem nomes, notas ou conteúdo, com o link de Meu Histórico, mensagens editáveis por evento e proteção contra repetição.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.7.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.7.0: notificações otimizadas. Feedbacks, avaliações semanais e avaliações 1:1 geram um aviso pessoal para o colaborador, que passa a ler apenas os próprios avisos em vez de coleções inteiras, e a gestão pode enviar um resumo dos eventos a um canal da equipe (Discord, Slack, Teams, Google Chat ou URL genérica).',
     items: [
       {

@@ -28,6 +28,7 @@ import {
     dispatchTeamWebhook,
     invalidateWebhookConfigCache,
     renderWebhookText,
+    describeWebhookResult,
     DEFAULT_WEBHOOK_MESSAGES
 } from './notificationEvents';
 
@@ -266,5 +267,93 @@ describe('dispatchTeamWebhook: aviso genérico', () => {
         fetch.mockRejectedValue(new TypeError('offline'));
         expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('error');
         expect(storage['hubdesk_webhook_last_weekly_evaluation']).toBeUndefined();
+    });
+});
+
+describe('dispatchTeamWebhook: diagnóstico do envio', () => {
+    const asDoc = (data) => ({ exists: () => true, data: () => data });
+    let storage;
+    let emitted;
+
+    beforeEach(() => {
+        invalidateWebhookConfigCache();
+        getDocMock.mockReset();
+        storage = {};
+        emitted = [];
+        vi.stubGlobal('localStorage', {
+            getItem: (k) => (k in storage ? storage[k] : null),
+            setItem: (k, v) => { storage[k] = String(v); }
+        });
+        vi.stubGlobal('CustomEvent', class { constructor(type, init) { this.type = type; this.detail = init?.detail; } });
+        vi.stubGlobal('window', {
+            location: { origin: 'https://hubdesk.example' },
+            dispatchEvent: (e) => { emitted.push(e.detail); return true; }
+        });
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true }));
+    });
+    afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+    it('webhook com URL salva, mas desativado: informa o motivo "disabled"', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: false, provider: 'discord', url: 'https://discord.example/w' }));
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('skipped');
+        expect(emitted[0]).toMatchObject({ event: 'weekly_evaluation', status: 'skipped', reason: 'disabled' });
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('configuração ilegível (regras não publicadas): informa o motivo "unreadable"', async () => {
+        getDocMock.mockRejectedValue(new Error('permission-denied'));
+        await dispatchTeamWebhook({ event: 'feedback' });
+        expect(emitted[0]).toMatchObject({ status: 'skipped', reason: 'unreadable' });
+    });
+
+    it('webhook nunca configurado: motivo "not-configured" e nenhuma mensagem ao usuário', async () => {
+        getDocMock.mockResolvedValue({ exists: () => false });
+        await dispatchTeamWebhook({ event: 'feedback' });
+        expect(emitted[0]).toMatchObject({ status: 'skipped', reason: 'not-configured' });
+        expect(describeWebhookResult(emitted[0].status, emitted[0].reason)).toBeNull();
+    });
+
+    it('envio bem-sucedido emite o resultado "ok"', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w' }));
+        await dispatchTeamWebhook({ event: 'weekly_evaluation' });
+        expect(emitted[0]).toMatchObject({ status: 'ok' });
+    });
+
+    it('intervalo configurado em 0 minutos envia sempre', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w', cooldownMinutes: 0 }));
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('ok');
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('ok');
+        expect(fetch).toHaveBeenCalledTimes(2);
+    });
+
+    it('intervalo configurado vale para todos os eventos e informa "cooldown" ao repetir', async () => {
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w', cooldownMinutes: 60 }));
+        await dispatchTeamWebhook({ event: 'feedback' });
+        expect(await dispatchTeamWebhook({ event: 'feedback' })).toBe('skipped');
+        expect(emitted[1]).toMatchObject({ status: 'skipped', reason: 'cooldown' });
+    });
+
+    it('configuração desativada é relida em segundos: ativar em outra aba passa a valer logo', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date('2026-11-10T12:00:00Z'));
+        getDocMock.mockResolvedValueOnce(asDoc({ enabled: false, provider: 'discord', url: 'https://discord.example/w' }));
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('skipped');
+
+        getDocMock.mockResolvedValue(asDoc({ enabled: true, provider: 'discord', url: 'https://discord.example/w' }));
+        vi.setSystemTime(new Date('2026-11-10T12:00:20Z'));
+        expect(await dispatchTeamWebhook({ event: 'weekly_evaluation' })).toBe('ok');
+    });
+});
+
+describe('describeWebhookResult', () => {
+    it('explica cada situação ao usuário que lançou o item', () => {
+        expect(describeWebhookResult('ok')).toMatchObject({ type: 'success' });
+        expect(describeWebhookResult('sent_unverified')).toMatchObject({ type: 'info' });
+        expect(describeWebhookResult('error')).toMatchObject({ type: 'warning' });
+        expect(describeWebhookResult('skipped', 'disabled').text).toMatch(/desativado/i);
+        expect(describeWebhookResult('skipped', 'unreadable').text).toMatch(/regras do Firestore/i);
+        expect(describeWebhookResult('skipped', 'cooldown').text).toMatch(/não repetido/i);
+        expect(describeWebhookResult('skipped', 'event-off').text).toMatch(/desmarcado/i);
+        expect(describeWebhookResult('skipped', 'not-configured')).toBeNull();
     });
 });

@@ -4,6 +4,27 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.7.2] - 2026-11-10
+
+### 🎯 Destaque Principal
+**Diagnóstico do webhook do canal**: o gestor passa a ver se o aviso ao canal saiu e, quando não saiu, o motivo.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Resultado do aviso ao canal na tela** (`HUBDESK_WEBHOOK_RESULT` + `describeWebhookResult`): após lançar avaliação semanal, feedback ou 1:1, uma mensagem informa o resultado: enviado, enviado sem confirmação do serviço, falha de envio, webhook desativado, configuração ilegível (regras do Firestore não publicadas), evento desmarcado ou aviso repetido (proteção contra repetição). Webhook nunca configurado não exibe mensagem. O resultado também é registrado no console (`[Webhook]`).
+- **Intervalo mínimo entre avisos iguais configurável** (`cooldownMinutes`): em branco usa o padrão de cada evento (10 min semanal; 30 min feedback e 1:1); `0` avisa sempre.
+- **Alertas na tela de configuração**: faixa amarela quando o webhook está desativado (o teste funciona, mas os avisos automáticos não) ou há alterações não salvas; o salvamento com o webhook desativado avisa explicitamente.
+
+### 🔄 Alterações (Changed)
+- **Cache da configuração do webhook**: desativada ou ilegível é relida a cada 15 segundos (antes 5 minutos); ativa continua em 5 minutos. Ativar o webhook e lançar em seguida passa a funcionar sem esperar.
+- `dispatchTeamWebhook` passa a classificar cada resultado por motivo (`not-configured`, `disabled`, `unreadable`, `event-off`, `cooldown`).
+
+### 🧪 Testes
+- 8 novos testes (110 no total): motivos de cada situação, intervalo configurável (inclusive 0), releitura da configuração desativada e mensagens ao usuário.
+
+---
+
 ## [v4.7.1] - 2026-11-10
 
 ### 🎯 Destaque Principal

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
 import { subscribeSharedCollection } from '../services/dataCache';
-import { NOTIFICATION_EVENTS, inboxOptions } from '../services/notificationEvents';
+import { NOTIFICATION_EVENTS, inboxOptions, describeWebhookResult } from '../services/notificationEvents';
 import { registerMessagingServiceWorker } from '../services/browserNotifications';
 import { resolveUserName } from '../utils/userResolvers';
 
@@ -17,7 +17,7 @@ import { resolveUserName } from '../utils/userResolvers';
 export const NotificationManager = () => {
     const { currentUser, isInactive, userRole } = useAuth();
     const { normalizedRole, isMasterAdmin } = usePermissions();
-    const { notify, requestPermission } = useNotification();
+    const { notify, requestPermission, showToast } = useNotification();
     
     // Rastreia os avisos pessoais já vistos (feedback, avaliação semanal e 1:1 mensal)
     const knownInboxIds = useRef(new Set());
@@ -210,6 +210,17 @@ export const NotificationManager = () => {
             window.removeEventListener('HUBDESK_SIMULATE_REPORT_STATUS', handleSimulateStatusChange);
         };
     }, [notify]);
+
+    // Resultado do aviso ao canal da equipe: quem lançou o item vê se o aviso saiu (ou por que não saiu)
+    useEffect(() => {
+        if (typeof window === 'undefined') return undefined;
+        const handleWebhookResult = (e) => {
+            const info = describeWebhookResult(e.detail?.status, e.detail?.reason);
+            if (info) showToast(info.text, info.type);
+        };
+        window.addEventListener('HUBDESK_WEBHOOK_RESULT', handleWebhookResult);
+        return () => window.removeEventListener('HUBDESK_WEBHOOK_RESULT', handleWebhookResult);
+    }, [showToast]);
 
     // 4. Caixa de avisos pessoal: o lançamento de feedback, avaliação semanal ou 1:1 mensal grava um
     // aviso endereçado ao colaborador. Em vez de baixar as coleções inteiras, escutamos só os avisos

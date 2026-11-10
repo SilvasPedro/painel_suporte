@@ -24,6 +24,17 @@ import {
  * Configuração do webhook do canal da equipe (Configurações > Notificações).
  * A URL fica em `integrations/team_webhook`, legível apenas pela equipe de gestão (regras do Firestore).
  */
+// Campos que o botão "Salvar" grava (usados para detectar alterações pendentes)
+const snapshotOf = (c) => JSON.stringify({
+    enabled: Boolean(c.enabled),
+    provider: c.provider,
+    url: (c.url || '').trim(),
+    link: (c.link || '').trim(),
+    cooldownMinutes: c.cooldownMinutes ?? null,
+    events: c.events || {},
+    messages: Object.fromEntries(Object.entries(c.messages || {}).map(([k, v]) => [k, String(v || '').trim()]).filter(([, v]) => v))
+});
+
 const TeamWebhookSettings = () => {
     const { showToast } = useNotification();
     const { currentUser } = useAuth();
@@ -35,12 +46,16 @@ const TeamWebhookSettings = () => {
     const [saving, setSaving] = useState(false);
     const [testing, setTesting] = useState(false);
     const [showUrl, setShowUrl] = useState(false);
+    const [savedSnapshot, setSavedSnapshot] = useState('');
 
     useEffect(() => {
         let cancelled = false;
         getWebhookConfig().then((value) => {
             if (cancelled) return;
-            if (value) setConfig(value);
+            if (value) {
+                setConfig(value);
+                setSavedSnapshot(snapshotOf(value));
+            }
             setLoading(false);
         });
         return () => { cancelled = true; };
@@ -50,6 +65,8 @@ const TeamWebhookSettings = () => {
     const urlIsValid = (() => {
         try { return new URL(config.url).protocol === 'https:'; } catch { return false; }
     })();
+
+    const isDirty = !loading && snapshotOf(config) !== savedSnapshot;
 
     const update = (patch) => setConfig(prev => ({ ...prev, ...patch }));
     const setMessage = (eventId, value) => update({ messages: { ...(config.messages || {}), [eventId]: value } });
@@ -67,6 +84,7 @@ const TeamWebhookSettings = () => {
                 provider: config.provider,
                 url: config.url.trim(),
                 link: (config.link || '').trim(),
+                cooldownMinutes: config.cooldownMinutes === '' || config.cooldownMinutes === undefined ? null : config.cooldownMinutes,
                 messages: Object.fromEntries(
                     Object.entries(config.messages || {})
                         .map(([k, v]) => [k, String(v || '').trim()])
@@ -77,7 +95,8 @@ const TeamWebhookSettings = () => {
                 updatedBy: currentUser?.name || currentUser?.email || ''
             }, { merge: true });
             invalidateWebhookConfigCache();
-            showToast('Webhook do canal salvo com sucesso!', 'success');
+            setSavedSnapshot(snapshotOf(config));
+            showToast(config.enabled ? 'Webhook salvo e ativo! Os próximos lançamentos avisarão o canal.' : 'Webhook salvo, mas DESATIVADO: marque "Webhook ativo" e salve para os avisos automáticos.', config.enabled ? 'success' : 'warning');
         } catch (error) {
             showToast('Erro ao salvar o webhook: ' + error.message, 'error');
         } finally {
@@ -230,6 +249,28 @@ const TeamWebhookSettings = () => {
                                 Deixe em branco para usar o texto padrão (mostrado em cinza). Use <span className="font-mono">{'{link}'}</span> onde o endereço deve aparecer; no Discord, também dá para incluir <span className="font-mono">@everyone</span> ou <span className="font-mono">@here</span>.
                             </p>
                         </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-secondary-hub mb-1">Intervalo mínimo entre avisos iguais (minutos)</label>
+                            <input
+                                type="number"
+                                min="0"
+                                max="1440"
+                                value={config.cooldownMinutes ?? ''}
+                                disabled={!canManage}
+                                onChange={(e) => update({ cooldownMinutes: e.target.value === '' ? null : Number(e.target.value) })}
+                                placeholder="Padrão: 10 (semanal) e 30 (feedback e 1:1)"
+                                className="w-full px-3 py-2.5 text-xs bg-subtle border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub"
+                            />
+                            <p className="text-[11px] text-muted-hub mt-1">Use 0 para avisar sempre (útil para testar). Em branco, vale o padrão de cada evento.</p>
+                        </div>
+
+                        {(isDirty || !config.enabled) && (
+                            <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-[11px] text-amber-800 dark:text-amber-300 leading-relaxed">
+                                {!config.enabled && <p><strong>O webhook está desativado.</strong> O "Enviar teste" funciona mesmo assim, mas os avisos automáticos (ao lançar avaliações, feedbacks e 1:1) só saem com "Webhook ativo" marcado.</p>}
+                                {isDirty && <p className={!config.enabled ? 'mt-1' : ''}><strong>Há alterações não salvas.</strong> Clique em "Salvar webhook"; o teste usa o que está na tela, mas os avisos automáticos usam o que está salvo.</p>}
+                            </div>
+                        )}
 
                         {canManage ? (
                             <div className="flex flex-wrap gap-2 pt-1">

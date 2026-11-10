@@ -54,6 +54,7 @@ export const DEFAULT_WEBHOOK_CONFIG = {
     enabled: false,
     provider: 'discord',
     url: '',
+    cooldownMinutes: null, // intervalo mínimo entre avisos iguais (null = padrão por evento; 0 = sempre enviar)
     link: '',      // endereço enviado nos avisos (vazio = endereço do site atual + /home?tab=my_history)
     messages: {},  // textos personalizados por evento (vazio = texto padrão)
     events: { weekly_evaluation: true, feedback: true, monthly_evaluation: true }
@@ -169,7 +170,8 @@ export const markNotificationsRead = async (userId, events = HISTORY_EVENT_IDS) 
 // -------------------------------------------------------------------------------------------
 
 let configCache = { value: null, at: 0 };
-const CONFIG_TTL_MS = 5 * 60 * 1000;
+const CONFIG_TTL_MS = 5 * 60 * 1000;          // configuração ativa
+const CONFIG_TTL_INACTIVE_MS = 15 * 1000;     // desativada: relê rápido, para pegar a ativação feita em outra aba
 
 export const invalidateWebhookConfigCache = () => {
     configCache = { value: null, at: 0 };
@@ -180,7 +182,8 @@ export const invalidateWebhookConfigCache = () => {
  * Somente a equipe de gestão consegue ler (regras do Firestore); para os demais retorna null.
  */
 export const getWebhookConfig = async () => {
-    if (configCache.value && Date.now() - configCache.at < CONFIG_TTL_MS) return configCache.value;
+    const ttl = configCache.value?.enabled ? CONFIG_TTL_MS : CONFIG_TTL_INACTIVE_MS;
+    if (configCache.value && Date.now() - configCache.at < ttl) return configCache.value;
     try {
         const snap = await getDoc(doc(db, WEBHOOK_CONFIG_COLLECTION, WEBHOOK_CONFIG_DOC));
         const value = snap.exists() ? { ...DEFAULT_WEBHOOK_CONFIG, ...snap.data() } : { ...DEFAULT_WEBHOOK_CONFIG };
@@ -281,10 +284,18 @@ export const postToWebhook = async (config, message) => {
 
 const cooldownKey = (event) => `hubdesk_webhook_last_${event}`;
 
-const isInCooldown = (event) => {
+const getCooldownMs = (event, config) => {
+    const minutes = config?.cooldownMinutes;
+    if (minutes !== null && minutes !== undefined && Number.isFinite(Number(minutes))) {
+        return Math.max(0, Number(minutes)) * 60 * 1000;
+    }
+    return WEBHOOK_COOLDOWN_MS[event] || 0;
+};
+
+const isInCooldown = (event, config) => {
     try {
         const last = Number(localStorage.getItem(cooldownKey(event)) || 0);
-        return Date.now() - last < (WEBHOOK_COOLDOWN_MS[event] || 0);
+        return Date.now() - last < getCooldownMs(event, config);
     } catch {
         return false;
     }
@@ -294,36 +305,85 @@ const markDispatched = (event) => {
     try { localStorage.setItem(cooldownKey(event), String(Date.now())); } catch { /* sem armazenamento */ }
 };
 
+// Mensagem para o usuário que lançou o item, explicando o que aconteceu com o aviso ao canal.
+// Retorna null quando não há nada a dizer (ex.: webhook nunca configurado).
+export const describeWebhookResult = (status, reason) => {
+    if (status === 'ok') return { type: 'success', text: 'Aviso enviado ao canal da equipe.' };
+    if (status === 'sent_unverified') {
+        return { type: 'info', text: 'Aviso enviado ao canal da equipe (este serviço não confirma a entrega pelo navegador).' };
+    }
+    if (status === 'error') {
+        return { type: 'warning', text: 'Não foi possível enviar o aviso ao canal da equipe. Confira a URL em Configurações > Notificações.' };
+    }
+    switch (reason) {
+        case 'disabled':
+            return { type: 'info', text: 'O webhook do canal está configurado, mas desativado. Marque "Webhook ativo" e salve em Configurações > Notificações.' };
+        case 'unreadable':
+            return { type: 'warning', text: 'Sem permissão para ler a configuração do webhook. Confira se as regras do Firestore foram publicadas.' };
+        case 'cooldown':
+            return { type: 'info', text: 'Aviso ao canal não repetido: um aviso igual já foi enviado há poucos minutos.' };
+        case 'event-off':
+            return { type: 'info', text: 'Este tipo de aviso está desmarcado nas configurações do webhook.' };
+        default:
+            return null;
+    }
+};
+
+// Avisa a interface (e o console) do resultado, para o gestor saber se o aviso saiu
+const emitWebhookResult = (event, status, reason) => {
+    console.info(`[Webhook] ${event}: ${status}${reason ? ` (${reason})` : ''}`);
+    try {
+        if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('HUBDESK_WEBHOOK_RESULT', { detail: { event, status, reason } }));
+        }
+    } catch {
+        // sem ambiente de navegador
+    }
+};
+
 /**
  * Despacha um aviso GENÉRICO do evento ao canal da equipe, se o webhook estiver ativo e o evento habilitado.
  * - O texto vem da configuração (ou do padrão) e nunca contém dados de pessoas, notas ou conteúdo.
- * - Repetições do mesmo evento em poucos minutos são ignoradas, para não lotar o canal.
+ * - Repetições do mesmo evento em poucos minutos são ignoradas (intervalo configurável).
  * - Nunca lança erro: a falha do webhook não pode atrapalhar o salvamento do item.
+ * - O resultado é comunicado por `HUBDESK_WEBHOOK_RESULT` (ver describeWebhookResult).
  * `title`, `text` e `link` são opcionais e sobrescrevem a configuração.
+ * @returns {'ok'|'sent_unverified'|'error'|'skipped'}
  */
 export const dispatchTeamWebhook = async ({ event, title, text, link }) => {
+    let status = 'error';
+    let reason = '';
     try {
         const config = await getWebhookConfig();
-        if (!config?.enabled || !config.url) return 'skipped';
-        if (config.events && config.events[event] === false) return 'skipped';
-        if (isInCooldown(event)) return 'skipped';
+        if (!config) {
+            status = 'skipped'; reason = 'unreadable';
+        } else if (!config.url && !config.enabled) {
+            status = 'skipped'; reason = 'not-configured';
+        } else if (!config.enabled || !config.url) {
+            status = 'skipped'; reason = 'disabled';
+        } else if (config.events && config.events[event] === false) {
+            status = 'skipped'; reason = 'event-off';
+        } else if (isInCooldown(event, config)) {
+            status = 'skipped'; reason = 'cooldown';
+        } else {
+            const defaults = DEFAULT_WEBHOOK_MESSAGES[event] || {
+                title: 'Hubdesk',
+                text: 'Atenção, pessoal! Há novidades no Hubdesk. Acessem {link}'
+            };
+            const finalLink = link || config.link || getDefaultLink();
+            const finalText = renderWebhookText(text || config.messages?.[event] || defaults.text, finalLink);
 
-        const defaults = DEFAULT_WEBHOOK_MESSAGES[event] || {
-            title: 'Hubdesk',
-            text: 'Atenção, pessoal! Há novidades no Hubdesk. Acessem {link}'
-        };
-        const finalLink = link || config.link || getDefaultLink();
-        const finalText = renderWebhookText(text || config.messages?.[event] || defaults.text, finalLink);
-
-        const result = await postToWebhook(config, {
-            event,
-            title: title || defaults.title,
-            text: finalText,
-            link: finalLink
-        });
-        if (result !== 'error') markDispatched(event);
-        return result;
+            status = await postToWebhook(config, {
+                event,
+                title: title || defaults.title,
+                text: finalText,
+                link: finalLink
+            });
+            if (status !== 'error') markDispatched(event);
+        }
     } catch {
-        return 'error';
+        status = 'error';
     }
+    emitWebhookResult(event, status, reason);
+    return status;
 };
