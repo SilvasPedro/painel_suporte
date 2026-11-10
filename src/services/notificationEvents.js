@@ -54,7 +54,7 @@ export const DEFAULT_WEBHOOK_CONFIG = {
     enabled: false,
     provider: 'discord',
     url: '',
-    dm: { enabled: false, events: { weekly_evaluation: true, feedback: true, monthly_evaluation: true } }, // DM no Discord (bot)
+    dm: { enabled: false, events: { weekly_evaluation: true, feedback: true, monthly_evaluation: true, report_status: true, report_comment: true } }, // DM no Discord (bot)
     cooldownMinutes: null, // intervalo mínimo entre avisos iguais (null = padrão por evento; 0 = sempre enviar)
     link: '',      // endereço enviado nos avisos (vazio = endereço do site atual + /home?tab=my_history)
     messages: {},  // textos personalizados por evento (vazio = texto padrão)

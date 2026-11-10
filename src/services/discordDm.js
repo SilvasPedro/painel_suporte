@@ -19,11 +19,20 @@ export const TOKEN_HELP = 'No portal do Discord, abra o aplicativo > Bot > Reset
 // ID de usuário do Discord: 17 a 20 dígitos
 export const isValidDiscordId = (value) => /^\d{17,20}$/.test(String(value || '').trim());
 
-export const DM_EVENT_IDS = ['weekly_evaluation', 'feedback', 'monthly_evaluation'];
+// Tipos de aviso por DM (ordem exibida em Configurações > Notificações)
+export const DM_EVENT_META = [
+    { id: 'weekly_evaluation', icon: '📊', label: 'Avaliação semanal' },
+    { id: 'feedback', icon: '📢', label: 'Feedback' },
+    { id: 'monthly_evaluation', icon: '🎯', label: 'Avaliação 1:1 mensal' },
+    { id: 'report_status', icon: '🔄', label: 'Mudança de status em tarefa/relatório (ao solicitante)' },
+    { id: 'report_comment', icon: '💬', label: 'Novo comentário em tarefa/relatório (ao solicitante)' }
+];
+
+export const DM_EVENT_IDS = DM_EVENT_META.map(e => e.id);
 
 export const DEFAULT_DM_CONFIG = {
     enabled: false,
-    events: { weekly_evaluation: true, feedback: true, monthly_evaluation: true }
+    events: Object.fromEntries(DM_EVENT_IDS.map(id => [id, true]))
 };
 
 /**
@@ -69,6 +78,14 @@ export const describeDmResult = ({ event, httpStatus, error, summary, reason, li
     }
 
     const { sent = 0, noLink = 0, inactive = 0, blocked = 0, failed = 0 } = summary;
+
+    // Tarefas e relatórios acontecem toda hora: só avisa o gestor quando a DM saiu ou deu problema
+    if (String(event || '').startsWith('report_')) {
+        if (blocked > 0) return { type: 'warning', text: 'O solicitante não aceita DMs no Discord; ele não recebeu o aviso desta alteração.' };
+        if (failed > 0) return { type: 'warning', text: 'Não foi possível enviar a DM ao solicitante desta tarefa.' };
+        if (sent > 0) return { type: 'success', text: 'DM enviada ao solicitante no Discord.' };
+        return null;
+    }
 
     if (isTest) {
         if (sent > 0) return { type: 'success', text: 'DM de teste enviada! Confira suas mensagens diretas no Discord.' };
@@ -120,7 +137,7 @@ const countLinkedRecipients = (recipients) => {
  * - 'test': envia ao próprio usuário logado, sem depender dessa configuração.
  * @param {{ event: string, recipients?: Array<{ id: string, params?: object }> }} request
  */
-export const sendDiscordDms = async ({ event, recipients = [] }) => {
+export const sendDiscordDms = async ({ event, recipients = [], reportId, params }) => {
     // Pula o envio e, se alguém vinculado deixaria de receber, avisa o gestor na tela
     const skip = (reason) => {
         const linked = countLinkedRecipients(recipients);
@@ -145,7 +162,12 @@ export const sendDiscordDms = async ({ event, recipients = [] }) => {
         const response = await fetch(DM_ENDPOINT, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-            body: JSON.stringify({ event, recipients })
+            body: JSON.stringify({
+                event,
+                recipients,
+                ...(reportId ? { reportId } : {}),
+                ...(params ? { params } : {})
+            })
         });
 
         let data = {};
@@ -159,6 +181,26 @@ export const sendDiscordDms = async ({ event, recipients = [] }) => {
         emitDmResult(detail);
         return { status: 'error', ...detail };
     }
+};
+
+/**
+ * Avisa por DM o SOLICITANTE de uma tarefa/relatório quando o status muda ou chega um comentário.
+ * A função lê o relatório no servidor: o status, o protocolo e o solicitante nunca vêm do navegador.
+ * @param {{ report: { id: string, creatorId?: string }, kind: 'status'|'comment', withComment?: boolean }} args
+ *   withComment: a mudança de status veio acompanhada de um comentário (só altera o texto da DM)
+ */
+export const sendReportDm = async ({ report, kind, withComment = false }) => {
+    const creatorId = String(report?.creatorId || '');
+    if (!report?.id || !creatorId) return { status: 'skipped', reason: 'sem-solicitante' };
+    // Quem alterou a própria solicitação não precisa de aviso
+    if (auth.currentUser?.uid === creatorId) return { status: 'skipped', reason: 'proprio-autor' };
+
+    return sendDiscordDms({
+        event: kind === 'comment' ? 'report_comment' : 'report_status',
+        recipients: [{ id: creatorId }], // usado só para contar quem tem Discord vinculado
+        reportId: report.id,
+        params: withComment ? { withComment: true } : undefined
+    });
 };
 
 /**

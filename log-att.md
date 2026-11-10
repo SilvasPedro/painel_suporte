@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [10/11/2026] — Versão v4.9.0 (DM ao Solicitante em Tarefas & Relatórios)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.8.2` para `4.9.0`. |
+| **Alterado** | `api/_lib/dm.js` / `api/_lib/dm.test.js` | Eventos `report_status` e `report_comment` com leitura do relatório no servidor e testes. |
+| **Alterado** | `src/services/discordDm.js` / `discordDm.test.js` | `sendReportDm`, `DM_EVENT_META` e mensagens discretas, com testes. |
+| **Alterado** | `src/services/notificationEvents.js` | Novos tipos de DM ativados por padrão. |
+| **Alterado** | `src/components/settings/TeamWebhookSettings.jsx` | Toggles dos novos avisos de DM. |
+| **Alterado** | `src/pages/Reports.jsx` / `src/components/reports/ReportDetailModal.jsx` | Disparo da DM ao mudar status ou comentar. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [10/11/2026] — Versão v4.8.2 (Aviso de DM Pulada por Configuração)
 
 | Ação | Arquivo | Descrição da Alteração |

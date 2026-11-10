@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.8.2';
+export const CURRENT_VERSION = 'v4.9.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.8.2',
+    version: 'v4.9.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.9.0: o bot do Discord agora avisa por DM o solicitante de uma tarefa ou relatório sempre que o status muda ou chega um novo comentário, para acompanhar tudo em tempo real.',
+    items: [
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'DM ao Solicitante em Tarefas & Relatórios',
+        category: 'Notificações',
+        description: 'Quando a gestão ou o responsável altera o status ou comenta em uma tarefa/relatório, o colaborador que a abriu (com Discord vinculado) recebe uma DM com o protocolo, o novo status ou quem comentou, e o link para Tarefas & Relatórios. O texto do comentário nunca é enviado.'
+      },
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Novos Tipos de Aviso nas Configurações',
+        category: 'Integrações',
+        description: 'Configurações > Notificações ganha os avisos "Mudança de status" e "Novo comentário", ativados por padrão e que podem ser desmarcados. Quem altera só vê aviso na tela quando a DM é enviada ou dá problema.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Dados Lidos no Servidor',
+        category: 'Segurança',
+        description: 'O servidor lê o relatório no Firestore com as permissões de quem chamou: protocolo, status e solicitante nunca vêm do navegador, e só gestão ou o responsável designado pode disparar o aviso.'
+      }
+    ]
+  },
+  {
+    version: 'v4.8.2',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.8.2: quando um colaborador vinculou o Discord, mas a DM está desativada nas configurações (ou o tipo de aviso está desmarcado), quem lançou o item agora é avisado na tela em vez de o envio ser pulado em silêncio.',
     items: [
       {
@@ -30,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.8.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.8.1: diagnóstico do bot do Discord. O token é limpo automaticamente (espaços, aspas e prefixo Bot), a tela de configuração mostra se o Discord aceita o token e, quando recusa, indica o passo a passo para corrigir.',
     items: [
       {

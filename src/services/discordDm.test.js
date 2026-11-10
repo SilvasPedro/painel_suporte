@@ -13,7 +13,10 @@ vi.mock('./firebase', () => ({ auth: authMock }));
 vi.mock('./notificationEvents', () => ({ getWebhookConfig: (...args) => getWebhookConfigMock(...args) }));
 vi.mock('./dataCache', () => ({ getCachedCollection: (...args) => getCachedCollectionMock(...args) }));
 
-import { describeDmResult, describeBotStatus, sendDiscordDms, fetchBotStatus, isValidDiscordId, DM_ENDPOINT } from './discordDm';
+import {
+    describeDmResult, describeBotStatus, sendDiscordDms, sendReportDm, fetchBotStatus, isValidDiscordId,
+    DM_ENDPOINT, DM_EVENT_META, DEFAULT_DM_CONFIG
+} from './discordDm';
 
 const response = (status, body) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
 
@@ -257,5 +260,92 @@ describe('describeDmResult: DM pulada por configuração', () => {
     it('evento desmarcado explica o motivo', () => {
         expect(describeDmResult({ event: 'feedback', reason: 'evento-desmarcado', linked: 1 }).text).toMatch(/desmarcado/i);
         expect(describeDmResult({ event: 'feedback', reason: 'evento-desmarcado', linked: 0 })).toBeNull();
+    });
+});
+
+describe('sendReportDm: tarefas e relatórios', () => {
+    let emitted;
+    const report = { id: 'rep1', creatorId: 'ana' };
+    const dmOn = { dm: { enabled: true, events: {} } };
+
+    beforeEach(() => {
+        emitted = [];
+        getIdToken.mockClear();
+        getWebhookConfigMock.mockReset();
+        getCachedCollectionMock.mockReset();
+        getCachedCollectionMock.mockReturnValue([]);
+        authMock.currentUser = { uid: 'uid-gestor', getIdToken: (...args) => getIdToken(...args) };
+        vi.stubGlobal('CustomEvent', class { constructor(type, init) { this.type = type; this.detail = init?.detail; } });
+        vi.stubGlobal('window', { dispatchEvent: (e) => { emitted.push(e.detail); return true; } });
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(200, { summary: { sent: 1 } })));
+    });
+    afterEach(() => { vi.unstubAllGlobals(); });
+
+    it('mudança de status: envia o id do relatório (não o texto) e o solicitante só para contagem', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        const result = await sendReportDm({ report, kind: 'status' });
+        expect(result.status).toBe('done');
+        const body = JSON.parse(fetch.mock.calls[0][1].body);
+        expect(body).toEqual({ event: 'report_status', recipients: [{ id: 'ana' }], reportId: 'rep1' });
+    });
+
+    it('comentário: usa o evento report_comment', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        await sendReportDm({ report, kind: 'comment' });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).event).toBe('report_comment');
+    });
+
+    it('status com comentário junto envia o indicador withComment', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        await sendReportDm({ report, kind: 'status', withComment: true });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).params).toEqual({ withComment: true });
+    });
+
+    it('relatório sem solicitante ou sem id não envia', async () => {
+        expect((await sendReportDm({ report: { id: 'rep1' }, kind: 'status' })).reason).toBe('sem-solicitante');
+        expect((await sendReportDm({ report: { creatorId: 'ana' }, kind: 'status' })).reason).toBe('sem-solicitante');
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('quem alterou a própria solicitação não manda DM para si mesmo', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        const result = await sendReportDm({ report: { id: 'rep1', creatorId: 'uid-gestor' }, kind: 'comment' });
+        expect(result.reason).toBe('proprio-autor');
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('respeita a configuração: DM desativada ou tipo desmarcado', async () => {
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: false } });
+        expect((await sendReportDm({ report, kind: 'status' })).reason).toBe('dm-desativado');
+
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: true, events: { report_comment: false } } });
+        expect((await sendReportDm({ report, kind: 'comment' })).reason).toBe('evento-desmarcado');
+        expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it('DM desativada com o solicitante vinculado avisa o gestor', async () => {
+        getWebhookConfigMock.mockResolvedValue({ dm: { enabled: false } });
+        getCachedCollectionMock.mockReturnValue([{ id: 'ana', discordUserId: '123456789012345678' }]);
+        await sendReportDm({ report, kind: 'status' });
+        expect(emitted[0]).toMatchObject({ event: 'report_status', reason: 'dm-desativado', linked: 1 });
+    });
+});
+
+describe('tipos de DM e mensagens de tarefas/relatórios', () => {
+    it('os novos tipos aparecem na configuração e vêm ativados por padrão', () => {
+        const ids = DM_EVENT_META.map(e => e.id);
+        expect(ids).toEqual(expect.arrayContaining(['report_status', 'report_comment']));
+        expect(DEFAULT_DM_CONFIG.events.report_status).toBe(true);
+        expect(DEFAULT_DM_CONFIG.events.report_comment).toBe(true);
+    });
+
+    it('só comunica ao gestor quando a DM saiu ou deu problema', () => {
+        expect(describeDmResult({ event: 'report_status', httpStatus: 200, summary: { sent: 1 } }))
+            .toMatchObject({ type: 'success', text: expect.stringMatching(/solicitante/i) });
+        expect(describeDmResult({ event: 'report_comment', httpStatus: 200, summary: { blocked: 1 } }).type).toBe('warning');
+        expect(describeDmResult({ event: 'report_status', httpStatus: 200, summary: { failed: 1 } }).type).toBe('warning');
+        // muitos colaboradores não vinculam o Discord: sem ruído a cada comentário
+        expect(describeDmResult({ event: 'report_comment', httpStatus: 200, summary: { noLink: 1 } })).toBeNull();
+        expect(describeDmResult({ event: 'report_status', httpStatus: 200, summary: {} })).toBeNull();
     });
 });

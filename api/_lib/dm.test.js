@@ -9,6 +9,8 @@ import {
     looksLikeBotToken,
     getBotStatus,
     resetBotStatusCache,
+    toPlain,
+    cleanInline,
     buildDmContent,
     processDmRequest,
     MAX_RECIPIENTS
@@ -400,5 +402,174 @@ describe('getBotStatus', () => {
         expect(calls).toHaveLength(1);
         await getBotStatus({ env, fetchImpl, now: NOW + 61 * 1000 });
         expect(calls).toHaveLength(2);
+    });
+});
+
+// ----------------------------------------------------------------------------------------
+// Tarefas e relatórios: DM ao solicitante quando o status muda ou chega um comentário
+// ----------------------------------------------------------------------------------------
+const fsValue = (v) => {
+    if (typeof v === 'boolean') return { booleanValue: v };
+    if (typeof v === 'number') return { integerValue: String(v) };
+    if (Array.isArray(v)) return { arrayValue: { values: v.map(fsValue) } };
+    if (v && typeof v === 'object') return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, fsValue(x)])) } };
+    return { stringValue: String(v) };
+};
+const fsRaw = (obj) => ({ fields: Object.fromEntries(Object.entries(obj).map(([k, v]) => [k, fsValue(v)])) });
+
+describe('toPlain (Firestore REST)', () => {
+    it('converte textos, números, booleanos, listas e mapas aninhados', () => {
+        const plain = toPlain(fsRaw({ a: 'x', n: 3, ok: true, lista: [{ authorId: 'u1', authorName: 'Ana' }] }));
+        expect(plain).toEqual({ a: 'x', n: 3, ok: true, lista: [{ authorId: 'u1', authorName: 'Ana' }] });
+    });
+});
+
+describe('cleanInline', () => {
+    it('tira quebras de linha e marcações do Discord e limita o tamanho', () => {
+        expect(cleanInline('Linha 1\nLinha **2** `x` @here')).toBe('Linha 1 Linha 2 x @here');
+        expect(cleanInline('a'.repeat(200), 20)).toHaveLength(20);
+        expect(cleanInline(undefined)).toBe('');
+    });
+});
+
+describe('buildDmContent: tarefas e relatórios', () => {
+    it('status: mostra o protocolo e o novo status, sem conteúdo, e aponta para Tarefas & Relatórios', () => {
+        const text = buildDmContent('report_status', { label: 'Protocolo #123', status: 'Resolvido' }, 'https://hub.example/home?tab=reports');
+        expect(text).toContain('Protocolo #123');
+        expect(text).toContain('**Resolvido**');
+        expect(text).toContain('https://hub.example/home?tab=reports');
+    });
+
+    it('status junto com comentário avisa isso', () => {
+        expect(buildDmContent('report_status', { label: 'X', status: 'Em Andamento', withComment: true }, '')).toContain('novo comentário');
+        expect(buildDmContent('report_status', { label: 'X', status: 'Em Andamento' }, '')).not.toContain('novo comentário');
+    });
+
+    it('comentário: cita quem comentou, mas nunca o texto do comentário', () => {
+        const text = buildDmContent('report_comment', { label: 'Protocolo #9', author: 'Maria', content: 'segredo' }, '');
+        expect(text).toContain('Maria comentou');
+        expect(text).not.toContain('segredo');
+    });
+
+    it('neutraliza marcações nos textos vindos do relatório', () => {
+        const text = buildDmContent('report_status', { label: '**@everyone** `x`', status: 'A_B' }, '');
+        expect(text).not.toContain('**@everyone**');
+    });
+});
+
+describe('processDmRequest: eventos de tarefas e relatórios', () => {
+    const env = { DISCORD_BOT_TOKEN: FAKE_TOKEN, APP_URL: 'https://hub.example' };
+
+    const reportDoc = (overrides = {}) => fsRaw({
+        creatorId: 'ana', title: 'Cliente sem acesso', protocol: '2611.001', status: 'Resolvido',
+        lastUpdatedBy: 'Gestor', comments: [{ authorId: 'uid-gestor', authorName: 'Gestor Silva', isStaff: true, content: 'texto do comentário' }],
+        ...overrides
+    });
+
+    const run = async ({ event = 'report_status', reportId = 'rep1', report = reportDoc(), callerDocs = staffDocs, token, params } = {}) => {
+        const { fetchImpl, calls } = makeFetch({ key, docs: callerDocs });
+        const wrapped = async (url, options = {}) => {
+            if (url.includes('/documents/critical_reports/')) {
+                return report ? json(200, report) : json(404, {});
+            }
+            return fetchImpl(url, options);
+        };
+        const result = await processDmRequest({
+            body: { event, reportId, params },
+            idToken: token || signToken(key),
+            env,
+            fetchImpl: wrapped,
+            now: NOW
+        });
+        return { ...result, calls };
+    };
+
+    it('mudança de status: gestão avisa o solicitante com protocolo, status e link de tarefas', async () => {
+        const { status, json: body, calls } = await run();
+        expect(status).toBe(200);
+        expect(body.summary).toMatchObject({ sent: 1 });
+        const message = calls.discord.find(c => c.url.endsWith('/messages'));
+        expect(calls.discord[0].body).toEqual({ recipient_id: DISCORD_ID_ANA });
+        expect(message.body.content).toContain('Protocolo #2611.001');
+        expect(message.body.content).toContain('**Resolvido**');
+        expect(message.body.content).toContain('https://hub.example/home?tab=reports');
+    });
+
+    it('sem protocolo, usa o título da solicitação', async () => {
+        const { calls } = await run({ report: reportDoc({ protocol: '' }) });
+        expect(calls.discord.find(c => c.url.endsWith('/messages')).body.content).toContain('Cliente sem acesso');
+    });
+
+    it('comentário: avisa quem comentou, sem enviar o texto', async () => {
+        const { json: body, calls } = await run({ event: 'report_comment' });
+        expect(body.summary.sent).toBe(1);
+        const content = calls.discord.find(c => c.url.endsWith('/messages')).body.content;
+        expect(content).toContain('Gestor Silva comentou');
+        expect(content).not.toContain('texto do comentário');
+    });
+
+    it('comentário do próprio solicitante não gera DM para ele mesmo', async () => {
+        const report = reportDoc({ comments: [{ authorId: 'ana', authorName: 'Ana', content: 'oi' }] });
+        const { json: body, calls } = await run({ event: 'report_comment', report });
+        expect(body.summary.sent).toBe(0);
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('relatório sem comentários: evento de comentário não envia nada', async () => {
+        const { json: body, calls } = await run({ event: 'report_comment', report: reportDoc({ comments: [] }) });
+        expect(body.summary.sent).toBe(0);
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('quando o solicitante é quem fez a alteração, não envia', async () => {
+        const docs = { ...staffDocs, 'collaborators/uid-gestor': { role: 'Gestor', discordUserId: DISCORD_ID_ANA } };
+        const { json: body, calls } = await run({ report: reportDoc({ creatorId: 'uid-gestor' }), callerDocs: docs });
+        expect(body.summary.sent).toBe(0);
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('solicitante sem Discord vinculado fica como "sem vínculo"', async () => {
+        const { json: body } = await run({ report: reportDoc({ creatorId: 'caio' }) });
+        expect(body.summary).toMatchObject({ sent: 0, noLink: 1 });
+    });
+
+    it('quem não é da gestão nem responsável recebe 403', async () => {
+        const docs = { ...staffDocs, 'collaborators/uid-gestor': { role: 'Colaborador' } };
+        const { status, calls } = await run({ callerDocs: docs });
+        expect(status).toBe(403);
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('o responsável designado pode avisar mesmo sem ser da gestão', async () => {
+        const docs = { ...staffDocs, 'collaborators/uid-gestor': { role: 'Colaborador' } };
+        const { status, json: body } = await run({ callerDocs: docs, report: reportDoc({ assignedToId: 'uid-gestor' }) });
+        expect(status).toBe(200);
+        expect(body.summary.sent).toBe(1);
+    });
+
+    it('relatório inexistente responde 404 e id perigoso responde 400', async () => {
+        expect((await run({ report: null })).status).toBe(404);
+        expect((await run({ reportId: '../collaborators/x' })).status).toBe(400);
+        expect((await run({ reportId: '' })).status).toBe(400);
+    });
+
+    it('o status e o solicitante vêm do banco, não do navegador', async () => {
+        const { calls } = await run({ params: { status: 'FALSO', creatorId: 'bia', withComment: true } });
+        expect(calls.discord[0].body).toEqual({ recipient_id: DISCORD_ID_ANA }); // solicitante real do relatório
+        const content = calls.discord.find(c => c.url.endsWith('/messages')).body.content;
+        expect(content).toContain('**Resolvido**');
+        expect(content).not.toContain('FALSO');
+    });
+
+    it('lê o relatório com o token de quem chamou', async () => {
+        const token = signToken(key);
+        const urls = [];
+        const { fetchImpl } = makeFetch({ key, docs: staffDocs });
+        const spy = async (url, options = {}) => {
+            if (url.includes('/documents/critical_reports/')) { urls.push(options.headers.Authorization); return json(200, reportDoc()); }
+            return fetchImpl(url, options);
+        };
+        await processDmRequest({ body: { event: 'report_status', reportId: 'rep1' }, idToken: token, env, fetchImpl: spy, now: NOW });
+        expect(urls).toEqual([`Bearer ${token}`]);
     });
 });

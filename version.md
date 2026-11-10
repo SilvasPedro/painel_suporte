@@ -4,6 +4,32 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.9.0] - 2026-11-10
+
+### 🎯 Destaque Principal
+O bot do Discord envia DM ao solicitante de uma tarefa/relatório quando o status muda ou chega um comentário.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Eventos `report_status` e `report_comment`** em `/api/notify-dm`: a DM vai ao solicitante (`creatorId`) com protocolo (ou título), novo status ou autor do comentário e link para `?tab=reports`. O texto do comentário nunca é enviado.
+- **Disparo na tela de Tarefas & Relatórios** (formulário, modal de detalhes, painel lateral, atualização rápida e comentários) via `sendReportDm`.
+- **Novos avisos em Configurações > Notificações**: "Mudança de status" e "Novo comentário", ativados por padrão.
+- **Feedback discreto**: o gestor só vê aviso quando a DM sai ou falha; sem Discord vinculado, nada é exibido.
+
+### 🔒 Segurança
+- O servidor lê `critical_reports/{id}` com o token de quem chamou (regras do Firestore valem); status, protocolo e solicitante vêm do banco.
+- Só gestão ou o responsável designado dispara; quem alterou a própria solicitação não recebe DM.
+- Textos do relatório são higienizados (`cleanInline`) e menções são desativadas.
+
+### 🧪 Testes
+- 196 testes no total (novos: eventos de relatório no servidor e `sendReportDm`/mensagens no cliente).
+
+### ⚠️ Observações
+- Requer redeploy na Vercel e `DISCORD_BOT_TOKEN` configurado. A DM exige "Enviar DM aos colaboradores vinculados" marcado e salvo.
+
+---
+
 ## [v4.8.2] - 2026-11-10
 
 ### 🎯 Destaque Principal

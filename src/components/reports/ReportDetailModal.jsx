@@ -26,6 +26,7 @@ import {
 } from '../../types/request.types';
 import { resolveUserName } from '../../utils/userResolvers';
 import { getRoleLabel } from '../../services/rbac';
+import { sendReportDm } from '../../services/discordDm';
 
 /**
  * ReportDetailModal (Hubdesk v4.0.0)
@@ -338,6 +339,10 @@ export default function ReportDetailModal({
             }
 
             await updateDoc(doc(db, "critical_reports", report.id), updateData);
+
+            // DM ao solicitante: mudança de status (com comentário junto) ou só o comentário
+            const statusChanged = Boolean(updateData.status && updateData.status !== report.status);
+            void sendReportDm({ report, kind: statusChanged ? 'status' : 'comment', withComment: statusChanged });
             onReportUpdate({ ...report, ...updateData });
             setNewCommentText('');
             showToast("Comentário adicionado com sucesso!", "success");
@@ -385,6 +390,15 @@ export default function ReportDetailModal({
             }
 
             await updateDoc(doc(db, "critical_reports", report.id), updatePayload);
+
+            // DM ao solicitante: status mudou (com parecer junto) ou só o parecer
+            const quickStatusChanged = Boolean(updatePayload.status && updatePayload.status !== report.status);
+            const quickCommentAdded = Boolean(updatePayload.comments);
+            if (quickStatusChanged) {
+                void sendReportDm({ report, kind: 'status', withComment: quickCommentAdded });
+            } else if (quickCommentAdded) {
+                void sendReportDm({ report, kind: 'comment' });
+            }
             onReportUpdate({ ...report, ...updatePayload });
             showToast("Andamento e parecer atualizados com sucesso!", "success");
         } catch (err) {

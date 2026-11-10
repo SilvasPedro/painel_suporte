@@ -19,7 +19,7 @@ import {
     invalidateWebhookConfigCache,
     postToWebhook
 } from '../../services/notificationEvents';
-import { DEFAULT_DM_CONFIG, sendDiscordDms, fetchBotStatus, describeBotStatus } from '../../services/discordDm';
+import { DEFAULT_DM_CONFIG, DM_EVENT_META, sendDiscordDms, fetchBotStatus, describeBotStatus } from '../../services/discordDm';
 
 /**
  * Configuração do webhook do canal da equipe (Configurações > Notificações).
@@ -309,7 +309,7 @@ const TeamWebhookSettings = () => {
                             </label>
 
                             <div className="space-y-1.5 pl-1">
-                                {NOTIFICATION_EVENT_IDS.map(eventId => (
+                                {DM_EVENT_META.map(({ id: eventId, icon, label }) => (
                                     <label key={eventId} className="flex items-center gap-2.5 cursor-pointer">
                                         <input
                                             type="checkbox"
@@ -319,7 +319,7 @@ const TeamWebhookSettings = () => {
                                             className="w-4 h-4"
                                         />
                                         <span className="text-[11px] font-semibold text-secondary-hub">
-                                            {NOTIFICATION_EVENTS[eventId].icon} {NOTIFICATION_EVENTS[eventId].label}
+                                            {icon} {label}
                                         </span>
                                     </label>
                                 ))}

@@ -37,6 +37,7 @@ import {
     canUserDispatchOrCloseTask,
     isUserTaskCreator
 } from '../types/request.types';
+import { sendReportDm } from '../services/discordDm';
 
 const Reports = () => {
     const { showToast } = useNotification();
@@ -312,6 +313,9 @@ const Reports = () => {
                 }
 
                 await updateDoc(doc(db, "critical_reports", editingId), reportPayload);
+                if (canManageTickets && existingRep && reportPayload.status && reportPayload.status !== existingRep.status) {
+                    void sendReportDm({ report: existingRep, kind: 'status' }); // DM ao solicitante
+                }
                 showToast("Solicitação atualizada com sucesso!", "success");
             } else {
                 reportPayload.creatorId = currentUser.firestoreId || currentUser.uid;
@@ -522,6 +526,7 @@ const Reports = () => {
                 status: newStatus,
                 updatedAt: new Date()
             });
+            if (target && target.status !== newStatus) void sendReportDm({ report: target, kind: 'status' });
             showToast(`Status atualizado para ${newStatus}!`, "success");
             setViewingReport(prev => prev ? { ...prev, status: newStatus } : null);
         } catch (err) {
@@ -549,6 +554,7 @@ const Reports = () => {
                 comments: [...currentComments, newComment],
                 updatedAt: new Date()
             });
+            void sendReportDm({ report: target, kind: 'comment' });
             showToast("Parecer técnico registrado com sucesso!", "success");
             setViewingReport(prev => prev ? { ...prev, comments: [...(prev.comments || []), newComment] } : null);
         } catch (err) {
@@ -640,6 +646,10 @@ const Reports = () => {
 
             await updateDoc(doc(db, "critical_reports", viewingReport.id), updateData);
 
+            // DM ao solicitante: mudança de status (com comentário junto) ou só o comentário
+            const statusChanged = Boolean(updateData.status && updateData.status !== viewingReport.status);
+            void sendReportDm({ report: viewingReport, kind: statusChanged ? 'status' : 'comment', withComment: statusChanged });
+
             setViewingReport(prev => ({
                 ...prev,
                 ...updateData
@@ -692,6 +702,15 @@ const Reports = () => {
             }
 
             await updateDoc(doc(db, "critical_reports", viewingReport.id), updatePayload);
+
+            // DM ao solicitante: status mudou (com parecer junto) ou só o parecer
+            const quickStatusChanged = Boolean(updatePayload.status && updatePayload.status !== viewingReport.status);
+            const quickCommentAdded = Boolean(updatePayload.comments);
+            if (quickStatusChanged) {
+                void sendReportDm({ report: viewingReport, kind: 'status', withComment: quickCommentAdded });
+            } else if (quickCommentAdded) {
+                void sendReportDm({ report: viewingReport, kind: 'comment' });
+            }
             showToast("Andamento e parecer atualizados com sucesso!", "success");
             setViewingReport(prev => ({ 
                 ...prev, 

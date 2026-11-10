@@ -25,7 +25,9 @@ const DISCORD_API = 'https://discord.com/api/v10';
 const STAFF_ROLES = ['admin', 'gestor', 'supervisor', 'noc', 'diretor'];
 const MASTER_EMAIL = 'pedrosouzactt@gmail.com';
 
-export const DM_EVENTS = ['weekly_evaluation', 'feedback', 'monthly_evaluation', 'test'];
+// Eventos de tarefas/relatórios: a DM vai ao SOLICITANTE; a função lê o relatório no Firestore (nada vem do navegador)
+export const REPORT_EVENTS = ['report_status', 'report_comment'];
+export const DM_EVENTS = ['weekly_evaluation', 'feedback', 'monthly_evaluation', ...REPORT_EVENTS, 'test'];
 export const MAX_RECIPIENTS = 100;
 const CONCURRENCY = 5;
 
@@ -153,6 +155,23 @@ export const verifyFirebaseToken = async (idToken, { projectId, fetchImpl = fetc
 // Firestore (REST), sempre com o token de quem chamou
 // -------------------------------------------------------------------------------------------
 
+// Converte um valor no formato REST do Firestore em valor simples (recursivo)
+const fromFirestoreValue = (value) => {
+    if (!value || typeof value !== 'object') return null;
+    if ('stringValue' in value) return value.stringValue;
+    if ('booleanValue' in value) return value.booleanValue;
+    if ('integerValue' in value) return Number(value.integerValue);
+    if ('doubleValue' in value) return value.doubleValue;
+    if ('timestampValue' in value) return value.timestampValue;
+    if ('arrayValue' in value) return (value.arrayValue.values || []).map(fromFirestoreValue);
+    if ('mapValue' in value) return toPlain(value.mapValue);
+    return null;
+};
+
+export const toPlain = (doc) => Object.fromEntries(
+    Object.entries(doc?.fields || {}).map(([key, value]) => [key, fromFirestoreValue(value)])
+);
+
 const readString = (doc, field) => doc?.fields?.[field]?.stringValue ?? '';
 const readBoolean = (doc, field) => doc?.fields?.[field]?.booleanValue;
 
@@ -183,6 +202,14 @@ export const isStaffUser = async ({ uid, email }, ctx) => {
 // Mensagens
 // -------------------------------------------------------------------------------------------
 
+// Texto de uma linha, sem marcações do Discord, com tamanho limitado
+export const cleanInline = (value, max = 80) => {
+    // caracteres de controle (quebras de linha, tabulações...) viram espaço
+    const flat = Array.from(String(value || '')).map(ch => (ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? ' ' : ch)).join('');
+    const text = flat.replace(/[*_~`|>]/g, '').replace(/\s+/g, ' ').trim();
+    return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+};
+
 const safeDate = (value) => (/^[\d/-]{1,10}$/.test(String(value || '')) ? String(value) : '');
 
 // "2026-11" -> "11/2026"
@@ -210,6 +237,17 @@ export const buildDmContent = (event, params = {}, link = '') => {
         case 'monthly_evaluation': {
             const month = formatMonth(params.refMonth);
             return `🎯 **Novo 1:1 mensal disponível**\nSeu alinhamento${month ? ` de ${month}` : ' mensal'} foi registrado. Abra para ler e confirmar ciência.${where}`;
+        }
+        case 'report_status': {
+            const label = cleanInline(params.label, 90);
+            const status = cleanInline(params.status, 30);
+            const extra = params.withComment ? ' O andamento veio com um novo comentário.' : '';
+            return `🔄 **Atualização na sua solicitação**\n${label ? `${label}\n` : ''}Novo status: **${status || 'atualizado'}**.${extra}${where}`;
+        }
+        case 'report_comment': {
+            const label = cleanInline(params.label, 90);
+            const author = cleanInline(params.author, 40);
+            return `💬 **Novo comentário na sua solicitação**\n${label ? `${label}\n` : ''}${author ? `${author} comentou. ` : ''}Abra o Hubdesk para ler e responder.${where}`;
         }
         case 'test':
             return '✅ **Teste do Hubdesk**\nSe você recebeu esta mensagem, os avisos por mensagem direta estão funcionando para a sua conta.';
@@ -320,9 +358,44 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
 
     const firestoreCtx = { idToken, projectId, fetchImpl };
 
-    // Teste: só para si mesmo. Eventos reais: só a gestão.
+    // Teste: só para si mesmo. Eventos reais: só a gestão. Relatórios: gestão ou responsável, para o solicitante.
     let recipients;
-    if (event === 'test') {
+    if (REPORT_EVENTS.includes(event)) {
+        const reportId = body?.reportId;
+        if (!isSafeDocId(reportId)) return { status: 400, json: { error: 'relatorio-invalido' } };
+
+        let reportDoc;
+        try {
+            reportDoc = await getFirestoreDoc(`critical_reports/${reportId}`, firestoreCtx);
+        } catch (error) {
+            return { status: error.status === 403 ? 403 : 502, json: { error: error.status === 403 ? 'sem-permissao' : 'falha-ao-ler-relatorio' } };
+        }
+        if (!reportDoc) return { status: 404, json: { error: 'relatorio-nao-encontrado' } };
+
+        const report = toPlain(reportDoc);
+        const isAssignee = [report.assignedToId, report.assigned_to].some(id => id && String(id) === caller.uid);
+        if (!isAssignee && !(await isStaffUser(caller, firestoreCtx))) return { status: 403, json: { error: 'sem-permissao' } };
+
+        const creatorId = String(report.creatorId || '');
+        const nothingToDo = { status: 200, json: { event, summary: summarize([]), results: [] } };
+        // Sem solicitante conhecido, ou a própria pessoa fez a alteração: não há a quem avisar
+        if (!isSafeDocId(creatorId) || creatorId === caller.uid) return nothingToDo;
+
+        const comments = Array.isArray(report.comments) ? report.comments : [];
+        const lastComment = comments[comments.length - 1] || null;
+        if (event === 'report_comment' && (!lastComment || String(lastComment.authorId || '') === creatorId)) return nothingToDo;
+
+        const clientParams = body?.params && typeof body.params === 'object' ? body.params : {};
+        recipients = [{
+            id: creatorId,
+            params: {
+                label: report.protocol ? `Protocolo #${report.protocol}` : (report.title || 'Sua solicitação'),
+                status: report.status || '',
+                author: lastComment?.authorName || report.lastUpdatedBy || '',
+                withComment: clientParams.withComment === true // só muda o texto da mensagem
+            }
+        }];
+    } else if (event === 'test') {
         recipients = [{ id: caller.uid, params: {} }];
     } else {
         if (!(await isStaffUser(caller, firestoreCtx))) return { status: 403, json: { error: 'sem-permissao' } };
@@ -336,7 +409,7 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
     }
 
     const appUrl = (env.APP_URL || origin || DEFAULT_APP_URL).replace(/\/+$/, '');
-    const link = `${appUrl}/home?tab=my_history`;
+    const link = REPORT_EVENTS.includes(event) ? `${appUrl}/home?tab=reports` : `${appUrl}/home?tab=my_history`;
     const discordCtx = { token, fetchImpl };
 
     let tokenRejected = false;
