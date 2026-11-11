@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.14.1';
+export const CURRENT_VERSION = 'v4.15.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.14.1',
+    version: 'v4.15.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.15.0: nova aba Atendimentos no Smart Pre, com o consolidado de todos os protocolos, em aberto e finalizados.',
+    items: [
+      {
+        icon: FileText,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Aba Atendimentos',
+        category: 'Smart Pre',
+        description: 'Terceira aba ao lado de Dashboard e Clientes, com todos os protocolos registrados de todos os clientes, do mais recente ao mais antigo, e acesso direto ao detalhe do cliente.'
+      },
+      {
+        icon: Filter,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Filtros e Contadores',
+        category: 'Smart Pre',
+        description: 'Cartões de total, em aberto e finalizados, pílulas de situação e filtros por classificação, encerramento e busca por protocolo, cliente ou descrição.'
+      }
+    ]
+  },
+  {
+    version: 'v4.14.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Correção v4.14.1: protocolos do Smart Pre agora aceitam datas de abertura retroativas, inclusive anteriores à adesão do cliente.',
     items: [
       {
@@ -30,7 +53,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.14.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.14.0: a classificação de abertura dos protocolos do Smart Pre ganhou a opção Feedback, o campo "Outro" pede a descrição e o seletor foi redesenhado com mini pílulas.',
     items: [
       {

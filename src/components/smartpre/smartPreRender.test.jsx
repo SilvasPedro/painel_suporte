@@ -8,6 +8,7 @@ import { renderToString } from 'react-dom/server';
 import SmartPreDashboard from './SmartPreDashboard';
 import SmartPreFormModal from './SmartPreFormModal';
 import PillSelect from './PillSelect';
+import SmartPreProtocols from './SmartPreProtocols';
 import SmartPreDetailModal from './SmartPreDetailModal';
 import EasyAuthShortcut from './EasyAuthShortcut';
 
@@ -95,5 +96,15 @@ describe('telas do Smart Pre (renderização)', () => {
         expect(closed).toContain('rounded-2xl');
         expect(closed).not.toContain('role="option"'); // lista só aparece ao abrir
         expect(renderToString(<PillSelect value="" onChange={() => {}} options={options} placeholder="Selecione" />)).toContain('Selecione');
+    });
+
+    it('aba Atendimentos consolida os protocolos de todos os clientes com contadores', () => {
+        const html = renderToString(<SmartPreProtocols clients={clients} onOpenClient={() => {}} />);
+        expect(html).toContain('Total de atendimentos');
+        expect(html).toContain('Em aberto');
+        expect(html).toContain('Finalizados');
+        expect(html).toContain('#2611.001');
+        expect(html).toContain('Ana Souza');
+        expect(renderToString(<SmartPreProtocols clients={[]} onOpenClient={() => {}} />)).toContain('Nenhum atendimento registrado');
     });
 });

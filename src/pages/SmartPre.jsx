@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Wifi, Plus, Search, LayoutDashboard, List, Loader2, MessageSquare, Clock, ShieldCheck, FileText } from 'lucide-react';
+import { Wifi, Plus, Search, LayoutDashboard, List, ClipboardList, Loader2, MessageSquare, Clock, ShieldCheck, FileText } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
@@ -9,12 +9,13 @@ import { usePermissions } from '../context/PermissionsContext';
 import { Button, Badge, Tabs, EmptyState } from '../components/ui';
 import SmartPreDashboard from '../components/smartpre/SmartPreDashboard';
 import SmartPreFormModal from '../components/smartpre/SmartPreFormModal';
+import SmartPreProtocols from '../components/smartpre/SmartPreProtocols';
 import SmartPreDetailModal from '../components/smartpre/SmartPreDetailModal';
 import EasyAuthShortcut from '../components/smartpre/EasyAuthShortcut';
 import {
     SMART_PRE_STATUSES, SMART_PRE_RESOLUTIONS, SMART_PRE_ISSUES, SMART_PRE_PERIODS,
     getStatusMeta, getClientStatus, getProtocols, getResolutionMeta, getDaysToFirstContact, getIssueLabel,
-    filterByPeriod, matchesSearch, buildSmartPrePayload, createSmartPreComment, upsertProtocol, removeProtocol, toDateKey
+    filterByPeriod, matchesSearch, flattenProtocols, buildSmartPrePayload, createSmartPreComment, upsertProtocol, removeProtocol, toDateKey
 } from '../utils/smartPre';
 
 const PAGE_SIZE = 40;
@@ -69,6 +70,8 @@ export default function SmartPre() {
         .filter(c => issueFilter === 'all' || getProtocols(c).some(p => p.classification === issueFilter))
         .sort((a, b) => String(b.installedAt || '').localeCompare(String(a.installedAt || ''))),
     [periodClients, search, statusFilter, resolutionFilter, issueFilter]);
+
+    const protocolCount = useMemo(() => flattenProtocols(allClients).length, [allClients]);
 
     const viewing = viewingId ? allClients.find(c => c.id === viewingId) || null : null;
 
@@ -225,7 +228,8 @@ export default function SmartPre() {
                     onChange={setTab}
                     tabs={[
                         { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-                        { id: 'clients', label: 'Clientes', icon: List, badge: periodClients.length }
+                        { id: 'clients', label: 'Clientes', icon: List, badge: periodClients.length },
+                        { id: 'protocols', label: 'Atendimentos', icon: ClipboardList, badge: protocolCount }
                     ]}
                 />
 
@@ -236,6 +240,8 @@ export default function SmartPre() {
                     </div>
                 ) : tab === 'dashboard' ? (
                     <SmartPreDashboard clients={periodClients} allClients={allClients} onOpenClient={setViewingId} />
+                ) : tab === 'protocols' ? (
+                    <SmartPreProtocols clients={allClients} onOpenClient={setViewingId} />
                 ) : (
                     <div className="space-y-4">
                         {/* Filtros */}

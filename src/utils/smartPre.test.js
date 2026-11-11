@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     toDateKey, daysBetween, getProtocols, getClientStatus, getDaysToFirstContact, getProtocolDuration,
     computeSmartPreStats, getServiceHealth, filterByPeriod, buildMonthlyTimeline, matchesSearch,
-    validateSmartPreClient, validateProtocol, formatPhone, getProtocolIssueLabel, SMART_PRE_ISSUES, buildSmartPrePayload, buildProtocolRecord,
+    validateSmartPreClient, validateProtocol, formatPhone, flattenProtocols, matchesProtocolSearch, getProtocolIssueLabel, SMART_PRE_ISSUES, buildSmartPrePayload, buildProtocolRecord,
     upsertProtocol, removeProtocol, createSmartPreComment, getResolutionMeta
 } from './smartPre';
 
@@ -284,6 +284,28 @@ describe('classificação "Feedback" e "Outro"', () => {
         expect(slow.classificationOther).toBe('');
         expect(getProtocolIssueLabel(slow)).toBe('Lentidão / oscilação');
         expect(getProtocolIssueLabel({ classification: 'other' })).toBe('Outro');
+    });
+});
+
+describe('flattenProtocols / matchesProtocolSearch', () => {
+    const a = client({ id: 'a', clientName: 'Ana', erpCode: 'C1', protocols: [proto({ id: 'p1', protocol: '100', openedAt: '2026-10-01' }), proto({ id: 'p2', protocol: '101', openedAt: '2026-11-03', status: 'open' })] });
+    const b = client({ id: 'b', clientName: 'Bruno', protocols: [proto({ id: 'p3', protocol: '200', openedAt: '2026-11-05', description: 'sem sinal' })] });
+    const semProtocolo = client({ id: 'c', clientName: 'Carla', protocols: [] });
+
+    it('junta os protocolos de todos os clientes, do mais recente ao mais antigo, com o cliente', () => {
+        const list = flattenProtocols([a, b, semProtocolo]);
+        expect(list.map(p => p.protocol)).toEqual(['200', '101', '100']);
+        expect(list[0]).toMatchObject({ clientId: 'b', clientName: 'Bruno' });
+        expect(list[2]).toMatchObject({ clientId: 'a', clientErpCode: 'C1' });
+        expect(flattenProtocols()).toEqual([]);
+    });
+
+    it('busca por protocolo, cliente ou descrição', () => {
+        const list = flattenProtocols([a, b]);
+        expect(list.filter(p => matchesProtocolSearch(p, '200')).length).toBe(1);
+        expect(list.filter(p => matchesProtocolSearch(p, 'ana')).length).toBe(2);
+        expect(list.filter(p => matchesProtocolSearch(p, 'sinal')).length).toBe(1);
+        expect(list.filter(p => matchesProtocolSearch(p, '')).length).toBe(3);
     });
 });
 

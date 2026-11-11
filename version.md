@@ -4,6 +4,26 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.15.0] - 2026-11-11
+
+### 🎯 Destaque Principal
+Nova aba **Atendimentos** no Smart Pre, com o consolidado de todos os protocolos.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- Aba Atendimentos (`SmartPreProtocols`): lista única com os protocolos de todos os clientes, do mais recente ao mais antigo, com acesso ao detalhe do cliente.
+- Cartões de total, em aberto e finalizados; pílulas de situação; filtros por classificação e encerramento; busca por protocolo, cliente, código, username ou descrição; paginação de 50 em 50.
+- Helpers `flattenProtocols` e `matchesProtocolSearch`.
+
+### ⚠️ Observações
+- A aba considera todos os clientes, sem o filtro de período do cabeçalho. Sem mudança nas regras do Firestore.
+
+### 🧪 Testes
+- 260 testes no total.
+
+---
+
 ## [v4.14.1] - 2026-11-11
 
 ### 🐛 Corrigido (Fixed)

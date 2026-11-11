@@ -189,6 +189,24 @@ export const matchesSearch = (client, term) => {
         .some(v => String(v || '').toLowerCase().includes(q));
 };
 
+/** Todos os protocolos de todos os clientes em uma lista só (mais recentes primeiro), com os dados do cliente. */
+export const flattenProtocols = (clients = []) => clients
+    .flatMap(c => getProtocols(c).map(p => ({
+        ...p,
+        clientId: c.id,
+        clientName: c.clientName || '',
+        clientErpCode: c.erpCode || '',
+        clientUsername: c.username || ''
+    })))
+    .sort((a, b) => String(b.openedAt || '').localeCompare(String(a.openedAt || '')));
+
+export const matchesProtocolSearch = (item, term) => {
+    const q = String(term || '').trim().toLowerCase();
+    if (!q) return true;
+    return [item.protocol, item.clientName, item.clientErpCode, item.clientUsername, item.description, item.classificationOther]
+        .some(v => String(v || '').toLowerCase().includes(q));
+};
+
 /** Indicadores da dashboard (clientes e protocolos). */
 export const computeSmartPreStats = (clients = []) => {
     const total = clients.length;
