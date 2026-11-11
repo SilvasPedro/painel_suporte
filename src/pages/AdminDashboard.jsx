@@ -6,7 +6,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi, SlidersHorizontal
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { logout } from '../services/auth';
@@ -16,6 +16,8 @@ import { useNotification } from '../context/NotificationContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import ProductTour from '../components/tour/ProductTour';
+import MenuCustomizerModal from '../components/MenuCustomizerModal';
+import { applyMenuLayout, normalizeLayout, getMenuLayoutStorageKey, findSectionOfItem } from '../utils/menuLayout';
 import { TOUR_VERSION, getTourType, getTourStorageKey, buildTourSteps } from '../data/tourSteps';
 
 // Carregamento sob demanda (Code-Splitting) para máxima performance de inicialização
@@ -59,6 +61,63 @@ const PageLoader = () => (
 // Importação do ícone da barra de navegação (mesmo ícone do favicon)
 import faviconLogo from '../assets/favicon_red.png';
 const logo = faviconLogo;
+
+// Menu padrão. Cada usuário pode renomear as seções e reposicionar os itens (ver utils/menuLayout.js).
+const DEFAULT_NAV_MENUS = [
+    {
+        id: 'individual',
+        title: 'Meu Espaço',
+        icon: User,
+        items: [
+            { id: 'my_dashboard', label: 'Meu Desempenho', icon: Activity },
+            { id: 'my_history', label: 'Meu Histórico', icon: History },
+        ]
+    },
+    {
+        id: 'equipe',
+        title: 'Equipe',
+        icon: Users,
+        items: [
+            { id: 'hub', label: 'Hub da Equipe', icon: Users },
+            { id: 'orgchart', label: 'Organograma', icon: Network },
+            { id: 'rankings', label: 'Rankings da Equipe', icon: Trophy },
+        ]
+    },
+    {
+        id: 'operacional',
+        title: 'Lançamentos/Análise',
+        icon: TrendingUp,
+        items: [
+            { id: 'metrics', label: 'Avaliações Semanais', icon: TrendingUp },
+            { id: 'monthly_evaluations', label: 'Análise Mensal (1:1)', icon: FileText },
+            { id: 'DailyQueueTracker', label: 'Demanda Diária', icon: Activity },
+            { id: 'reports', label: 'Tarefas & Relatórios', icon: ClipboardList },
+            { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
+            { id: 'third_party_audits', label: 'Auditoria Terceirizada', icon: Headphones },
+            { id: 'smart_pre', label: 'Smart Pre', icon: Wifi },
+        ]
+    },
+    {
+        id: 'escalas',
+        title: 'Escalas',
+        icon: Calendar,
+        items: [
+            { id: 'day_off_schedule', label: 'Escala de Folgas', icon: Coffee },
+            { id: 'daily_schedule', label: 'Escala Diária & Plantão', icon: CalendarDays },
+        ]
+    },
+    {
+        id: 'gestao',
+        title: 'Gestão & Sistema',
+        icon: SettingsIcon,
+        items: [
+            { id: 'dashboard', label: 'Visão Geral KPIs', icon: BarChart2 },
+            { id: 'sector_kpis', label: 'KPIs do Setor', icon: Target },
+            { id: 'data_manager', label: 'Gestão de Dados', icon: Database },
+            { id: 'settings', label: 'Configurações', icon: SettingsIcon },
+        ]
+    }
+];
 
 const AdminDashboard = () => {
     const { canView, canEdit, activeRoleInfo, normalizedRole, isMasterAdmin } = usePermissions();
@@ -122,7 +181,7 @@ const AdminDashboard = () => {
 
     const [expandedMenus, setExpandedMenus] = useState({
         individual: true,
-        geral: true,
+        equipe: true,
         operacional: true,
         escalas: true,
         gestao: true
@@ -135,6 +194,38 @@ const AdminDashboard = () => {
     const [tourIsMobile, setTourIsMobile] = useState(false);
     const tourType = getTourType({ normalizedRole, isMasterAdmin });
     const tourUserId = currentUser?.firestoreId || currentUser?.uid;
+
+    // ---------------------------------------------------------------------
+    // PERSONALIZAÇÃO DO MENU (nome/ordem das seções e posição dos itens, por usuário)
+    // Fica no perfil do colaborador (vale em qualquer aparelho) e em cópia local (funciona sem perfil).
+    // ---------------------------------------------------------------------
+    const [layoutOverride, setLayoutOverride] = useState(undefined); // undefined = usar o que está salvo
+    const [isMenuCustomizerOpen, setIsMenuCustomizerOpen] = useState(false);
+    const profileMenuLayout = currentUser?.menuLayout;
+    const storedMenuLayout = useMemo(() => {
+        if (profileMenuLayout) return normalizeLayout(profileMenuLayout);
+        if (!tourUserId) return null;
+        try { return normalizeLayout(localStorage.getItem(getMenuLayoutStorageKey(tourUserId))); } catch { return null; }
+    }, [profileMenuLayout, tourUserId]);
+    const menuLayout = layoutOverride !== undefined ? layoutOverride : storedMenuLayout;
+    const navMenus = useMemo(() => applyMenuLayout(DEFAULT_NAV_MENUS, menuLayout), [menuLayout]);
+
+    const handleSaveMenuLayout = useCallback(async (layout) => {
+        setLayoutOverride(layout);
+        setIsMenuCustomizerOpen(false);
+        if (tourUserId) {
+            try {
+                if (layout) localStorage.setItem(getMenuLayoutStorageKey(tourUserId), JSON.stringify(layout));
+                else localStorage.removeItem(getMenuLayoutStorageKey(tourUserId));
+            } catch { /* sem acesso ao armazenamento */ }
+            try {
+                await updateDoc(doc(db, 'collaborators', tourUserId), { menuLayout: layout ? JSON.stringify(layout) : '' });
+            } catch {
+                // Sem perfil de colaborador ou sem permissão: a cópia local já mantém a personalização neste aparelho
+            }
+        }
+        showToast(layout ? 'Menu personalizado salvo.' : 'Menu restaurado para o padrão.', 'success');
+    }, [tourUserId, showToast, setIsMenuCustomizerOpen]);
 
     const tourSteps = useMemo(
         () => buildTourSteps(tourType, canView, tourIsMobile),
@@ -159,8 +250,9 @@ const AdminDashboard = () => {
     // Prepara a tela para o passo atual: menu lateral aberto e grupo do item expandido
     const handleTourBeforeStep = useCallback((step) => {
         if (step.target && !step.target.includes('mobile-menu')) setIsSidebarCollapsed(false);
-        if (step.menu) setExpandedMenus(prev => (prev[step.menu] ? prev : { ...prev, [step.menu]: true }));
-    }, [setIsSidebarCollapsed, setExpandedMenus]);
+        const sectionId = findSectionOfItem(navMenus, step.requires || step.id) || step.menu;
+        if (sectionId) setExpandedMenus(prev => (prev[sectionId] ? prev : { ...prev, [sectionId]: true }));
+    }, [setIsSidebarCollapsed, setExpandedMenus, navMenus]);
 
     const handleTourFinish = useCallback(async () => {
         setTourOpen(false);
@@ -192,61 +284,6 @@ const AdminDashboard = () => {
         }
     };
 
-    const navMenus = useMemo(() => [
-        {
-            id: 'individual',
-            title: 'Meu Espaço',
-            icon: User,
-            items: [
-                { id: 'my_dashboard', label: 'Meu Desempenho', icon: Activity },
-                { id: 'my_history', label: 'Meu Histórico', icon: History },
-            ]
-        },
-        {
-            id: 'geral',
-            title: 'Principal',
-            icon: BarChart2,
-            items: [
-                { id: 'dashboard', label: 'Visão Geral KPIs', icon: BarChart2 },
-                { id: 'hub', label: 'Hub da Equipe', icon: Users },
-                { id: 'orgchart', label: 'Organograma', icon: Network },
-            ]
-        },
-        {
-            id: 'operacional',
-            title: 'Lançamentos/Análise',
-            icon: TrendingUp,
-            items: [
-                { id: 'metrics', label: 'Avaliações Semanais', icon: TrendingUp },
-                { id: 'monthly_evaluations', label: 'Análise Mensal (1:1)', icon: FileText },
-                { id: 'DailyQueueTracker', label: 'Demanda Diária', icon: Activity },
-                { id: 'reports', label: 'Tarefas & Relatórios', icon: ClipboardList },
-                { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
-                { id: 'third_party_audits', label: 'Auditoria Terceirizada', icon: Headphones },
-                { id: 'smart_pre', label: 'Smart Pre', icon: Wifi },
-                { id: 'rankings', label: 'Rankings da Equipe', icon: Trophy },
-            ]
-        },
-        {
-            id: 'escalas',
-            title: 'Escalas',
-            icon: Calendar,
-            items: [
-                { id: 'day_off_schedule', label: 'Escala de Folgas', icon: Coffee },
-                { id: 'daily_schedule', label: 'Escala Diária & Plantão', icon: CalendarDays },
-            ]
-        },
-        {
-            id: 'gestao',
-            title: 'Gestão & Sistema',
-            icon: SettingsIcon,
-            items: [
-                { id: 'sector_kpis', label: 'KPIs do Setor', icon: Target },
-                { id: 'data_manager', label: 'Gestão de Dados', icon: Database },
-                { id: 'settings', label: 'Configurações', icon: SettingsIcon },
-            ]
-        }
-    ], []);
 
     // Menus visíveis conforme matriz de permissões RBAC
     const visibleMenus = useMemo(() => {
@@ -653,6 +690,21 @@ const AdminDashboard = () => {
                         </button>
                     </div>
 
+                    {/* Personalizar o menu lateral */}
+                    <button
+                        type="button"
+                        data-tour="menu-customize"
+                        onClick={() => setIsMenuCustomizerOpen(true)}
+                        className={cn(
+                            "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                            isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                        )}
+                        title="Personalizar o menu: nome e ordem das seções e posição das telas"
+                    >
+                        <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                        {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Personalizar menu</span>}
+                    </button>
+
                     {/* Rever o tour guiado */}
                     <button
                         type="button"
@@ -825,6 +877,15 @@ const AdminDashboard = () => {
 
                         {/* Rodapé mobile */}
                         <div className="p-3 border-t border-zinc-800/80 shrink-0 bg-zinc-950/80">
+                            <button
+                                onClick={() => {
+                                    setIsMobileMenuOpen(false);
+                                    setIsMenuCustomizerOpen(true);
+                                }}
+                                className="w-full mb-2 py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
+                            >
+                                <SlidersHorizontal className="w-3.5 h-3.5" /> Personalizar menu
+                            </button>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => {
@@ -930,6 +991,18 @@ const AdminDashboard = () => {
                 onOpenChangelogModal={() => setIsChangelogModalOpen(true)}
                 onOpenLogoutModal={() => setIsLogoutModalOpen(true)}
             />
+
+            {/* Personalização do menu lateral (remontado a cada abertura para partir do que está salvo) */}
+            {isMenuCustomizerOpen && (
+                <MenuCustomizerModal
+                    isOpen
+                    onClose={() => setIsMenuCustomizerOpen(false)}
+                    defaults={DEFAULT_NAV_MENUS}
+                    layout={menuLayout}
+                    canViewItem={canView}
+                    onSave={handleSaveMenuLayout}
+                />
+            )}
 
             {/* Modal de Alteração de Senha com Indicador Visual (Fraca, Média, Forte) */}
             <ChangePasswordModal 

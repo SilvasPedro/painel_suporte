@@ -101,7 +101,7 @@ const OPERATIONAL_SCREENS = [
         body: 'Acompanhe os clientes do novo serviço: quem entrou em contato após a instalação, o problema relatado, a tratativa (remota, visita técnica ou TI) e a dashboard de saúde do serviço.'
     },
     {
-        id: 'rankings', menu: 'operacional', requires: 'rankings',
+        id: 'rankings', menu: 'equipe', requires: 'rankings',
         title: 'Rankings da Equipe',
         body: 'Compare a pontuação da equipe por turno e acompanhe os destaques do período.'
     },
@@ -131,7 +131,7 @@ const OPERATIONAL_SCREENS = [
         body: 'Consulte a distribuição diária entre telefonia, Huggy e apoio e a escala de plantões dos domingos.'
     },
     {
-        id: 'orgchart', menu: 'geral', requires: 'orgchart',
+        id: 'orgchart', menu: 'equipe', requires: 'orgchart',
         title: 'Organograma',
         body: 'Conheça a estrutura da equipe, as lideranças e a distribuição por função.'
     }
@@ -139,12 +139,12 @@ const OPERATIONAL_SCREENS = [
 
 const LEADERSHIP_SCREENS = [
     {
-        id: 'dashboard', menu: 'geral', requires: 'dashboard',
+        id: 'dashboard', menu: 'gestao', requires: 'dashboard',
         title: 'Visão Geral KPIs',
         body: 'Cockpit da operação: TMR, FCR, reincidência, conformidade QA, indicadores da terceirizada e evolução histórica, com filtros por período.'
     },
     {
-        id: 'hub', menu: 'geral', requires: 'hub',
+        id: 'hub', menu: 'equipe', requires: 'hub',
         title: 'Hub da Equipe',
         body: 'Gestão dos colaboradores: cadastro, turnos, cargos, histórico de feedbacks e relatório individual de cada pessoa.'
     },
@@ -179,7 +179,7 @@ const LEADERSHIP_SCREENS = [
         body: 'Audite os atendimentos da empresa terceirizada (ATSOC atual e UpCall como histórico): FCR, procedimentos, qualidade e reincidência.'
     },
     {
-        id: 'rankings', menu: 'operacional', requires: 'rankings',
+        id: 'rankings', menu: 'equipe', requires: 'rankings',
         title: 'Rankings da Equipe',
         body: 'Pontuação por colaborador e turno, com detalhamento semanal e exportação.'
     },

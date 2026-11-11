@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.11.2';
+export const CURRENT_VERSION = 'v4.12.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.11.2',
+    version: 'v4.12.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.12.0: a seção "Principal" saiu do menu lateral, suas telas foram realocadas e cada usuário agora pode personalizar o nome e a ordem das seções e a posição das telas.',
+    items: [
+      {
+        icon: Layers,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Menu Reorganizado',
+        category: 'Navegação',
+        description: 'A seção "Principal" foi removida. Hub da Equipe, Organograma e Rankings da Equipe ficam na nova seção "Equipe", e Visão Geral KPIs passa para "Gestão & Sistema".'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Personalizar Menu',
+        category: 'Personalização',
+        description: 'Novo botão "Personalizar menu" no rodapé do menu lateral (e no menu do celular): renomeie as seções, mude a ordem delas, reposicione as telas e mova uma tela para outra seção. Há botão para restaurar o padrão.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Salvo por Usuário',
+        category: 'Personalização',
+        description: 'A personalização vale só para quem a fez e fica no perfil do colaborador (acompanha em outros aparelhos), com cópia local no navegador. Telas novas aparecem sozinhas na seção padrão e telas sem permissão não são listadas.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Busca e Tour Acompanham o Menu',
+        category: 'Navegação',
+        description: 'A busca rápida (Ctrl+K) e o tour guiado seguem o menu personalizado, expandindo a seção onde cada tela está.'
+      }
+    ]
+  },
+  {
+    version: 'v4.11.2',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.11.2: o painel de credenciais do EasyAuth no Smart Pre passa a abrir como popover flutuante, sem empurrar o título e os demais elementos do cabeçalho.',
     items: [
       {
@@ -30,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.11.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.11.1: a tela Smart Pre ganha um atalho para o portal EasyAuth (autenticação dos clientes) e um painel para copiar as credenciais de acesso sem exibir a senha.',
     items: [
       {

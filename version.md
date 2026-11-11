@@ -4,6 +4,30 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.12.0] - 2026-11-11
+
+### 🎯 Destaque Principal
+Menu lateral reorganizado (sem a seção "Principal") e personalizável por usuário.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Personalizar menu** (`MenuCustomizerModal`): renomear seções (até 28 caracteres), reordenar seções, reordenar telas e mover telas entre seções, com "Restaurar padrão".
+- **Persistência por usuário**: campo `menuLayout` (JSON) no perfil do colaborador, com cópia em `localStorage` (`hubdesk_menu_layout_<id>`).
+- **Telas novas** aparecem sozinhas na seção padrão para quem já personalizou; seções e telas removidas são ignoradas.
+
+### 🔄 Alterado (Changed)
+- Seção **Principal** removida. Nova seção **Equipe** (Hub da Equipe, Organograma, Rankings da Equipe); **Visão Geral KPIs** passa para **Gestão & Sistema**.
+- Busca rápida (Ctrl+K) e tour guiado seguem o menu personalizado (o tour expande a seção atual de cada tela).
+
+### 🧪 Testes
+- 252 testes no total (lógica de layout do menu e renderização do personalizador).
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore (o colaborador já pode atualizar o próprio perfil, exceto cargo e status).
+
+---
+
 ## [v4.11.2] - 2026-11-11
 
 ### 🎯 Destaque Principal

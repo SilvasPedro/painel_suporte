@@ -4,6 +4,19 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.12.0 (Menu Reorganizado e Personalizável)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.11.2` para `4.12.0`. |
+| **Criado** | `src/utils/menuLayout.js` / `menuLayout.test.js` | Regras puras de personalização do menu (ordem, nomes, posição dos itens) com testes. |
+| **Criado** | `src/components/MenuCustomizerModal.jsx` / `.test.jsx` | Modal "Personalizar menu" e teste de renderização. |
+| **Alterado** | `src/pages/AdminDashboard.jsx` | Menu padrão sem "Principal", nova seção "Equipe", persistência e botão de personalização. |
+| **Alterado** | `src/data/tourSteps.js` | Seções de referência do tour atualizadas. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.11.2 (Smart Pre: Credenciais em Popover)
 
 | Ação | Arquivo | Descrição da Alteração |
