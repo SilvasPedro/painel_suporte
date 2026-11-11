@@ -4,6 +4,22 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.11.2] - 2026-11-11
+
+### 🎯 Destaque Principal
+O painel "Ver credenciais" do Smart Pre deixa de empurrar o cabeçalho: agora é um popover flutuante.
+
+---
+
+### 🐛 Correções (Fixed)
+- **Layout do cabeçalho**: o painel de credenciais abria no fluxo da página e aumentava a altura do cabeçalho, deslocando o título. Agora usa posicionamento absoluto (popover) e não afeta os demais elementos.
+
+### 🚀 Melhorias (Added)
+- O popover fecha ao clicar fora, ao apertar Esc ou ao clicar novamente em "Ver credenciais".
+- Largura limitada à tela (`max-w-[calc(100vw-2rem)]`) para não gerar rolagem horizontal no celular.
+
+---
+
 ## [v4.11.1] - 2026-11-11
 
 ### 🎯 Destaque Principal

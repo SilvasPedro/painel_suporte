@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.11.1';
+export const CURRENT_VERSION = 'v4.11.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.11.1',
+    version: 'v4.11.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.11.2: o painel de credenciais do EasyAuth no Smart Pre passa a abrir como popover flutuante, sem empurrar o título e os demais elementos do cabeçalho.',
+    items: [
+      {
+        icon: Layers,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Credenciais em Popover Flutuante',
+        category: 'Smart Pre',
+        description: 'Ao clicar em "Ver credenciais", o painel flutua sobre a página em vez de aumentar a altura do cabeçalho, mantendo o título e os outros elementos no lugar.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Fechamento Rápido',
+        category: 'Usabilidade',
+        description: 'O painel fecha ao clicar fora dele, ao apertar Esc ou ao clicar novamente em "Ver credenciais".'
+      }
+    ]
+  },
+  {
+    version: 'v4.11.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.11.1: a tela Smart Pre ganha um atalho para o portal EasyAuth (autenticação dos clientes) e um painel para copiar as credenciais de acesso sem exibir a senha.',
     items: [
       {
@@ -30,7 +53,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.11.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.11.0: o Smart Pre passa a cadastrar o cliente apenas com os dados da instalação e a registrar os atendimentos como protocolos, com situação, classificação de abertura e encerramento. A dashboard é calculada a partir dos protocolos.',
     items: [
       {

@@ -4,6 +4,16 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.11.2 (Smart Pre: Credenciais em Popover)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.11.1` para `4.11.2`. |
+| **Alterado** | `src/components/smartpre/EasyAuthShortcut.jsx` | Painel de credenciais como popover absoluto, com fechamento por clique fora e Esc. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.11.1 (Smart Pre: Atalho EasyAuth)
 
 | Ação | Arquivo | Descrição da Alteração |

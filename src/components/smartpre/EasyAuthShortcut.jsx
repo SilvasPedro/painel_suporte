@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ExternalLink, KeyRound, Copy, Check, Loader2, ChevronDown, Settings2, Save } from 'lucide-react';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
@@ -56,6 +56,20 @@ export default function EasyAuthShortcut({ canConfigure }) {
     const [form, setForm] = useState({ email: '', password: '' });
     const [saving, setSaving] = useState(false);
     const [logoFailed, setLogoFailed] = useState(false);
+    const rootRef = useRef(null);
+
+    // Fecha o popover ao clicar fora ou apertar Esc
+    useEffect(() => {
+        if (!open) return undefined;
+        const onPointerDown = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
+        const onKeyDown = (e) => { if (e.key === 'Escape') setOpen(false); };
+        document.addEventListener('mousedown', onPointerDown);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onPointerDown);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [open]);
 
     const load = async () => {
         setLoading(true);
@@ -108,7 +122,7 @@ export default function EasyAuthShortcut({ canConfigure }) {
     const configured = Boolean(creds?.email && creds?.password);
 
     return (
-        <div className="flex flex-col items-stretch sm:items-end gap-2">
+        <div ref={rootRef} className="relative flex flex-col items-stretch sm:items-end gap-2">
             <a
                 href={EASYAUTH_URL}
                 target="_blank"
@@ -134,7 +148,8 @@ export default function EasyAuthShortcut({ canConfigure }) {
             </button>
 
             {open && (
-                <div className="w-full sm:w-80 rounded-2xl border border-subtle bg-surface p-3.5 space-y-3 shadow-sm">
+                // Popover: flutua sobre a página e não altera a altura do cabeçalho nem o layout dos outros elementos
+                <div className="absolute right-0 top-full mt-1.5 z-30 w-80 max-w-[calc(100vw-2rem)] rounded-2xl border border-subtle bg-surface p-3.5 space-y-3 shadow-xl">
                     {loading ? (
                         <div className="py-3 flex items-center justify-center text-muted-hub"><Loader2 className="w-4 h-4 animate-spin" /></div>
                     ) : editing ? (
