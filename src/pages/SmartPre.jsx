@@ -10,6 +10,7 @@ import { Button, Badge, Tabs, EmptyState } from '../components/ui';
 import SmartPreDashboard from '../components/smartpre/SmartPreDashboard';
 import SmartPreFormModal from '../components/smartpre/SmartPreFormModal';
 import SmartPreDetailModal from '../components/smartpre/SmartPreDetailModal';
+import EasyAuthShortcut from '../components/smartpre/EasyAuthShortcut';
 import {
     SMART_PRE_STATUSES, SMART_PRE_RESOLUTIONS, SMART_PRE_ISSUES, SMART_PRE_PERIODS,
     getStatusMeta, getClientStatus, getProtocols, getResolutionMeta, getDaysToFirstContact, getIssueLabel,
@@ -207,11 +208,14 @@ export default function SmartPre() {
                         </p>
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex flex-col items-stretch xl:items-end gap-3">
+                    <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                         <select aria-label="Período" className={selectCls} value={period} onChange={e => { setPeriod(e.target.value); setVisibleCount(PAGE_SIZE); }}>
                             {SMART_PRE_PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}
                         </select>
                         {hasEditPermission && <Button icon={Plus} onClick={openNew}>Novo cliente</Button>}
+                    </div>
+                    <EasyAuthShortcut canConfigure={canEdit('settings')} />
                     </div>
                 </header>
 

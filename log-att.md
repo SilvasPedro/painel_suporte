@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.11.1 (Smart Pre: Atalho EasyAuth)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.11.0` para `4.11.1`. |
+| **Criado** | `src/components/smartpre/EasyAuthShortcut.jsx` | Botão do portal EasyAuth e painel "Ver credenciais" (senha oculta, copiar, cadastro pela gestão). |
+| **Criado** | `src/assets/easyauth_logo.png` | Logo da EasyAuth usada no botão. |
+| **Alterado** | `src/pages/SmartPre.jsx` | Atalho no cabeçalho da tela. |
+| **Alterado** | `firestore.rules` | Regras da coleção `smart_pre_settings`. |
+| **Alterado** | `src/components/smartpre/smartPreRender.test.jsx` | Teste do atalho. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.11.0 (Smart Pre: Protocolos de Atendimento)
 
 | Ação | Arquivo | Descrição da Alteração |

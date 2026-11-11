@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.11.0';
+export const CURRENT_VERSION = 'v4.11.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.11.0',
+    version: 'v4.11.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.11.1: a tela Smart Pre ganha um atalho para o portal EasyAuth (autenticação dos clientes) e um painel para copiar as credenciais de acesso sem exibir a senha.',
+    items: [
+      {
+        icon: Layers,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Atalho para o Portal EasyAuth',
+        category: 'Smart Pre',
+        description: 'Botão com a logo da EasyAuth no cabeçalho do Smart Pre que abre o portal de autenticação dos clientes em uma nova aba.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Ver Credenciais com Senha Oculta',
+        category: 'Segurança',
+        description: 'Opção "Ver credenciais" abaixo do botão: e-mail e senha com botão de copiar. A senha nunca é exibida na tela. As credenciais ficam no Firestore (não no código do site), legíveis pela equipe do Smart Pre e editáveis apenas pela gestão.'
+      }
+    ]
+  },
+  {
+    version: 'v4.11.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.11.0: o Smart Pre passa a cadastrar o cliente apenas com os dados da instalação e a registrar os atendimentos como protocolos, com situação, classificação de abertura e encerramento. A dashboard é calculada a partir dos protocolos.',
     items: [
       {
@@ -44,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.10.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.10.0: nova tela Smart Pre para a equipe de Apoio, Supervisão e Gestão acompanharem os clientes do novo serviço, com relatos, tratativas e dashboard de saúde do serviço.',
     items: [
       {

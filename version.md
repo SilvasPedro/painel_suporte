@@ -4,6 +4,26 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.11.1] - 2026-11-11
+
+### 🎯 Destaque Principal
+Atalho para o portal EasyAuth e painel de credenciais (senha oculta, apenas copiar) na tela Smart Pre.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Botão do portal EasyAuth** com a logo, abrindo `https://app.easyauth.net/signin` em nova aba (`rel="noopener noreferrer"`).
+- **"Ver credenciais"**: e-mail e senha com botão de copiar; a senha permanece oculta o tempo todo.
+- **Cadastro das credenciais pela gestão** (Cadastrar/Alterar credenciais), gravadas em `smart_pre_settings/easyauth`.
+
+### 🔒 Segurança
+- As credenciais **não ficam no código** (o pacote do site é público): ficam no Firestore, legíveis pela equipe do Smart Pre e graváveis apenas pela gestão. **Publicar o `firestore.rules`** e cadastrar as credenciais no primeiro uso.
+
+### 🧪 Testes
+- 233 testes no total (inclui o atalho e o painel recolhido sem senha na tela).
+
+---
+
 ## [v4.11.0] - 2026-11-11
 
 ### 🎯 Destaque Principal

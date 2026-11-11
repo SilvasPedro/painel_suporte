@@ -163,6 +163,12 @@ service cloud.firestore {
       allow update, delete: if isSmartPreTeam();
     }
 
+    // Credenciais compartilhadas do portal EasyAuth (Smart Pre): a equipe lê; só a gestão altera
+    match /smart_pre_settings/{settingId} {
+      allow read: if isSmartPreTeam();
+      allow write: if isStaffAdmin();
+    }
+
     match /third_party_operators/{opId} {
       allow read: if isSignedIn();
       allow write: if isStaffAdmin();

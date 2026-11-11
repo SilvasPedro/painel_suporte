@@ -1,9 +1,14 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('../../services/firebase', () => ({ db: {} }));
+vi.mock('firebase/firestore', () => ({ doc: vi.fn(), getDoc: vi.fn(), setDoc: vi.fn() }));
+vi.mock('../../context/NotificationContext', () => ({ useNotification: () => ({ showToast: vi.fn() }) }));
 import { renderToString } from 'react-dom/server';
 import SmartPreDashboard from './SmartPreDashboard';
 import SmartPreFormModal from './SmartPreFormModal';
 import SmartPreDetailModal from './SmartPreDetailModal';
+import EasyAuthShortcut from './EasyAuthShortcut';
 
 const clients = [
     {
@@ -60,6 +65,16 @@ describe('telas do Smart Pre (renderização)', () => {
         const html = renderToString(<SmartPreDetailModal client={clients[1]} canEdit {...detailProps} />);
         expect(html).toContain('Nenhum atendimento registrado');
         expect(html).toContain('Ainda não entrou em contato');
+    });
+
+    it('atalho do EasyAuth abre o portal em nova aba e mantém as credenciais recolhidas', () => {
+        const html = renderToString(<EasyAuthShortcut canConfigure={false} />);
+        expect(html).toContain('href="https://app.easyauth.net/signin"');
+        expect(html).toContain('target="_blank"');
+        expect(html).toContain('rel="noopener noreferrer"');
+        expect(html).toContain('alt="EasyAuth"');
+        expect(html).toContain('Ver credenciais');
+        expect(html).not.toContain('Copiar senha'); // painel fechado: nada de senha na tela
     });
 
     it('quem só consulta não vê botões nem campos de edição', () => {
