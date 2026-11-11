@@ -4,6 +4,29 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.13.0] - 2026-11-11
+
+### 🎯 Destaque Principal
+Cadastro de clientes do Smart Pre com campos separados e celular com máscara.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- Campos: código da conexão e código do contrato (opcionais), username (PPPoE), data de adesão, celular, e-mail, cidade, bairro e complemento.
+- Máscara de celular `(11) 99999-9999` (`formatPhone`) e validação de e-mail e DDD.
+- Busca por conexão, contrato, username, e-mail e bairro; detalhe do cliente exibe todos os dados.
+
+### 🔄 Alterado (Changed)
+- "Código / contrato" passou a ser "Código da conexão" (dados existentes preservados); "Data da instalação" virou "Data de adesão".
+
+### 🧪 Testes
+- 253 testes no total.
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore.
+
+---
+
 ## [v4.12.0] - 2026-11-11
 
 ### 🎯 Destaque Principal

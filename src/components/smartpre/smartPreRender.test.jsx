@@ -38,7 +38,9 @@ describe('telas do Smart Pre (renderização)', () => {
     it('cadastro do cliente não pergunta sobre contato', () => {
         const novo = renderToString(<SmartPreFormModal isOpen onClose={() => {}} client={null} onSave={() => {}} saving={false} />);
         expect(novo).toContain('Novo cliente Smart Pre');
-        expect(novo).toContain('Data da instalação');
+        ['Nome do cliente', 'Código da conexão', 'Código do contrato', 'Username (PPPoE)', 'Data de adesão', 'Celular', 'E-mail', 'Cidade', 'Bairro', 'Complemento']
+            .forEach(label => expect(novo).toContain(label));
+        expect(novo).toContain('(00) 00000-0000');
         expect(novo).not.toContain('entrou em contato');
         const edicao = renderToString(<SmartPreFormModal isOpen onClose={() => {}} client={clients[0]} onSave={() => {}} saving={false} />);
         expect(edicao).toContain('Editar cliente Smart Pre');

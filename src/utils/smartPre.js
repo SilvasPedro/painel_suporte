@@ -3,7 +3,7 @@
  * Constantes e cálculos puros (sem Firebase) usados pela tela e pela dashboard.
  *
  * Modelo (coleção `smart_pre_clients`): o cliente é cadastrado primeiro e, depois, recebe protocolos de atendimento.
- *  Cliente:   clientName, erpCode, phone, city, installedAt 'YYYY-MM-DD', comments[], protocols[]
+ *  Cliente:   clientName, erpCode (código da conexão), contractCode, username (PPPoE), phone, email, city, neighborhood, complement, installedAt 'YYYY-MM-DD', comments[], protocols[]
  *  Protocolo: id, protocol (número), openedAt, channel, classification (id de SMART_PRE_ISSUES, definida na abertura),
  *             description, status 'open' | 'closed', closedAt, resolutionType 'remote' | 'service_order' | 'it',
  *             closingNotes, createdByName
@@ -176,7 +176,7 @@ export const matchesSearch = (client, term) => {
     const q = String(term || '').trim().toLowerCase();
     if (!q) return true;
     const protocolNumbers = getProtocols(client).map(p => p.protocol);
-    return [client.clientName, client.erpCode, client.phone, client.city, ...protocolNumbers]
+    return [client.clientName, client.erpCode, client.contractCode, client.username, client.phone, client.email, client.city, client.neighborhood, ...protocolNumbers]
         .some(v => String(v || '').toLowerCase().includes(q));
 };
 
@@ -294,17 +294,38 @@ export const validateSmartPreClient = (form, todayKey = toDateKey(new Date())) =
     const errors = [];
     if (!String(form.clientName || '').trim()) errors.push('Informe o nome do cliente.');
     const installed = toDateKey(form.installedAt);
-    if (!installed) errors.push('Informe a data de instalação.');
-    else if (installed > todayKey) errors.push('A data de instalação não pode ser futura.');
+    if (!installed) errors.push('Informe a data de adesão.');
+    else if (installed > todayKey) errors.push('A data de adesão não pode ser futura.');
+    const email = String(form.email || '').trim();
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push('Informe um e-mail válido.');
+    const phoneDigits = onlyDigits(form.phone);
+    if (phoneDigits && phoneDigits.length < 10) errors.push('Informe o celular com DDD (10 ou 11 dígitos).');
     return errors;
+};
+
+export const onlyDigits = (value) => String(value || '').replace(/\D/g, '');
+
+/** Máscara de celular brasileiro enquanto digita: (11) 99999-9999 (ou (11) 9999-9999 com 10 dígitos). */
+export const formatPhone = (value) => {
+    const d = onlyDigits(value).slice(0, 11);
+    if (!d) return '';
+    if (d.length <= 2) return `(${d}`;
+    if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+    if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+    return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
 /** Cadastro do cliente para gravação (sem campos undefined). Protocolos e relatos são gravados à parte. */
 export const buildSmartPrePayload = (form) => ({
     clientName: String(form.clientName || '').trim(),
     erpCode: String(form.erpCode || '').trim(),
-    phone: String(form.phone || '').trim(),
+    contractCode: String(form.contractCode || '').trim(),
+    username: String(form.username || '').trim(),
+    phone: formatPhone(form.phone),
+    email: String(form.email || '').trim().toLowerCase(),
     city: String(form.city || '').trim(),
+    neighborhood: String(form.neighborhood || '').trim(),
+    complement: String(form.complement || '').trim(),
     installedAt: toDateKey(form.installedAt)
 });
 

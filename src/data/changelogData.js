@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.12.0';
+export const CURRENT_VERSION = 'v4.13.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.12.0',
+    version: 'v4.13.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.13.0: o cadastro de clientes do Smart Pre ganhou campos separados para conexão, contrato, PPPoE, celular com máscara, e-mail e endereço.',
+    items: [
+      {
+        icon: User,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Cadastro Completo do Cliente',
+        category: 'Smart Pre',
+        description: 'Novos campos: código da conexão e código do contrato (opcionais), username PPPoE, data de adesão, e-mail, cidade, bairro e complemento.'
+      },
+      {
+        icon: Phone,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Celular com Máscara',
+        category: 'Smart Pre',
+        description: 'O celular é formatado enquanto se digita, no padrão (11) 99999-9999, e valida o DDD. O e-mail também é validado.'
+      },
+      {
+        icon: Filter,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Busca e Detalhe Ampliados',
+        category: 'Smart Pre',
+        description: 'A busca encontra o cliente por conexão, contrato, username, e-mail e bairro, e o detalhe exibe todos os dados do cadastro.'
+      }
+    ]
+  },
+  {
+    version: 'v4.12.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.12.0: a seção "Principal" saiu do menu lateral, suas telas foram realocadas e cada usuário agora pode personalizar o nome e a ordem das seções e a posição das telas.',
     items: [
       {
@@ -44,7 +74,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.11.2',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.11.2: o painel de credenciais do EasyAuth no Smart Pre passa a abrir como popover flutuante, sem empurrar o título e os demais elementos do cabeçalho.',
     items: [
       {

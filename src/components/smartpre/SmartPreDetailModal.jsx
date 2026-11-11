@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Edit2, Trash2, Send, MessageSquare, Phone, MapPin, Calendar, Clock, Hash, Plus, FileText, Save, X, AlertCircle
+    Edit2, Trash2, Send, MessageSquare, Phone, MapPin, Calendar, Clock, Hash, Mail, User, Plus, FileText, Save, X, AlertCircle
 } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
 import { cn } from '../../utils/cn';
@@ -188,7 +188,7 @@ export default function SmartPreDetailModal({
             onClose={onClose}
             size="xl"
             title={client.clientName}
-            description={`Instalado em ${formatDate(client.installedAt)}${client.erpCode ? ` • Código ${client.erpCode}` : ''}`}
+            description={`Instalado em ${formatDate(client.installedAt)}${client.erpCode ? ` • Conexão ${client.erpCode}` : ''}`}
             footer={canEdit ? (
                 confirmDelete ? (
                     <>
@@ -209,10 +209,15 @@ export default function SmartPreDetailModal({
                 <div className="lg:col-span-2 space-y-4">
                     <Badge variant={statusMeta.variant} dot>{statusMeta.label}</Badge>
                     <div className="space-y-3">
-                        <Info icon={Phone} label="Telefone">{client.phone}</Info>
-                        <Info icon={MapPin} label="Cidade / bairro">{client.city}</Info>
-                        <Info icon={Hash} label="Código / contrato">{client.erpCode}</Info>
-                        <Info icon={Calendar} label="Data da instalação">{formatDate(client.installedAt)}</Info>
+                        <Info icon={Phone} label="Celular">{client.phone}</Info>
+                        <Info icon={Mail} label="E-mail">{client.email}</Info>
+                        <Info icon={User} label="Username (PPPoE)">{client.username}</Info>
+                        <Info icon={Hash} label="Código da conexão">{client.erpCode}</Info>
+                        <Info icon={Hash} label="Código do contrato">{client.contractCode}</Info>
+                        <Info icon={MapPin} label="Cidade">{client.city}</Info>
+                        <Info icon={MapPin} label="Bairro">{client.neighborhood}</Info>
+                        <Info icon={MapPin} label="Complemento">{client.complement}</Info>
+                        <Info icon={Calendar} label="Data de adesão">{formatDate(client.installedAt)}</Info>
                         <Info icon={Clock} label="Primeiro atendimento">
                             {firstContact
                                 ? `${formatDate(firstContact)}${days !== null ? ` (${days === 0 ? 'no mesmo dia da instalação' : `${days} dia${days > 1 ? 's' : ''} após instalar`})` : ''}`

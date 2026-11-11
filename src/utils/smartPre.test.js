@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     toDateKey, daysBetween, getProtocols, getClientStatus, getDaysToFirstContact, getProtocolDuration,
     computeSmartPreStats, getServiceHealth, filterByPeriod, buildMonthlyTimeline, matchesSearch,
-    validateSmartPreClient, validateProtocol, buildSmartPrePayload, buildProtocolRecord,
+    validateSmartPreClient, validateProtocol, formatPhone, buildSmartPrePayload, buildProtocolRecord,
     upsertProtocol, removeProtocol, createSmartPreComment, getResolutionMeta
 } from './smartPre';
 
@@ -173,12 +173,15 @@ describe('cadastro do cliente', () => {
     it('exige nome e data de instalação, sem data futura', () => {
         expect(validateSmartPreClient({}, today)).toHaveLength(2);
         expect(validateSmartPreClient({ clientName: 'A', installedAt: '2026-12-01' }, today)[0]).toMatch(/futura/);
+        expect(validateSmartPreClient({ clientName: 'A', installedAt: '2026-11-01', email: 'x@' }, today)[0]).toMatch(/e-mail/);
+        expect(validateSmartPreClient({ clientName: 'A', installedAt: '2026-11-01', phone: '(11) 9' }, today)[0]).toMatch(/celular/);
+        expect(validateSmartPreClient({ clientName: 'A', installedAt: '2026-11-01', email: 'a@b.com', phone: '(11) 99999-9999' }, today)).toEqual([]);
         expect(validateSmartPreClient({ clientName: 'A', installedAt: '2026-11-01' }, today)).toEqual([]);
     });
 
     it('buildSmartPrePayload grava só os dados do cadastro, aparados', () => {
         expect(buildSmartPrePayload({ clientName: '  Ana ', installedAt: '2026-11-01', contacted: true, issues: ['slow'], status: 'resolved' }))
-            .toEqual({ clientName: 'Ana', erpCode: '', phone: '', city: '', installedAt: '2026-11-01' });
+            .toEqual({ clientName: 'Ana', erpCode: '', contractCode: '', username: '', phone: '', email: '', city: '', neighborhood: '', complement: '', installedAt: '2026-11-01' });
     });
 });
 
@@ -252,5 +255,16 @@ describe('createSmartPreComment', () => {
         const c = createSmartPreComment({ authorId: 'u1', authorName: 'Ana', authorRole: 'Apoio', text: '  oi  ', now: new Date('2026-11-10T10:00:00Z') });
         expect(c).toMatchObject({ authorId: 'u1', authorName: 'Ana', authorRole: 'Apoio', content: 'oi', createdAt: '2026-11-10T10:00:00.000Z' });
         expect(c.id).toMatch(/^cmt_/);
+    });
+});
+
+describe('formatPhone', () => {
+    it('aplica a máscara de celular enquanto digita', () => {
+        expect(formatPhone('')).toBe('');
+        expect(formatPhone('1')).toBe('(1');
+        expect(formatPhone('11999')).toBe('(11) 999');
+        expect(formatPhone('11999998888')).toBe('(11) 99999-8888');
+        expect(formatPhone('1133334444')).toBe('(11) 3333-4444');
+        expect(formatPhone('119999988889999')).toBe('(11) 99999-8888');
     });
 });

@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.13.0 (Cadastro Completo no Smart Pre)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.12.0` para `4.13.0`. |
+| **Alterado** | `src/components/smartpre/SmartPreFormModal.jsx` | Novos campos (conexão, contrato, PPPoE, e-mail, bairro, complemento) e celular com máscara. |
+| **Alterado** | `src/utils/smartPre.js` / `smartPre.test.js` | `formatPhone`, validação de e-mail/celular, payload e busca ampliados. |
+| **Alterado** | `SmartPreDetailModal.jsx` / `SmartPre.jsx` | Exibição dos novos dados. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.12.0 (Menu Reorganizado e Personalizável)
 
 | Ação | Arquivo | Descrição da Alteração |

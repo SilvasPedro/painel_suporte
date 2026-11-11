@@ -296,7 +296,7 @@ export default function SmartPre() {
                                                         <div className="min-w-0">
                                                             <p className="font-semibold text-sm text-primary-hub truncate">{c.clientName}</p>
                                                             <p className="text-[11px] text-muted-hub mt-0.5 truncate">
-                                                                Instalado em {formatDate(c.installedAt)}{c.erpCode ? ` • ${c.erpCode}` : ''}{c.city ? ` • ${c.city}` : ''}
+                                                                Instalado em {formatDate(c.installedAt)}{c.erpCode ? ` • ${c.erpCode}` : ''}{c.city ? ` • ${c.city}` : ''}{c.neighborhood ? ` / ${c.neighborhood}` : ''}
                                                             </p>
                                                         </div>
                                                         <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
