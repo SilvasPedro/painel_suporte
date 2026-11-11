@@ -4,6 +4,22 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.10.0 (Tela Smart Pre)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.9.0` para `4.10.0`. |
+| **Criado** | `src/pages/SmartPre.jsx` | Tela principal: cabeçalho, abas Dashboard/Clientes, filtros e gravação no Firestore. |
+| **Criado** | `src/components/smartpre/*` | Dashboard, formulário e detalhe com relatos, mais teste de renderização. |
+| **Criado** | `src/utils/smartPre.js` / `smartPre.test.js` | Constantes e cálculos puros (taxa de contato, tempos, saúde do serviço) com testes. |
+| **Alterado** | `src/services/rbac.js` | Módulo `smart_pre` e permissões padrão por cargo. |
+| **Alterado** | `src/pages/AdminDashboard.jsx` / `src/data/tourSteps.js` | Item de menu, rota interna e passo do tour. |
+| **Alterado** | `src/services/dataCache.js` | Limite e ordenação de `smart_pre_clients`. |
+| **Alterado** | `firestore.rules` | Regras da coleção `smart_pre_clients`. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [10/11/2026] — Versão v4.9.0 (DM ao Solicitante em Tarefas & Relatórios)
 
 | Ação | Arquivo | Descrição da Alteração |

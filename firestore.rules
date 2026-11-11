@@ -30,6 +30,15 @@ service cloud.firestore {
       );
     }
 
+    // Equipe do Smart Pre: gestão/supervisão (isStaffAdmin) + Apoio
+    function isSmartPreTeam() {
+      return isStaffAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role in ['Apoio']
+      );
+    }
+
     function isOwner(userId) {
       return isSignedIn() && (request.auth.uid == userId);
     }
@@ -142,6 +151,16 @@ service cloud.firestore {
     match /third_party_audits/{auditId} {
       allow read: if isSignedIn();
       allow write: if isStaffAdmin();
+    }
+
+    // Acompanhamento de clientes do Smart Pre (cadastro, relatos e dashboard): equipe de apoio, supervisão e gestão
+    match /smart_pre_clients/{clientId} {
+      allow read: if isSmartPreTeam();
+      allow create: if isSmartPreTeam()
+        && incoming().clientName is string
+        && incoming().clientName.size() > 0
+        && incoming().clientName.size() <= 120;
+      allow update, delete: if isSmartPreTeam();
     }
 
     match /third_party_operators/{opId} {

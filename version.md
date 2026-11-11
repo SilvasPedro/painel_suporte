@@ -4,6 +4,31 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.10.0] - 2026-11-11
+
+### 🎯 Destaque Principal
+Nova tela **Smart Pre** para acompanhar os clientes do novo serviço, com relatos, tratativas e dashboard.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Tela Smart Pre** (`/home?tab=smart_pre`): cadastro de clientes com data de instalação, contato após instalar (data e canal), problemas relatados, situação (em acompanhamento, em tratativa, resolvido) e tratativa (resolvido remotamente, visita técnica, acionamento do TI).
+- **Relatos por cliente**: comentários no formato de Tarefas & Relatórios, gravados com `arrayUnion`, com atualização opcional da situação.
+- **Dashboard**: saúde do serviço, taxa de contato, tempo médio/mediana até o primeiro contato, solicitações mais frequentes, tratativas, entradas x contatos por mês e fila em tratativa.
+- **Filtros** por período, situação, tratativa, problema e busca por nome, código, telefone ou cidade.
+- **Permissões**: módulo `smart_pre` na matriz do RBAC (Gestor, Supervisor e Apoio com ver/editar; Operacional sem acesso) e passo no tour guiado.
+
+### 🔒 Segurança
+- Nova coleção `smart_pre_clients` nas regras do Firestore, acessível à gestão, supervisão e ao cargo Apoio. **Publicar o `firestore.rules`.**
+
+### 🧪 Testes
+- 217 testes no total (cálculos da dashboard, validação, payload e renderização das telas).
+
+### ⚠️ Observações
+- A tela carrega até 600 clientes (os mais recentes). A regra do Firestore reconhece o cargo exato "Apoio" no cadastro do colaborador.
+
+---
+
 ## [v4.9.0] - 2026-11-10
 
 ### 🎯 Destaque Principal

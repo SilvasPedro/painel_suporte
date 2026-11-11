@@ -6,7 +6,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { logout } from '../services/auth';
@@ -28,6 +28,7 @@ const Settings = lazy(() => import('./Settings'));
 const Reports = lazy(() => import('./Reports'));
 const Audits = lazy(() => import('./Audits'));
 const ThirdPartyAudits = lazy(() => import('./ThirdPartyAudits'));
+const SmartPre = lazy(() => import('./SmartPre'));
 const Rankings = lazy(() => import('./Rankings'));
 const DailyQueueTracker = lazy(() => import('./DailyDemandLaunch'));
 const DayOffSchedule = lazy(() => import('./DayOffSchedule'));
@@ -222,6 +223,7 @@ const AdminDashboard = () => {
                 { id: 'reports', label: 'Tarefas & Relatórios', icon: ClipboardList },
                 { id: 'audits', label: 'Auditorias QA', icon: ShieldCheck },
                 { id: 'third_party_audits', label: 'Auditoria Terceirizada', icon: Headphones },
+                { id: 'smart_pre', label: 'Smart Pre', icon: Wifi },
                 { id: 'rankings', label: 'Rankings da Equipe', icon: Trophy },
             ]
         },
@@ -337,6 +339,8 @@ const AdminDashboard = () => {
                 return <Audits />;
             case 'third_party_audits':
                 return <ThirdPartyAudits />;
+            case 'smart_pre':
+                return <SmartPre />;
             case 'settings':
                 return <Settings />;
             case 'DailyQueueTracker':

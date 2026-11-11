@@ -117,6 +117,12 @@ export const SYSTEM_MODULES = [
         description: 'Auditorias de qualidade das equipes de atendimento terceirizado (chamadas, FCR, reincidência e procedimentos).'
     },
     {
+        id: 'smart_pre',
+        label: 'Smart Pre',
+        group: 'Lançamentos & Análise',
+        description: 'Acompanhamento dos clientes do serviço Smart Pre: contatos após a instalação, problemas relatados, tratativas (remota, visita técnica ou TI), relatos e dashboard.'
+    },
+    {
         id: 'rankings',
         label: 'Rankings da Equipe',
         group: 'Lançamentos & Análise',
@@ -181,6 +187,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         reports: { view: true, edit: true },
         audits: { view: true, edit: true },
         third_party_audits: { view: true, edit: true },
+        smart_pre: { view: true, edit: true },
         rankings: { view: true, edit: true },
         schedules_hub: { view: true, edit: true },
         day_off_schedule: { view: true, edit: true },
@@ -203,6 +210,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         reports: { view: true, edit: true },
         audits: { view: true, edit: true },
         third_party_audits: { view: true, edit: true },
+        smart_pre: { view: true, edit: true },
         rankings: { view: true, edit: false },
         schedules_hub: { view: true, edit: true },
         day_off_schedule: { view: true, edit: true },
@@ -225,6 +233,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         reports: { view: true, edit: true },
         audits: { view: true, edit: false },
         third_party_audits: { view: true, edit: true },
+        smart_pre: { view: true, edit: true },
         rankings: { view: true, edit: false },
         schedules_hub: { view: true, edit: true },
         day_off_schedule: { view: true, edit: true },
@@ -247,6 +256,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         reports: { view: true, edit: true },
         audits: { view: false, edit: false },
         third_party_audits: { view: false, edit: false },
+        smart_pre: { view: false, edit: false },
         rankings: { view: true, edit: false },
         schedules_hub: { view: true, edit: false },
         day_off_schedule: { view: true, edit: false },

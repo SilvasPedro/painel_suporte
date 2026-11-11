@@ -41,6 +41,7 @@ const DEFAULT_COLLECTION_LIMITS = {
     weekly_evaluations: 400,
     qa_audits: 300,
     third_party_audits: 300,
+    smart_pre_clients: 600,
     feedbacks: 300,
 };
 
@@ -52,6 +53,7 @@ const DEFAULT_COLLECTION_ORDER = {
     weekly_evaluations: { field: 'createdAt' },
     qa_audits: { field: 'createdAt' },
     third_party_audits: { field: 'createdAt' },
+    smart_pre_clients: { field: 'createdAt' },
     feedbacks: { field: 'createdAt' },
 };
 

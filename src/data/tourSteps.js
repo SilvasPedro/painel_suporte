@@ -96,6 +96,11 @@ const OPERATIONAL_SCREENS = [
         body: 'Todos os feedbacks, análises mensais 1:1, métricas semanais e auditorias QA que você recebeu, com opção de confirmar ciência e exportar.'
     },
     {
+        id: 'smart_pre', menu: 'operacional', requires: 'smart_pre',
+        title: 'Smart Pre',
+        body: 'Acompanhe os clientes do novo serviço: quem entrou em contato após a instalação, o problema relatado, a tratativa (remota, visita técnica ou TI) e a dashboard de saúde do serviço.'
+    },
+    {
         id: 'rankings', menu: 'operacional', requires: 'rankings',
         title: 'Rankings da Equipe',
         body: 'Compare a pontuação da equipe por turno e acompanhe os destaques do período.'

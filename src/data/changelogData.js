@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.9.0';
+export const CURRENT_VERSION = 'v4.10.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.9.0',
+    version: 'v4.10.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.10.0: nova tela Smart Pre para a equipe de Apoio, Supervisão e Gestão acompanharem os clientes do novo serviço, com relatos, tratativas e dashboard de saúde do serviço.',
+    items: [
+      {
+        icon: Layers,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Nova Tela Smart Pre',
+        category: 'Novidade',
+        description: 'Cadastro dos clientes que entram na base com o Smart Pre: data da instalação, contato após instalar, problemas relatados e tratativa (resolvido remotamente, visita técnica ou acionamento do TI), com filtros por situação, tratativa, problema e período.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Relatos por Cliente',
+        category: 'Acompanhamento',
+        description: 'Cada cliente tem um histórico de relatos no mesmo formato de Tarefas & Relatórios, com autor, cargo e data, e a possibilidade de atualizar a situação junto com o relato.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Dashboard de Acompanhamento',
+        category: 'Indicadores',
+        description: 'Saúde do serviço, clientes que entraram em contato, tempo médio e mediana até o primeiro contato, solicitações mais frequentes, tratativas (remoto x visita x TI), entradas x contatos por mês e fila de clientes em tratativa.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Permissões e Tour',
+        category: 'Segurança',
+        description: 'Novo módulo Smart Pre na matriz de permissões (Configurações): Gestor, Supervisor e Apoio com acesso por padrão. Regras do Firestore para a nova coleção e novo passo no tour guiado.'
+      }
+    ]
+  },
+  {
+    version: 'v4.9.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.9.0: o bot do Discord agora avisa por DM o solicitante de uma tarefa ou relatório sempre que o status muda ou chega um novo comentário, para acompanhar tudo em tempo real.',
     items: [
       {
@@ -37,7 +74,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.8.2',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.8.2: quando um colaborador vinculou o Discord, mas a DM está desativada nas configurações (ou o tipo de aviso está desmarcado), quem lançou o item agora é avisado na tela em vez de o envio ser pulado em silêncio.',
     items: [
       {
