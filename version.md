@@ -4,6 +4,17 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.14.1] - 2026-11-11
+
+### 🐛 Corrigido (Fixed)
+- Protocolos do Smart Pre aceitam data de abertura retroativa, inclusive anterior à data de adesão do cliente (lançamento de atendimentos antigos do ERP). Datas futuras e encerramento anterior à abertura continuam bloqueados.
+- O campo de data de abertura não limita mais o calendário à data de adesão.
+
+### ⚠️ Observações
+- O tempo "adesão → 1º atendimento" ignora protocolos anteriores à adesão. Sem mudança nas regras do Firestore.
+
+---
+
 ## [v4.14.0] - 2026-11-11
 
 ### 🎯 Destaque Principal

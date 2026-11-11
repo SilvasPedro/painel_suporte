@@ -199,7 +199,9 @@ describe('validateProtocol', () => {
         expect(errs({ ...base, protocol: '' })).toMatch(/número do protocolo/);
         expect(errs({ ...base, openedAt: '' })).toMatch(/data de abertura/);
         expect(errs({ ...base, openedAt: '2026-11-20' })).toMatch(/futura/);
-        expect(errs({ ...base, openedAt: '2026-11-01' })).toMatch(/anterior à instalação/);
+        // atendimentos retroativos (anteriores à adesão/cadastro) são permitidos
+        expect(errs({ ...base, openedAt: '2026-11-01' })).toBe('');
+        expect(errs({ ...base, openedAt: '2025-03-10' })).toBe('');
         expect(errs({ ...base, classification: '' })).toMatch(/classificação/);
     });
 

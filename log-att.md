@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.14.1 (Atendimentos Retroativos no Smart Pre)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.14.0` para `4.14.1`. |
+| **Corrigido** | `src/utils/smartPre.js` | Removida a validação que impedia abertura anterior à adesão do cliente. |
+| **Corrigido** | `src/components/smartpre/SmartPreDetailModal.jsx` | Campo de abertura sem data mínima. |
+| **Alterado** | `src/utils/smartPre.test.js` | Teste cobre protocolos retroativos. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.14.0 (Classificação Feedback e Seletor em Pílulas)
 
 | Ação | Arquivo | Descrição da Alteração |

@@ -353,12 +353,8 @@ export const validateProtocol = (form, client, todayKey = toDateKey(new Date()))
     }
 
     const opened = toDateKey(form.openedAt);
-    const installed = toDateKey(client?.installedAt);
     if (!opened) errors.push('Informe a data de abertura do atendimento.');
-    else {
-        if (opened > todayKey) errors.push('A data de abertura não pode ser futura.');
-        if (installed && opened < installed) errors.push('A abertura não pode ser anterior à instalação do cliente.');
-    }
+    else if (opened > todayKey) errors.push('A data de abertura não pode ser futura.');
 
     if (!form.classification) errors.push('Selecione a classificação de abertura do atendimento.');
     else if (form.classification === 'other' && !String(form.classificationOther || '').trim()) errors.push('Informe qual é a classificação, já que ela não está na lista.');

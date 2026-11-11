@@ -83,7 +83,7 @@ function ProtocolForm({ client, initial, authorName, saving, onCancel, onSave })
                 </div>
                 <div>
                     <label className={labelCls} htmlFor="pr-opened">Abertura *</label>
-                    <input id="pr-opened" type="date" min={toDateKey(client.installedAt) || undefined} max={todayKey()} className={inputCls} value={form.openedAt} onChange={e => set({ openedAt: e.target.value })} />
+                    <input id="pr-opened" type="date" max={todayKey()} className={inputCls} value={form.openedAt} onChange={e => set({ openedAt: e.target.value })} />
                 </div>
                 <div>
                     <label className={labelCls} htmlFor="pr-channel">Canal</label>

@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.14.0';
+export const CURRENT_VERSION = 'v4.14.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.14.0',
+    version: 'v4.14.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.14.1: protocolos do Smart Pre agora aceitam datas de abertura retroativas, inclusive anteriores à adesão do cliente.',
+    items: [
+      {
+        icon: Calendar,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Atendimentos Retroativos',
+        category: 'Smart Pre',
+        description: 'Removida a regra que impedia abrir protocolo antes da data de adesão do cliente. Agora é possível lançar atendimentos antigos do ERP, de meses ou de anos anteriores. Datas futuras continuam bloqueadas.'
+      },
+      {
+        icon: Activity,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Indicadores Preservados',
+        category: 'Smart Pre',
+        description: 'O tempo médio entre adesão e primeiro atendimento ignora protocolos anteriores à adesão, sem distorcer a média; os demais indicadores contam o protocolo normalmente.'
+      }
+    ]
+  },
+  {
+    version: 'v4.14.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.14.0: a classificação de abertura dos protocolos do Smart Pre ganhou a opção Feedback, o campo "Outro" pede a descrição e o seletor foi redesenhado com mini pílulas.',
     items: [
       {
@@ -37,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.13.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.13.0: o cadastro de clientes do Smart Pre ganhou campos separados para conexão, contrato, PPPoE, celular com máscara, e-mail e endereço.',
     items: [
       {
