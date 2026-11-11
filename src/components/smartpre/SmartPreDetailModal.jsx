@@ -3,11 +3,12 @@ import {
     Edit2, Trash2, Send, MessageSquare, Phone, MapPin, Calendar, Clock, Hash, Mail, User, Plus, FileText, Save, X, AlertCircle
 } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
+import PillSelect from './PillSelect';
 import { cn } from '../../utils/cn';
 import {
     SMART_PRE_ISSUES, SMART_PRE_CHANNELS, SMART_PRE_RESOLUTIONS, PROTOCOL_STATUSES,
     getStatusMeta, getClientStatus, getProtocols, getProtocolStatusMeta, getResolutionMeta, getProtocolDuration,
-    getDaysToFirstContact, getFirstContactDate, getIssueLabel, toDateKey, validateProtocol, buildProtocolRecord
+    getDaysToFirstContact, getFirstContactDate, getProtocolIssueLabel, MAX_CLASSIFICATION_OTHER, toDateKey, validateProtocol, buildProtocolRecord
 } from '../../utils/smartPre';
 
 const inputCls = 'w-full px-3 py-2 rounded-xl bg-surface border border-subtle text-sm text-primary-hub placeholder:text-muted-hub focus:outline-none focus:ring-2 focus:ring-rose-500/30 focus:border-rose-500/50 transition-colors';
@@ -40,7 +41,7 @@ const Info = ({ icon: Icon, label, children }) => (
 );
 
 const emptyProtocolForm = () => ({
-    id: '', protocol: '', openedAt: todayKey(), channel: SMART_PRE_CHANNELS[0], classification: '', description: '',
+    id: '', protocol: '', openedAt: todayKey(), channel: SMART_PRE_CHANNELS[0], classification: '', classificationOther: '', description: '',
     status: 'open', closedAt: '', resolutionType: '', closingNotes: ''
 });
 
@@ -94,10 +95,28 @@ function ProtocolForm({ client, initial, authorName, saving, onCancel, onSave })
 
             <div>
                 <label className={labelCls} htmlFor="pr-class">Classificação de abertura *</label>
-                <select id="pr-class" className={inputCls} value={form.classification} onChange={e => set({ classification: e.target.value })}>
-                    <option value="">Selecione o que o cliente solicitou</option>
-                    {SMART_PRE_ISSUES.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
-                </select>
+                <PillSelect
+                    id="pr-class"
+                    ariaLabel="Classificação de abertura"
+                    value={form.classification}
+                    onChange={id => set({ classification: id })}
+                    options={SMART_PRE_ISSUES}
+                    placeholder="Selecione o que o cliente solicitou"
+                />
+                {form.classification === 'other' && (
+                    <div className="mt-2">
+                        <label className={labelCls} htmlFor="pr-class-other">Qual classificação? *</label>
+                        <input
+                            id="pr-class-other"
+                            className={inputCls}
+                            value={form.classificationOther}
+                            onChange={e => set({ classificationOther: e.target.value })}
+                            maxLength={MAX_CLASSIFICATION_OTHER}
+                            placeholder="Descreva a classificação que não está na lista"
+                            autoFocus
+                        />
+                    </div>
+                )}
             </div>
 
             <div>
@@ -287,7 +306,7 @@ export default function SmartPreDetailModal({
                                                 )}
                                             </div>
                                             <p className="text-[11px] text-muted-hub mt-1.5">
-                                                Aberto em {formatDate(p.openedAt)}{p.channel ? ` • ${p.channel}` : ''} • <strong className="font-semibold text-secondary-hub">{getIssueLabel(p.classification)}</strong>
+                                                Aberto em {formatDate(p.openedAt)}{p.channel ? ` • ${p.channel}` : ''} • <strong className="font-semibold text-secondary-hub">{getProtocolIssueLabel(p)}</strong>
                                             </p>
                                             {p.description && <p className="text-xs text-secondary-hub mt-1.5 whitespace-pre-wrap break-words">{p.description}</p>}
                                             {p.status === 'closed' && (

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
     toDateKey, daysBetween, getProtocols, getClientStatus, getDaysToFirstContact, getProtocolDuration,
     computeSmartPreStats, getServiceHealth, filterByPeriod, buildMonthlyTimeline, matchesSearch,
-    validateSmartPreClient, validateProtocol, formatPhone, buildSmartPrePayload, buildProtocolRecord,
+    validateSmartPreClient, validateProtocol, formatPhone, getProtocolIssueLabel, SMART_PRE_ISSUES, buildSmartPrePayload, buildProtocolRecord,
     upsertProtocol, removeProtocol, createSmartPreComment, getResolutionMeta
 } from './smartPre';
 
@@ -255,6 +255,33 @@ describe('createSmartPreComment', () => {
         const c = createSmartPreComment({ authorId: 'u1', authorName: 'Ana', authorRole: 'Apoio', text: '  oi  ', now: new Date('2026-11-10T10:00:00Z') });
         expect(c).toMatchObject({ authorId: 'u1', authorName: 'Ana', authorRole: 'Apoio', content: 'oi', createdAt: '2026-11-10T10:00:00.000Z' });
         expect(c.id).toMatch(/^cmt_/);
+    });
+});
+
+describe('classificação "Feedback" e "Outro"', () => {
+    const today = '2026-11-10';
+    const c = client({ installedAt: '2026-11-05' });
+    const base = { protocol: '300', openedAt: '2026-11-06', status: 'open' };
+
+    it('a lista tem Feedback', () => {
+        expect(SMART_PRE_ISSUES.some(i => i.id === 'feedback' && i.label === 'Feedback')).toBe(true);
+        expect(validateProtocol({ ...base, classification: 'feedback' }, c, today)).toEqual([]);
+    });
+
+    it('"Outro" exige informar qual é a classificação', () => {
+        expect(validateProtocol({ ...base, classification: 'other' }, c, today).join(' ')).toMatch(/qual é a classificação/);
+        expect(validateProtocol({ ...base, classification: 'other', classificationOther: '  ' }, c, today).join(' ')).toMatch(/qual é a classificação/);
+        expect(validateProtocol({ ...base, classification: 'other', classificationOther: 'Troca de titular' }, c, today)).toEqual([]);
+    });
+
+    it('grava o texto só quando for "Outro" e mostra no rótulo', () => {
+        const other = buildProtocolRecord({ ...base, classification: 'other', classificationOther: ' Troca de titular ' });
+        expect(other.classificationOther).toBe('Troca de titular');
+        expect(getProtocolIssueLabel(other)).toBe('Outro: Troca de titular');
+        const slow = buildProtocolRecord({ ...base, classification: 'slow', classificationOther: 'sobra' });
+        expect(slow.classificationOther).toBe('');
+        expect(getProtocolIssueLabel(slow)).toBe('Lentidão / oscilação');
+        expect(getProtocolIssueLabel({ classification: 'other' })).toBe('Outro');
     });
 });
 

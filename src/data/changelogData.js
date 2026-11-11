@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.13.0';
+export const CURRENT_VERSION = 'v4.14.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.13.0',
+    version: 'v4.14.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.14.0: a classificação de abertura dos protocolos do Smart Pre ganhou a opção Feedback, o campo "Outro" pede a descrição e o seletor foi redesenhado com mini pílulas.',
+    items: [
+      {
+        icon: MessageSquare,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Classificação Feedback',
+        category: 'Smart Pre',
+        description: 'Nova classificação de abertura "Feedback" para registrar retornos espontâneos dos clientes, também disponível no filtro da lista.'
+      },
+      {
+        icon: Edit2,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Outro com Descrição',
+        category: 'Smart Pre',
+        description: 'Ao escolher "Outro", aparece o campo "Qual classificação?" (obrigatório). O texto informado é exibido no protocolo e no dashboard.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Seletor em Mini Pílulas',
+        category: 'Interface',
+        description: 'O dropdown de classificação foi redesenhado no estilo da plataforma: bordas mais arredondadas e opções em mini pílulas, fechando ao clicar fora ou com Esc.'
+      }
+    ]
+  },
+  {
+    version: 'v4.13.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.13.0: o cadastro de clientes do Smart Pre ganhou campos separados para conexão, contrato, PPPoE, celular com máscara, e-mail e endereço.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.12.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.12.0: a seção "Principal" saiu do menu lateral, suas telas foram realocadas e cada usuário agora pode personalizar o nome e a ordem das seções e a posição das telas.',
     items: [
       {

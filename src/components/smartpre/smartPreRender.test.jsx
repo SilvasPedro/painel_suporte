@@ -7,6 +7,7 @@ vi.mock('../../context/NotificationContext', () => ({ useNotification: () => ({ 
 import { renderToString } from 'react-dom/server';
 import SmartPreDashboard from './SmartPreDashboard';
 import SmartPreFormModal from './SmartPreFormModal';
+import PillSelect from './PillSelect';
 import SmartPreDetailModal from './SmartPreDetailModal';
 import EasyAuthShortcut from './EasyAuthShortcut';
 
@@ -85,5 +86,14 @@ describe('telas do Smart Pre (renderização)', () => {
         expect(html).not.toContain('Novo protocolo');
         expect(html).not.toContain('Registre um relato');
         expect(html).not.toContain('Editar protocolo');
+    });
+
+    it('seletor de classificação usa mini pílulas e mostra a opção escolhida', () => {
+        const options = [{ id: 'a', label: 'Alfa' }, { id: 'feedback', label: 'Feedback' }];
+        const closed = renderToString(<PillSelect value="feedback" onChange={() => {}} options={options} placeholder="Selecione" />);
+        expect(closed).toContain('Feedback');
+        expect(closed).toContain('rounded-2xl');
+        expect(closed).not.toContain('role="option"'); // lista só aparece ao abrir
+        expect(renderToString(<PillSelect value="" onChange={() => {}} options={options} placeholder="Selecione" />)).toContain('Selecione');
     });
 });

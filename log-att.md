@@ -4,6 +4,19 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.14.0 (Classificação Feedback e Seletor em Pílulas)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.13.0` para `4.14.0`. |
+| **Criado** | `src/components/smartpre/PillSelect.jsx` | Dropdown estilizado com mini pílulas. |
+| **Alterado** | `src/components/smartpre/SmartPreDetailModal.jsx` | Seletor de classificação em pílulas e campo para "Outro". |
+| **Alterado** | `src/utils/smartPre.js` / `smartPre.test.js` | Classificação Feedback, `classificationOther`, validação e rótulo. |
+| **Alterado** | `SmartPreDashboard.jsx` / `smartPreRender.test.jsx` | Rótulo com o texto de "Outro" e teste do seletor. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.13.0 (Cadastro Completo no Smart Pre)
 
 | Ação | Arquivo | Descrição da Alteração |

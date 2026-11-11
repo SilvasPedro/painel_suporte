@@ -4,7 +4,7 @@
  *
  * Modelo (coleção `smart_pre_clients`): o cliente é cadastrado primeiro e, depois, recebe protocolos de atendimento.
  *  Cliente:   clientName, erpCode (código da conexão), contractCode, username (PPPoE), phone, email, city, neighborhood, complement, installedAt 'YYYY-MM-DD', comments[], protocols[]
- *  Protocolo: id, protocol (número), openedAt, channel, classification (id de SMART_PRE_ISSUES, definida na abertura),
+ *  Protocolo: id, protocol (número), openedAt, channel, classification (id de SMART_PRE_ISSUES, definida na abertura; classificationOther descreve o 'Outro'),
  *             description, status 'open' | 'closed', closedAt, resolutionType 'remote' | 'service_order' | 'it',
  *             closingNotes, createdByName
  *  A situação do cliente é derivada dos protocolos (nenhum = em acompanhamento; algum aberto = em tratativa; todos
@@ -38,6 +38,7 @@ export const SMART_PRE_ISSUES = [
     { id: 'usage_doubt', label: 'Dúvida de uso' },
     { id: 'billing', label: 'Financeiro / cobrança' },
     { id: 'cancel', label: 'Insatisfação / cancelamento' },
+    { id: 'feedback', label: 'Feedback' },
     { id: 'other', label: 'Outro' }
 ];
 
@@ -53,6 +54,14 @@ export const SMART_PRE_PERIODS = [
 export const getStatusMeta = (id) => SMART_PRE_STATUSES.find(s => s.id === id) || SMART_PRE_STATUSES[0];
 export const getProtocolStatusMeta = (id) => PROTOCOL_STATUSES.find(s => s.id === id) || PROTOCOL_STATUSES[0];
 export const getIssueLabel = (id) => SMART_PRE_ISSUES.find(i => i.id === id)?.label || id;
+export const MAX_CLASSIFICATION_OTHER = 60;
+
+/** Rótulo da classificação do protocolo; em "Outro" mostra o que foi informado ("Outro: ..."). */
+export const getProtocolIssueLabel = (protocol) => {
+    const base = getIssueLabel(protocol?.classification);
+    const custom = String(protocol?.classificationOther || '').trim();
+    return protocol?.classification === 'other' && custom ? `${base}: ${custom}` : base;
+};
 
 // 'technical_visit' era o nome na v4.10.0; hoje é ordem de serviço
 export const normalizeResolution = (id) => (id === 'technical_visit' ? 'service_order' : id || '');
@@ -352,6 +361,7 @@ export const validateProtocol = (form, client, todayKey = toDateKey(new Date()))
     }
 
     if (!form.classification) errors.push('Selecione a classificação de abertura do atendimento.');
+    else if (form.classification === 'other' && !String(form.classificationOther || '').trim()) errors.push('Informe qual é a classificação, já que ela não está na lista.');
 
     if (form.status === 'closed') {
         const closedAt = toDateKey(form.closedAt);
@@ -374,6 +384,7 @@ export const buildProtocolRecord = (form, { authorName = '', now = new Date() } 
         openedAt: toDateKey(form.openedAt),
         channel: form.channel || '',
         classification: form.classification || '',
+        classificationOther: form.classification === 'other' ? String(form.classificationOther || '').trim().slice(0, MAX_CLASSIFICATION_OTHER) : '',
         description: String(form.description || '').trim(),
         status: closed ? 'closed' : 'open',
         closedAt: closed ? toDateKey(form.closedAt) : '',

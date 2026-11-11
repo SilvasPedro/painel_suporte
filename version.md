@@ -4,6 +4,26 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.14.0] - 2026-11-11
+
+### 🎯 Destaque Principal
+Classificação de abertura do Smart Pre com Feedback, "Outro" descritivo e seletor em mini pílulas.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- Classificação **Feedback** na abertura de protocolos (e no filtro da lista).
+- Campo **Qual classificação?** (obrigatório, até 60 caracteres) ao escolher "Outro"; exibido como "Outro: texto" no detalhe e no dashboard.
+- Componente `PillSelect`: dropdown arredondado com opções em mini pílulas (fecha ao clicar fora ou com Esc).
+
+### 🧪 Testes
+- 257 testes no total.
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore. Gráficos continuam agrupando todos os "Outro".
+
+---
+
 ## [v4.13.0] - 2026-11-11
 
 ### 🎯 Destaque Principal

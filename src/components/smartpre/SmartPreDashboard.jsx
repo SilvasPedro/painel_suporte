@@ -10,7 +10,7 @@ import { Card, StatCard, EmptyState } from '../ui';
 import { cn } from '../../utils/cn';
 import {
     computeSmartPreStats, getServiceHealth, buildMonthlyTimeline, SMART_PRE_RESOLUTIONS,
-    getClientStatus, getProtocols, getDaysToFirstContact, getIssueLabel
+    getClientStatus, getProtocols, getDaysToFirstContact, getProtocolIssueLabel
 } from '../../utils/smartPre';
 
 const TOOLTIP_STYLE = { backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff', fontSize: '11px' };
@@ -217,7 +217,7 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                                     <div className="min-w-0">
                                         <p className="text-sm font-semibold text-primary-hub truncate">{c.clientName}</p>
                                         <p className="text-[11px] text-muted-hub truncate">
-                                            {open.map(p => `${p.protocol ? `#${p.protocol}` : 'Sem nº'} ${getIssueLabel(p.classification)}`).join(' • ')}
+                                            {open.map(p => `${p.protocol ? `#${p.protocol}` : 'Sem nº'} ${getProtocolIssueLabel(p)}`).join(' • ')}
                                             {getDaysToFirstContact(c) !== null && ` • 1º contato após ${getDaysToFirstContact(c)} dia(s)`}
                                         </p>
                                     </div>
