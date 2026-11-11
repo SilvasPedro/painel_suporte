@@ -2,29 +2,34 @@
  * Smart Pre — acompanhamento de clientes do novo serviço.
  * Constantes e cálculos puros (sem Firebase) usados pela tela e pela dashboard.
  *
- * Modelo do cliente (coleção `smart_pre_clients`):
- *  clientName, erpCode, phone, city,
- *  installedAt   'YYYY-MM-DD'  data em que o cliente entrou na base com o Smart Pre
- *  contacted     boolean       o cliente entrou em contato após a instalação
- *  firstContactAt 'YYYY-MM-DD' data do primeiro contato
- *  contactChannel, issues[] (ids de SMART_PRE_ISSUES), issueDescription
- *  status        'monitoring' | 'in_progress' | 'resolved'
- *  resolutionType '' | 'remote' | 'technical_visit' | 'it'
- *  comments[]    mesmo formato dos comentários de Tarefas & Relatórios
+ * Modelo (coleção `smart_pre_clients`): o cliente é cadastrado primeiro e, depois, recebe protocolos de atendimento.
+ *  Cliente:   clientName, erpCode, phone, city, installedAt 'YYYY-MM-DD', comments[], protocols[]
+ *  Protocolo: id, protocol (número), openedAt, channel, classification (id de SMART_PRE_ISSUES, definida na abertura),
+ *             description, status 'open' | 'closed', closedAt, resolutionType 'remote' | 'service_order' | 'it',
+ *             closingNotes, createdByName
+ *  A situação do cliente é derivada dos protocolos (nenhum = em acompanhamento; algum aberto = em tratativa; todos
+ *  encerrados = resolvido). Clientes da v4.10.0 (campos contacted/issues/resolutionType, sem `protocols`) continuam
+ *  funcionando: viram um protocolo "legado" automaticamente.
  */
 
 export const SMART_PRE_STATUSES = [
-    { id: 'monitoring', label: 'Em acompanhamento', variant: 'info', hint: 'Sem ocorrências até agora' },
-    { id: 'in_progress', label: 'Em tratativa', variant: 'warning', hint: 'Cliente com problema em andamento' },
-    { id: 'resolved', label: 'Resolvido', variant: 'success', hint: 'Problema solucionado' }
+    { id: 'monitoring', label: 'Em acompanhamento', variant: 'info', hint: 'Sem atendimentos até agora' },
+    { id: 'in_progress', label: 'Em tratativa', variant: 'warning', hint: 'Há protocolo em aberto' },
+    { id: 'resolved', label: 'Resolvido', variant: 'success', hint: 'Todos os protocolos encerrados' }
+];
+
+export const PROTOCOL_STATUSES = [
+    { id: 'open', label: 'Em aberto', variant: 'warning' },
+    { id: 'closed', label: 'Finalizado', variant: 'success' }
 ];
 
 export const SMART_PRE_RESOLUTIONS = [
     { id: 'remote', label: 'Resolvido remotamente', short: 'Remoto', color: '#10b981' },
-    { id: 'technical_visit', label: 'Visita técnica', short: 'Visita técnica', color: '#f59e0b' },
-    { id: 'it', label: 'Acionamento do TI', short: 'TI', color: '#8b5cf6' }
+    { id: 'service_order', label: 'Encaminhado para ordem de serviço', short: 'Ordem de serviço', color: '#f59e0b' },
+    { id: 'it', label: 'Encaminhado para o TI', short: 'TI', color: '#8b5cf6' }
 ];
 
+// Classificação do atendimento na abertura
 export const SMART_PRE_ISSUES = [
     { id: 'no_connection', label: 'Sem conexão' },
     { id: 'slow', label: 'Lentidão / oscilação' },
@@ -46,8 +51,12 @@ export const SMART_PRE_PERIODS = [
 ];
 
 export const getStatusMeta = (id) => SMART_PRE_STATUSES.find(s => s.id === id) || SMART_PRE_STATUSES[0];
-export const getResolutionMeta = (id) => SMART_PRE_RESOLUTIONS.find(r => r.id === id) || null;
+export const getProtocolStatusMeta = (id) => PROTOCOL_STATUSES.find(s => s.id === id) || PROTOCOL_STATUSES[0];
 export const getIssueLabel = (id) => SMART_PRE_ISSUES.find(i => i.id === id)?.label || id;
+
+// 'technical_visit' era o nome na v4.10.0; hoje é ordem de serviço
+export const normalizeResolution = (id) => (id === 'technical_visit' ? 'service_order' : id || '');
+export const getResolutionMeta = (id) => SMART_PRE_RESOLUTIONS.find(r => r.id === normalizeResolution(id)) || null;
 
 const pad = (n) => String(n).padStart(2, '0');
 
@@ -77,19 +86,65 @@ export const daysBetween = (fromValue, toValue) => {
     return diff < 0 ? null : diff;
 };
 
-/** Dias entre a instalação e o primeiro contato do cliente (null quando não houve contato ou dados inválidos). */
-export const getDaysToFirstContact = (client) => {
-    if (!client?.contacted) return null;
-    return daysBetween(client.installedAt, client.firstContactAt);
+// ---------------------------------------------------------------------------------------------
+// Protocolos
+// ---------------------------------------------------------------------------------------------
+
+/** Protocolos do cliente, do mais antigo para o mais recente (com suporte aos cadastros da v4.10.0). */
+export const getProtocols = (client) => {
+    if (!client) return [];
+    let list;
+    if (Array.isArray(client.protocols)) {
+        list = client.protocols.filter(Boolean);
+    } else if (client.contacted) {
+        const closed = client.status === 'resolved';
+        list = [{
+            id: 'legacy',
+            legacy: true,
+            protocol: '',
+            openedAt: toDateKey(client.firstContactAt) || toDateKey(client.installedAt),
+            channel: client.contactChannel || '',
+            classification: Array.isArray(client.issues) && client.issues[0] ? client.issues[0] : 'other',
+            description: client.issueDescription || '',
+            status: closed ? 'closed' : 'open',
+            closedAt: closed ? (toDateKey(client.updatedAt) || toDateKey(client.firstContactAt)) : '',
+            resolutionType: normalizeResolution(client.resolutionType),
+            closingNotes: ''
+        }];
+    } else {
+        list = [];
+    }
+    return list
+        .map(p => ({ ...p, resolutionType: normalizeResolution(p.resolutionType) }))
+        .sort((a, b) => String(a.openedAt || '').localeCompare(String(b.openedAt || '')));
 };
 
-export const normalizeIssues = (client) => {
-    const list = Array.isArray(client?.issues) ? client.issues : [];
-    return [...new Set(list.filter(Boolean))];
+export const getClientStatus = (client) => {
+    const protocols = getProtocols(client);
+    if (protocols.length === 0) return 'monitoring';
+    return protocols.some(p => p.status !== 'closed') ? 'in_progress' : 'resolved';
 };
+
+export const hasContacted = (client) => getProtocols(client).length > 0;
+
+/** Data do primeiro atendimento (primeira abertura de protocolo). */
+export const getFirstContactDate = (client) => {
+    const first = getProtocols(client).find(p => toDateKey(p.openedAt));
+    return first ? toDateKey(first.openedAt) : '';
+};
+
+/** Dias entre a instalação e o primeiro atendimento (null sem atendimento ou com datas inválidas). */
+export const getDaysToFirstContact = (client) => daysBetween(client?.installedAt, getFirstContactDate(client));
+
+/** Dias entre a abertura e o encerramento de um protocolo (null se aberto ou datas inválidas). */
+export const getProtocolDuration = (protocol) => (protocol?.status === 'closed' ? daysBetween(protocol.openedAt, protocol.closedAt) : null);
+
+/** Classificações usadas nos protocolos do cliente (ids únicos). */
+export const getClientIssues = (client) => [...new Set(getProtocols(client).map(p => p.classification).filter(Boolean))];
 
 const round1 = (n) => Math.round(n * 10) / 10;
 const percent = (part, total) => (total > 0 ? Math.round((part / total) * 100) : 0);
+const average = (values) => (values.length ? round1(values.reduce((s, v) => s + v, 0) / values.length) : null);
 
 const median = (values) => {
     if (values.length === 0) return null;
@@ -120,61 +175,65 @@ export const filterByPeriod = (clients, periodId, now = new Date()) => {
 export const matchesSearch = (client, term) => {
     const q = String(term || '').trim().toLowerCase();
     if (!q) return true;
-    return [client.clientName, client.erpCode, client.phone, client.city, client.issueDescription]
+    const protocolNumbers = getProtocols(client).map(p => p.protocol);
+    return [client.clientName, client.erpCode, client.phone, client.city, ...protocolNumbers]
         .some(v => String(v || '').toLowerCase().includes(q));
 };
 
-/** Indicadores da dashboard. */
+/** Indicadores da dashboard (clientes e protocolos). */
 export const computeSmartPreStats = (clients = []) => {
     const total = clients.length;
-    const contactedClients = clients.filter(c => c.contacted);
-    const contacted = contactedClients.length;
+    const withProtocols = clients.map(c => ({ client: c, protocols: getProtocols(c) }));
+    const contactedList = withProtocols.filter(x => x.protocols.length > 0);
+    const contacted = contactedList.length;
+    const allProtocols = withProtocols.flatMap(x => x.protocols);
 
-    const daysList = contactedClients.map(getDaysToFirstContact).filter(d => d !== null);
-    const avgDaysToContact = daysList.length ? round1(daysList.reduce((s, d) => s + d, 0) / daysList.length) : null;
-
+    const daysList = contactedList.map(x => getDaysToFirstContact(x.client)).filter(d => d !== null);
     const buckets = CONTACT_TIME_BUCKETS.map(b => ({
-        id: b.id,
-        label: b.label,
-        count: daysList.filter(d => d >= b.min && d <= b.max).length
+        id: b.id, label: b.label, count: daysList.filter(d => d >= b.min && d <= b.max).length
     }));
 
     const statusCounts = { monitoring: 0, in_progress: 0, resolved: 0 };
-    clients.forEach(c => {
-        const key = statusCounts[c.status] !== undefined ? c.status : 'monitoring';
-        statusCounts[key] += 1;
-    });
+    clients.forEach(c => { statusCounts[getClientStatus(c)] += 1; });
 
-    const resolutionCounts = { remote: 0, technical_visit: 0, it: 0, undefined: 0 };
-    contactedClients.forEach(c => {
-        if (resolutionCounts[c.resolutionType] !== undefined && c.resolutionType) resolutionCounts[c.resolutionType] += 1;
+    const closed = allProtocols.filter(p => p.status === 'closed');
+    const open = allProtocols.length - closed.length;
+    const resolutionCounts = { remote: 0, service_order: 0, it: 0, undefined: 0 };
+    closed.forEach(p => {
+        if (p.resolutionType && resolutionCounts[p.resolutionType] !== undefined) resolutionCounts[p.resolutionType] += 1;
         else resolutionCounts.undefined += 1;
     });
 
     const issueMap = new Map();
-    contactedClients.forEach(c => normalizeIssues(c).forEach(id => issueMap.set(id, (issueMap.get(id) || 0) + 1)));
+    allProtocols.forEach(p => { if (p.classification) issueMap.set(p.classification, (issueMap.get(p.classification) || 0) + 1); });
     const issues = [...issueMap.entries()]
         .map(([id, count]) => ({ id, label: getIssueLabel(id), count }))
         .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
-    const escalated = resolutionCounts.technical_visit + resolutionCounts.it;
+    const durations = closed.map(getProtocolDuration).filter(d => d !== null);
+    const escalated = resolutionCounts.service_order + resolutionCounts.it;
+    const repeatClients = contactedList.filter(x => x.protocols.length > 1).length;
 
     return {
         total,
         contacted,
         noContact: total - contacted,
         contactRate: percent(contacted, total),
-        avgDaysToContact,
+        avgDaysToContact: average(daysList),
         medianDaysToContact: median(daysList),
         buckets,
         statusCounts,
-        openCount: statusCounts.in_progress,
-        resolvedCount: statusCounts.resolved,
-        resolvedRate: percent(statusCounts.resolved, contacted),
+        protocolsTotal: allProtocols.length,
+        openProtocols: open,
+        closedProtocols: closed.length,
+        closeRate: percent(closed.length, allProtocols.length),
+        avgResolutionDays: average(durations),
         resolutionCounts,
         escalated,
-        escalationRate: percent(escalated, contacted),
-        remoteRate: percent(resolutionCounts.remote, contacted),
+        escalationRate: percent(escalated, closed.length),
+        remoteRate: percent(resolutionCounts.remote, closed.length),
+        repeatClients,
+        repeatRate: percent(repeatClients, contacted),
         issues
     };
 };
@@ -182,8 +241,8 @@ export const computeSmartPreStats = (clients = []) => {
 /**
  * Saúde do serviço, para leitura rápida.
  * Regras: taxa de contato até 25% = indo bem; até 45% = atenção; acima disso = crítico.
- * Muitos encaminhamentos (visita técnica/TI > 35% dos contatos) ou problemas em aberto
- * (> 40% dos contatos) rebaixam "indo bem" para "atenção".
+ * Muitos encaminhamentos (ordem de serviço/TI > 35% dos protocolos encerrados) ou protocolos em aberto
+ * (> 40% do total) rebaixam "indo bem" para "atenção".
  */
 export const getServiceHealth = (stats) => {
     if (!stats || stats.total === 0) {
@@ -191,8 +250,8 @@ export const getServiceHealth = (stats) => {
     }
     let level = stats.contactRate <= 25 ? 'good' : stats.contactRate <= 45 ? 'attention' : 'critical';
     const reasons = [];
-    if (stats.contacted > 0 && stats.escalationRate > 35) reasons.push('muitos encaminhamentos para visita técnica ou TI');
-    if (stats.contacted > 0 && percent(stats.openCount, stats.contacted) > 40) reasons.push('muitos problemas ainda em aberto');
+    if (stats.closedProtocols > 0 && stats.escalationRate > 35) reasons.push('muitos encaminhamentos para ordem de serviço ou TI');
+    if (stats.protocolsTotal > 0 && percent(stats.openProtocols, stats.protocolsTotal) > 40) reasons.push('muitos protocolos ainda em aberto');
     if (level === 'good' && reasons.length > 0) level = 'attention';
 
     const labels = { good: 'Indo bem', attention: 'Requer atenção', critical: 'Crítico' };
@@ -204,7 +263,7 @@ export const getServiceHealth = (stats) => {
     return { level, label: labels[level], hint: reasons.length ? `${base} Atenção: ${reasons.join(' e ')}.` : base };
 };
 
-/** Entradas e contatos por mês de instalação (últimos `months` meses, do mais antigo ao mais recente). */
+/** Entradas e clientes com atendimento por mês de instalação (últimos `months` meses). */
 export const buildMonthlyTimeline = (clients = [], months = 6, now = new Date()) => {
     const names = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
     const slots = [];
@@ -221,50 +280,101 @@ export const buildMonthlyTimeline = (clients = [], months = 6, now = new Date())
         const slot = slots.find(s => s.key === toDateKey(c.installedAt).slice(0, 7));
         if (!slot) return;
         slot.entered += 1;
-        if (c.contacted) slot.contacted += 1;
+        if (hasContacted(c)) slot.contacted += 1;
     });
     return slots;
 };
 
-/** Validação do formulário; devolve a lista de mensagens de erro (vazia = válido). */
+// ---------------------------------------------------------------------------------------------
+// Formulários
+// ---------------------------------------------------------------------------------------------
+
+/** Validação do cadastro do cliente; devolve a lista de mensagens de erro (vazia = válido). */
 export const validateSmartPreClient = (form, todayKey = toDateKey(new Date())) => {
     const errors = [];
     if (!String(form.clientName || '').trim()) errors.push('Informe o nome do cliente.');
     const installed = toDateKey(form.installedAt);
     if (!installed) errors.push('Informe a data de instalação.');
     else if (installed > todayKey) errors.push('A data de instalação não pode ser futura.');
+    return errors;
+};
 
-    if (form.contacted) {
-        const first = toDateKey(form.firstContactAt);
-        if (!first) errors.push('Informe a data do primeiro contato do cliente.');
+/** Cadastro do cliente para gravação (sem campos undefined). Protocolos e relatos são gravados à parte. */
+export const buildSmartPrePayload = (form) => ({
+    clientName: String(form.clientName || '').trim(),
+    erpCode: String(form.erpCode || '').trim(),
+    phone: String(form.phone || '').trim(),
+    city: String(form.city || '').trim(),
+    installedAt: toDateKey(form.installedAt)
+});
+
+/**
+ * Validação do protocolo de atendimento.
+ * @param {object} form formulário do protocolo
+ * @param {object} client cliente dono do protocolo (data de instalação e demais protocolos)
+ */
+export const validateProtocol = (form, client, todayKey = toDateKey(new Date())) => {
+    const errors = [];
+    const number = String(form.protocol || '').trim();
+    if (!number) errors.push('Informe o número do protocolo.');
+    else {
+        const duplicated = getProtocols(client).some(p => p.id !== form.id && String(p.protocol || '').trim().toLowerCase() === number.toLowerCase());
+        if (duplicated) errors.push('Este protocolo já está registrado para o cliente.');
+    }
+
+    const opened = toDateKey(form.openedAt);
+    const installed = toDateKey(client?.installedAt);
+    if (!opened) errors.push('Informe a data de abertura do atendimento.');
+    else {
+        if (opened > todayKey) errors.push('A data de abertura não pode ser futura.');
+        if (installed && opened < installed) errors.push('A abertura não pode ser anterior à instalação do cliente.');
+    }
+
+    if (!form.classification) errors.push('Selecione a classificação de abertura do atendimento.');
+
+    if (form.status === 'closed') {
+        const closedAt = toDateKey(form.closedAt);
+        if (!closedAt) errors.push('Informe a data de encerramento.');
         else {
-            if (first > todayKey) errors.push('A data do primeiro contato não pode ser futura.');
-            if (installed && first < installed) errors.push('O primeiro contato não pode ser anterior à instalação.');
+            if (closedAt > todayKey) errors.push('A data de encerramento não pode ser futura.');
+            if (opened && closedAt < opened) errors.push('O encerramento não pode ser anterior à abertura.');
         }
-        if (normalizeIssues(form).length === 0) errors.push('Selecione ao menos um problema relatado.');
-        if (form.status === 'resolved' && !form.resolutionType) errors.push('Informe como o problema foi resolvido.');
+        if (!getResolutionMeta(form.resolutionType)) errors.push('Informe como o atendimento foi encerrado (remoto, ordem de serviço ou TI).');
     }
     return errors;
 };
 
-/** Normaliza o formulário para gravação (sem campos undefined; dados de contato zerados quando não houve contato). */
-export const buildSmartPrePayload = (form) => {
-    const contacted = Boolean(form.contacted);
+/** Registro do protocolo para gravação (encerramento só existe quando finalizado). */
+export const buildProtocolRecord = (form, { authorName = '', now = new Date() } = {}) => {
+    const closed = form.status === 'closed';
     return {
-        clientName: String(form.clientName || '').trim(),
-        erpCode: String(form.erpCode || '').trim(),
-        phone: String(form.phone || '').trim(),
-        city: String(form.city || '').trim(),
-        installedAt: toDateKey(form.installedAt),
-        contacted,
-        firstContactAt: contacted ? toDateKey(form.firstContactAt) : '',
-        contactChannel: contacted ? (form.contactChannel || '') : '',
-        issues: contacted ? normalizeIssues(form) : [],
-        issueDescription: contacted ? String(form.issueDescription || '').trim() : '',
-        status: contacted ? (form.status === 'resolved' ? 'resolved' : 'in_progress') : 'monitoring',
-        resolutionType: contacted && getResolutionMeta(form.resolutionType) ? form.resolutionType : ''
+        id: form.id || `prt_${now.getTime()}_${Math.random().toString(36).slice(2, 7)}`,
+        protocol: String(form.protocol || '').trim(),
+        openedAt: toDateKey(form.openedAt),
+        channel: form.channel || '',
+        classification: form.classification || '',
+        description: String(form.description || '').trim(),
+        status: closed ? 'closed' : 'open',
+        closedAt: closed ? toDateKey(form.closedAt) : '',
+        resolutionType: closed ? normalizeResolution(form.resolutionType) : '',
+        closingNotes: closed ? String(form.closingNotes || '').trim() : '',
+        createdByName: form.createdByName || authorName,
+        updatedByName: authorName,
+        updatedAt: now.toISOString()
     };
 };
+
+/** Substitui (mesmo id) ou acrescenta um protocolo, preservando os existentes (inclusive o legado). */
+export const upsertProtocol = (client, record) => {
+    const list = getProtocols(client).map(({ legacy, ...rest }) => rest); // eslint-disable-line no-unused-vars
+    const index = list.findIndex(p => p.id === record.id);
+    if (index >= 0) list[index] = record;
+    else list.push(record);
+    return list;
+};
+
+export const removeProtocol = (client, protocolId) =>
+    getProtocols(client).filter(p => p.id !== protocolId).map(({ legacy, ...rest }) => rest); // eslint-disable-line no-unused-vars
 
 /** Cria um comentário no mesmo formato de Tarefas & Relatórios. */
 export const createSmartPreComment = ({ authorId, authorName, authorRole, text, now = new Date() }) => ({

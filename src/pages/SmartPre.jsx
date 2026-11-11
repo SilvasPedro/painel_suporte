@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Wifi, Plus, Search, LayoutDashboard, List, Loader2, MessageSquare, Clock, ShieldCheck } from 'lucide-react';
+import { Wifi, Plus, Search, LayoutDashboard, List, Loader2, MessageSquare, Clock, ShieldCheck, FileText } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
@@ -12,8 +12,8 @@ import SmartPreFormModal from '../components/smartpre/SmartPreFormModal';
 import SmartPreDetailModal from '../components/smartpre/SmartPreDetailModal';
 import {
     SMART_PRE_STATUSES, SMART_PRE_RESOLUTIONS, SMART_PRE_ISSUES, SMART_PRE_PERIODS,
-    getStatusMeta, getResolutionMeta, getDaysToFirstContact, normalizeIssues, getIssueLabel,
-    filterByPeriod, matchesSearch, buildSmartPrePayload, createSmartPreComment, toDateKey
+    getStatusMeta, getClientStatus, getProtocols, getResolutionMeta, getDaysToFirstContact, getIssueLabel,
+    filterByPeriod, matchesSearch, buildSmartPrePayload, createSmartPreComment, upsertProtocol, removeProtocol, toDateKey
 } from '../utils/smartPre';
 
 const PAGE_SIZE = 40;
@@ -48,6 +48,7 @@ export default function SmartPre() {
     const [viewingId, setViewingId] = useState(null);
     const [saving, setSaving] = useState(false);
     const [submittingUpdate, setSubmittingUpdate] = useState(false);
+    const [savingProtocol, setSavingProtocol] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
@@ -62,9 +63,9 @@ export default function SmartPre() {
 
     const filtered = useMemo(() => periodClients
         .filter(c => matchesSearch(c, search))
-        .filter(c => statusFilter === 'all' || (c.status || 'monitoring') === statusFilter)
-        .filter(c => resolutionFilter === 'all' || c.resolutionType === resolutionFilter)
-        .filter(c => issueFilter === 'all' || normalizeIssues(c).includes(issueFilter))
+        .filter(c => statusFilter === 'all' || getClientStatus(c) === statusFilter)
+        .filter(c => resolutionFilter === 'all' || getProtocols(c).some(p => p.resolutionType === resolutionFilter))
+        .filter(c => issueFilter === 'all' || getProtocols(c).some(p => p.classification === issueFilter))
         .sort((a, b) => String(b.installedAt || '').localeCompare(String(a.installedAt || ''))),
     [periodClients, search, statusFilter, resolutionFilter, issueFilter]);
 
@@ -94,6 +95,7 @@ export default function SmartPre() {
             } else {
                 await addDoc(collection(db, 'smart_pre_clients'), {
                     ...payload,
+                    protocols: [],
                     comments: [],
                     createdAt: now,
                     updatedAt: now,
@@ -113,24 +115,48 @@ export default function SmartPre() {
         }
     };
 
-    // Relato (comentário) e/ou mudança de situação feitos no detalhe do cliente
-    const handleSubmitUpdate = async ({ text, status, resolutionType }) => {
+    // Grava a nova lista de protocolos do cliente aberto no detalhe
+    const writeProtocols = async (protocols, successMessage) => {
         if (!viewing || !hasEditPermission) return false;
+        setSavingProtocol(true);
+        try {
+            const now = new Date();
+            await updateDoc(doc(db, 'smart_pre_clients', viewing.id), {
+                protocols, updatedAt: now, lastActivityAt: now, lastUpdatedBy: author.authorName
+            });
+            showToast(successMessage, 'success');
+            return true;
+        } catch (error) {
+            console.error('Erro ao salvar protocolo Smart Pre:', error);
+            showToast('Não foi possível salvar o protocolo.', 'error');
+            return false;
+        } finally {
+            setSavingProtocol(false);
+        }
+    };
+
+    const handleSaveProtocol = (record) => writeProtocols(
+        upsertProtocol(viewing, record),
+        record.status === 'closed' ? 'Protocolo salvo e finalizado.' : 'Protocolo salvo.'
+    );
+
+    const handleDeleteProtocol = (protocolId) => writeProtocols(removeProtocol(viewing, protocolId), 'Protocolo excluído.');
+
+    // Relato (comentário) no detalhe do cliente
+    const handleSubmitComment = async (text) => {
+        if (!viewing || !hasEditPermission || !text.trim()) return false;
         setSubmittingUpdate(true);
         try {
             const now = new Date();
-            const update = { updatedAt: now, lastActivityAt: now, lastUpdatedBy: author.authorName };
-            if (text.trim()) update.comments = arrayUnion(createSmartPreComment({ ...author, text, now }));
-            if (viewing.contacted) {
-                update.status = status;
-                update.resolutionType = resolutionType;
-            }
-            await updateDoc(doc(db, 'smart_pre_clients', viewing.id), update);
-            showToast(text.trim() ? 'Relato registrado.' : 'Andamento atualizado.', 'success');
+            await updateDoc(doc(db, 'smart_pre_clients', viewing.id), {
+                comments: arrayUnion(createSmartPreComment({ ...author, text, now })),
+                updatedAt: now, lastActivityAt: now, lastUpdatedBy: author.authorName
+            });
+            showToast('Relato registrado.', 'success');
             return true;
         } catch (error) {
-            console.error('Erro ao atualizar cliente Smart Pre:', error);
-            showToast('Não foi possível registrar a atualização.', 'error');
+            console.error('Erro ao registrar relato Smart Pre:', error);
+            showToast('Não foi possível registrar o relato.', 'error');
             return false;
         } finally {
             setSubmittingUpdate(false);
@@ -177,7 +203,7 @@ export default function SmartPre() {
                             )}
                         </div>
                         <p className="text-sm text-secondary-hub mt-1.5 max-w-3xl">
-                            Acompanhe os clientes que entram na base com o Smart Pre: quem entrou em contato após a instalação, o problema relatado e se foi resolvido remotamente, por visita técnica ou pelo TI.
+                            Cadastre os clientes que entram na base com o Smart Pre e acompanhe os protocolos de atendimento: classificação de abertura, situação e encerramento (remoto, ordem de serviço ou TI).
                         </p>
                     </div>
 
@@ -223,12 +249,12 @@ export default function SmartPre() {
                                 <option value="all">Todas as situações</option>
                                 {SMART_PRE_STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                             </select>
-                            <select aria-label="Tratativa" className={selectCls} value={resolutionFilter} onChange={e => { setResolutionFilter(e.target.value); setVisibleCount(PAGE_SIZE); }}>
-                                <option value="all">Todas as tratativas</option>
+                            <select aria-label="Encerramento" className={selectCls} value={resolutionFilter} onChange={e => { setResolutionFilter(e.target.value); setVisibleCount(PAGE_SIZE); }}>
+                                <option value="all">Todos os encerramentos</option>
                                 {SMART_PRE_RESOLUTIONS.map(r => <option key={r.id} value={r.id}>{r.label}</option>)}
                             </select>
-                            <select aria-label="Problema" className={selectCls} value={issueFilter} onChange={e => { setIssueFilter(e.target.value); setVisibleCount(PAGE_SIZE); }}>
-                                <option value="all">Todos os problemas</option>
+                            <select aria-label="Classificação" className={selectCls} value={issueFilter} onChange={e => { setIssueFilter(e.target.value); setVisibleCount(PAGE_SIZE); }}>
+                                <option value="all">Todas as classificações</option>
                                 {SMART_PRE_ISSUES.map(i => <option key={i.id} value={i.id}>{i.label}</option>)}
                             </select>
                             {hasFilters && <Button variant="ghost" size="sm" onClick={clearFilters}>Limpar filtros</Button>}
@@ -248,10 +274,12 @@ export default function SmartPre() {
                             <>
                                 <ul className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                                     {filtered.slice(0, visibleCount).map(c => {
-                                        const status = getStatusMeta(c.status);
-                                        const resolution = getResolutionMeta(c.resolutionType);
+                                        const status = getStatusMeta(getClientStatus(c));
+                                        const protocols = getProtocols(c);
+                                        const openCount = protocols.filter(p => p.status !== 'closed').length;
+                                        const resolutions = [...new Set(protocols.map(p => p.resolutionType).filter(Boolean))].map(getResolutionMeta).filter(Boolean);
                                         const days = getDaysToFirstContact(c);
-                                        const issues = normalizeIssues(c);
+                                        const issues = [...new Set(protocols.map(p => p.classification).filter(Boolean))];
                                         const commentCount = Array.isArray(c.comments) ? c.comments.length : 0;
                                         return (
                                             <li key={c.id}>
@@ -269,16 +297,20 @@ export default function SmartPre() {
                                                         </div>
                                                         <div className="flex flex-wrap justify-end gap-1.5 shrink-0">
                                                             <Badge variant={status.variant} size="sm" dot>{status.label}</Badge>
-                                                            {resolution && <Badge variant="purple" size="sm">{resolution.short}</Badge>}
+                                                            {resolutions.map(r => <Badge key={r.id} variant="purple" size="sm">{r.short}</Badge>)}
                                                         </div>
                                                     </div>
 
                                                     <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px] text-secondary-hub">
                                                         <span className="flex items-center gap-1.5">
                                                             <Clock className="w-3 h-3 text-muted-hub" />
-                                                            {c.contacted
+                                                            {protocols.length > 0
                                                                 ? (days === null ? 'Entrou em contato' : days === 0 ? 'Contato no mesmo dia' : `Contato após ${days} dia${days > 1 ? 's' : ''}`)
                                                                 : 'Sem contato após a instalação'}
+                                                        </span>
+                                                        <span className="flex items-center gap-1.5">
+                                                            <FileText className="w-3 h-3 text-muted-hub" />
+                                                            {protocols.length} {protocols.length === 1 ? 'protocolo' : 'protocolos'}{openCount > 0 ? ` (${openCount} em aberto)` : ''}
                                                         </span>
                                                         <span className="flex items-center gap-1.5">
                                                             <MessageSquare className="w-3 h-3 text-muted-hub" />
@@ -327,9 +359,13 @@ export default function SmartPre() {
                     client={viewing}
                     onClose={() => setViewingId(null)}
                     canEdit={hasEditPermission}
+                    authorName={author.authorName}
                     onEdit={openEdit}
                     onDelete={handleDelete}
-                    onSubmitUpdate={handleSubmitUpdate}
+                    onSaveProtocol={handleSaveProtocol}
+                    onDeleteProtocol={handleDeleteProtocol}
+                    onSubmitComment={handleSubmitComment}
+                    savingProtocol={savingProtocol}
                     submitting={submittingUpdate}
                     deleting={deleting}
                 />

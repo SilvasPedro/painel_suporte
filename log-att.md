@@ -4,6 +4,21 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [11/11/2026] — Versão v4.11.0 (Smart Pre: Protocolos de Atendimento)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.10.0` para `4.11.0`. |
+| **Alterado** | `src/utils/smartPre.js` / `smartPre.test.js` | Modelo cliente + protocolos, situação derivada, validações, indicadores por protocolo e compatibilidade com a v4.10.0. |
+| **Alterado** | `src/components/smartpre/SmartPreFormModal.jsx` | Cadastro simplificado (apenas dados da instalação). |
+| **Alterado** | `src/components/smartpre/SmartPreDetailModal.jsx` | Protocolos de atendimento (abrir, editar, finalizar, excluir) e relatos. |
+| **Alterado** | `src/components/smartpre/SmartPreDashboard.jsx` | Indicadores calculados pelos protocolos. |
+| **Alterado** | `src/pages/SmartPre.jsx` | Gravação de protocolos, filtros por situação/encerramento/classificação e busca por protocolo. |
+| **Alterado** | `src/components/smartpre/smartPreRender.test.jsx` | Testes de renderização atualizados. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.10.0 (Tela Smart Pre)
 
 | Ação | Arquivo | Descrição da Alteração |

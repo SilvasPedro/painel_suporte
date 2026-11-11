@@ -4,6 +4,36 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.11.0] - 2026-11-11
+
+### 🎯 Destaque Principal
+Smart Pre em duas etapas: cadastro do cliente com os dados da instalação e atendimentos registrados como protocolos.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **Protocolos de atendimento** no detalhe do cliente: número, data de abertura, canal, classificação de abertura, descrição e situação (em aberto/finalizado). Editar, finalizar e excluir.
+- **Encerramento**: data e forma (resolvido remotamente, ordem de serviço ou TI) com observações.
+- **Validações**: protocolo repetido no mesmo cliente, abertura anterior à instalação, encerramento anterior à abertura e datas futuras.
+- **Dashboard por protocolo**: finalizados/em aberto, tempo médio de resolução, classificação mais frequente, encerramentos (remoto x O.S. x TI), clientes com mais de um protocolo e fila de protocolos em aberto.
+- **Filtros** por situação, encerramento e classificação; busca pelo número do protocolo.
+
+### 🔄 Alterado (Changed)
+- O cadastro do cliente não pergunta mais sobre contato; contém apenas nome, código, telefone, cidade e data da instalação.
+- A situação do cliente é calculada pelos protocolos (nenhum = em acompanhamento; algum aberto = em tratativa; todos finalizados = resolvido).
+- "Visita técnica" passa a se chamar "Encaminhado para ordem de serviço".
+
+### ♻️ Compatibilidade
+- Clientes da v4.10.0 (sem `protocols`) viram um protocolo sem número automaticamente, e seus dados antigos são mantidos no documento.
+
+### 🧪 Testes
+- 232 testes no total (modelo de protocolos, validações, indicadores e renderização das telas).
+
+### ⚠️ Observações
+- Não há mudança nas regras do Firestore.
+
+---
+
 ## [v4.10.0] - 2026-11-11
 
 ### 🎯 Destaque Principal

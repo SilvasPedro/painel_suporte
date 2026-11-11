@@ -6,18 +6,23 @@ import SmartPreFormModal from './SmartPreFormModal';
 import SmartPreDetailModal from './SmartPreDetailModal';
 
 const clients = [
-    { id: '1', clientName: 'Ana Souza', installedAt: '2026-11-01', contacted: true, firstContactAt: '2026-11-03', issues: ['slow'], status: 'in_progress', resolutionType: 'remote', comments: [] },
-    { id: '2', clientName: 'Bruno', installedAt: '2026-11-02', contacted: false, status: 'monitoring', issues: [] }
+    {
+        id: '1', clientName: 'Ana Souza', installedAt: '2026-11-01', comments: [],
+        protocols: [{ id: 'p1', protocol: '2611.001', openedAt: '2026-11-03', classification: 'slow', status: 'open' }]
+    },
+    { id: '2', clientName: 'Bruno', installedAt: '2026-11-02', protocols: [], comments: [] }
 ];
 
 describe('telas do Smart Pre (renderização)', () => {
-    it('dashboard mostra os indicadores principais', () => {
+    it('dashboard mostra os indicadores principais e a fila de protocolos em aberto', () => {
         const html = renderToString(<SmartPreDashboard clients={clients} allClients={clients} onOpenClient={() => {}} />);
         expect(html).toContain('Saúde do serviço');
         expect(html).toContain('Clientes na base');
         expect(html).toContain('Tempo médio até o contato');
+        expect(html).toContain('Protocolos finalizados');
         expect(html).toContain('Em tratativa agora');
         expect(html).toContain('Ana Souza');
+        expect(html).toContain('#2611.001');
     });
 
     it('dashboard sem clientes mostra o estado vazio', () => {
@@ -25,22 +30,43 @@ describe('telas do Smart Pre (renderização)', () => {
         expect(html).toContain('Nenhum cliente no período');
     });
 
-    it('formulário abre vazio para cadastro e preenchido para edição', () => {
+    it('cadastro do cliente não pergunta sobre contato', () => {
         const novo = renderToString(<SmartPreFormModal isOpen onClose={() => {}} client={null} onSave={() => {}} saving={false} />);
         expect(novo).toContain('Novo cliente Smart Pre');
+        expect(novo).toContain('Data da instalação');
+        expect(novo).not.toContain('entrou em contato');
         const edicao = renderToString(<SmartPreFormModal isOpen onClose={() => {}} client={clients[0]} onSave={() => {}} saving={false} />);
         expect(edicao).toContain('Editar cliente Smart Pre');
         expect(edicao).toContain('Ana Souza');
-        expect(edicao).toContain('Problema relatado');
     });
 
-    it('detalhe mostra relatos e esconde o campo de relato para quem só consulta', () => {
-        const props = { client: { ...clients[0], comments: [{ id: 'c', authorName: 'Maria', authorRole: 'Apoio', content: 'Cliente ligou', createdAt: '2026-11-04T10:00:00.000Z' }] }, onClose: () => {}, onEdit: () => {}, onDelete: () => {}, onSubmitUpdate: async () => true };
-        const editor = renderToString(<SmartPreDetailModal {...props} canEdit />);
-        expect(editor).toContain('Cliente ligou');
-        expect(editor).toContain('Registre um relato');
-        const leitor = renderToString(<SmartPreDetailModal {...props} canEdit={false} />);
-        expect(leitor).toContain('somente de leitura');
-        expect(leitor).not.toContain('Registre um relato');
+    const detailProps = {
+        onClose: () => {}, onEdit: () => {}, onDelete: () => {}, onSaveProtocol: async () => true,
+        onDeleteProtocol: async () => true, onSubmitComment: async () => true, authorName: 'Maria'
+    };
+
+    it('detalhe lista protocolos, relatos e permite abrir novo protocolo para quem edita', () => {
+        const client = { ...clients[0], comments: [{ id: 'c', authorName: 'Maria', authorRole: 'Apoio', content: 'Cliente ligou', createdAt: '2026-11-04T10:00:00.000Z' }] };
+        const html = renderToString(<SmartPreDetailModal client={client} canEdit {...detailProps} />);
+        expect(html).toContain('Protocolos de atendimento');
+        expect(html).toContain('#2611.001');
+        expect(html).toContain('Em aberto');
+        expect(html).toContain('Novo protocolo');
+        expect(html).toContain('Cliente ligou');
+        expect(html).toContain('Registre um relato');
+    });
+
+    it('detalhe de cliente sem atendimento orienta a registrar o primeiro protocolo', () => {
+        const html = renderToString(<SmartPreDetailModal client={clients[1]} canEdit {...detailProps} />);
+        expect(html).toContain('Nenhum atendimento registrado');
+        expect(html).toContain('Ainda não entrou em contato');
+    });
+
+    it('quem só consulta não vê botões nem campos de edição', () => {
+        const html = renderToString(<SmartPreDetailModal client={clients[0]} canEdit={false} {...detailProps} />);
+        expect(html).toContain('somente de leitura');
+        expect(html).not.toContain('Novo protocolo');
+        expect(html).not.toContain('Registre um relato');
+        expect(html).not.toContain('Editar protocolo');
     });
 });

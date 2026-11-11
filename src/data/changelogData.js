@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.10.0';
+export const CURRENT_VERSION = 'v4.11.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.10.0',
+    version: 'v4.11.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.11.0: o Smart Pre passa a cadastrar o cliente apenas com os dados da instalação e a registrar os atendimentos como protocolos, com situação, classificação de abertura e encerramento. A dashboard é calculada a partir dos protocolos.',
+    items: [
+      {
+        icon: Layers,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Cadastro Simples e Protocolos de Atendimento',
+        category: 'Smart Pre',
+        description: 'O cadastro do cliente não pergunta mais sobre contato. Depois de cadastrar, cada atendimento é registrado como protocolo no detalhe do cliente: número, abertura, canal, classificação de abertura, descrição e situação (em aberto ou finalizado).'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Encerramento do Atendimento',
+        category: 'Smart Pre',
+        description: 'Ao finalizar um protocolo informe a data e a forma de encerramento: resolvido remotamente, encaminhado para ordem de serviço ou encaminhado para o TI. Há validação de datas e de protocolo repetido no mesmo cliente.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Dashboard por Protocolo',
+        category: 'Indicadores',
+        description: 'Protocolos finalizados e em aberto, tempo médio de resolução, classificação de abertura mais frequente, encerramentos (remoto x O.S. x TI), clientes com mais de um protocolo e fila de protocolos em aberto. A situação do cliente passa a ser calculada pelos protocolos.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Filtros e Compatibilidade',
+        category: 'Smart Pre',
+        description: 'Filtros por situação, encerramento e classificação, e busca pelo número do protocolo. Clientes cadastrados na v4.10.0 viram automaticamente um protocolo, com visita técnica convertida em ordem de serviço.'
+      }
+    ]
+  },
+  {
+    version: 'v4.10.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.10.0: nova tela Smart Pre para a equipe de Apoio, Supervisão e Gestão acompanharem os clientes do novo serviço, com relatos, tratativas e dashboard de saúde do serviço.',
     items: [
       {
@@ -44,7 +81,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.9.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.9.0: o bot do Discord agora avisa por DM o solicitante de uma tarefa ou relatório sempre que o status muda ou chega um novo comentário, para acompanhar tudo em tempo real.',
     items: [
       {

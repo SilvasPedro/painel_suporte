@@ -10,7 +10,7 @@ import { Card, StatCard, EmptyState } from '../ui';
 import { cn } from '../../utils/cn';
 import {
     computeSmartPreStats, getServiceHealth, buildMonthlyTimeline, SMART_PRE_RESOLUTIONS,
-    getDaysToFirstContact, normalizeIssues, getIssueLabel
+    getClientStatus, getProtocols, getDaysToFirstContact, getIssueLabel
 } from '../../utils/smartPre';
 
 const TOOLTIP_STYLE = { backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff', fontSize: '11px' };
@@ -42,6 +42,7 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
     const health = useMemo(() => getServiceHealth(stats), [stats]);
     const timeline = useMemo(() => buildMonthlyTimeline(allClients, 6), [allClients]);
     const hs = HEALTH_STYLES[health.level] || HEALTH_STYLES.empty;
+    const attentionTotal = stats.statusCounts.in_progress;
 
     const resolutionData = SMART_PRE_RESOLUTIONS
         .map(r => ({ name: r.short, value: stats.resolutionCounts[r.id], color: r.color }))
@@ -49,8 +50,12 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
 
     // Clientes em tratativa há mais tempo primeiro (fila de atenção)
     const attentionList = useMemo(() => clients
-        .filter(c => c.status === 'in_progress')
-        .sort((a, b) => String(a.firstContactAt || a.installedAt).localeCompare(String(b.firstContactAt || b.installedAt)))
+        .filter(c => getClientStatus(c) === 'in_progress')
+        .map(c => {
+            const open = getProtocols(c).filter(p => p.status !== 'closed');
+            return { client: c, open, since: open[0]?.openedAt || '' };
+        })
+        .sort((a, b) => String(a.since).localeCompare(String(b.since)))
         .slice(0, 6), [clients]);
 
     if (stats.total === 0) {
@@ -58,7 +63,7 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
             <EmptyState
                 icon={Activity}
                 title="Nenhum cliente no período"
-                description="Cadastre os clientes que entram na base com o Smart Pre para acompanhar contatos, problemas e o tempo até o primeiro contato."
+                description="Cadastre os clientes que entram na base com o Smart Pre e registre os protocolos de atendimento para acompanhar contatos, classificações e encerramentos."
             />
         );
     }
@@ -101,12 +106,12 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                     subtitle={stats.medianDaysToContact !== null ? `Mediana: ${stats.medianDaysToContact} dias` : 'Sem contatos registrados'}
                 />
                 <StatCard
-                    title="Resolvidos"
-                    value={stats.resolvedCount}
-                    unit={`(${stats.resolvedRate}% dos contatos)`}
+                    title="Protocolos finalizados"
+                    value={stats.closedProtocols}
+                    unit={`de ${stats.protocolsTotal} (${stats.closeRate}%)`}
                     icon={CheckCircle2}
-                    status={stats.openCount > 0 ? 'warning' : 'success'}
-                    subtitle={`${stats.openCount} em tratativa agora`}
+                    status={stats.openProtocols > 0 ? 'warning' : 'success'}
+                    subtitle={`${stats.openProtocols} em aberto${stats.avgResolutionDays !== null ? ` • resolução média: ${stats.avgResolutionDays} dia(s)` : ''}`}
                 />
             </div>
 
@@ -125,8 +130,8 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                     )}
                 </ChartCard>
 
-                <ChartCard title="O que os clientes estão solicitando" subtitle="Problemas relatados (um cliente pode ter mais de um)">
-                    {stats.issues.length === 0 ? <NoData text="Nenhuma solicitação registrada." /> : (
+                <ChartCard title="O que os clientes estão solicitando" subtitle="Classificação de abertura dos protocolos de atendimento">
+                    {stats.issues.length === 0 ? <NoData text="Nenhum protocolo registrado." /> : (
                         <ResponsiveContainer width="100%" height={Math.max(220, stats.issues.length * 34)}>
                             <BarChart data={stats.issues} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#71717a30" horizontal={false} />
@@ -139,8 +144,8 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                     )}
                 </ChartCard>
 
-                <ChartCard title="Como os problemas foram tratados" subtitle="Solução remota, visita técnica ou acionamento do TI">
-                    {resolutionData.length === 0 ? <NoData text="Nenhuma forma de tratativa registrada." /> : (
+                <ChartCard title="Como os atendimentos foram encerrados" subtitle="Protocolos finalizados: resolvidos remotamente, ordem de serviço ou TI">
+                    {resolutionData.length === 0 ? <NoData text="Nenhum protocolo finalizado ainda." /> : (
                         <div className="flex flex-col sm:flex-row items-center gap-4">
                             <div className="w-full sm:w-1/2">
                                 <ResponsiveContainer width="100%" height={210}>
@@ -159,18 +164,22 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                                     <strong className="text-primary-hub tabular-nums">{stats.remoteRate}%</strong>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
-                                    <span className="flex items-center gap-2 text-secondary-hub"><TrendingUp className="w-3.5 h-3.5" /> Encaminhados (visita ou TI)</span>
+                                    <span className="flex items-center gap-2 text-secondary-hub"><TrendingUp className="w-3.5 h-3.5" /> Encaminhados (O.S. ou TI)</span>
                                     <strong className="text-primary-hub tabular-nums">{stats.escalationRate}%</strong>
                                 </div>
+                                <div className="flex items-center justify-between text-xs">
+                                    <span className="flex items-center gap-2 text-secondary-hub"><Activity className="w-3.5 h-3.5" /> Clientes com mais de um protocolo</span>
+                                    <strong className="text-primary-hub tabular-nums">{stats.repeatRate}%</strong>
+                                </div>
                                 {stats.resolutionCounts.undefined > 0 && (
-                                    <p className="text-[11px] text-muted-hub pt-1">{stats.resolutionCounts.undefined} contato(s) ainda sem forma de tratativa definida.</p>
+                                    <p className="text-[11px] text-muted-hub pt-1">{stats.resolutionCounts.undefined} protocolo(s) finalizado(s) sem forma de encerramento.</p>
                                 )}
                             </div>
                         </div>
                     )}
                 </ChartCard>
 
-                <ChartCard title="Entradas x contatos por mês" subtitle="Clientes instalados em cada mês e quantos já entraram em contato (todos os períodos)">
+                <ChartCard title="Entradas x contatos por mês" subtitle="Clientes instalados em cada mês e quantos já abriram protocolo (todos os períodos)">
                     <ResponsiveContainer width="100%" height={220}>
                         <BarChart data={timeline} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
                             <CartesianGrid strokeDasharray="3 3" stroke="#71717a30" vertical={false} />
@@ -190,15 +199,15 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                 <div className="mb-3 flex items-center justify-between gap-3">
                     <div>
                         <h3 className="font-brand text-sm font-bold text-primary-hub tracking-tight">Em tratativa agora</h3>
-                        <p className="text-[11px] text-muted-hub mt-0.5">Clientes com problema em aberto, do contato mais antigo para o mais recente</p>
+                        <p className="text-[11px] text-muted-hub mt-0.5">Clientes com protocolo em aberto, do mais antigo para o mais recente</p>
                     </div>
-                    <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-subtle text-secondary-hub border border-subtle">{stats.openCount}</span>
+                    <span className="text-[11px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-subtle text-secondary-hub border border-subtle">{attentionTotal}</span>
                 </div>
                 {attentionList.length === 0 ? (
                     <p className="text-xs text-muted-hub py-4 text-center">Nenhum cliente com problema em aberto.</p>
                 ) : (
                     <ul className="divide-y divide-zinc-500/15">
-                        {attentionList.map(c => (
+                        {attentionList.map(({ client: c, open }) => (
                             <li key={c.id}>
                                 <button
                                     type="button"
@@ -208,8 +217,8 @@ export default function SmartPreDashboard({ clients, allClients, onOpenClient })
                                     <div className="min-w-0">
                                         <p className="text-sm font-semibold text-primary-hub truncate">{c.clientName}</p>
                                         <p className="text-[11px] text-muted-hub truncate">
-                                            {normalizeIssues(c).map(getIssueLabel).join(' • ') || 'Sem problema informado'}
-                                            {getDaysToFirstContact(c) !== null && ` • contato após ${getDaysToFirstContact(c)} dia(s)`}
+                                            {open.map(p => `${p.protocol ? `#${p.protocol}` : 'Sem nº'} ${getIssueLabel(p.classification)}`).join(' • ')}
+                                            {getDaysToFirstContact(c) !== null && ` • 1º contato após ${getDaysToFirstContact(c)} dia(s)`}
                                         </p>
                                     </div>
                                     <ChevronRight className="w-4 h-4 text-muted-hub shrink-0" />
