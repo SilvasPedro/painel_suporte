@@ -1,17 +1,21 @@
 import { GoogleGenAI } from '@google/genai';
 import { authorizeAiRequest, validateInsightsBody, sendGuardError } from './_lib/aiGuard.js';
 import { buildInsightsPrompts } from './_lib/aiPrompts.js';
-import { classifyGeminiError, emptyReplyError, errorBody, sanitizeDetail } from './_lib/aiErrors.js';
+import { classifyGeminiError, emptyReplyError, errorBody, sanitizeDetail, inspectApiKey } from './_lib/aiErrors.js';
 
 let aiInstance = null;
+let aiInstanceKey = '';
+
+// Só a variável do servidor: qualquer variável VITE_* vai para o código público do site.
+// O valor é conferido antes de usar (aspas curvas, espaços e texto junto à chave quebram a chamada).
 function getAI() {
-  // Só a variável do servidor: qualquer variável VITE_* vai para o código público do site
-  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
-  if (!apiKey) return null;
-  if (!aiInstance) {
-    aiInstance = new GoogleGenAI({ apiKey });
+  const inspected = inspectApiKey(process.env.GEMINI_API_KEY);
+  if (!inspected.ok) return { failure: inspected };
+  if (!aiInstance || aiInstanceKey !== inspected.key) {
+    aiInstance = new GoogleGenAI({ apiKey: inspected.key });
+    aiInstanceKey = inspected.key;
   }
-  return aiInstance;
+  return { ai: aiInstance };
 }
 
 export default async function handler(req, res) {
@@ -30,14 +34,9 @@ export default async function handler(req, res) {
   if (!parsed.ok) return res.status(parsed.status).json({ error: 'pedido-invalido', message: parsed.error });
   const { dadosColaborador, periodo, tipoAnalise } = parsed.value;
 
-  const ai = getAI();
+  const { ai, failure: keyFailure } = getAI();
   if (!ai) {
-    return res.status(503).json(errorBody({
-      error: 'chave-nao-configurada',
-      message: 'A chave da IA ainda não foi configurada no servidor. Crie a variável GEMINI_API_KEY na Vercel (sem prefixo VITE_) e faça um novo deploy.',
-      detail: 'GEMINI_API_KEY ausente',
-      retryable: false
-    }));
+    return res.status(503).json(errorBody({ ...keyFailure, retryable: false }));
   }
 
   try {

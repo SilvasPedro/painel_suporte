@@ -4,6 +4,17 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.19.2 (Conferência da Chave da IA)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.19.1` para `4.19.2`. |
+| **Alterado** | `api/_lib/aiErrors.js` / `aiErrors.test.js` | `inspectApiKey` e tradução do erro de ByteString, com testes. |
+| **Alterado** | `api/chat.js` / `api/insights.js` | Conferem a chave antes de criar o cliente do Gemini. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.19.1 (Erros da IA Explicados e Novos Prompts)
 
 | Ação | Arquivo | Descrição da Alteração |

@@ -1,13 +1,36 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.19.1';
+export const CURRENT_VERSION = 'v4.19.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.19.1',
+    version: 'v4.19.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.19.2: o servidor passa a conferir a chave do Gemini antes de usá-la e explica no chat quando o valor salvo está errado (aspas curvas, espaços ou texto junto).',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Conferência da Chave da IA',
+        category: 'Inteligência Artificial',
+        description: 'O valor de GEMINI_API_KEY é limpo (espaços e aspas nas pontas) e validado antes de chamar a IA. Se houver caractere inválido ou tamanho incomum, o chat avisa o que corrigir e mostra a posição do problema, sem expor a chave.'
+      },
+      {
+        icon: Sliders,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Erro de Cabeçalho Traduzido',
+        category: 'Inteligência Artificial',
+        description: 'O erro técnico "Cannot convert argument to a ByteString" passa a ser explicado como chave com caractere inválido, com o passo a passo para colar só a chave no Vercel.'
+      }
+    ]
+  },
+  {
+    version: 'v4.19.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.19.1: o chat de IA passa a mostrar o motivo exato de cada erro e os prompts foram reescritos para respostas curtas e precisas.',
     items: [
       {
@@ -37,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.19.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.19.0: botão flutuante único com as opções Ramais e Chat IA e novo chat com o assistente, no estilo do projeto.',
     items: [
       {

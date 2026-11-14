@@ -4,6 +4,24 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.19.2] - 2026-11-14
+
+### 🐛 Corrigido (Fixed)
+- **Chave do Gemini com caractere inválido** (`Cannot convert argument to a ByteString ... value of 8217`): a chave é enviada como cabeçalho HTTP e uma aspa curva (ou texto colado junto) quebrava a chamada com um erro confuso.
+
+### 🚀 Novas Funcionalidades (Added)
+- `inspectApiKey` em `api/_lib/aiErrors.js`: limpa espaços e aspas (retas ou curvas) das pontas, recusa valores com espaço, caractere especial ou tamanho incomum (menos de 20 ou mais de 120 caracteres) e devolve `chave-formato-invalido` com o tamanho e a posição do caractere inválido, sem mostrar a chave.
+- O erro de ByteString vindo da chamada também é traduzido pela mesma explicação.
+- `api/chat.js` e `api/insights.js` usam a conferência antes de criar o cliente do Gemini (e recriam o cliente se a chave mudar).
+
+### 🧪 Testes
+- 367 testes no total.
+
+### ⚠️ Observações
+- É preciso corrigir o valor de `GEMINI_API_KEY` na Vercel (só a chave, sem aspas nem texto extra) e fazer novo deploy. Sem mudança nas regras do Firestore.
+
+---
+
 ## [v4.19.1] - 2026-11-14
 
 ### 🎯 Destaque Principal

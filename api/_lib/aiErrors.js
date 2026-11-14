@@ -57,6 +57,9 @@ export const classifyGeminiError = (error) => {
     if (code === 400 || apiStatus === 'INVALID_ARGUMENT') {
         return make(502, 'pedido-recusado', 'A IA recusou o pedido. Tente uma pergunta menor ou comece uma nova conversa.');
     }
+    if (text.includes('bytestring') || text.includes('is not a legal http header value') || text.includes('invalid character in header')) {
+        return make(502, 'chave-formato-invalido', `O valor de GEMINI_API_KEY na Vercel contém um caractere inválido (por exemplo aspas curvas). ${CHAVE_AJUDA}`);
+    }
     if (error?.name === 'AbortError' || text.includes('timeout') || text.includes('timed out') || text.includes('etimedout')) {
         return make(504, 'tempo-esgotado', 'A IA demorou demais para responder. Tente de novo com uma pergunta mais curta.', true);
     }
@@ -64,6 +67,43 @@ export const classifyGeminiError = (error) => {
         return make(502, 'falha-de-rede', 'O servidor não conseguiu falar com a IA do Google. Tente de novo em instantes.', true);
     }
     return make(500, 'erro-desconhecido', 'Ocorreu um erro inesperado ao consultar a IA. O detalhe técnico abaixo ajuda a identificar a causa.');
+};
+
+const CHAVE_AJUDA = 'Abra o Google AI Studio, copie só a chave (começa com AIza e não tem espaços, aspas nem texto extra) e cole no campo Value de GEMINI_API_KEY na Vercel; depois faça um novo deploy.';
+
+/**
+ * Confere o valor salvo em GEMINI_API_KEY antes de usá-lo.
+ * Chaves coladas com aspas curvas, espaços ou texto junto fazem a chamada falhar com um erro confuso
+ * ("Cannot convert argument to a ByteString"). Aqui o problema é apontado com a posição do caractere,
+ * sem mostrar a chave.
+ * @returns {{ ok: true, key: string } | { ok: false, error: string, message: string, detail: string }}
+ */
+export const inspectApiKey = (raw) => {
+    // tira espaços e aspas (retas ou curvas) que costumam vir junto ao colar
+    const key = String(raw || '').trim().replace(/^[\s"'“”‘’]+|[\s"'“”‘’]+$/g, '');
+    if (!key) {
+        return { ok: false, error: 'chave-nao-configurada', message: 'A chave da IA ainda não foi configurada no servidor. Crie a variável GEMINI_API_KEY na Vercel (sem prefixo VITE_) e faça um novo deploy.', detail: 'GEMINI_API_KEY ausente' };
+    }
+    const bad = Array.from(key).findIndex(ch => ch.charCodeAt(0) < 33 || ch.charCodeAt(0) > 126);
+    if (bad >= 0) {
+        const code = Array.from(key)[bad].codePointAt(0);
+        const why = code === 32 ? 'há um espaço no meio do valor' : (code > 126 ? 'há um caractere especial (como aspas curvas ou acento)' : 'há uma quebra de linha ou caractere invisível');
+        return {
+            ok: false,
+            error: 'chave-formato-invalido',
+            message: `O valor de GEMINI_API_KEY na Vercel não parece uma chave: ${why}. ${CHAVE_AJUDA}`,
+            detail: `tamanho ${key.length} • caractere inválido na posição ${bad} (código ${code})`
+        };
+    }
+    if (key.length < 20 || key.length > 120) {
+        return {
+            ok: false,
+            error: 'chave-formato-invalido',
+            message: `O valor de GEMINI_API_KEY tem um tamanho incomum (${key.length} caracteres). ${CHAVE_AJUDA}`,
+            detail: `tamanho ${key.length}`
+        };
+    }
+    return { ok: true, key };
 };
 
 /** Resposta sem texto: normalmente bloqueada pelos filtros de segurança do Gemini. */

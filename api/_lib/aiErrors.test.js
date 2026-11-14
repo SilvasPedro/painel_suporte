@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyGeminiError, emptyReplyError, sanitizeDetail, errorBody } from './aiErrors.js';
+import { classifyGeminiError, emptyReplyError, sanitizeDetail, errorBody, inspectApiKey } from './aiErrors.js';
 import { buildChatSystemPrompt, buildInsightsPrompts, todayInBrazil } from './aiPrompts.js';
 
 // O SDK do Gemini devolve a mensagem como um JSON dentro do erro
@@ -50,6 +50,49 @@ describe('classifyGeminiError', () => {
 
     it('mensagem que não é JSON também é entendida', () => {
         expect(classifyGeminiError(new Error('got status: 429 RESOURCE_EXHAUSTED quota')).error).toBe('cota-esgotada');
+    });
+});
+
+describe('inspectApiKey', () => {
+    const goodKey = 'AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q';
+
+    it('aceita uma chave normal e limpa espaços e aspas nas pontas', () => {
+        expect(inspectApiKey(goodKey)).toEqual({ ok: true, key: goodKey });
+        expect(inspectApiKey(`  ${goodKey}
+`).key).toBe(goodKey);
+        expect(inspectApiKey(`"${goodKey}"`).key).toBe(goodKey);
+        expect(inspectApiKey(`“${goodKey}”`).key).toBe(goodKey);
+        expect(inspectApiKey(`‘${goodKey}’`).key).toBe(goodKey);
+    });
+
+    it('sem valor, pede para criar a variável', () => {
+        expect(inspectApiKey(undefined)).toMatchObject({ ok: false, error: 'chave-nao-configurada' });
+        expect(inspectApiKey('   ')).toMatchObject({ ok: false, error: 'chave-nao-configurada' });
+    });
+
+    it('aspas curvas no meio (o erro ByteString) apontam a posição sem mostrar a chave', () => {
+        const pasted = `${goodKey} copiada do Studio da Pedro’s conta`;
+        const r = inspectApiKey(pasted);
+        expect(r).toMatchObject({ ok: false, error: 'chave-formato-invalido' });
+        expect(r.detail).toMatch(/posição \d+ \(código \d+\)/);
+        expect(JSON.stringify(r)).not.toContain(goodKey);
+        // o primeiro caractere inválido é o espaço logo após a chave
+        expect(r.detail).toContain('posição 39 (código 32)');
+        expect(inspectApiKey(`${goodKey}’x`).detail).toContain('código 8217');
+        expect(inspectApiKey(`${goodKey}’x`).message).toMatch(/caractere especial/);
+    });
+
+    it('tamanho incomum é recusado', () => {
+        expect(inspectApiKey('curta')).toMatchObject({ ok: false, error: 'chave-formato-invalido' });
+        expect(inspectApiKey('A'.repeat(150))).toMatchObject({ ok: false, error: 'chave-formato-invalido' });
+    });
+});
+
+describe('erro ByteString vindo da chamada', () => {
+    it('é traduzido como chave com caractere inválido', () => {
+        const r = classifyGeminiError(new TypeError('Cannot convert argument to a ByteString because the character at index 116 has a value of 8217 which is greater than 255.'));
+        expect(r).toMatchObject({ httpStatus: 502, error: 'chave-formato-invalido' });
+        expect(r.message).toMatch(/GEMINI_API_KEY/);
     });
 });
 
