@@ -4,6 +4,25 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.19.3] - 2026-11-14
+
+### 🐛 Corrigido (Fixed)
+- **Modelo da IA aposentado** (`404 NOT_FOUND ... gemini-2.5-flash is no longer available to new users`): o modelo estava fixo no código; o chat e a análise de desempenho não respondiam para contas novas do Google.
+
+### 🚀 Novas Funcionalidades (Added)
+- **`api/_lib/aiModels.js`**: escolha do modelo. Ordem: `GEMINI_MODEL` (opcional na Vercel), depois `gemini-3.8-flash`, `gemini-3-flash` e `gemini-2.5-flash`. Modelo "não disponível" (404) passa para o próximo e o que funcionou é lembrado na instância. Se um modelo recusar `thinkingConfig`, a chamada é repetida sem ele.
+- `generateWithFallback` usado por `api/chat.js` e `api/insights.js`.
+- Mensagem de modelo indisponível orienta a definir `GEMINI_MODEL`.
+
+### 🧪 Testes
+- 375 testes no total (lista de modelos, saltos por 404, `GEMINI_MODEL` e fallback do raciocínio).
+
+### ⚠️ Observações
+- Opcional: criar `GEMINI_MODEL` na Vercel com o nome exato do modelo atual (ex.: `gemini-3.8-flash`). Sem mudança nas regras do Firestore.
+- Novo deploy na Vercel necessário. Apenas `gemini-3.8-flash` foi confirmado pelo Google; `gemini-3-flash` é uma alternativa na lista.
+
+---
+
 ## [v4.19.2] - 2026-11-14
 
 ### 🐛 Corrigido (Fixed)

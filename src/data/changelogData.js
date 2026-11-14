@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.19.2';
+export const CURRENT_VERSION = 'v4.19.3';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.19.2',
+    version: 'v4.19.3',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.19.3: o modelo da IA deixa de ser fixo no código. O servidor escolhe o primeiro modelo do Gemini disponível e aceita a variável GEMINI_MODEL, já que o gemini-2.5-flash foi aposentado para contas novas.',
+    items: [
+      {
+        icon: RefreshCw,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Modelo da IA Automático',
+        category: 'Inteligência Artificial',
+        description: 'O servidor tenta os modelos em ordem (gemini-3.8-flash, gemini-3-flash e gemini-2.5-flash), pula os que o Google aposentou e lembra o que funcionou. O chat e a análise de desempenho voltam a responder.'
+      },
+      {
+        icon: Sliders,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Variável GEMINI_MODEL',
+        category: 'Inteligência Artificial',
+        description: 'Opcional na Vercel: define o modelo preferido sem alterar o código. Quando o Google trocar de modelo novamente, basta atualizar a variável.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Compatível com Modelos Novos',
+        category: 'Estabilidade',
+        description: 'Se um modelo recusar o parâmetro de raciocínio interno, a chamada é repetida sem ele em vez de falhar. Quando nenhum modelo está disponível, o chat orienta o que configurar.'
+      }
+    ]
+  },
+  {
+    version: 'v4.19.2',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Correção v4.19.2: o servidor passa a conferir a chave do Gemini antes de usá-la e explica no chat quando o valor salvo está errado (aspas curvas, espaços ou texto junto).',
     items: [
       {
@@ -30,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.19.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.19.1: o chat de IA passa a mostrar o motivo exato de cada erro e os prompts foram reescritos para respostas curtas e precisas.',
     items: [
       {

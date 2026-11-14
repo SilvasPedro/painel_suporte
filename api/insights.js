@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { authorizeAiRequest, validateInsightsBody, sendGuardError } from './_lib/aiGuard.js';
 import { buildInsightsPrompts } from './_lib/aiPrompts.js';
+import { generateWithFallback } from './_lib/aiModels.js';
 import { classifyGeminiError, emptyReplyError, errorBody, sanitizeDetail, inspectApiKey } from './_lib/aiErrors.js';
 
 let aiInstance = null;
@@ -42,14 +43,18 @@ export default async function handler(req, res) {
   try {
     const { systemPrompt, userPrompt } = buildInsightsPrompts({ dadosColaborador, periodo, tipoAnalise });
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-      config: {
-        systemInstruction: systemPrompt,
-        temperature: 0.2,
-        maxOutputTokens: 1000,
-        thinkingConfig: { thinkingBudget: 0 }
+    const { response } = await generateWithFallback({
+      ai,
+      env: process.env,
+      onModelSkipped: (model) => console.warn(`Modelo ${model} indisponível; tentando o próximo.`),
+      request: {
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.2,
+          maxOutputTokens: 1000,
+          thinkingConfig: { thinkingBudget: 0 }
+        }
       }
     });
 

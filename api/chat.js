@@ -1,6 +1,7 @@
 import { GoogleGenAI } from '@google/genai';
 import { authorizeAiRequest, validateChatBody, sendGuardError } from './_lib/aiGuard.js';
 import { buildChatSystemPrompt } from './_lib/aiPrompts.js';
+import { generateWithFallback } from './_lib/aiModels.js';
 import { classifyGeminiError, emptyReplyError, errorBody, sanitizeDetail, inspectApiKey } from './_lib/aiErrors.js';
 
 let aiInstance = null;
@@ -44,17 +45,21 @@ export default async function handler(req, res) {
       parts: [{ text: msg.content }]
     }));
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: [
-        ...formattedHistory,
-        { role: 'user', parts: [{ text: message }] }
-      ],
-      config: {
-        systemInstruction: buildChatSystemPrompt({ contextData }),
-        temperature: 0.2,
-        maxOutputTokens: 1200,
-        thinkingConfig: { thinkingBudget: 0 } // respostas curtas e rápidas, sem gastar o limite pensando
+    const { response } = await generateWithFallback({
+      ai,
+      env: process.env,
+      onModelSkipped: (model) => console.warn(`Modelo ${model} indisponível; tentando o próximo.`),
+      request: {
+        contents: [
+          ...formattedHistory,
+          { role: 'user', parts: [{ text: message }] }
+        ],
+        config: {
+          systemInstruction: buildChatSystemPrompt({ contextData }),
+          temperature: 0.2,
+          maxOutputTokens: 1200,
+          thinkingConfig: { thinkingBudget: 0 } // respostas curtas e rápidas, sem gastar o limite pensando
+        }
       }
     });
 

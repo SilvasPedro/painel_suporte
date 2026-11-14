@@ -46,7 +46,7 @@ export const classifyGeminiError = (error) => {
         return make(429, 'cota-esgotada', 'A cota da IA acabou ou há chamadas demais agora. Aguarde um pouco e tente de novo; se persistir, confira o plano e os limites da chave no Google AI Studio.', true);
     }
     if (code === 404 || apiStatus === 'NOT_FOUND' || text.includes('is not found for api version') || text.includes('model not found')) {
-        return make(502, 'modelo-indisponivel', 'O modelo da IA configurado não está disponível para esta chave.');
+        return make(502, 'modelo-indisponivel', 'O modelo da IA não está disponível para esta chave (o Google aposenta modelos antigos). Defina na Vercel a variável GEMINI_MODEL com um modelo atual, como gemini-3.8-flash, e faça um novo deploy.');
     }
     if (code === 503 || code === 500 || apiStatus === 'UNAVAILABLE' || apiStatus === 'INTERNAL' || text.includes('overloaded') || text.includes('high demand')) {
         return make(503, 'ia-sobrecarregada', 'A IA do Google está sobrecarregada no momento. Tente de novo em alguns segundos.', true);

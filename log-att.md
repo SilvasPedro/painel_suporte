@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.19.3 (Modelo da IA Automático)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.19.2` para `4.19.3`. |
+| **Criado** | `api/_lib/aiModels.js` / `aiModels.test.js` | Lista de modelos, `GEMINI_MODEL` opcional, salto por 404 e repetição sem `thinkingConfig`. |
+| **Alterado** | `api/chat.js` / `api/insights.js` | Usam `generateWithFallback` em vez do modelo fixo. |
+| **Alterado** | `api/_lib/aiErrors.js` | Mensagem de modelo indisponível orienta o uso de `GEMINI_MODEL`. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.19.2 (Conferência da Chave da IA)
 
 | Ação | Arquivo | Descrição da Alteração |
