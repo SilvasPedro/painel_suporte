@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.16.1';
+export const CURRENT_VERSION = 'v4.17.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.16.1',
+    version: 'v4.17.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.17.0: comentários em tarefas avisam por DM no Discord o solicitante e o responsável, com o texto, e a tabela de Tarefas e Relatórios ganhou responsável, última alteração, ordenação e mais filtros.',
+    items: [
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'DM com o Comentário',
+        category: 'Notificações',
+        description: 'Cada novo comentário em uma tarefa gera uma DM no Discord, com o texto, para o solicitante e para o responsável. Quem escreveu não recebe a própria DM.'
+      },
+      {
+        icon: User,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Responsável e Última Alteração',
+        category: 'Tarefas & Relatórios',
+        description: 'A tabela mostra o responsável de cada tarefa (ou Fila da liderança) e a data e hora da última alteração, com há quanto tempo e quem fez. Tarefas abertas paradas há mais de 24h ficam em destaque.'
+      },
+      {
+        icon: Filter,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Ordenação e Filtros',
+        category: 'Tarefas & Relatórios',
+        description: 'Ordene clicando nos cabeçalhos (SLA, abertura, última alteração, status, prioridade e responsável) ou pelo seletor, filtre por responsável (inclusive Atribuídos a mim e Sem responsável) e busque pelo nome dele.'
+      },
+      {
+        icon: CheckCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Tabela Mais Ágil',
+        category: 'Tarefas & Relatórios',
+        description: 'Lista paginada de 50 em 50, contador de resultados, navegação por teclado nas linhas e botões de ação que não abrem a linha duas vezes.'
+      }
+    ]
+  },
+  {
+    version: 'v4.16.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.16.1: a linha do tempo do modal de tarefas ganhou seletor de ordem, do mais antigo ao mais recente ou o inverso.',
     items: [
       {
@@ -23,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.16.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.16.0: o modal de visualização de tarefas foi redesenhado em duas colunas, com linha do tempo unificada, campo de envio único, barra lateral de detalhes e correções de vários bugs.',
     items: [
       {

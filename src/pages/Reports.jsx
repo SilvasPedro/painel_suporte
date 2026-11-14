@@ -5,7 +5,7 @@ import {
     Lightbulb, Monitor, Building, Zap, Bug, MessageSquare, Send,
     Table, Columns3, LayoutGrid, List, Copy, ChevronLeft, ChevronRight,
     User, ShieldCheck, Check, Sparkles, AlertOctagon, RotateCcw, Hourglass, Lock,
-    CornerDownRight, MessageCircle, ChevronUp, ChevronDown, UserCheck, CheckSquare
+    CornerDownRight, MessageCircle, ChevronUp, ChevronDown, UserCheck, CheckSquare, ArrowUpDown
 } from 'lucide-react';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
@@ -38,6 +38,27 @@ import {
     isUserTaskCreator
 } from '../types/request.types';
 import { sendReportDm } from '../services/discordDm';
+import { formatDateTime } from '../utils/reportTimeline';
+import {
+    SORT_OPTIONS, UNASSIGNED_FILTER, MINE_FILTER, getDefaultSortDir, getAssigneeName, getLastChange,
+    formatRelativeTime, isStale, matchesAssigneeFilter, listAssignees, sortReports
+} from '../utils/reportTable';
+
+const TABLE_PAGE_SIZE = 50;
+
+// Cabeçalho de coluna que ordena a tabela ao clicar (clicar de novo inverte)
+function SortHeader({ label, sortKey, sort, onSort, className = '' }) {
+    const active = sort.key === sortKey;
+    const Icon = !active ? ArrowUpDown : (sort.dir === 'asc' ? ChevronUp : ChevronDown);
+    return (
+        <th className={`px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider ${className}`} aria-sort={active ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}>
+            <button type="button" onClick={() => onSort(sortKey)} className={`inline-flex items-center gap-1 uppercase tracking-wider font-bold cursor-pointer hover:text-gray-900 ${active ? 'text-red-600' : ''}`} title={`Ordenar por ${label}`}>
+                {label}
+                <Icon className={`w-3 h-3 ${active ? '' : 'opacity-50'}`} aria-hidden="true" />
+            </button>
+        </th>
+    );
+}
 
 const Reports = () => {
     const { showToast } = useNotification();
@@ -101,6 +122,10 @@ const Reports = () => {
     const [clientImpactFilter, setClientImpactFilter] = useState('');
     const [creatorFilter, setCreatorFilter] = useState(''); // Apenas para quem vê todos
     const [regionFilter, setRegionFilter] = useState(''); // Filtro de região / falha massiva
+    const [assigneeFilter, setAssigneeFilter] = useState(''); // Responsável: todos, eu, sem responsável ou uma pessoa
+    const [sort, setSort] = useState({ key: 'default', dir: 'desc' });
+    const [visibleCount, setVisibleCount] = useState(TABLE_PAGE_SIZE);
+    const [nowMs, setNowMs] = useState(() => Date.now()); // referência dos textos "há 5 min"
 
     // Feedback de cópia
     const [copiedText, setCopiedText] = useState(false);
@@ -126,6 +151,11 @@ const Reports = () => {
     const [newCommentStatus, setNewCommentStatus] = useState('');
     const [sendingComment, setSendingComment] = useState(false);
 
+
+    useEffect(() => {
+        const timer = setInterval(() => setNowMs(Date.now()), 60 * 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     // ==========================================
     // BUSCA DE COLABORADORES PARA ATRIBUIÇÃO / WATCHERS
@@ -190,13 +220,17 @@ const Reports = () => {
         return Array.from(names).sort();
     }, [reports]);
 
-    // Relatórios filtrados
+    const myIds = useMemo(() => [effectiveUser?.id, effectiveUser?.uid, effectiveUser?.email, currentUser?.firestoreId, currentUser?.uid].filter(Boolean).map(String), [effectiveUser, currentUser]);
+    const assigneeOptions = useMemo(() => listAssignees(reports), [reports]);
+
+    // Relatórios filtrados (e ordenados)
     const filteredReports = useMemo(() => {
-        return reports.filter(r => {
+        const filtered = reports.filter(r => {
             const titleSafe = getDisplayTitle(r).toLowerCase();
             const descSafe = (r.description || '').toLowerCase();
             const protoSafe = (r.protocol || '').toLowerCase();
             const authorSafe = (r.creatorName || '').toLowerCase();
+            const assigneeSafe = getAssigneeName(r).toLowerCase();
             const commentSafe = (r.adminComment || r.closingComment || '').toLowerCase();
             const commentsSafe = Array.isArray(r.comments)
                 ? r.comments.map(c => `${c.content || ''} ${c.authorName || ''}`).join(' ').toLowerCase()
@@ -208,6 +242,7 @@ const Reports = () => {
                 descSafe.includes(searchLower) ||
                 protoSafe.includes(searchLower) ||
                 authorSafe.includes(searchLower) ||
+                assigneeSafe.includes(searchLower) ||
                 commentSafe.includes(searchLower) ||
                 commentsSafe.includes(searchLower);
 
@@ -219,11 +254,13 @@ const Reports = () => {
             const matchPriority = priorityFilter === '' || r.priority === priorityFilter;
             const matchClient = clientImpactFilter === '' || r.affectedClient === clientImpactFilter;
             const matchCreator = creatorFilter === '' || r.creatorName === creatorFilter;
+            const matchAssignee = matchesAssigneeFilter(r, assigneeFilter, myIds);
             const matchRegion = !regionFilter || (r.region && r.region.toLowerCase().includes(regionFilter.toLowerCase())) || (r.title && r.title.toLowerCase().includes(regionFilter.toLowerCase()));
 
-            return matchSearch && matchStatus && matchCategory && matchDepartment && matchSla && matchType && matchPriority && matchClient && matchCreator && matchRegion;
+            return matchSearch && matchStatus && matchCategory && matchDepartment && matchSla && matchType && matchPriority && matchClient && matchCreator && matchAssignee && matchRegion;
         });
-    }, [reports, searchTerm, statusFilter, categoryFilter, departmentFilter, slaFilter, typeFilter, priorityFilter, clientImpactFilter, creatorFilter, regionFilter]);
+        return sortReports(filtered, sort.key, sort.dir);
+    }, [reports, searchTerm, statusFilter, categoryFilter, departmentFilter, slaFilter, typeFilter, priorityFilter, clientImpactFilter, creatorFilter, assigneeFilter, regionFilter, myIds, sort]);
 
     // Métricas para o Ribbon de Resumo
     const metricsSummary = useMemo(() => {
@@ -236,7 +273,22 @@ const Reports = () => {
         return { total, pending, inProgress, resolved, suspended, clientImpact };
     }, [reports]);
 
-    const hasActiveFilters = Boolean(searchTerm || statusFilter || categoryFilter || departmentFilter || slaFilter || typeFilter || priorityFilter || clientImpactFilter || creatorFilter || regionFilter);
+    const hasActiveFilters = Boolean(searchTerm || statusFilter || categoryFilter || departmentFilter || slaFilter || typeFilter || priorityFilter || clientImpactFilter || creatorFilter || assigneeFilter || regionFilter);
+
+    // A paginação da tabela volta ao início quando filtros ou ordenação mudam (ajuste durante a renderização)
+    const listSignature = [searchTerm, statusFilter, categoryFilter, departmentFilter, slaFilter, typeFilter, priorityFilter, clientImpactFilter, creatorFilter, assigneeFilter, regionFilter, sort.key, sort.dir].join('|');
+    const [appliedSignature, setAppliedSignature] = useState(listSignature);
+    if (listSignature !== appliedSignature) {
+        setAppliedSignature(listSignature);
+        setVisibleCount(TABLE_PAGE_SIZE);
+    }
+    const visibleRows = filteredReports.slice(0, visibleCount);
+
+    const handleSort = (key) => {
+        setSort(prev => (prev.key === key
+            ? { key, dir: prev.dir === 'asc' ? 'desc' : 'asc' }
+            : { key, dir: getDefaultSortDir(key) }));
+    };
 
     const clearAllFilters = () => {
         setSearchTerm('');
@@ -248,6 +300,7 @@ const Reports = () => {
         setPriorityFilter('');
         setClientImpactFilter('');
         setCreatorFilter('');
+        setAssigneeFilter('');
         setRegionFilter('');
     };
 
@@ -1208,6 +1261,19 @@ ${report.description || 'Sem descrição'}`;
                             <option value="Não">Interno</option>
                         </select>
 
+                        <select
+                            value={assigneeFilter}
+                            onChange={(e) => setAssigneeFilter(e.target.value)}
+                            className="px-2 py-1.5 border border-sky-200 rounded-lg text-xs font-medium text-sky-900 bg-sky-50/50 focus:ring-1 focus:ring-sky-500 outline-none cursor-pointer max-w-[160px] truncate"
+                            title="Filtrar por responsável"
+                            aria-label="Filtrar por responsável"
+                        >
+                            <option value="">Responsável: Todos</option>
+                            <option value={MINE_FILTER}>Atribuídos a mim</option>
+                            <option value={UNASSIGNED_FILTER}>Sem responsável (fila)</option>
+                            {assigneeOptions.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                        </select>
+
                         {canViewAllReports && (
                             <select 
                                 value={creatorFilter}
@@ -1279,6 +1345,36 @@ ${report.description || 'Sem descrição'}`;
                 </div>
             ) : (
                 <>
+                    <div className="flex items-center justify-between gap-3 flex-wrap mb-2 text-xs text-gray-500">
+                        <span>
+                            {viewMode === 'table' && filteredReports.length > visibleRows.length
+                                ? <>Mostrando <strong className="text-gray-700">{visibleRows.length}</strong> de <strong className="text-gray-700">{filteredReports.length}</strong> solicitações</>
+                                : <><strong className="text-gray-700">{filteredReports.length}</strong> {filteredReports.length === 1 ? 'solicitação' : 'solicitações'}</>}
+                            {hasActiveFilters ? ` (de ${reports.length} no total)` : ''}
+                        </span>
+                        <label className="flex items-center gap-1.5 font-medium">
+                            Ordenar por
+                            <select
+                                value={sort.key}
+                                onChange={(e) => setSort({ key: e.target.value, dir: getDefaultSortDir(e.target.value) })}
+                                className="px-2 py-1 border border-gray-200 rounded-lg text-xs font-medium text-gray-700 bg-white focus:ring-1 focus:ring-red-500 outline-none cursor-pointer"
+                            >
+                                {SORT_OPTIONS.map(o => <option key={o.key} value={o.key}>{o.label}</option>)}
+                            </select>
+                            {sort.key !== 'default' && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSort(prev => ({ ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' }))}
+                                    className="p-1 border border-gray-200 rounded-lg bg-white text-gray-600 hover:bg-gray-50 cursor-pointer"
+                                    title={sort.dir === 'asc' ? 'Ordem crescente (clique para inverter)' : 'Ordem decrescente (clique para inverter)'}
+                                    aria-label="Inverter a ordem"
+                                >
+                                    {sort.dir === 'asc' ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                                </button>
+                            )}
+                        </label>
+                    </div>
+
                     {/* -------------------------------------- */}
                     {/* MODO 1: TABELA DETALHADA               */}
                     {/* -------------------------------------- */}
@@ -1289,19 +1385,27 @@ ${report.description || 'Sem descrição'}`;
                                     <thead className="bg-subtle/90 text-muted-hub border-b border-subtle sticky top-0 z-10 backdrop-blur-xs">
                                         <tr>
                                             <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Ticket</th>
-                                            <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">SLA ISP</th>
-                                            <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Data</th>
-                                            <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Status</th>
+                                            <SortHeader label="SLA ISP" sortKey="sla" sort={sort} onSort={handleSort} />
+                                            <SortHeader label="Abertura" sortKey="date" sort={sort} onSort={handleSort} />
+                                            <SortHeader label="Última alteração" sortKey="updated" sort={sort} onSort={handleSort} />
+                                            <SortHeader label="Status" sortKey="status" sort={sort} onSort={handleSort} />
                                             <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Tipo</th>
-                                            <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Resumo & Prioridade</th>
+                                            <SortHeader label="Resumo & Prioridade" sortKey="priority" sort={sort} onSort={handleSort} />
                                             <th className="px-4 py-3.5 text-left font-bold text-xs uppercase tracking-wider">Solicitante</th>
+                                            <SortHeader label="Responsável" sortKey="assignee" sort={sort} onSort={handleSort} />
                                             <th className="px-4 py-3.5 text-center font-bold text-xs uppercase tracking-wider">Impacto</th>
                                             <th className="px-4 py-3.5 text-right font-bold text-xs uppercase tracking-wider">Ações</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200 bg-white">
-                                        {filteredReports.map((report) => (
-                                            <tr key={report.id} className="hover:bg-gray-50/80 transition-colors group cursor-pointer" onClick={() => handleOpenViewModal(report)}>
+                                        {visibleRows.map((report) => (
+                                            <tr
+                                                key={report.id}
+                                                className="hover:bg-gray-50/80 focus-visible:bg-gray-50 focus-visible:outline-2 focus-visible:outline-red-500 transition-colors group cursor-pointer"
+                                                onClick={() => handleOpenViewModal(report)}
+                                                onKeyDown={(e) => { if (e.key === 'Enter' && e.target === e.currentTarget) handleOpenViewModal(report); }}
+                                                tabIndex={0}
+                                            >
                                                 <td className="px-4 py-3.5 whitespace-nowrap font-mono text-xs font-bold text-gray-500">
                                                     #{report.id.slice(0, 6).toUpperCase()}
                                                 </td>
@@ -1318,6 +1422,21 @@ ${report.description || 'Sem descrição'}`;
                                                 </td>
                                                 <td className="px-4 py-3.5 whitespace-nowrap text-xs text-gray-600 font-medium">
                                                     {formatDate(report.date)}
+                                                </td>
+                                                <td className="px-4 py-3.5 whitespace-nowrap">
+                                                    {(() => {
+                                                        const change = getLastChange(report);
+                                                        if (change.at === null) return <span className="text-xs text-gray-400">--</span>;
+                                                        const stale = isStale(report, nowMs);
+                                                        return (
+                                                            <div className="flex flex-col leading-tight" title={`${formatDateTime(change.at)}${change.by ? ` por ${change.by}` : ''}`}>
+                                                                <span className="text-xs font-medium text-gray-700">{formatDateTime(change.at, new Date(nowMs))}</span>
+                                                                <span className={`text-[11px] ${stale ? 'text-amber-600 font-semibold' : 'text-gray-400'}`}>
+                                                                    {formatRelativeTime(change.at, nowMs)}{change.by ? ` • ${change.by}` : ''}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                 </td>
                                                 <td className="px-4 py-3.5 whitespace-nowrap">
                                                     {getStatusBadge(report.status)}
@@ -1358,6 +1477,21 @@ ${report.description || 'Sem descrição'}`;
                                                         </span>
                                                     </div>
                                                 </td>
+                                                <td className="px-5 py-4 whitespace-nowrap">
+                                                    {(() => {
+                                                        const name = getAssigneeName(report);
+                                                        return name ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="w-6 h-6 rounded-full bg-sky-50 border border-sky-200 flex items-center justify-center text-[10px] font-bold text-sky-700">
+                                                                    {name.charAt(0).toUpperCase()}
+                                                                </div>
+                                                                <span className="text-xs font-medium text-gray-700 max-w-[140px] truncate" title={name}>{name}</span>
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-xs italic text-gray-400">Fila da liderança</span>
+                                                        );
+                                                    })()}
+                                                </td>
                                                 <td className="px-5 py-4 whitespace-nowrap text-center">
                                                     {report.affectedClient === 'Sim' ? (
                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-700 border border-red-200" title={report.howAffected}>
@@ -1369,26 +1503,29 @@ ${report.description || 'Sem descrição'}`;
                                                 </td>
                                                 <td className="px-5 py-4 whitespace-nowrap text-right">
                                                     <div className="flex items-center justify-end gap-1.5">
-                                                        <button 
-                                                            onClick={() => handleOpenViewModal(report)} 
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors border border-transparent hover:border-blue-200 cursor-pointer" 
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); handleOpenViewModal(report); }}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 hover:text-blue-700 rounded-lg transition-colors border border-transparent hover:border-blue-200 cursor-pointer"
                                                             title="Ver Detalhes e Andamento"
+                                                            aria-label="Ver detalhes e andamento"
                                                         >
                                                             <Eye className="w-4 h-4" />
                                                         </button>
                                                         {canEditOrDelete(report) && (
                                                             <>
-                                                                <button 
-                                                                    onClick={() => openEditModal(report)} 
-                                                                    className="p-1.5 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-lg transition-colors border border-transparent hover:border-amber-200 cursor-pointer" 
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); openEditModal(report); }}
+                                                                    className="p-1.5 text-amber-600 hover:bg-amber-50 hover:text-amber-700 rounded-lg transition-colors border border-transparent hover:border-amber-200 cursor-pointer"
                                                                     title="Editar Solicitação"
+                                                                    aria-label="Editar solicitação"
                                                                 >
                                                                     <Edit2 className="w-4 h-4" />
                                                                 </button>
-                                                                <button 
-                                                                    onClick={() => setDeletingReport(report)} 
-                                                                    className="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors border border-transparent hover:border-red-200 cursor-pointer" 
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); setDeletingReport(report); }}
+                                                                    className="p-1.5 text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors border border-transparent hover:border-red-200 cursor-pointer"
                                                                     title="Excluir"
+                                                                    aria-label="Excluir solicitação"
                                                                 >
                                                                     <Trash2 className="w-4 h-4" />
                                                                 </button>
@@ -1401,6 +1538,17 @@ ${report.description || 'Sem descrição'}`;
                                     </tbody>
                                 </table>
                             </div>
+                            {filteredReports.length > visibleRows.length && (
+                                <div className="shrink-0 border-t border-gray-200 bg-gray-50/60 p-2.5 flex justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => setVisibleCount(n => n + TABLE_PAGE_SIZE)}
+                                        className="px-4 py-1.5 rounded-lg border border-gray-200 bg-white text-xs font-bold text-gray-700 hover:bg-gray-50 cursor-pointer"
+                                    >
+                                        Mostrar mais ({filteredReports.length - visibleRows.length} restantes)
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     )}
 

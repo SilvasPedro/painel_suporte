@@ -1,6 +1,7 @@
 import { auth } from './firebase';
 import { getWebhookConfig } from './notificationEvents';
 import { getCachedCollection } from './dataCache';
+import { getTaskAssignee } from '../types/request.types';
 
 /**
  * AVISOS POR MENSAGEM DIRETA (DM) NO DISCORD
@@ -25,7 +26,7 @@ export const DM_EVENT_META = [
     { id: 'feedback', icon: '📢', label: 'Feedback' },
     { id: 'monthly_evaluation', icon: '🎯', label: 'Avaliação 1:1 mensal' },
     { id: 'report_status', icon: '🔄', label: 'Mudança de status em tarefa/relatório (ao solicitante)' },
-    { id: 'report_comment', icon: '💬', label: 'Novo comentário em tarefa/relatório (ao solicitante)' }
+    { id: 'report_comment', icon: '💬', label: 'Novo comentário em tarefa/relatório (ao solicitante e ao responsável, com o texto)' }
 ];
 
 export const DM_EVENT_IDS = DM_EVENT_META.map(e => e.id);
@@ -81,9 +82,9 @@ export const describeDmResult = ({ event, httpStatus, error, summary, reason, li
 
     // Tarefas e relatórios acontecem toda hora: só avisa o gestor quando a DM saiu ou deu problema
     if (String(event || '').startsWith('report_')) {
-        if (blocked > 0) return { type: 'warning', text: 'O solicitante não aceita DMs no Discord; ele não recebeu o aviso desta alteração.' };
-        if (failed > 0) return { type: 'warning', text: 'Não foi possível enviar a DM ao solicitante desta tarefa.' };
-        if (sent > 0) return { type: 'success', text: 'DM enviada ao solicitante no Discord.' };
+        if (blocked > 0) return { type: 'warning', text: 'Alguém envolvido na tarefa não aceita DMs no Discord e não recebeu o aviso.' };
+        if (failed > 0) return { type: 'warning', text: 'Não foi possível enviar a DM a algum envolvido na tarefa (solicitante ou responsável).' };
+        if (sent > 0) return { type: 'success', text: 'DM enviada no Discord (solicitante e responsável).' };
         return null;
     }
 
@@ -184,20 +185,28 @@ export const sendDiscordDms = async ({ event, recipients = [], reportId, params 
 };
 
 /**
- * Avisa por DM o SOLICITANTE de uma tarefa/relatório quando o status muda ou chega um comentário.
- * A função lê o relatório no servidor: o status, o protocolo e o solicitante nunca vêm do navegador.
+ * Avisa por DM os envolvidos de uma tarefa/relatório.
+ *  - status: só o SOLICITANTE.
+ *  - comentário: o SOLICITANTE e o RESPONSÁVEL (menos quem fez a ação); a DM leva o texto do comentário.
+ * A função lê o relatório no servidor: status, protocolo, destinatários e texto nunca vêm do navegador.
  * @param {{ report: { id: string, creatorId?: string }, kind: 'status'|'comment', withComment?: boolean }} args
  *   withComment: a mudança de status veio acompanhada de um comentário (só altera o texto da DM)
  */
 export const sendReportDm = async ({ report, kind, withComment = false }) => {
     const creatorId = String(report?.creatorId || '');
-    if (!report?.id || !creatorId) return { status: 'skipped', reason: 'sem-solicitante' };
-    // Quem alterou a própria solicitação não precisa de aviso
-    if (auth.currentUser?.uid === creatorId) return { status: 'skipped', reason: 'proprio-autor' };
+    const assigneeId = kind === 'comment' ? String(getTaskAssignee(report)?.id || '') : '';
+    const candidates = [...new Set([creatorId, assigneeId].filter(Boolean))];
+    if (!report?.id || candidates.length === 0) return { status: 'skipped', reason: 'sem-solicitante' };
+    if (kind !== 'comment' && !creatorId) return { status: 'skipped', reason: 'sem-solicitante' };
+
+    // Quem fez a ação não precisa de aviso
+    const me = auth.currentUser?.uid;
+    const recipients = candidates.filter(id => id !== me).map(id => ({ id })); // usado só para contar quem tem Discord vinculado
+    if (recipients.length === 0) return { status: 'skipped', reason: 'proprio-autor' };
 
     return sendDiscordDms({
         event: kind === 'comment' ? 'report_comment' : 'report_status',
-        recipients: [{ id: creatorId }], // usado só para contar quem tem Discord vinculado
+        recipients,
         reportId: report.id,
         params: withComment ? { withComment: true } : undefined
     });

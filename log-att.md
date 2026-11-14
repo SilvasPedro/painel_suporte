@@ -4,6 +4,19 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.17.0 (DM de Comentários e Nova Tabela de Tarefas)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.16.1` para `4.17.0`. |
+| **Alterado** | `api/_lib/dm.js` / `dm.test.js` | DM de comentário ao solicitante e ao responsável, com o texto (`cleanBlock`), e proteção contra reenvio de comentários antigos. |
+| **Alterado** | `src/services/discordDm.js` / `discordDm.test.js` | Destinatários do comentário (solicitante e responsável, menos quem agiu) e textos dos avisos. |
+| **Criado** | `src/utils/reportTable.js` / `.test.js` | Responsável, última alteração, tempo relativo, ordenação e filtro por responsável. |
+| **Alterado** | `src/pages/Reports.jsx` | Colunas Responsável e Última alteração, ordenação, filtro por responsável, paginação, contador e acessibilidade. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.16.1 (Ordem da Linha do Tempo)
 
 | Ação | Arquivo | Descrição da Alteração |

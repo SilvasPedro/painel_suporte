@@ -4,6 +4,33 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.17.0] - 2026-11-14
+
+### 🎯 Destaque Principal
+DM no Discord com o texto de cada comentário (solicitante e responsável) e tabela de Tarefas e Relatórios com responsável, última alteração e ordenação.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **DM de comentário** (`api/_lib/dm.js`): `report_comment` avisa o solicitante e o responsável, com o texto do comentário citado (lido do banco, até 600 caracteres e 10 linhas). Quem escreveu não recebe. O solicitante também pode disparar o aviso do próprio comentário. Comentários com mais de 10 minutos não são reenviados. Status continua indo só ao solicitante.
+- **Tabela**: colunas Responsável (ou "Fila da liderança") e Última alteração (data e hora, "há X", quem fez, destaque após 24h parado).
+- **Ordenação**: cabeçalhos clicáveis (SLA, abertura, última alteração, status, prioridade e responsável) e seletor "Ordenar por" com inversão de ordem; vale também para o Kanban, os cartões e a navegação do modal.
+- **Filtro por responsável** (Todos, Atribuídos a mim, Sem responsável e cada pessoa) e busca pelo nome do responsável.
+- Lista paginada (50 por vez) e contador "Mostrando X de Y".
+- Regras puras em `src/utils/reportTable.js`.
+
+### 🐛 Corrigido (Fixed)
+- Os botões Ver, Editar e Excluir da tabela também acionavam o clique da linha (abriam o modal de detalhes junto).
+- Linhas da tabela passam a ser acessíveis por teclado (Tab e Enter) e os botões de ação ganharam `aria-label`.
+
+### 🧪 Testes
+- 306 testes no total.
+
+### ⚠️ Observações
+- É preciso novo deploy na Vercel (a função `api/notify-dm` mudou). Sem mudança nas regras do Firestore.
+
+---
+
 ## [v4.16.1] - 2026-11-14
 
 ### 🚀 Novas Funcionalidades (Added)

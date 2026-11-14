@@ -25,7 +25,8 @@ const DISCORD_API = 'https://discord.com/api/v10';
 const STAFF_ROLES = ['admin', 'gestor', 'supervisor', 'noc', 'diretor'];
 const MASTER_EMAIL = 'pedrosouzactt@gmail.com';
 
-// Eventos de tarefas/relatórios: a DM vai ao SOLICITANTE; a função lê o relatório no Firestore (nada vem do navegador)
+// Eventos de tarefas/relatórios: status vai ao SOLICITANTE; comentário vai ao SOLICITANTE e ao RESPONSÁVEL.
+// A função lê o relatório no Firestore (nada disso vem do navegador)
 export const REPORT_EVENTS = ['report_status', 'report_comment'];
 export const DM_EVENTS = ['weekly_evaluation', 'feedback', 'monthly_evaluation', ...REPORT_EVENTS, 'test'];
 export const MAX_RECIPIENTS = 100;
@@ -210,6 +211,21 @@ export const cleanInline = (value, max = 80) => {
     return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
 };
 
+// Texto de várias linhas para citar na DM: sem caracteres de controle, sem crases, limitado em linhas e tamanho
+export const cleanBlock = (value, maxChars = 600, maxLines = 10) => {
+    const text = Array.from(String(value || '').replace(/\r\n?/g, '\n'))
+        .map(ch => (ch === '\n' ? ch : (ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127 ? ' ' : ch)))
+        .join('')
+        .replace(/`/g, "'")
+        .replace(/[ \t]+\n/g, '\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    let cut = text.length > maxChars ? `${text.slice(0, maxChars - 1).trimEnd()}…` : text;
+    const lines = cut.split('\n');
+    if (lines.length > maxLines) cut = `${lines.slice(0, maxLines).join('\n').trimEnd()}…`;
+    return cut;
+};
+
 const safeDate = (value) => (/^[\d/-]{1,10}$/.test(String(value || '')) ? String(value) : '');
 
 // "2026-11" -> "11/2026"
@@ -247,7 +263,13 @@ export const buildDmContent = (event, params = {}, link = '') => {
         case 'report_comment': {
             const label = cleanInline(params.label, 90);
             const author = cleanInline(params.author, 40);
-            return `💬 **Novo comentário na sua solicitação**\n${label ? `${label}\n` : ''}${author ? `${author} comentou. ` : ''}Abra o Hubdesk para ler e responder.${where}`;
+            const title = params.role === 'assignee'
+                ? '💬 **Novo comentário em tarefa sob sua responsabilidade**'
+                : '💬 **Novo comentário na sua solicitação**';
+            const body = cleanBlock(params.content);
+            const quoted = body ? `\n${body.split('\n').map(line => `> ${line}`).join('\n')}\n` : '';
+            const who = author ? `${author} comentou.` : 'Há um novo comentário.';
+            return `${title}\n${label ? `${label}\n` : ''}${who}${quoted}${quoted ? '' : ' '}Abra o Hubdesk para responder.${where}`;
         }
         case 'test':
             return '✅ **Teste do Hubdesk**\nSe você recebeu esta mensagem, os avisos por mensagem direta estão funcionando para a sua conta.';
@@ -358,7 +380,7 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
 
     const firestoreCtx = { idToken, projectId, fetchImpl };
 
-    // Teste: só para si mesmo. Eventos reais: só a gestão. Relatórios: gestão ou responsável, para o solicitante.
+    // Teste: só para si mesmo. Eventos reais: só a gestão. Relatórios: gestão, responsável (e o solicitante, nos comentários).
     let recipients;
     if (REPORT_EVENTS.includes(event)) {
         const reportId = body?.reportId;
@@ -373,28 +395,57 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
         if (!reportDoc) return { status: 404, json: { error: 'relatorio-nao-encontrado' } };
 
         const report = toPlain(reportDoc);
-        const isAssignee = [report.assignedToId, report.assigned_to].some(id => id && String(id) === caller.uid);
-        if (!isAssignee && !(await isStaffUser(caller, firestoreCtx))) return { status: 403, json: { error: 'sem-permissao' } };
-
         const creatorId = String(report.creatorId || '');
-        const nothingToDo = { status: 200, json: { event, summary: summarize([]), results: [] } };
-        // Sem solicitante conhecido, ou a própria pessoa fez a alteração: não há a quem avisar
-        if (!isSafeDocId(creatorId) || creatorId === caller.uid) return nothingToDo;
+        const assigneeRaw = report.assignedToId || report.assigned_to
+            || (report.assignedTo && typeof report.assignedTo === 'object' ? (report.assignedTo.id || report.assignedTo.uid) : '');
+        const assigneeId = String(assigneeRaw || '');
+        const isAssignee = Boolean(assigneeId) && assigneeId === caller.uid;
+        const isCreator = Boolean(creatorId) && creatorId === caller.uid;
+        // Comentário: o solicitante também comenta na própria tarefa. Status: só responsável ou gestão.
+        const mayNotify = isAssignee || (event === 'report_comment' && isCreator);
+        if (!mayNotify && !(await isStaffUser(caller, firestoreCtx))) return { status: 403, json: { error: 'sem-permissao' } };
 
+        const nothingToDo = { status: 200, json: { event, summary: summarize([]), results: [] } };
         const comments = Array.isArray(report.comments) ? report.comments : [];
         const lastComment = comments[comments.length - 1] || null;
-        if (event === 'report_comment' && (!lastComment || String(lastComment.authorId || '') === creatorId)) return nothingToDo;
+        const label = report.protocol ? `Protocolo #${report.protocol}` : (report.title || 'Sua solicitação');
 
-        const clientParams = body?.params && typeof body.params === 'object' ? body.params : {};
-        recipients = [{
-            id: creatorId,
-            params: {
-                label: report.protocol ? `Protocolo #${report.protocol}` : (report.title || 'Sua solicitação'),
-                status: report.status || '',
-                author: lastComment?.authorName || report.lastUpdatedBy || '',
-                withComment: clientParams.withComment === true // só muda o texto da mensagem
-            }
-        }];
+        if (event === 'report_comment') {
+            if (!lastComment) return nothingToDo;
+            // Evita reenviar um comentário antigo: só avisa comentários de até 10 minutos atrás
+            const sentAt = Date.parse(String(lastComment.createdAt || ''));
+            if (Number.isFinite(sentAt) && now - sentAt > 10 * 60 * 1000) return nothingToDo;
+
+            // Quem escreveu o comentário (e quem pediu o envio) não recebe o próprio aviso
+            const skip = new Set([caller.uid, String(lastComment.authorId || '')]);
+            const targets = [];
+            if (isSafeDocId(creatorId) && !skip.has(creatorId)) targets.push({ id: creatorId, role: 'requester' });
+            if (isSafeDocId(assigneeId) && !skip.has(assigneeId) && assigneeId !== creatorId) targets.push({ id: assigneeId, role: 'assignee' });
+            if (targets.length === 0) return nothingToDo;
+
+            recipients = targets.map(t => ({
+                id: t.id,
+                params: {
+                    label,
+                    role: t.role,
+                    author: lastComment.authorName || report.lastUpdatedBy || '',
+                    content: String(lastComment.content || '')
+                }
+            }));
+        } else {
+            // Status: avisa o solicitante, a menos que ele mesmo tenha feito a alteração
+            if (!isSafeDocId(creatorId) || creatorId === caller.uid) return nothingToDo;
+            const clientParams = body?.params && typeof body.params === 'object' ? body.params : {};
+            recipients = [{
+                id: creatorId,
+                params: {
+                    label,
+                    status: report.status || '',
+                    author: lastComment?.authorName || report.lastUpdatedBy || '',
+                    withComment: clientParams.withComment === true // só muda o texto da mensagem
+                }
+            }];
+        }
     } else if (event === 'test') {
         recipients = [{ id: caller.uid, params: {} }];
     } else {

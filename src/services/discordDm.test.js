@@ -295,6 +295,35 @@ describe('sendReportDm: tarefas e relatórios', () => {
         expect(JSON.parse(fetch.mock.calls[0][1].body).event).toBe('report_comment');
     });
 
+    it('comentário: avisa solicitante e responsável, menos quem comentou', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        const withAssignee = { id: 'rep1', creatorId: 'ana', assignedToId: 'bia', assignedToName: 'Bia' };
+        await sendReportDm({ report: withAssignee, kind: 'comment' });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).recipients).toEqual([{ id: 'ana' }, { id: 'bia' }]);
+
+        fetch.mockClear();
+        authMock.currentUser = { uid: 'bia', getIdToken: (...args) => getIdToken(...args) };
+        await sendReportDm({ report: withAssignee, kind: 'comment' });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).recipients).toEqual([{ id: 'ana' }]);
+
+        fetch.mockClear();
+        authMock.currentUser = { uid: 'ana', getIdToken: (...args) => getIdToken(...args) };
+        await sendReportDm({ report: withAssignee, kind: 'comment' });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).recipients).toEqual([{ id: 'bia' }]);
+    });
+
+    it('status continua indo só ao solicitante, mesmo com responsável', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        await sendReportDm({ report: { id: 'rep1', creatorId: 'ana', assignedToId: 'bia' }, kind: 'status' });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).recipients).toEqual([{ id: 'ana' }]);
+    });
+
+    it('comentário em tarefa sem solicitante conhecido ainda avisa o responsável', async () => {
+        getWebhookConfigMock.mockResolvedValue(dmOn);
+        await sendReportDm({ report: { id: 'rep1', assignedToId: 'bia' }, kind: 'comment' });
+        expect(JSON.parse(fetch.mock.calls[0][1].body).recipients).toEqual([{ id: 'bia' }]);
+    });
+
     it('status com comentário junto envia o indicador withComment', async () => {
         getWebhookConfigMock.mockResolvedValue(dmOn);
         await sendReportDm({ report, kind: 'status', withComment: true });
@@ -341,7 +370,7 @@ describe('tipos de DM e mensagens de tarefas/relatórios', () => {
 
     it('só comunica ao gestor quando a DM saiu ou deu problema', () => {
         expect(describeDmResult({ event: 'report_status', httpStatus: 200, summary: { sent: 1 } }))
-            .toMatchObject({ type: 'success', text: expect.stringMatching(/solicitante/i) });
+            .toMatchObject({ type: 'success', text: expect.stringMatching(/solicitante e responsável/i) });
         expect(describeDmResult({ event: 'report_comment', httpStatus: 200, summary: { blocked: 1 } }).type).toBe('warning');
         expect(describeDmResult({ event: 'report_status', httpStatus: 200, summary: { failed: 1 } }).type).toBe('warning');
         // muitos colaboradores não vinculam o Discord: sem ruído a cada comentário

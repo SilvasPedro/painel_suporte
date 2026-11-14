@@ -11,6 +11,7 @@ import {
     resetBotStatusCache,
     toPlain,
     cleanInline,
+    cleanBlock,
     buildDmContent,
     processDmRequest,
     MAX_RECIPIENTS
@@ -432,6 +433,16 @@ describe('cleanInline', () => {
     });
 });
 
+describe('cleanBlock', () => {
+    it('mantém quebras de linha, tira crases e controles e limita tamanho e linhas', () => {
+        expect(cleanBlock('a\r\nb `c`\u0007')).toBe("a\nb 'c'");
+        expect(cleanBlock('x\n\n\n\ny')).toBe('x\n\ny');
+        expect(cleanBlock('a'.repeat(1000), 50)).toHaveLength(50);
+        expect(cleanBlock(Array.from({ length: 20 }, (_, i) => `l${i}`).join('\n'), 600, 3)).toBe('l0\nl1\nl2…');
+        expect(cleanBlock(undefined)).toBe('');
+    });
+});
+
 describe('buildDmContent: tarefas e relatórios', () => {
     it('status: mostra o protocolo e o novo status, sem conteúdo, e aponta para Tarefas & Relatórios', () => {
         const text = buildDmContent('report_status', { label: 'Protocolo #123', status: 'Resolvido' }, 'https://hub.example/home?tab=reports');
@@ -445,10 +456,24 @@ describe('buildDmContent: tarefas e relatórios', () => {
         expect(buildDmContent('report_status', { label: 'X', status: 'Em Andamento' }, '')).not.toContain('novo comentário');
     });
 
-    it('comentário: cita quem comentou, mas nunca o texto do comentário', () => {
-        const text = buildDmContent('report_comment', { label: 'Protocolo #9', author: 'Maria', content: 'segredo' }, '');
-        expect(text).toContain('Maria comentou');
-        expect(text).not.toContain('segredo');
+    it('comentário: cita quem comentou e traz o texto do comentário citado', () => {
+        const text = buildDmContent('report_comment', { label: 'Protocolo #9', author: 'Maria', content: 'Linha 1\nLinha 2' }, 'https://hub.example/home?tab=reports');
+        expect(text).toContain('Novo comentário na sua solicitação');
+        expect(text).toContain('Maria comentou.');
+        expect(text).toContain('> Linha 1\n> Linha 2');
+        expect(text).toContain('https://hub.example/home?tab=reports');
+    });
+
+    it('comentário para o responsável tem título próprio', () => {
+        const text = buildDmContent('report_comment', { label: 'Protocolo #9', author: 'Ana', role: 'assignee', content: 'oi' }, '');
+        expect(text).toContain('Novo comentário em tarefa sob sua responsabilidade');
+        expect(text).toContain('> oi');
+    });
+
+    it('comentário sem texto ainda avisa que há novidade', () => {
+        const text = buildDmContent('report_comment', { label: 'X', author: 'Maria' }, '');
+        expect(text).toContain('Maria comentou.');
+        expect(text).not.toContain('>');
     });
 
     it('neutraliza marcações nos textos vindos do relatório', () => {
@@ -500,15 +525,68 @@ describe('processDmRequest: eventos de tarefas e relatórios', () => {
         expect(calls.discord.find(c => c.url.endsWith('/messages')).body.content).toContain('Cliente sem acesso');
     });
 
-    it('comentário: avisa quem comentou, sem enviar o texto', async () => {
-        const { json: body, calls } = await run({ event: 'report_comment' });
+    it('comentário: avisa quem comentou e envia o texto lido do banco', async () => {
+        const { json: body, calls } = await run({ event: 'report_comment', params: { content: 'TEXTO FALSO DO NAVEGADOR' } });
         expect(body.summary.sent).toBe(1);
         const content = calls.discord.find(c => c.url.endsWith('/messages')).body.content;
         expect(content).toContain('Gestor Silva comentou');
-        expect(content).not.toContain('texto do comentário');
+        expect(content).toContain('> texto do comentário');
+        expect(content).not.toContain('FALSO');
     });
 
-    it('comentário do próprio solicitante não gera DM para ele mesmo', async () => {
+    it('comentário: avisa o solicitante e o responsável, cada um com o seu título', async () => {
+        const report = reportDoc({ assignedToId: 'bia' });
+        const { json: body, calls } = await run({ event: 'report_comment', report });
+        expect(body.summary.sent).toBe(2);
+        const opened = calls.discord.filter(c => c.url.endsWith('/users/@me/channels')).map(c => c.body.recipient_id).sort();
+        expect(opened).toEqual([DISCORD_ID_ANA, DISCORD_ID_BIA].sort());
+        const texts = calls.discord.filter(c => c.url.endsWith('/messages')).map(c => c.body.content);
+        expect(texts.some(t => t.includes('na sua solicitação'))).toBe(true);
+        expect(texts.some(t => t.includes('sob sua responsabilidade'))).toBe(true);
+        expect(texts.every(t => t.includes('texto do comentário'))).toBe(true);
+    });
+
+    it('comentário do solicitante avisa só o responsável', async () => {
+        const report = reportDoc({ assignedToId: 'bia', comments: [{ authorId: 'ana', authorName: 'Ana', content: 'preciso de ajuda' }] });
+        const { json: body, calls } = await run({ event: 'report_comment', report });
+        expect(body.summary.sent).toBe(1);
+        expect(calls.discord[0].body).toEqual({ recipient_id: DISCORD_ID_BIA });
+    });
+
+    it('comentário do responsável avisa só o solicitante', async () => {
+        const report = reportDoc({ assignedToId: 'bia', comments: [{ authorId: 'bia', authorName: 'Bia', content: 'assumi' }] });
+        const { json: body, calls } = await run({ event: 'report_comment', report });
+        expect(body.summary.sent).toBe(1);
+        expect(calls.discord[0].body).toEqual({ recipient_id: DISCORD_ID_ANA });
+    });
+
+    it('o responsável também é lido de assignedTo.id e não recebe duas DMs quando é o próprio solicitante', async () => {
+        const viaMap = reportDoc({ assignedTo: { id: 'bia', name: 'Bia' } });
+        expect((await run({ event: 'report_comment', report: viaMap })).json.summary.sent).toBe(2);
+        const same = reportDoc({ assignedToId: 'ana' });
+        expect((await run({ event: 'report_comment', report: same })).json.summary.sent).toBe(1);
+    });
+
+    it('o solicitante pode disparar o aviso do próprio comentário, mas não de status', async () => {
+        const docs = { ...staffDocs, 'collaborators/uid-gestor': { role: 'Colaborador' } };
+        const report = reportDoc({ creatorId: 'uid-gestor', assignedToId: 'bia', comments: [{ authorId: 'uid-gestor', authorName: 'Eu', content: 'oi' }] });
+        const comment = await run({ event: 'report_comment', report, callerDocs: docs });
+        expect(comment.status).toBe(200);
+        expect(comment.json.summary.sent).toBe(1);
+        const status = await run({ event: 'report_status', report, callerDocs: docs });
+        expect(status.status).toBe(403);
+    });
+
+    it('não reenvia comentário antigo (mais de 10 minutos)', async () => {
+        const old = reportDoc({ assignedToId: 'bia', comments: [{ authorId: 'uid-gestor', authorName: 'G', content: 'velho', createdAt: new Date(NOW - 11 * 60 * 1000).toISOString() }] });
+        const { json: body, calls } = await run({ event: 'report_comment', report: old });
+        expect(body.summary.sent).toBe(0);
+        expect(calls.discord).toHaveLength(0);
+        const fresh = reportDoc({ comments: [{ authorId: 'uid-gestor', authorName: 'G', content: 'novo', createdAt: new Date(NOW - 60 * 1000).toISOString() }] });
+        expect((await run({ event: 'report_comment', report: fresh })).json.summary.sent).toBe(1);
+    });
+
+    it('comentário do próprio solicitante, sem responsável, não gera DM para ele mesmo', async () => {
         const report = reportDoc({ comments: [{ authorId: 'ana', authorName: 'Ana', content: 'oi' }] });
         const { json: body, calls } = await run({ event: 'report_comment', report });
         expect(body.summary.sent).toBe(0);
