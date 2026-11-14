@@ -1,6 +1,5 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Phone, Minus, Search, Copy, Check, Clock, ArrowRightLeft, Sparkles } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 
 const EXTENSIONS_DATA = [
   {
@@ -25,44 +24,12 @@ const EXTENSIONS_DATA = [
   }
 ];
 
-export default function FloatingExtensions() {
-  const [isOpen, setIsOpen] = useState(false);
+/**
+ * Janela de ramais telefônicos. O botão flutuante e o fechamento ao clicar fora ficam no FloatingHub.
+ */
+export default function ExtensionsPanel({ isOpen, onClose }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [copiedExt, setCopiedExt] = useState(null);
-
-  const modalRef = useRef(null);
-  const buttonRef = useRef(null);
-  const { currentUser } = useAuth();
-
-  // Fecha o modal ao clicar fora ou pressionar tecla Escape
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleOutsideClick = (event) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleOutsideClick);
-    document.addEventListener('keydown', handleKeyDown);
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
 
   // Copia o ramal para a área de transferência com feedback
   const handleCopy = (ext, e) => {
@@ -90,35 +57,18 @@ export default function FloatingExtensions() {
     }).filter(group => group.items.length > 0);
   }, [searchQuery]);
 
-  // Não renderiza se o usuário não estiver autenticado ou se estiver desativado
-  if (!currentUser || currentUser.isInactive) return null;
-
   return (
     <>
-      {/* Botão Flutuante (Posicionado perfeitamente no canto inferior direito) */}
-      <button
-        ref={buttonRef}
-        id="toggle-extensions-floating-btn"
-        onClick={() => setIsOpen(prev => !prev)}
-        className={`fixed bottom-6 right-6 p-4 rounded-full text-white shadow-xl hover:shadow-2xl transition-all duration-300 z-50 flex items-center justify-center cursor-pointer ${
-          isOpen
-            ? 'bg-red-700 ring-4 ring-red-200 shadow-2xl scale-105'
-            : 'bg-red-600 hover:bg-red-700 hover:scale-110 shadow-red-950/30'
-        }`}
-        title={isOpen ? 'Clique para recolher ramais' : 'Ver lista de ramais da empresa'}
-        aria-label={isOpen ? 'Recolher janela de ramais' : 'Abrir janela de ramais'}
-      >
-        <Phone className="w-6 h-6 transition-transform" />
-      </button>
-
       {/* Janela Modal de Ramais (Posicionada logo acima do botão flutuante no canto) */}
       <div
-        ref={modalRef}
         id="extensions-modal-window"
+        role="dialog"
+        aria-label="Ramais telefônicos"
+        aria-hidden={!isOpen}
         className={`fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-96 bg-surface rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-subtle z-50 origin-bottom-right transition-all duration-200 ${
           isOpen
             ? 'scale-100 opacity-100 pointer-events-auto'
-            : 'scale-90 opacity-0 pointer-events-none'
+            : 'scale-90 opacity-0 pointer-events-none invisible'
         }`}
         style={{ maxHeight: 'calc(100vh - 120px)' }}
       >
@@ -137,7 +87,7 @@ export default function FloatingExtensions() {
           {/* Botão de Minimizar com o ícone "-" */}
           <button
             id="minimize-extensions-btn"
-            onClick={() => setIsOpen(false)}
+            onClick={onClose}
             className="p-1.5 hover:bg-white/20 active:bg-white/30 rounded-lg text-white transition-colors flex items-center justify-center cursor-pointer"
             title="Minimizar janela"
             aria-label="Minimizar janela de ramais"

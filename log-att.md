@@ -4,6 +4,21 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.19.0 (Botão Flutuante e Novo Chat)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.18.0` para `4.19.0`. |
+| **Criado** | `src/components/floating/FloatingHub.jsx` | Botão flutuante com as bolinhas Ramais e Chat IA. |
+| **Alterado** | `src/components/floating/ChatPanel.jsx` (era `FloatingChat.jsx`) | Chat reformulado no estilo do projeto. |
+| **Alterado** | `src/components/floating/ExtensionsPanel.jsx` (era `FloatingExtensions.jsx`) | Janela de ramais controlada pelo hub. |
+| **Criado** | `src/utils/floatingHub.js` / `.test.js` | Permissão do chat, contexto compactado e histórico limitado. |
+| **Criado** | `src/components/floating/floating.test.jsx` | Testes de renderização do hub, do chat e dos ramais. |
+| **Alterado** | `src/App.jsx` | Passa a montar o `FloatingHub`. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.18.0 (Reforço de Segurança)
 
 | Ação | Arquivo | Descrição da Alteração |

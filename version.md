@@ -4,6 +4,31 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.19.0] - 2026-11-14
+
+### 🎯 Destaque Principal
+Botão flutuante único (Ramais e Chat IA) e novo chat com o assistente.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **`FloatingHub`**: botão no canto inferior direito que abre duas bolinhas, "Chat IA" (somente gestão) e "Ramais" (todos). Sem acesso ao chat, o botão abre os ramais direto. Esc fecha; clicar fora fecha o menu e os ramais; o chat mantém a conversa ao minimizar.
+- **`ChatPanel`** (novo visual): cabeçalho com status, balões, respostas em Markdown estilizadas (listas, títulos, tabelas), sugestões de perguntas, indicador de digitação, copiar resposta, nova conversa, tentar novamente e campo com Enter para enviar (Shift+Enter quebra a linha).
+- **`ExtensionsPanel`**: janela de ramais passa a ser controlada pelo hub (conteúdo inalterado).
+- `src/utils/floatingHub.js`: `canUseAiChat`, `buildChatContext` e `buildChatHistory`.
+
+### 🐛 Corrigido (Fixed)
+- O componente do chat nunca esteve montado na aplicação (por isso o botão não aparecia); agora faz parte do hub.
+- O chat enviava todos os colaboradores e avaliações e passaria do limite de 60.000 caracteres da proteção de IA da v4.18.0; o contexto agora é compactado (campos simples, avaliações mais recentes) e o histórico limitado a 20 mensagens de até 4.000 caracteres.
+
+### 🧪 Testes
+- 341 testes no total (regras do hub e do chat, renderização do hub, do chat e dos ramais).
+
+### ⚠️ Observações
+- Arquivos movidos para `src/components/floating/` (`FloatingChat` e `FloatingExtensions` viraram `ChatPanel` e `ExtensionsPanel`). Sem mudança nas regras do Firestore.
+
+---
+
 ## [v4.18.0] - 2026-11-14
 
 ### 🎯 Destaque Principal

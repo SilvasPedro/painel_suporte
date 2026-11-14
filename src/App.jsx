@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { PermissionsProvider, usePermissions } from './context/PermissionsContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { ThemeProvider } from './context/ThemeContext';
-import FloatingExtensions from './components/FloatingExtensions';
+import FloatingHub from './components/floating/FloatingHub';
 
 // Importação das páginas
 import Login from './pages/Login';
@@ -153,7 +153,7 @@ function App() {
                                 <ErrorBoundary>
                                     <AppRoutes />
                                 </ErrorBoundary>
-                                <FloatingExtensions />
+                                <FloatingHub />
                             </BrowserRouter>
                         </PermissionsProvider>
                     </NotificationProvider>

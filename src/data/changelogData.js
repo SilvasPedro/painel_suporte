@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.18.0';
+export const CURRENT_VERSION = 'v4.19.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.18.0',
+    version: 'v4.19.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.19.0: botão flutuante único com as opções Ramais e Chat IA e novo chat com o assistente, no estilo do projeto.',
+    items: [
+      {
+        icon: Zap,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Botão Flutuante com Duas Opções',
+        category: 'Navegação',
+        description: 'O botão no canto inferior direito abre duas bolinhas: Ramais e Chat IA. Quem não é da gestão vê só os ramais, que abrem direto.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Novo Chat com o Assistente',
+        category: 'Inteligência Artificial',
+        description: 'Visual renovado, sugestões de perguntas, respostas formatadas (listas, títulos e tabelas), indicador de digitação, botão de copiar, nova conversa e tentar novamente em caso de erro. A conversa continua ao minimizar.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Contexto Dentro do Limite',
+        category: 'Estabilidade',
+        description: 'O chat envia só os dados essenciais (colaboradores, avaliações recentes e KPIs) e limita o histórico, para caber nas regras de segurança da IA sem dar erro.'
+      }
+    ]
+  },
+  {
+    version: 'v4.18.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.18.0: reforço de segurança. As rotas de IA agora exigem login e perfil da gestão, têm limite de uso e de tamanho, e o site passou a enviar cabeçalhos de proteção.',
     items: [
       {
@@ -44,7 +74,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.17.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.17.0: comentários em tarefas avisam por DM no Discord o solicitante e o responsável, com o texto, e a tabela de Tarefas e Relatórios ganhou responsável, última alteração, ordenação e mais filtros.',
     items: [
       {
