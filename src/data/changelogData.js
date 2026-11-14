@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.15.0';
+export const CURRENT_VERSION = 'v4.16.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.15.0',
+    version: 'v4.16.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.16.0: o modal de visualização de tarefas foi redesenhado em duas colunas, com linha do tempo unificada, campo de envio único, barra lateral de detalhes e correções de vários bugs.',
+    items: [
+      {
+        icon: Layout,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Modal em Duas Colunas',
+        category: 'Tarefas & Relatórios',
+        description: 'Descrição, parecer oficial e atividade à esquerda; responsável, prioridade, SLA, setor, solicitante e visualizadores na barra lateral, com atalhos Assumir, Iniciar, Suspender e Resolver.'
+      },
+      {
+        icon: History,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Linha do Tempo Unificada',
+        category: 'Tarefas & Relatórios',
+        description: 'Abertura, atribuições, mudanças de status, visualizadores e comentários na mesma lista, com datas no passo a passo e aviso de chamado parado.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Campo de Envio Único',
+        category: 'Tarefas & Relatórios',
+        description: 'Abas Comentário e Parecer e encerramento no mesmo lugar, com status junto. Encerrar ou suspender exige o parecer, e o rascunho fica salvo no navegador.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Correções',
+        category: 'Estabilidade',
+        description: 'Setas não trocam de chamado enquanto você digita, clicar fora fecha o modal, o parecer não duplica, comentários simultâneos não se apagam, o prazo não desloca o dia e o parecer aparece uma só vez.'
+      }
+    ]
+  },
+  {
+    version: 'v4.15.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.15.0: nova aba Atendimentos no Smart Pre, com o consolidado de todos os protocolos, em aberto e finalizados.',
     items: [
       {
@@ -30,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.14.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Correção v4.14.1: protocolos do Smart Pre agora aceitam datas de abertura retroativas, inclusive anteriores à adesão do cliente.',
     items: [
       {

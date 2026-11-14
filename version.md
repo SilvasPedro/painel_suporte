@@ -4,6 +4,39 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.16.0] - 2026-11-14
+
+### 🎯 Destaque Principal
+Modal de visualização de tarefas redesenhado (duas colunas, linha do tempo unificada, campo de envio único) e bugs corrigidos.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- Layout em duas colunas: descrição, parecer oficial e atividade à esquerda; detalhes e ações rápidas (Assumir, Iniciar, Suspender, Resolver) na barra lateral.
+- Linha do tempo unificada (`utils/reportTimeline.js`): abertura, atribuições, mudanças de status, visualizadores e comentários. Eventos gravados em `events` com `arrayUnion`.
+- Passo a passo com data de cada etapa e aviso "Sem movimentação há Xh".
+- Campo de envio único com abas Comentário e Parecer e encerramento; encerrar ou suspender exige texto. Rascunho por chamado em `sessionStorage`.
+- Subcomponentes em `components/reports/detail/` (badges, StatusStepper, ActivityFeed, Composer, DetailSidebar).
+
+### 🐛 Corrigido (Fixed)
+- Setas ←/→ trocavam de chamado durante a digitação.
+- Clicar fora do modal não fechava, apesar do aviso no rodapé.
+- Parecer da gestão duplicava a cada salvamento.
+- Comentários simultâneos podiam se sobrescrever (agora `arrayUnion`).
+- Texto digitado era perdido ao fechar o modal.
+- Parecer oficial exibido duas vezes; prazo podia deslocar o dia por fuso.
+- Acessibilidade: foco preso no diálogo, `aria-label` nos botões de ícone, título associado.
+
+### ⚠️ Observações
+- Não há anexos (sem Firebase Storage no projeto).
+- Eventos só existem a partir desta versão; chamados antigos mostram abertura e comentários. A gaveta lateral de Tarefas ainda não gera eventos.
+- Sem mudança nas regras do Firestore.
+
+### 🧪 Testes
+- 281 testes no total.
+
+---
+
 ## [v4.15.0] - 2026-11-11
 
 ### 🎯 Destaque Principal

@@ -4,6 +4,19 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.16.0 (Novo Modal de Tarefas)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.15.0` para `4.16.0`. |
+| **Alterado** | `src/components/reports/ReportDetailModal.jsx` | Reescrito em duas colunas, com correções de bugs e gravação via `arrayUnion`. |
+| **Criado** | `src/components/reports/detail/*` | Badges, passo a passo, linha do tempo, campo de envio e barra lateral. |
+| **Criado** | `src/utils/reportTimeline.js` / `.test.js` | Regras de eventos, linha do tempo, datas, tempo parado e validação. |
+| **Criado** | `src/components/reports/reportDetailRender.test.jsx` | Testes de renderização do modal. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [11/11/2026] — Versão v4.15.0 (Aba Atendimentos no Smart Pre)
 
 | Ação | Arquivo | Descrição da Alteração |
