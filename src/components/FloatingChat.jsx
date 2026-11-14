@@ -3,6 +3,7 @@ import { MessageSquare, X, Send, Loader2, Bot, User } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useAuth } from '../context/AuthContext';
 import { getCachedCollection } from '../services/dataCache';
+import { getAuthHeaders, describeAiError } from '../services/apiAuth';
 
 export default function FloatingChat() {
   const [isOpen, setIsOpen] = useState(false);
@@ -62,9 +63,7 @@ export default function FloatingChat() {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({
           message: userMessage.content,
           history: messages,
@@ -77,7 +76,7 @@ export default function FloatingChat() {
       if (response.ok) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Desculpe, ocorreu um erro ao processar sua solicitação.' }]);
+        setMessages(prev => [...prev, { role: 'assistant', content: describeAiError(response.status, 'Desculpe, ocorreu um erro ao processar sua solicitação.') }]);
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error);

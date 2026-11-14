@@ -1,13 +1,50 @@
-import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
+import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.17.0';
+export const CURRENT_VERSION = 'v4.18.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.17.0',
+    version: 'v4.18.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.18.0: reforço de segurança. As rotas de IA agora exigem login e perfil da gestão, têm limite de uso e de tamanho, e o site passou a enviar cabeçalhos de proteção.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'IA Protegida por Login',
+        category: 'Segurança',
+        description: 'O chat e a análise de desempenho com IA só respondem a usuários logados com perfil da gestão. Antes, qualquer pessoa que conhecesse o endereço podia usar a cota da IA.'
+      },
+      {
+        icon: Zap,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Limites de Uso',
+        category: 'Segurança',
+        description: 'Até 20 chamadas por minuto por usuário e tamanhos máximos para mensagem, histórico e dados enviados, com mensagens claras quando o limite é atingido.'
+      },
+      {
+        icon: Sliders,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Cabeçalhos de Segurança',
+        category: 'Segurança',
+        description: 'O site passa a bloquear a exibição dentro de outras páginas e a limitar o acesso a câmera, microfone e localização.'
+      },
+      {
+        icon: Lock,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Segredos Fora do Git',
+        category: 'Segurança',
+        description: 'O arquivo .env deixou de ser versionado e entrou no .gitignore, e a chave do Gemini passa a ser lida só da variável do servidor.'
+      }
+    ]
+  },
+  {
+    version: 'v4.17.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.17.0: comentários em tarefas avisam por DM no Discord o solicitante e o responsável, com o texto, e a tabela de Tarefas e Relatórios ganhou responsável, última alteração, ordenação e mais filtros.',
     items: [
       {
@@ -44,7 +81,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.16.1',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.16.1: a linha do tempo do modal de tarefas ganhou seletor de ordem, do mais antigo ao mais recente ou o inverso.',
     items: [
       {

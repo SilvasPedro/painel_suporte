@@ -4,6 +4,33 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.18.0] - 2026-11-14
+
+### 🎯 Destaque Principal
+Reforço de segurança: rotas de IA protegidas por login, perfil e limite de uso.
+
+---
+
+### 🔒 Segurança (Security)
+- **`/api/chat` e `/api/insights`** exigem ID token do Firebase com assinatura verificada e perfil da gestão (gestor, supervisor, admin, noc, diretor; mesma regra do Firestore). Falha ao consultar o perfil nega o acesso. Lógica em `api/_lib/aiGuard.js`.
+- **Limite de uso:** 20 chamadas por minuto por usuário (429 com `Retry-After`); mensagem até 4.000 caracteres, histórico de 20 itens e dados de até 60.000 caracteres; período e tipo de análise viram uma linha curta (contra injeção de instruções no prompt).
+- A chave do Gemini passa a ser lida só de `GEMINI_API_KEY` (removido o fallback `VITE_GEMINI_API_KEY`, que iria para o código público).
+- **Cabeçalhos** no `vercel.json`: `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`.
+- **`.env` fora do git** (`git rm --cached`) e `.gitignore` com `.env` e `.env.*` (exceto `.env.example`). O arquivo era só um modelo vazio; nenhuma chave do Gemini estava no repositório.
+- Servidor local (`server.ts`): limite de corpo de 50 MB para 2 MB.
+
+### 🚀 Novas Funcionalidades (Added)
+- `src/services/apiAuth.js`: cabeçalho de login e mensagens de erro (401, 403, 413, 429) para as rotas de IA; usado pelo chat flutuante e pelo serviço de insights.
+
+### 🧪 Testes
+- 327 testes no total (guard de IA, validação dos corpos, limite de uso e rotas).
+
+### ⚠️ Observações
+- Novo deploy na Vercel necessário. Sem mudança nas regras do Firestore.
+- Pendências manuais: publicar o `firestore.rules`, restringir a chave do Firebase por domínio no Google Cloud e trocar a senha do EasyAuth.
+
+---
+
 ## [v4.17.0] - 2026-11-14
 
 ### 🎯 Destaque Principal

@@ -4,6 +4,22 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.18.0 (Reforço de Segurança)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.17.0` para `4.18.0`. |
+| **Criado** | `api/_lib/aiGuard.js` / `aiGuard.test.js` / `aiRoutes.test.js` | Login, perfil da gestão, limite de uso e validação dos corpos das rotas de IA. |
+| **Alterado** | `api/chat.js` / `api/insights.js` | Exigem autorização e usam só `GEMINI_API_KEY`. |
+| **Criado** | `src/services/apiAuth.js` | Cabeçalho de login e mensagens de erro das rotas de IA. |
+| **Alterado** | `src/components/FloatingChat.jsx` / `src/services/aiService.js` | Enviam o login e tratam 401, 403, 413 e 429. |
+| **Alterado** | `vercel.json` | Cabeçalhos de segurança. |
+| **Alterado** | `.gitignore` / `.env` | `.env` fora do versionamento (arquivo mantido só localmente). |
+| **Alterado** | `server.ts` | Limite de corpo de 2 MB. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.17.0 (DM de Comentários e Nova Tabela de Tarefas)
 
 | Ação | Arquivo | Descrição da Alteração |

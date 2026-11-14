@@ -23,6 +23,10 @@ dist-ssr
 *.sln
 *.sw?
 
+# Segredos: o arquivo .env fica só no computador (use .env.example como modelo)
+.env
+.env.*
+!.env.example
 .env.local
 .env*.local
 node_modules/
