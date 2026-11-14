@@ -3,7 +3,7 @@ import { Sparkles, Minus, Send, RotateCcw, Copy, Check, AlertCircle, ShieldCheck
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getCachedCollection } from '../../services/dataCache';
-import { getAuthHeaders, describeAiError } from '../../services/apiAuth';
+import { getAuthHeaders, readAiError } from '../../services/apiAuth';
 import { cn } from '../../utils/cn';
 import { buildChatContext, buildChatHistory, SUGGESTED_PROMPTS, CHAT_LIMITS } from '../../utils/floatingHub';
 
@@ -30,6 +30,9 @@ const MARKDOWN_COMPONENTS = {
     th: (props) => <th className="border border-subtle bg-canvas px-2 py-1 text-left font-semibold" {...props} />,
     td: (props) => <td className="border border-subtle px-2 py-1" {...props} />
 };
+
+// Detalhe técnico curto de um erro de rede do navegador
+const sanitizeClientDetail = (error) => String(error?.name || error?.message || 'erro de conexão').slice(0, 80);
 
 function TypingDots() {
     return (
@@ -67,7 +70,7 @@ export default function ChatPanel({ isOpen, onClose }) {
         if (isOpen) inputRef.current?.focus();
     }, [isOpen]);
 
-    const send = async (rawText) => {
+    const send = async (rawText, { isRetry = false } = {}) => {
         const text = String(rawText || '').trim();
         if (!text || isLoading) return;
         if (text.length > CHAT_LIMITS.message) {
@@ -75,7 +78,10 @@ export default function ChatPanel({ isOpen, onClose }) {
             return;
         }
 
-        const history = buildChatHistory(messages);
+        // Ao tentar de novo, a pergunta já está na conversa: não repete a bolha nem o histórico
+        const lastUser = [...messages].reverse().find(m => m.role === 'user');
+        const alreadyShown = isRetry && lastUser && lastUser.content === text;
+        const history = buildChatHistory(alreadyShown ? messages.filter(m => m.id !== lastUser.id) : messages);
         // Contexto (colaboradores, avaliações e KPIs do cache), sempre atual e cabendo no limite do servidor
         let contextData;
         try {
@@ -88,7 +94,9 @@ export default function ChatPanel({ isOpen, onClose }) {
             console.error('Erro ao carregar contexto:', error);
             contextData = { appInfo: 'Painel Hubdesk - Suporte Técnico' };
         }
-        setMessages(prev => [...prev.filter(m => !m.error), { id: nextId(), role: 'user', content: text }]);
+        setMessages(prev => (alreadyShown
+            ? prev.filter(m => !m.error)
+            : [...prev.filter(m => !m.error), { id: nextId(), role: 'user', content: text }]));
         setInput('');
         setIsLoading(true);
 
@@ -102,21 +110,25 @@ export default function ChatPanel({ isOpen, onClose }) {
                     contextData
                 })
             });
-            const data = await response.json().catch(() => ({}));
+            const data = await response.json().catch(() => null);
 
-            if (response.ok) {
-                setMessages(prev => [...prev, { id: nextId(), role: 'assistant', content: data.reply || 'Não consegui gerar uma resposta.' }]);
+            if (response.ok && data?.reply) {
+                setMessages(prev => [...prev, { id: nextId(), role: 'assistant', content: data.reply }]);
             } else {
+                const failure = response.ok
+                    ? { message: 'A IA não devolveu uma resposta. Tente reformular a pergunta.', detail: `HTTP ${response.status} • resposta vazia`, retryable: true }
+                    : readAiError(response.status, data);
                 setMessages(prev => [...prev, {
-                    id: nextId(), role: 'assistant', error: true, retry: text,
-                    content: describeAiError(response.status, 'Desculpe, ocorreu um erro ao processar sua solicitação.')
+                    id: nextId(), role: 'assistant', error: true, retry: failure.retryable ? text : '',
+                    content: failure.message, detail: failure.detail
                 }]);
             }
         } catch (error) {
             console.error('Erro ao enviar mensagem:', error);
             setMessages(prev => [...prev, {
                 id: nextId(), role: 'assistant', error: true, retry: text,
-                content: error?.message?.includes('Entre no sistema') ? error.message : 'Erro de conexão. Tente novamente em instantes.'
+                content: error?.message?.includes('Entre no sistema') ? error.message : 'Não foi possível conectar ao servidor. Confira sua internet e tente de novo.',
+                detail: sanitizeClientDetail(error)
             }]);
         } finally {
             setIsLoading(false);
@@ -220,10 +232,15 @@ export default function ChatPanel({ isOpen, onClose }) {
                                     ) : (
                                         <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{msg.content}</ReactMarkdown>
                                     )}
+                                    {msg.error && msg.detail && (
+                                        <p className="mt-1.5 text-xs font-mono opacity-80 break-words" title="Detalhe técnico do erro">
+                                            {msg.detail}
+                                        </p>
+                                    )}
                                     {msg.error && msg.retry && (
                                         <button
                                             type="button"
-                                            onClick={() => send(msg.retry)}
+                                            onClick={() => send(msg.retry, { isRetry: true })}
                                             disabled={isLoading}
                                             className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-rose-700 dark:text-rose-300 underline cursor-pointer disabled:opacity-50"
                                         >

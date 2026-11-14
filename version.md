@@ -4,6 +4,34 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.19.1] - 2026-11-14
+
+### 🎯 Destaque Principal
+Erros da IA explicados na tela e prompts reescritos para respostas curtas e precisas.
+
+---
+
+### 🚀 Novas Funcionalidades (Added)
+- **`api/_lib/aiErrors.js`**: classifica falhas do Gemini (chave não configurada, inválida ou sem permissão, cota esgotada, modelo indisponível, IA sobrecarregada, região, pedido recusado, tempo esgotado, rede, resposta vazia ou bloqueada) e devolve `{ error, message, detail, retryable }` com o HTTP adequado (429, 502, 503, 504). O detalhe nunca expõe chaves (`sanitizeDetail`); a causa completa vai para os logs da Vercel.
+- **`api/_lib/aiPrompts.js`**: prompts do chat e dos insights. Chat: resposta começa pela conclusão, até 6 tópicos ou cerca de 150 palavras, cita números, nomes e períodos, usa só os dados enviados, sabe a data de hoje (Brasília), termina com "Próximo passo:" e ignora instruções escondidas nos dados. Insights: três blocos (destaques, atenção, recomendações) com até 3 tópicos cada e "Sem dados suficientes" quando faltar dado.
+- `readAiError` em `src/services/apiAuth.js` e balão de erro do chat com explicação, detalhe técnico e "Tentar novamente" somente em erros temporários.
+
+### 🔄 Alterado (Changed)
+- `api/chat.js` e `api/insights.js`: contexto em JSON compacto, `temperature` 0.2, `maxOutputTokens` limitado e `thinkingBudget: 0` (respostas rápidas); resposta sem texto vira erro explicado; `GEMINI_API_KEY` ausente passa a responder 503 com instrução (antes era uma resposta de aviso com HTTP 200).
+
+### 🐛 Corrigido (Fixed)
+- Falhas do servidor apareciam sempre como "Desculpe, ocorreu um erro" sem causa.
+- "Tentar novamente" repetia a pergunta do usuário na conversa.
+
+### 🧪 Testes
+- 362 testes no total (classificação de erros, prompts e leitura do erro no navegador).
+
+### ⚠️ Observações
+- Novo deploy na Vercel necessário. Sem mudança nas regras do Firestore.
+- A variável da chave deve se chamar `GEMINI_API_KEY` (sem `VITE_`) e existir em Production.
+
+---
+
 ## [v4.19.0] - 2026-11-14
 
 ### 🎯 Destaque Principal

@@ -1,4 +1,4 @@
-import { getAuthHeaders, describeAiError } from './apiAuth';
+import { getAuthHeaders, readAiError } from './apiAuth';
 
 /**
  * Envia dados de desempenho para a rota serverless /api/insights
@@ -18,10 +18,11 @@ export async function gerarInsightsIA(dadosColaborador, periodo = 'Geral') {
       }),
     });
 
-    const data = await response.json();
+    const data = await response.json().catch(() => null);
 
     if (!response.ok) {
-      throw new Error(describeAiError(response.status, data.error || 'Erro ao comunicar com a IA.'));
+      const failure = readAiError(response.status, data);
+      throw new Error(`${failure.message} (${failure.detail})`);
     }
 
     return data.insights;

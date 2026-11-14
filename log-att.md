@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.19.1 (Erros da IA Explicados e Novos Prompts)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.19.0` para `4.19.1`. |
+| **Criado** | `api/_lib/aiErrors.js` / `aiErrors.test.js` | Classificação das falhas do Gemini com mensagem, detalhe técnico seguro e HTTP adequado. |
+| **Criado** | `api/_lib/aiPrompts.js` | Prompts do chat e dos insights (curtos, precisos e seguros). |
+| **Alterado** | `api/chat.js` / `api/insights.js` | Usam os novos prompts e erros, limite de saída e resposta vazia tratada. |
+| **Alterado** | `src/services/apiAuth.js` / `apiAuth.test.js` / `aiService.js` | `readAiError` para ler o erro das rotas de IA. |
+| **Alterado** | `src/components/floating/ChatPanel.jsx` | Balão de erro com detalhe técnico e tentar novamente sem duplicar a pergunta. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.19.0 (Botão Flutuante e Novo Chat)
 
 | Ação | Arquivo | Descrição da Alteração |

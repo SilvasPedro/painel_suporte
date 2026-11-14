@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.19.0';
+export const CURRENT_VERSION = 'v4.19.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.19.0',
+    version: 'v4.19.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.19.1: o chat de IA passa a mostrar o motivo exato de cada erro e os prompts foram reescritos para respostas curtas e precisas.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Erros da IA Explicados',
+        category: 'Inteligência Artificial',
+        description: 'Em vez de uma mensagem genérica, o chat mostra o que aconteceu (chave não configurada ou recusada, cota esgotada, IA sobrecarregada, resposta bloqueada, entre outros), o que fazer e um detalhe técnico curto, sem expor chaves.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Respostas Mais Precisas e Resumidas',
+        category: 'Inteligência Artificial',
+        description: 'Novos prompts: resposta começa pela conclusão, cita números, nomes e períodos, usa só os dados enviados, assume a data de hoje e termina com o próximo passo. A análise de desempenho vem em três blocos curtos.'
+      },
+      {
+        icon: RefreshCw,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Tentar Novamente sem Duplicar',
+        category: 'Inteligência Artificial',
+        description: 'O botão Tentar novamente aparece só em erros temporários e não repete mais a pergunta na conversa.'
+      }
+    ]
+  },
+  {
+    version: 'v4.19.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.19.0: botão flutuante único com as opções Ramais e Chat IA e novo chat com o assistente, no estilo do projeto.',
     items: [
       {
@@ -37,7 +67,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.18.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.18.0: reforço de segurança. As rotas de IA agora exigem login e perfil da gestão, têm limite de uso e de tamanho, e o site passou a enviar cabeçalhos de proteção.',
     items: [
       {
