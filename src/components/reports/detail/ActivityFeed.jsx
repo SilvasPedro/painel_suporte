@@ -1,8 +1,9 @@
-import React, { useEffect, useRef } from 'react';
-import { Plus, UserCheck, ArrowRightLeft, Eye, MessageSquare, ShieldCheck } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Plus, UserCheck, ArrowRightLeft, Eye, MessageSquare, ShieldCheck, ArrowDownWideNarrow, ArrowUpWideNarrow } from 'lucide-react';
 import { getRoleLabel } from '../../../services/rbac';
 import {
-    buildActivityFeed, describeEvent, formatDateTime, getIdleLabel, getStatusLabel
+    buildActivityFeed, describeEvent, formatDateTime, getIdleLabel, getStatusLabel, sortFeed,
+    FEED_ORDERS, FEED_ORDER_STORAGE_KEY
 } from '../../../utils/reportTimeline';
 
 const EVENT_ICON = {
@@ -22,7 +23,15 @@ const SystemDot = ({ icon: Icon }) => (
 
 /** Linha do tempo única: abertura, eventos do sistema e comentários, do mais antigo ao mais recente. */
 export default function ActivityFeed({ report, currentUserId }) {
-    const feed = buildActivityFeed(report);
+    const [order, setOrder] = useState(() => {
+        try { return localStorage.getItem(FEED_ORDER_STORAGE_KEY) === 'desc' ? 'desc' : 'asc'; } catch { return 'asc'; }
+    });
+    const chooseOrder = (next) => {
+        setOrder(next);
+        try { localStorage.setItem(FEED_ORDER_STORAGE_KEY, next); } catch { /* sem acesso ao armazenamento */ }
+    };
+    const chronological = buildActivityFeed(report);
+    const feed = sortFeed(chronological, order);
     const idle = getIdleLabel(report);
     const endRef = useRef(null);
     const firstRender = useRef(true);
@@ -30,10 +39,10 @@ export default function ActivityFeed({ report, currentUserId }) {
     // Depois de enviar algo, mantém o fim da lista visível (não rola na abertura)
     useEffect(() => {
         if (firstRender.current) { firstRender.current = false; return; }
-        endRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
-    }, [feed.length]);
+        if (order === 'asc') endRef.current?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' });
+    }, [chronological.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const commentCount = feed.filter(i => i.kind === 'comment').length;
+    const commentCount = chronological.filter(i => i.kind === 'comment').length;
 
     return (
         <section aria-label="Atividade do chamado">
@@ -43,7 +52,28 @@ export default function ActivityFeed({ report, currentUserId }) {
                     Atividade
                     <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">{commentCount}</span>
                 </h4>
-                {idle && <span className="text-xs font-medium text-amber-600 dark:text-amber-400">{idle}</span>}
+                <div className="flex items-center gap-2.5">
+                    {idle && <span className="text-xs font-medium text-amber-600 dark:text-amber-400">{idle}</span>}
+                    <div className="flex gap-1 rounded-full bg-subtle border border-subtle p-0.5" role="group" aria-label="Ordem da linha do tempo">
+                        {FEED_ORDERS.map(o => {
+                            const on = order === o.id;
+                            const Icon = o.id === 'asc' ? ArrowDownWideNarrow : ArrowUpWideNarrow;
+                            return (
+                                <button
+                                    key={o.id}
+                                    type="button"
+                                    aria-pressed={on}
+                                    title={o.label}
+                                    onClick={() => chooseOrder(o.id)}
+                                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold transition-colors cursor-pointer ${on ? 'bg-surface text-primary-hub border border-subtle' : 'text-muted-hub hover:text-primary-hub border border-transparent'}`}
+                                >
+                                    <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+                                    {o.id === 'asc' ? 'Antigos' : 'Recentes'}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
 
             <ol className="space-y-0">

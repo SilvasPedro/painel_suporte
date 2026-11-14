@@ -142,6 +142,15 @@ export const buildActivityFeed = (report) => {
         .map(x => x.item);
 };
 
+export const FEED_ORDERS = [
+    { id: 'asc', label: 'Mais antigos primeiro' },
+    { id: 'desc', label: 'Mais recentes primeiro' }
+];
+export const FEED_ORDER_STORAGE_KEY = 'hubdesk_report_feed_order';
+
+/** Aplica a ordem escolhida (asc = como veio, do mais antigo ao mais recente; desc = invertida). */
+export const sortFeed = (feed = [], order = 'asc') => (order === 'desc' ? [...feed].reverse() : [...feed]);
+
 /** Datas (ms) de cada etapa do passo a passo, a partir dos eventos de status. */
 export const getStageDates = (report) => {
     const events = (Array.isArray(report?.events) ? report.events : [])

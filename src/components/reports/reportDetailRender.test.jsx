@@ -78,6 +78,14 @@ describe('ReportDetailModal (novo layout)', () => {
         expect(html).toContain('Parecer da liderança');
     });
 
+    it('linha do tempo tem seletor de ordem, com mais antigos primeiro por padrão', () => {
+        const html = render();
+        expect(html).toContain('Ordem da linha do tempo');
+        expect(html).toContain('Antigos');
+        expect(html).toContain('Recentes');
+        expect(html.indexOf('abriu o chamado')).toBeLessThan(html.indexOf('Voltou a acontecer'));
+    });
+
     it('gestor vê as duas abas do compositor e os atalhos de despacho', () => {
         const html = render();
         expect(html).toContain('Comentário');

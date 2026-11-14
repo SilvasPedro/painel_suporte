@@ -4,6 +4,17 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.16.1] - 2026-11-14
+
+### 🚀 Novas Funcionalidades (Added)
+- Seletor de ordem na linha do tempo do chamado (Antigos / Recentes), com `sortFeed` em `utils/reportTimeline.js`. A preferência fica em `localStorage` (`hubdesk_report_feed_order`).
+- A rolagem automática ao enviar só ocorre na ordem "antigos primeiro".
+
+### 🧪 Testes
+- 283 testes no total. Sem mudança nas regras do Firestore.
+
+---
+
 ## [v4.16.0] - 2026-11-14
 
 ### 🎯 Destaque Principal

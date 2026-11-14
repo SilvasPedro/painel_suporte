@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [14/11/2026] — Versão v4.16.1 (Ordem da Linha do Tempo)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Incremento da versão semântica de `4.16.0` para `4.16.1`. |
+| **Alterado** | `src/components/reports/detail/ActivityFeed.jsx` | Seletor de ordem (Antigos / Recentes) com preferência salva. |
+| **Alterado** | `src/utils/reportTimeline.js` / `.test.js` | `sortFeed` e constantes de ordem, com teste. |
+| **Alterado** | `reportDetailRender.test.jsx` | Teste do seletor de ordem. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [14/11/2026] — Versão v4.16.0 (Novo Modal de Tarefas)
 
 | Ação | Arquivo | Descrição da Alteração |

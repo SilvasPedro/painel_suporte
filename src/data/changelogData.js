@@ -1,13 +1,29 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.16.0';
+export const CURRENT_VERSION = 'v4.16.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.16.0',
+    version: 'v4.16.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Atualização v4.16.1: a linha do tempo do modal de tarefas ganhou seletor de ordem, do mais antigo ao mais recente ou o inverso.',
+    items: [
+      {
+        icon: History,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Ordem da Linha do Tempo',
+        category: 'Tarefas & Relatórios',
+        description: 'Novos botões Antigos e Recentes na seção Atividade do chamado para alternar a ordem de eventos e comentários. A escolha fica salva no navegador e vale para todos os chamados.'
+      }
+    ]
+  },
+  {
+    version: 'v4.16.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Atualização v4.16.0: o modal de visualização de tarefas foi redesenhado em duas colunas, com linha do tempo unificada, campo de envio único, barra lateral de detalhes e correções de vários bugs.',
     items: [
       {
@@ -44,7 +60,7 @@ export const CHANGELOG_VERSIONS = [
     version: 'v4.15.0',
     date: 'Novembro 2026',
     isCurrent: false,
-    tag: 'Versão Anterior',
+    tag: 'Estável',
     summary: 'Atualização v4.15.0: nova aba Atendimentos no Smart Pre, com o consolidado de todos os protocolos, em aberto e finalizados.',
     items: [
       {

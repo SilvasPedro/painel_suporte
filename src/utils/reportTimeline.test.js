@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     normalizeStatus, isClosedStatus, toMillis, formatDateOnly, formatDateTime, createEvent, createComment,
-    parseComment, buildActivityFeed, getStageDates, getLastActivityMillis, getIdleLabel, describeEvent, validateComposer
+    parseComment, buildActivityFeed, getStageDates, getLastActivityMillis, getIdleLabel, describeEvent, validateComposer, sortFeed
 } from './reportTimeline';
 
 const at = (iso) => new Date(iso).getTime();
@@ -102,6 +102,16 @@ describe('linha do tempo unificada', () => {
         expect(stages.closed).toBe(at('2026-11-12T09:00:00.000Z'));
         expect(stages.paused).toBeNull();
         expect(getStageDates({}).progress).toBeNull();
+    });
+});
+
+describe('ordem da linha do tempo', () => {
+    it('sortFeed inverte sem alterar a lista original', () => {
+        const feed = [{ key: 'a' }, { key: 'b' }, { key: 'c' }];
+        expect(sortFeed(feed, 'asc').map(i => i.key)).toEqual(['a', 'b', 'c']);
+        expect(sortFeed(feed, 'desc').map(i => i.key)).toEqual(['c', 'b', 'a']);
+        expect(feed.map(i => i.key)).toEqual(['a', 'b', 'c']);
+        expect(sortFeed(undefined, 'desc')).toEqual([]);
     });
 });
 
