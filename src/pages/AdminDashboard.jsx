@@ -413,9 +413,6 @@ const AdminDashboard = () => {
                                     <span className="font-brand text-lg font-black tracking-tight text-white select-none">
                                         HUB<span className="text-rose-500">DESK</span>
                                     </span>
-                                    <span className="px-1.5 py-0.5 rounded-md bg-rose-500/10 border border-rose-500/20 text-[9px] font-bold text-rose-400 font-mono">
-                                        v3.11
-                                    </span>
                                 </div>
                                 <p className="text-[10px] text-zinc-500 font-medium truncate uppercase tracking-widest mt-0.5">
                                     Central de Operações

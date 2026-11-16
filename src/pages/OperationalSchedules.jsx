@@ -73,6 +73,26 @@ const getSundaysInMonth = (year, month) => {
     return sundays;
 };
 
+// Reduz cada colaborador alocado aos campos essenciais (sem foto/base64),
+// evitando estourar o limite de 1 MB por documento do Firestore.
+const slimColab = (c) => ({
+    id: c.id,
+    name: c.name,
+    shift: c.shift || 'Manhã I',
+    role: c.role || 'Colaborador'
+});
+
+const slimAssignments = (assignments) => {
+    const walk = (value) => {
+        if (Array.isArray(value)) return value.map(slimColab);
+        if (value && typeof value === 'object') {
+            return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, walk(v)]));
+        }
+        return value;
+    };
+    return walk(assignments || {});
+};
+
 const formatDateString = (date) => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
@@ -193,8 +213,9 @@ export const OperationalSchedules = ({
         const unsub = subscribeSharedDocument("daily_schedules", "fixed_schedule", (docData) => {
             if (!isMounted) return;
             if (docData && docData.assignments) {
-                setDailySchedule(docData.assignments);
-                setOriginalDailySchedule(docData.assignments);
+                const slim = slimAssignments(docData.assignments);
+                setDailySchedule(slim);
+                setOriginalDailySchedule(slim);
             } else {
                 setDailySchedule({});
                 setOriginalDailySchedule({});
@@ -262,12 +283,15 @@ export const OperationalSchedules = ({
         if (readOnly) return;
         setSavingDaily(true);
         try {
+            const slim = slimAssignments(dailySchedule);
+            // Sem merge: substitui o documento inteiro (o merge manteria o conteúdo pesado antigo)
             await setDoc(doc(db, "daily_schedules", "fixed_schedule"), {
                 type: "fixed",
-                assignments: dailySchedule,
+                assignments: slim,
                 updatedAt: new Date()
-            }, { merge: true });
-            setOriginalDailySchedule(dailySchedule);
+            });
+            setDailySchedule(slim);
+            setOriginalDailySchedule(slim);
             showToast("Escala diária salva com sucesso!", "success");
         } catch (err) {
             console.error("Erro ao salvar escala diária:", err);
@@ -483,12 +507,14 @@ export const OperationalSchedules = ({
         if (readOnly) return;
         setSavingSunday(true);
         try {
+            const slim = slimAssignments(sundaySchedule);
             await setDoc(doc(db, "sunday_schedules", sundayDocumentId), {
                 month: sundayDocumentId,
-                assignments: sundaySchedule,
+                assignments: slim,
                 updatedAt: new Date()
-            }, { merge: true });
-            setOriginalSundaySchedule(sundaySchedule);
+            });
+            setSundaySchedule(slim);
+            setOriginalSundaySchedule(slim);
             showToast("Escala de plantão salva com sucesso!", "success");
         } catch (err) {
             console.error("Erro ao salvar plantão:", err);

@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.19.3';
+export const CURRENT_VERSION = 'v4.19.4';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.19.3',
+    version: 'v4.19.4',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.19.4: a Escala Diária voltou a salvar (o documento passou do limite de 1 MB do Firestore por guardar a foto de cada colaborador), a barra lateral perdeu a tag de versão e os KPIs do Setor ganharam um atalho para a Analítica 3M.',
+    items: [
+      {
+        icon: CalendarDays,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Escala Diária Volta a Salvar',
+        category: 'Escalas',
+        description: 'Cada alocação passa a guardar apenas id, nome, turno e função, sem a foto do colaborador. Isso evita o erro de documento acima de 1 MB e vale também para a Escala de Plantão.'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Barra Lateral Mais Limpa',
+        category: 'Interface',
+        description: 'A tag de versão que ficava ao lado do título HUBDESK foi removida.'
+      },
+      {
+        icon: Target,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Atalho para a Analítica 3M',
+        category: 'KPIs do Setor',
+        description: 'Novo botão com a logo da Analítica 3M no cabeçalho dos KPIs do Setor, que abre a plataforma em nova aba.'
+      }
+    ]
+  },
+  {
+    version: 'v4.19.3',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Correção v4.19.3: o modelo da IA deixa de ser fixo no código. O servidor escolhe o primeiro modelo do Gemini disponível e aceita a variável GEMINI_MODEL, já que o gemini-2.5-flash foi aposentado para contas novas.',
     items: [
       {

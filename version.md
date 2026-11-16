@@ -4,6 +4,22 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.19.4] - 2026-11-16
+
+### 🐛 Corrigido (Fixed)
+- **Escala Diária não salvava** (`Document 'daily_schedules/fixed_schedule' cannot be written because its size exceeds the maximum allowed size of 1,048,576 bytes`): cada alocação guardava o objeto completo do colaborador, incluindo a foto. Agora só `id`, `name`, `shift` e `role` são gravados, e o documento é substituído por inteiro. Mesmo ajuste na Escala de Plantão.
+
+### 🎨 Alterado (Changed)
+- Barra lateral: removida a tag de versão ao lado do título HUBDESK.
+
+### 🚀 Novas Funcionalidades (Added)
+- KPIs do Setor: botão de atalho com a logo da Analítica 3M (abre em nova aba).
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore. O primeiro salvamento da escala limpa o conteúdo pesado antigo.
+
+---
+
 ## [v4.19.3] - 2026-11-14
 
 ### 🐛 Corrigido (Fixed)

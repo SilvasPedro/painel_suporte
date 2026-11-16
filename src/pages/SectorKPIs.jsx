@@ -499,6 +499,22 @@ const SectorKPIs = () => {
                         )}
                     </button>
 
+                    <a
+                        href="https://eteccnet.analitica3m.com.br/production/login.php"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl border border-subtle bg-surface hover:bg-subtle text-secondary-hub font-bold text-xs transition-colors shadow-2xs cursor-pointer"
+                        title="Abrir a plataforma Analítica 3M em nova aba"
+                    >
+                        <img
+                            src="https://eteccnet.analitica3m.com.br/production/images/favicon.png"
+                            alt="Analítica 3M"
+                            className="w-5 h-5 object-contain"
+                            referrerPolicy="no-referrer"
+                        />
+                        <span>Analítica 3M</span>
+                    </a>
+
                     <button
                         type="button"
                         onClick={handleExportCSV}
