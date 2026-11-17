@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Phone, Headphones, Save, Loader2, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Phone, Mail, Headphones, Save, Loader2, AlertCircle, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 import { useAuth } from '../../context/AuthContext';
@@ -15,23 +15,30 @@ const formatPhoneNumber = (val) => {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
 };
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isContactPhoneValid = (phone) => String(phone || '').replace(/\D/g, '').length >= 8;
+const isContactEmailValid = (email) => EMAIL_REGEX.test(String(email || '').trim());
+
 export const MandatoryContactModal = () => {
     const { currentUser, isInactive } = useAuth();
     const { showToast } = useNotification();
 
     const [phone, setPhone] = useState(() => formatPhoneNumber(currentUser?.phone || ''));
     const [ramal, setRamal] = useState(() => currentUser?.ramal || currentUser?.slackOrTeams || '');
+    const [contactEmail, setContactEmail] = useState('');
     const [saving, setSaving] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [dismissed, setDismissed] = useState(false);
 
     // Verifica se os dados de contato já estão cadastrados
-    const rawPhoneDigits = (currentUser?.phone || '').replace(/\D/g, '');
-    const hasPhone = rawPhoneDigits.length >= 8;
+    const hasPhone = isContactPhoneValid(currentUser?.phone);
     const hasRamal = Boolean((currentUser?.ramal && String(currentUser.ramal).trim().length > 0) || (currentUser?.slackOrTeams && String(currentUser.slackOrTeams).trim().length > 0));
+    // O e-mail de login nunca fica em branco; o campo "E-mail" do perfil é o e-mail de contato (E-mails Adicionais)
+    const existingEmails = Array.isArray(currentUser?.additionalEmails) ? currentUser.additionalEmails : [];
+    const hasEmail = existingEmails.some(isContactEmailValid);
 
     // Não exibe se o usuário não estiver logado, estiver inativo, já preencheu tudo ou salvou com sucesso
-    if (!currentUser || isInactive || (hasPhone && hasRamal) || dismissed) {
+    if (!currentUser || isInactive || (hasPhone && hasRamal && hasEmail) || dismissed) {
         return null;
     }
 
@@ -63,6 +70,12 @@ export const MandatoryContactModal = () => {
             return;
         }
 
+        const cleanEmail = contactEmail.trim().toLowerCase();
+        if (!hasEmail && !isContactEmailValid(cleanEmail)) {
+            setErrorMsg('Por favor, informe um e-mail de contato válido.');
+            return;
+        }
+
         setSaving(true);
         try {
             const firestoreId = currentUser.firestoreId || currentUser.uid;
@@ -76,6 +89,11 @@ export const MandatoryContactModal = () => {
                 slackOrTeams: cleanRamal,
                 updatedAt: new Date().toISOString()
             };
+            if (!hasEmail) {
+                // Mantém os e-mails que já existiam e acrescenta o novo
+                const others = existingEmails.filter(e => e && String(e).toLowerCase() !== cleanEmail);
+                payload.additionalEmails = [...others, cleanEmail];
+            }
 
             // Atualiza na coleção 'collaborators'
             const colabRef = doc(db, 'collaborators', firestoreId);
@@ -137,7 +155,7 @@ export const MandatoryContactModal = () => {
                         <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                         <div>
                             <strong className="block font-bold text-primary-hub mb-0.5">Atualização Obrigatória</strong>
-                            Para navegar no HubDesk, informe seu WhatsApp/Telefone e Ramal. Esses dados são indispensáveis para os fluxos da equipe e plantões.
+                            Para navegar no HubDesk, informe seu WhatsApp/Telefone, Ramal e E-mail de contato. Esses dados são indispensáveis para os fluxos da equipe e plantões.
                         </div>
                     </div>
 
@@ -190,6 +208,29 @@ export const MandatoryContactModal = () => {
                             Número do seu ramal VoIP interno para ligações entre operadores.
                         </p>
                     </div>
+
+                    {/* E-mail de contato (só pede se ainda não houver nenhum cadastrado) */}
+                    {!hasEmail && (
+                        <div className="space-y-1.5">
+                            <label className="text-xs font-bold text-primary-hub flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <Mail className="w-3.5 h-3.5 text-rose-500" />
+                                    E-mail de Contato
+                                </span>
+                                <span className="text-[10px] text-rose-500 font-bold uppercase tracking-wider">*Obrigatório</span>
+                            </label>
+                            <input
+                                type="email"
+                                value={contactEmail}
+                                onChange={(e) => { setErrorMsg(''); setContactEmail(e.target.value); }}
+                                placeholder="seu.email@empresa.com.br"
+                                className="w-full px-3.5 py-2.5 bg-subtle border border-subtle rounded-xl text-xs font-medium text-primary-hub outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all placeholder:text-muted-hub"
+                            />
+                            <p className="text-[10px] text-muted-hub">
+                                Fica salvo em "E-mails Adicionais" do seu perfil.
+                            </p>
+                        </div>
+                    )}
 
                     {/* Botão de Salvar */}
                     <div className="pt-2">
