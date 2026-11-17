@@ -59,11 +59,16 @@ const DEFAULT_COLLECTION_ORDER = {
 
 // Chave de cache/listener: nome da coleção, ou nome + filtros quando a query é escopada
 export const buildCollectionKey = (collectionName, options = {}) => {
+    // Limite customizado entra na chave: cada tamanho de janela tem seu próprio listener/cache
+    const limitSuffix = options.limitCount ? `#limit=${options.limitCount}` : '';
     if (options.where && options.where.length > 0) {
-        return `${collectionName}?${JSON.stringify(options.where)}`;
+        return `${collectionName}?${JSON.stringify(options.where)}${limitSuffix}`;
     }
-    return collectionName;
+    return `${collectionName}${limitSuffix}`;
 };
+
+// Limite padrão de FinOps de uma coleção (null = sem limite)
+export const getDefaultCollectionLimit = (collectionName) => DEFAULT_COLLECTION_LIMITS[collectionName] || null;
 
 // Monta a query respeitando filtros, ordenação e limites de FinOps
 const buildQuery = (collectionName, options = {}, { withOrder = true } = {}) => {

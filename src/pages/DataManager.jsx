@@ -16,8 +16,10 @@ const collectionMap = {
     "kpis": "sector_kpis",
     "audits": "qa_audits"
 };
+// Abas cujos registros têm colabId e podem ser consultados por colaborador no servidor
+const SCOPED_TABS = ['feedbacks', 'metrics', 'audits'];
 import { db } from '../services/firebase';
-import { subscribeSharedCollection } from '../services/dataCache';
+import { subscribeSharedCollection, getDefaultCollectionLimit } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { resolveUserName } from '../utils/userResolvers';
 import { usePermissions } from '../context/PermissionsContext';
@@ -83,7 +85,8 @@ const DataManager = () => {
     
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+    const [loadLimit, setLoadLimit] = useState(null); // null = limite padrão da coleção
+
     const [collaboratorsMap, setCollaboratorsMap] = useState({});
     const [collaboratorsInfo, setCollaboratorsInfo] = useState({});
     const [qaProcesses, setQaProcesses] = useState({});
@@ -173,12 +176,20 @@ const DataManager = () => {
         };
     }, []);
 
+    // Com um colaborador selecionado, busca TODO o histórico dele direto no servidor
+    // (sem o teto de FinOps que corta os registros mais antigos da coleção geral).
+    const scopedColabId = SCOPED_TABS.includes(activeTab) && colabFilter !== 'all' ? colabFilter : null;
+
     useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setLoading(true);
         const currentCollection = collectionMap[activeTab];
         if (!currentCollection) return;
-        
+
+        let queryOptions = {};
+        if (scopedColabId) queryOptions = { where: [['colabId', '==', scopedColabId]] };
+        else if (loadLimit) queryOptions = { limitCount: loadLimit };
+
         const unsubscribe = subscribeSharedCollection(currentCollection, (items) => {
             const fetchedData = [...items];
             
@@ -202,14 +213,20 @@ const DataManager = () => {
             
             setData(fetchedData);
             setLoading(false);
-        });
+        }, queryOptions);
 
         return () => unsubscribe();
-    }, [activeTab]);
+    }, [activeTab, scopedColabId, loadLimit]);
+
+    // Janela de registros carregada da coleção geral (aviso + "carregar mais antigos")
+    const baseLimit = getDefaultCollectionLimit(collectionMap[activeTab]);
+    const effectiveLimit = loadLimit || baseLimit;
+    const isTruncated = !scopedColabId && Boolean(effectiveLimit) && data.length >= effectiveLimit;
 
     // Reseta filtros secundários ao alternar de aba
     const handleTabChange = (newTab) => {
         setActiveTab(newTab);
+        setLoadLimit(null);
         setStatusTypeFilter('all');
         setCurrentPage(1);
     };
@@ -850,6 +867,21 @@ const DataManager = () => {
                         <span className="font-bold text-primary-hub bg-subtle px-2.5 py-1 rounded-lg">
                             {statsSummary.total} {statsSummary.total === 1 ? 'registro encontrado' : 'registros encontrados'}
                         </span>
+
+                        {isTruncated && (
+                            <span className="inline-flex items-center gap-2 text-xs text-amber-900 bg-amber-100/90 border border-amber-300 px-2.5 py-1 rounded-lg font-semibold">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                                Exibindo apenas os {data.length} mais recentes — os filtros não alcançam registros mais antigos.
+                                <button
+                                    type="button"
+                                    onClick={() => setLoadLimit(effectiveLimit + baseLimit)}
+                                    className="underline font-bold hover:text-amber-700"
+                                >
+                                    Carregar mais antigos
+                                </button>
+                                <span className="font-normal">ou selecione um colaborador para ver todo o histórico dele.</span>
+                            </span>
+                        )}
 
                         {activeTab === 'feedbacks' && (
                             <div className="flex items-center gap-2 text-xs flex-wrap">

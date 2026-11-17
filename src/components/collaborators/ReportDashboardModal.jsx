@@ -257,29 +257,41 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
         });
 
         // 3. Feedbacks via cache compartilhado
-        const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
-            const list = [];
-            const colabIdentifiers = [colab.id, colab.firestoreId, colab.uid].filter(Boolean);
-            const colabEmail = colab.email?.toLowerCase();
-            const colabName = colab.name?.toLowerCase();
+        // Duas fontes mescladas por id: a coleção geral (limitada pelo FinOps, cobre registros legados
+        // que casam por e-mail/nome) e a consulta escopada por colabId (histórico completo, sem teto).
+        let generalItems = [];
+        let scopedItems = [];
+        const colabIdentifiers = [colab.id, colab.firestoreId, colab.uid].filter(Boolean);
+        const colabEmail = colab.email?.toLowerCase();
+        const colabName = colab.name?.toLowerCase();
 
-            items.forEach((dt) => {
+        const publishFeedbacks = () => {
+            const byId = new Map();
+            generalItems.forEach((dt) => {
                 const targetId = dt.collaboratorId || dt.colabId;
                 const matchesId = targetId && colabIdentifiers.includes(targetId);
                 const matchesEmail = colabEmail && dt.collaboratorEmail?.toLowerCase() === colabEmail;
                 const matchesName = colabName && (dt.collaboratorName?.toLowerCase() === colabName || dt.colabName?.toLowerCase() === colabName);
-
-                if (matchesId || matchesEmail || matchesName) {
-                    list.push(dt);
-                }
+                if (matchesId || matchesEmail || matchesName) byId.set(dt.id, dt);
             });
-            setFeedbacks(list);
+            scopedItems.forEach((dt) => byId.set(dt.id, dt));
+            setFeedbacks(Array.from(byId.values()));
+        };
+
+        const unsubFeedbacks = subscribeSharedCollection("feedbacks", (items) => {
+            generalItems = items;
+            publishFeedbacks();
         });
+        const unsubFeedbacksScoped = subscribeSharedCollection("feedbacks", (items) => {
+            scopedItems = items;
+            publishFeedbacks();
+        }, { where: [['colabId', '==', colab.id]] });
 
         return () => {
             unsubWeekly();
             unsubAudits();
             unsubFeedbacks();
+            unsubFeedbacksScoped();
         };
     }, [colab?.id, colab?.firestoreId, colab?.uid, colab?.email, colab?.name]);
 
