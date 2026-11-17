@@ -137,6 +137,12 @@ export const SYSTEM_MODULES = [
         description: 'Programação de folgas da equipe com visão de calendário e cards.'
     },
     {
+        id: 'vacation_schedule',
+        label: 'Escala de Férias 2027',
+        group: 'Escalas',
+        description: 'Planejamento anual de férias da equipe: linha do tempo, cobertura por turno e conflitos. Edição restrita ao Gestor.'
+    },
+    {
         id: 'daily_schedule',
         label: 'Escala Diária & Plantão',
         group: 'Escalas',
@@ -192,6 +198,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         schedules_hub: { view: true, edit: true },
         day_off_schedule: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
+        vacation_schedule: { view: true, edit: true },
         schedule: { view: true, edit: true },
         sector_kpis: { view: true, edit: true },
         data_manager: { view: true, edit: true },
@@ -215,6 +222,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         schedules_hub: { view: true, edit: true },
         day_off_schedule: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
+        vacation_schedule: { view: true, edit: false },
         schedule: { view: true, edit: true },
         sector_kpis: { view: true, edit: false },
         data_manager: { view: false, edit: false },
@@ -238,6 +246,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         schedules_hub: { view: true, edit: true },
         day_off_schedule: { view: true, edit: true },
         daily_schedule: { view: true, edit: true },
+        vacation_schedule: { view: true, edit: false },
         schedule: { view: true, edit: true },
         sector_kpis: { view: false, edit: false },
         data_manager: { view: false, edit: false },
@@ -261,6 +270,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         schedules_hub: { view: true, edit: false },
         day_off_schedule: { view: true, edit: false },
         daily_schedule: { view: true, edit: false },
+        vacation_schedule: { view: true, edit: false },
         schedule: { view: true, edit: false },
         sector_kpis: { view: false, edit: false },
         data_manager: { view: false, edit: false },

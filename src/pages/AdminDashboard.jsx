@@ -6,7 +6,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi, SlidersHorizontal
+    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi, SlidersHorizontal, Plane
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { logout } from '../services/auth';
@@ -37,6 +37,7 @@ const DayOffSchedule = lazy(() => import('./DayOffSchedule'));
 const OperationalSchedules = lazy(() => import('./OperationalSchedules'));
 const OrgChart = lazy(() => import('./OrgChart'));
 const MonthlyEvaluations = lazy(() => import('./MonthlyEvaluations'));
+const VacationSchedule = lazy(() => import('./VacationSchedule'));
 const MyDashboard = lazy(() => import('./MyDashboard'));
 const MyHistory = lazy(() => import('./MyHistory'));
 const MyProfile = lazy(() => import('./MyProfile'));
@@ -104,6 +105,7 @@ const DEFAULT_NAV_MENUS = [
         items: [
             { id: 'day_off_schedule', label: 'Escala de Folgas', icon: Coffee },
             { id: 'daily_schedule', label: 'Escala Diária & Plantão', icon: CalendarDays },
+            { id: 'vacation_schedule', label: 'Escala de Férias 2027', icon: Plane },
         ]
     },
     {
@@ -361,6 +363,8 @@ const AdminDashboard = () => {
                 return <MonthlyEvaluations />;
             case 'day_off_schedule':
                 return <DayOffSchedule readOnly={!canEdit('day_off_schedule')} />;
+            case 'vacation_schedule':
+                return <VacationSchedule readOnly={!canEdit('vacation_schedule')} />;
             case 'operational_schedules':
             case 'daily_schedule':
                 return <OperationalSchedules initialTab="diaria" readOnly={!canEdit('daily_schedule')} />;

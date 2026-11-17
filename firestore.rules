@@ -30,6 +30,18 @@ service cloud.firestore {
       );
     }
 
+    // Gestão (somente Gestor/Admin/Diretor): usado onde supervisores NÃO podem escrever (ex.: escala de férias)
+    function isManager() {
+      return isSignedIn() && (
+        request.auth.token.email == "pedrosouzactt@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (
+          exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role in ['Admin', 'Gestor', 'Diretor']
+        )
+      );
+    }
+
     // Equipe do Smart Pre: gestão/supervisão (isStaffAdmin) + Apoio
     function isSmartPreTeam() {
       return isStaffAdmin() || (
@@ -197,6 +209,12 @@ service cloud.firestore {
     match /day_off_schedules/{schedId} {
       allow read: if isSignedIn();
       allow write: if isStaffAdmin();
+    }
+
+    // Escala de férias (documento por ano, ex.: 2027): todos leem; só o Gestor edita
+    match /vacation_schedules/{year} {
+      allow read: if isSignedIn();
+      allow write: if isManager();
     }
 
     match /system_settings/{settingId} {
