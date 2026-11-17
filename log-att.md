@@ -4,6 +4,17 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [17/11/2026] — Versão v4.21.2 (Regras: marcar lido, 1:1 e cargo)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.21.1` para `4.21.2`. |
+| **Alterado** | `firestore.rules` | `feedbacks` e `monthly_evaluations`: colaborador marca como lido com os 7 campos de leitura; cargo com `trim().lower()`. |
+| **Alterado** | `src/pages/Agenda.jsx` | Mensagem de erro ao salvar distingue `permission-denied` dos demais erros. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [17/11/2026] — Versão v4.21.1 (Contatos obrigatórios no login)
 
 | Ação | Arquivo | Descrição da Alteração |

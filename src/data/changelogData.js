@@ -1,13 +1,43 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.21.1';
+export const CURRENT_VERSION = 'v4.21.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.21.1',
+    version: 'v4.21.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.21.2: colaboradores voltam a conseguir marcar feedbacks e 1:1 como lidos, a checagem de cargo nas regras ignora maiúsculas e espaços, e a Agenda mostra o erro real ao salvar.',
+    items: [
+      {
+        icon: CheckCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Marcar como Lido Voltou a Funcionar',
+        category: 'Feedbacks',
+        description: 'As regras do Firestore negavam a confirmação de leitura porque o app grava também quem leu e quando. Agora a ciência de feedbacks e do 1:1 mensal é aceita para o colaborador avaliado.'
+      },
+      {
+        icon: Lock,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Cargo Sem Diferença de Maiúsculas',
+        category: 'Permissões',
+        description: 'Cargos como "gestor" ou "Gestor " passam a valer como Gestor nas regras do servidor.'
+      },
+      {
+        icon: Calendar,
+        iconColor: 'text-violet-500 bg-violet-500/10 border-violet-500/20',
+        title: 'Erro Claro ao Salvar na Agenda',
+        category: 'Agenda',
+        description: 'A mensagem só aponta falta de permissão quando o Firestore recusou de fato; outros erros mostram o motivo real.'
+      }
+    ]
+  },
+  {
+    version: 'v4.21.1',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Correção v4.21.1: a tela de contatos obrigatórios deixa de reaparecer a cada login para contas fora da tabela de equipe.',
     items: [
       {

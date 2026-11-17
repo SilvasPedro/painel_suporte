@@ -25,7 +25,8 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
         (
           exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role in ['Admin', 'Gestor', 'Supervisor', 'NOC', 'Diretor']
+          // trim() + lower(): o cargo é texto livre e pode estar como "gestor" ou "Gestor " no cadastro
+          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role.trim().lower() in ['admin', 'gestor', 'supervisor', 'noc', 'diretor']
         )
       );
     }
@@ -37,7 +38,7 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
         (
           exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role in ['Admin', 'Gestor', 'Diretor']
+          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role.trim().lower() in ['admin', 'gestor', 'diretor']
         )
       );
     }
@@ -131,12 +132,15 @@ service cloud.firestore {
       );
       // Criação e gestão exclusiva de liderança
       allow create, delete: if isStaffAdmin();
-      // Colaborador pode apenas marcar como lido (read = true)
+      // Colaborador pode apenas marcar como lido: o app grava também quem leu e quando (readBy*, updatedAt)
       allow update: if isSignedIn() && (
         isStaffAdmin() ||
         (
           (resource.data.colabId == request.auth.uid || resource.data.collaboratorId == request.auth.uid) &&
-          incoming().diff(existing()).affectedKeys().hasOnly(['read', 'readAt'])
+          incoming().read == true &&
+          incoming().diff(existing()).affectedKeys().hasOnly(
+            ['read', 'readAt', 'readAtFormatted', 'readByUid', 'readByName', 'readByEmail', 'updatedAt']
+          )
         )
       );
     }
@@ -197,7 +201,18 @@ service cloud.firestore {
 
     match /monthly_evaluations/{evalId} {
       allow read: if isSignedIn();
-      allow write: if isStaffAdmin();
+      allow create, delete: if isStaffAdmin();
+      // O colaborador avaliado confirma a ciência do 1:1 (mesmos campos de leitura dos feedbacks)
+      allow update: if isSignedIn() && (
+        isStaffAdmin() ||
+        (
+          (resource.data.colabId == request.auth.uid || resource.data.collaboratorId == request.auth.uid) &&
+          incoming().read == true &&
+          incoming().diff(existing()).affectedKeys().hasOnly(
+            ['read', 'readAt', 'readAtFormatted', 'readByUid', 'readByName', 'readByEmail', 'updatedAt']
+          )
+        )
+      );
     }
 
     match /sunday_schedules/{schedId} {

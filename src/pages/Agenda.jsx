@@ -327,7 +327,10 @@ const Agenda = ({ readOnly = false }) => {
             if (rescheduled.length) void sendAgendaInviteDm({ eventId: id, recipientIds: rescheduled, rescheduled: true });
         } catch (error) {
             console.error('Erro ao salvar evento:', error);
-            showToast('Erro ao salvar o evento. Só a Gestão pode criar ou editar eventos.', 'error');
+            // Só culpa a permissão quando foi mesmo o Firestore que recusou
+            showToast(error?.code === 'permission-denied'
+                ? 'Sem permissão para salvar o evento. Confira se as regras do Firestore foram publicadas e se o seu cargo é Gestor.'
+                : `Erro ao salvar o evento: ${error?.message || 'tente novamente'}`, 'error');
         } finally {
             setSaving(false);
         }

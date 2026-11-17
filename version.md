@@ -4,6 +4,20 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.21.2] - 2026-11-17
+
+### 🐛 Corrigido (Fixed)
+- **Colaborador não conseguia marcar feedback como lido**: a regra de `feedbacks` só aceitava `read` e `readAt`, mas o app grava também `readAtFormatted`, `readByUid`, `readByName`, `readByEmail` e `updatedAt`. Agora aceita esses 7 campos e exige `read == true`.
+- **Ciência do 1:1 mensal negada ao colaborador**: `monthly_evaluations` era só da gestão; o colaborador avaliado passa a atualizar os mesmos campos de leitura.
+- **Cargo nas regras**: `isStaffAdmin` e `isManager` usam `trim().lower()` (aceita `gestor`, `Gestor `).
+- **Agenda**: a mensagem de erro ao salvar só fala em permissão quando o Firestore retorna `permission-denied`.
+
+### ⚠️ Observações
+- **Publicar as regras do Firestore** (`firebase deploy --only firestore:rules`), incluindo `agenda_events` da v4.21.0.
+- Cargos como "Coordenador" ou "Gerente" aparecem como Gestor na tela, mas as regras continuam exigindo admin, gestor ou diretor.
+
+---
+
 ## [v4.21.1] - 2026-11-17
 
 ### 🐛 Corrigido (Fixed)
