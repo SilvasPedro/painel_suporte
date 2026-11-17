@@ -1,13 +1,57 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.19.4';
+export const CURRENT_VERSION = 'v4.20.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.19.4',
+    version: 'v4.20.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.20.0: feedbacks antigos deixam de sumir nos filtros, contatos obrigatórios passam a incluir o e-mail, o Discord ganha botão de ativar/desativar o Bot na DM (ID vinculado só pela Gestão) e chegam a Escala de Férias 2027 e o dashboard analítico reformulado.',
+    items: [
+      {
+        icon: Filter,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Feedbacks Antigos Não Somem Mais',
+        category: 'Gestão de Dados',
+        description: 'Ao filtrar por colaborador, a Gestão de Dados busca todo o histórico dele. Sem colaborador, aparece um aviso quando só os mais recentes estão carregados, com o botão "Carregar mais antigos". O relatório do colaborador também mostra o histórico completo.'
+      },
+      {
+        icon: Phone,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'E-mail de Contato Obrigatório',
+        category: 'Perfil',
+        description: 'Quem entra sem Telefone/WhatsApp, Ramal ou e-mail de contato precisa preencher os três na tela de cadastro para continuar usando a plataforma.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Notificações do Bot na DM',
+        category: 'Discord',
+        description: 'Em Meu Perfil, o ID do Discord passa a ser somente leitura e um botão (bot com check ou bloqueio) ativa ou desativa os avisos por DM. Só a Gestão vincula ou altera o ID, em Editar Colaborador.'
+      },
+      {
+        icon: Calendar,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Escala de Férias 2027',
+        category: 'Escalas',
+        description: 'Planejamento anual com linha do tempo, cobertura por turno e conflitos. A edição é restrita à Gestão.'
+      },
+      {
+        icon: BarChart3,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Dashboard Analítico Reformulado',
+        category: 'Dashboard',
+        description: 'Visão geral reescrita com novos cartões e gráficos, ajustes nos KPIs do Setor e lançamento de demanda diária em modal.'
+      }
+    ]
+  },
+  {
+    version: 'v4.19.4',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Correção v4.19.4: a Escala Diária voltou a salvar (o documento passou do limite de 1 MB do Firestore por guardar a foto de cada colaborador), a barra lateral perdeu a tag de versão e os KPIs do Setor ganharam um atalho para a Analítica 3M.',
     items: [
       {

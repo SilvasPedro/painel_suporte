@@ -155,7 +155,8 @@ describe('describeDmResult', () => {
 
     it('teste: orienta conforme o motivo', () => {
         expect(describeDmResult({ event: 'test', httpStatus: 200, summary: { sent: 1 } }).type).toBe('success');
-        expect(describeDmResult({ event: 'test', httpStatus: 200, summary: { noLink: 1 } }).text).toMatch(/salve o seu ID/i);
+        expect(describeDmResult({ event: 'test', httpStatus: 200, summary: { noLink: 1 } }).text).toMatch(/não está vinculado/i);
+        expect(describeDmResult({ event: 'test', httpStatus: 200, summary: { disabled: 1 } }).text).toMatch(/desativadas/i);
         expect(describeDmResult({ event: 'test', httpStatus: 200, summary: { blocked: 1 } }).text).toMatch(/mensagens diretas/i);
     });
 

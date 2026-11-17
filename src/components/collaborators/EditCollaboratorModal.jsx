@@ -3,12 +3,14 @@ import {
     X, Loader2, User, Mail, Sun, Sunset, Moon, 
     KeyRound, Check, Shield, ShieldCheck, Users, Edit3,
     Trophy, Sparkles, Headphones, Award, Star, Zap, Rocket, CalendarCheck, Network,
-    ThumbsUp, TrendingUp, Clock
+    ThumbsUp, TrendingUp, Clock, Bot
 } from 'lucide-react';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../services/firebase';
 import { updateCollaboratorProfile } from '../../services/adminAuth';
 import { useNotification } from '../../context/NotificationContext';
+import { usePermissions } from '../../context/PermissionsContext';
+import { isValidDiscordId } from '../../services/discordDm';
 import { BADGES_CATALOG, calculateUserLevel, THIRD_PARTY_SCHEDULE_INFO, LEGACY_BADGE_MAP } from '../../services/userProfile';
 
 const BADGE_ICONS = {
@@ -41,6 +43,9 @@ const SHIFT_OPTIONS = [
 
 export const EditCollaboratorModal = ({ colab, onClose }) => {
     const { showToast } = useNotification();
+    const { isMasterAdmin, normalizedRole } = usePermissions();
+    // Só a Gestão vincula/altera o ID do Discord (o colaborador vê, mas não edita, em Meu Perfil)
+    const canEditDiscordId = isMasterAdmin || normalizedRole === 'gestor';
     const initialShift = colab.shift === 'Manhã' ? 'Manhã I' : (colab.shift === 'Noite' ? 'Noturno' : (colab.shift || 'Manhã I'));
     const [formData, setFormData] = useState({
         name: colab.name || '',
@@ -48,6 +53,7 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
         role: ['', 'colaborador', 'operacional'].includes(String(colab.role || '').trim().toLowerCase()) ? 'Operacional' : colab.role,
         shift: initialShift,
         active: colab.active !== false,
+        discordUserId: colab.discordUserId || '',
         badges: Array.isArray(colab.badges) 
             ? colab.badges.map(b => LEGACY_BADGE_MAP[b] || b).filter(b => BADGES_CATALOG.some(c => c.id === b))
             : []
@@ -69,16 +75,25 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const discordId = formData.discordUserId.trim();
+        const discordChanged = discordId !== String(colab.discordUserId || '').trim();
+        if (canEditDiscordId && discordChanged && discordId && !isValidDiscordId(discordId)) {
+            showToast('O ID do Discord deve ter de 17 a 20 números (ou ficar vazio para desvincular).', 'warning');
+            return;
+        }
         setLoading(true);
         try {
-            await updateCollaboratorProfile(colab.id, {
+            const payload = {
                 name: formData.name.trim(),
                 role: formData.role,
                 shift: formData.shift,
                 active: formData.active,
                 badges: formData.badges,
                 status: formData.active ? 'Ativo' : 'Inativo'
-            });
+            };
+            // Só envia quando a Gestão alterou: as regras do Firestore recusam mudança de outra função
+            if (canEditDiscordId && discordChanged) payload.discordUserId = discordId;
+            await updateCollaboratorProfile(colab.id, payload);
             showToast("Dados do colaborador e insígnias atualizados com sucesso!", "success");
             onClose();
         } catch (error) {
@@ -246,6 +261,32 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
                         {/* COLUNA 2: EMBLEMAS, STATUS OPERACIONAL & SENHA */}
                         <div className="space-y-4">
                             
+                            {/* Discord (somente Gestão edita) */}
+                            <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs space-y-2">
+                                <label className="text-xs font-bold text-secondary-hub flex items-center gap-1.5">
+                                    <Bot className="w-3.5 h-3.5 text-indigo-500" />
+                                    <span>ID do Discord (avisos do Bot por DM)</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    maxLength={20}
+                                    value={formData.discordUserId}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, discordUserId: e.target.value.replace(/\D/g, '') }))}
+                                    disabled={!canEditDiscordId}
+                                    placeholder="Ex: 123456789012345678"
+                                    className="w-full px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub disabled:opacity-60 disabled:cursor-not-allowed"
+                                />
+                                {formData.discordUserId && !isValidDiscordId(formData.discordUserId) && (
+                                    <p className="text-[11px] text-rose-600">O ID do Discord tem de 17 a 20 números.</p>
+                                )}
+                                <p className="text-[11px] text-muted-hub leading-relaxed">
+                                    {canEditDiscordId
+                                        ? 'Deixe vazio para desvincular. Para achar o ID: Discord > Configurações > Avançado > Modo desenvolvedor, clique com o botão direito no usuário e escolha Copiar ID do usuário. O colaborador ativa ou desativa os avisos em Meu Perfil.'
+                                        : 'Somente a Gestão pode vincular ou alterar o ID do Discord.'}
+                                </p>
+                            </div>
+
                             {/* Emblemas & Insígnias */}
                             <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs space-y-2.5">
                                 <div className="flex items-center justify-between">

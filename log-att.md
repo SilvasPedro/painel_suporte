@@ -4,6 +4,27 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [17/11/2026] — Versão v4.20.0 (Feedbacks completos, contatos, Discord e Escala de Férias)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.19.4` para `4.20.0`. |
+| **Alterado** | `src/services/dataCache.js` | `limitCount` entra na chave do cache; exporta `getDefaultCollectionLimit`. |
+| **Alterado** | `src/pages/DataManager.jsx` | Consulta por colaborador no servidor, aviso de lista truncada e "Carregar mais antigos". |
+| **Alterado** | `src/components/collaborators/ReportDashboardModal.jsx` | Feedbacks: coleção geral + consulta por `colabId`, mesclados por id. |
+| **Alterado** | `src/components/profile/MandatoryContactModal.jsx` | Exige e-mail de contato além de telefone e ramal. |
+| **Alterado** | `src/pages/MyProfile.jsx` | ID do Discord somente leitura e botão de notificações do Bot na DM. |
+| **Alterado** | `src/services/userProfile.js` | Grava `discordDmEnabled`; não regrava mais `discordUserId`. |
+| **Alterado** | `src/components/collaborators/EditCollaboratorModal.jsx` | Campo de ID do Discord, editável só pela Gestão. |
+| **Alterado** | `api/_lib/dm.js` / `dm.test.js`, `src/services/discordDm.js` / `.test.js` | Status `desativado` e novos textos, com testes. |
+| **Alterado** | `firestore.rules` | `vacation_schedules` e `discordUserId` restritos à Gestão (`isManager()`). |
+| **Criado** | `src/pages/VacationSchedule.jsx`, `src/utils/vacationSchedule.js` (+ teste) | Escala de Férias 2027. |
+| **Alterado** | `src/pages/AdminDashboard.jsx`, `src/services/rbac.js` | Menu e permissões da Escala de Férias. |
+| **Alterado/Criado** | `src/pages/DashboardOverview.jsx`, `src/components/dashboard/`, `src/utils/dashboardAnalytics.js` (+ teste), `SectorKPIs.jsx`, `DailyDemandLaunch.jsx`, `DailyDemandModal.jsx` | Dashboard analítico e demanda diária em modal. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [16/11/2026] — Versão v4.19.4 (Escala Diária, Barra Lateral e Atalho Analítica 3M)
 
 | Ação | Arquivo | Descrição da Alteração |

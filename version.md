@@ -4,6 +4,23 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.20.0] - 2026-11-17
+
+### 🐛 Corrigido (Fixed)
+- **Feedbacks antigos sumiam mesmo com filtros**: a coleção carregava só os 300 mais recentes e os filtros rodavam no navegador sobre essa janela. Gestão de Dados passa a consultar todo o histórico do colaborador selecionado (feedbacks, métricas e auditorias), avisa quando a lista está truncada e oferece "Carregar mais antigos" (+300 por clique). O relatório do colaborador mescla a coleção geral com a consulta por `colabId`. O limite passa a compor a chave do cache.
+
+### 🚀 Novas Funcionalidades (Added)
+- **Contatos obrigatórios**: além de Telefone/WhatsApp e Ramal, exige ao menos um e-mail de contato válido (salvo em `additionalEmails`).
+- **Notificações do Bot na DM**: Meu Perfil ganha botão de ativar/desativar (campo `discordDmEnabled`, ausente = ativado). O servidor responde `desativado` e não envia a DM.
+- **ID do Discord**: somente leitura em Meu Perfil; a Gestão vincula/altera em Editar Colaborador.
+- **Escala de Férias 2027** (`vacation_schedules/{ano}`): linha do tempo, cobertura por turno e conflitos; edição restrita à Gestão.
+- **Dashboard analítico reformulado**, KPIs do Setor e lançamento de demanda diária em modal.
+
+### ⚠️ Observações
+- **Publicar as regras do Firestore** (`firebase deploy --only firestore:rules`): `vacation_schedules` (função `isManager()`) e `discordUserId` em `collaborators` só alterável pela Gestão.
+
+---
+
 ## [v4.19.4] - 2026-11-16
 
 ### 🐛 Corrigido (Fixed)

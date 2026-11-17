@@ -78,7 +78,7 @@ export const describeDmResult = ({ event, httpStatus, error, summary, reason, li
             : null;
     }
 
-    const { sent = 0, noLink = 0, inactive = 0, blocked = 0, failed = 0 } = summary;
+    const { sent = 0, noLink = 0, inactive = 0, disabled = 0, blocked = 0, failed = 0 } = summary;
 
     // Tarefas e relatórios acontecem toda hora: só avisa o gestor quando a DM saiu ou deu problema
     if (String(event || '').startsWith('report_')) {
@@ -90,7 +90,8 @@ export const describeDmResult = ({ event, httpStatus, error, summary, reason, li
 
     if (isTest) {
         if (sent > 0) return { type: 'success', text: 'DM de teste enviada! Confira suas mensagens diretas no Discord.' };
-        if (noLink > 0) return { type: 'warning', text: 'Informe e salve o seu ID do Discord no perfil antes de enviar o teste.' };
+        if (disabled > 0) return { type: 'warning', text: 'As notificações do bot na DM estão desativadas. Ative-as em Meu Perfil e salve antes de enviar o teste.' };
+        if (noLink > 0) return { type: 'warning', text: 'Seu ID do Discord ainda não está vinculado ao perfil. Fale com a gestão para vincular.' };
         if (blocked > 0) {
             return { type: 'warning', text: 'O Discord bloqueou a DM. Entre no mesmo servidor do bot e ative "Mensagens diretas" de membros do servidor nas suas configurações de privacidade.' };
         }
@@ -125,7 +126,7 @@ const countLinkedRecipients = (recipients) => {
     try {
         const ids = new Set(recipients.map(r => String(r.id)));
         return (getCachedCollection('collaborators') || [])
-            .filter(c => ids.has(String(c.id)) && isValidDiscordId(c.discordUserId)).length;
+            .filter(c => ids.has(String(c.id)) && isValidDiscordId(c.discordUserId) && c.discordDmEnabled !== false).length;
     } catch {
         return 0;
     }

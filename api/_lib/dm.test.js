@@ -265,6 +265,13 @@ describe('processDmRequest', () => {
         expect(calls.discord).toHaveLength(0);
     });
 
+    it('colaborador que desativou as notificações do bot não recebe DM', async () => {
+        const docs = { ...staffDocs, 'collaborators/ana': { name: 'Ana', discordUserId: DISCORD_ID_ANA, discordDmEnabled: false } };
+        const { json: body, calls } = await run({}, { docs });
+        expect(body.summary).toMatchObject({ sent: 0, disabled: 1, failed: 0 });
+        expect(calls.discord).toHaveLength(0);
+    });
+
     it('exige destinatários, respeita o limite e descarta IDs com caracteres perigosos', async () => {
         expect((await run({ body: { event: 'feedback', recipients: [] } })).status).toBe(400);
 

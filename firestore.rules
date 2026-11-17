@@ -98,11 +98,15 @@ service cloud.firestore {
       allow read: if isSignedIn();
       // Apenas Administradores podem cadastrar, desativar ou alterar cargos RBAC
       allow create, delete: if isStaffAdmin();
+      // discordUserId (vínculo com o Discord): só a Gestão altera; supervisão e o próprio colaborador não
       allow update: if isSignedIn() && (
-        isStaffAdmin() ||
+        (
+          isStaffAdmin() &&
+          (isManager() || !incoming().diff(existing()).affectedKeys().hasAny(['discordUserId']))
+        ) ||
         (
           request.auth.uid == colabId &&
-          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'isInactive', 'permissions'])
+          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'isInactive', 'permissions', 'discordUserId'])
         )
       );
     }

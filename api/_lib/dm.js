@@ -346,11 +346,12 @@ const runWithConcurrency = async (items, limit, worker) => {
 };
 
 const summarize = (results) => {
-    const summary = { sent: 0, noLink: 0, inactive: 0, blocked: 0, failed: 0 };
+    const summary = { sent: 0, noLink: 0, inactive: 0, disabled: 0, blocked: 0, failed: 0 };
     for (const r of results) {
         if (r.status === 'enviado') summary.sent++;
         else if (r.status === 'sem-vinculo') summary.noLink++;
         else if (r.status === 'inativo') summary.inactive++;
+        else if (r.status === 'desativado') summary.disabled++;
         else if (r.status === 'dm-bloqueada') summary.blocked++;
         else summary.failed++;
     }
@@ -473,6 +474,8 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
 
             const discordUserId = readString(colab, 'discordUserId').trim();
             if (!isValidDiscordId(discordUserId)) return { id: recipient.id, status: 'sem-vinculo' };
+            // O próprio colaborador pode desligar o bot em Meu Perfil (ausente = ligado)
+            if (readBoolean(colab, 'discordDmEnabled') === false) return { id: recipient.id, status: 'desativado' };
 
             const status = await sendDiscordDm(discordUserId, buildDmContent(event, recipient.params, link), discordCtx);
             if (status === 'token-invalido') tokenRejected = true;

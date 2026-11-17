@@ -5,7 +5,8 @@ import {
     Phone, Clock, ExternalLink, Copy, CheckCircle2,
     Sparkles, Plus, Trash2, Loader2, Save,
     Headphones, Users, Search,
-    ArrowLeft, Eye, ChevronRight, TrendingUp, Palette, Image as ImageIcon
+    ArrowLeft, Eye, ChevronRight, TrendingUp, Palette, Image as ImageIcon,
+    Bot, Ban
 } from 'lucide-react';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
@@ -67,6 +68,7 @@ const getInitialFormData = (u) => {
         bannerColor: u?.bannerColor || 'carmim',
         bannerUrl: u?.bannerUrl || '',
         discordUserId: u?.discordUserId || '',
+        discordDmEnabled: u?.discordDmEnabled !== false,
         bannerPosX: u?.bannerPosX ?? 50,
         bannerPosY: u?.bannerPosY ?? 50,
         bannerZoom: u?.bannerZoom ?? 100,
@@ -82,6 +84,16 @@ const getInitialFormData = (u) => {
         badges: Array.isArray(u?.badges) ? u.badges : []
     };
 };
+
+// Ícone de bot com selo: check (notificações ativas) ou bloqueio (desativadas)
+const BotStatusIcon = ({ enabled }) => (
+    <span className="relative inline-flex w-5 h-5 shrink-0">
+        <Bot className="w-5 h-5" />
+        <span className={`absolute -right-1.5 -bottom-1.5 rounded-full p-px ring-2 ring-surface text-white ${enabled ? 'bg-emerald-500' : 'bg-rose-500'}`}>
+            {enabled ? <Check className="w-2.5 h-2.5" strokeWidth={3.5} /> : <Ban className="w-2.5 h-2.5" strokeWidth={3.5} />}
+        </span>
+    </span>
+);
 
 const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const { currentUser: authContextUser } = useAuth();
@@ -407,8 +419,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     // DM de teste para o próprio usuário: a função lê o ID já SALVO no perfil, não o que está na tela
     const handleSendDmTest = async () => {
         const saved = String(user?.discordUserId || '').trim();
-        if (!saved || saved !== String(formData.discordUserId || '').trim()) {
-            showToast('Salve o perfil com o ID do Discord antes de enviar o teste.', 'warning');
+        const savedEnabled = user?.discordDmEnabled !== false;
+        if (!saved || saved !== String(formData.discordUserId || '').trim() || savedEnabled !== formData.discordDmEnabled) {
+            showToast('Salve o perfil antes de enviar o teste.', 'warning');
             return;
         }
         setSendingDmTest(true);
@@ -897,26 +910,40 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 </label>
                                 <input
                                     type="text"
-                                    inputMode="numeric"
-                                    maxLength={20}
-                                    value={formData.discordUserId}
-                                    onChange={(e) => setFormData(prev => ({ ...prev, discordUserId: e.target.value.replace(/\D/g, '') }))}
-                                    placeholder="Seu ID numérico, ex: 123456789012345678"
-                                    className="w-full px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-mono outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 text-primary-hub placeholder:text-muted-hub"
+                                    value={formData.discordUserId || 'Não vinculado'}
+                                    readOnly
+                                    disabled
+                                    aria-label="ID do Discord (somente leitura)"
+                                    className="w-full px-3 py-2 bg-subtle border border-subtle rounded-xl text-xs font-mono text-muted-hub cursor-not-allowed opacity-80"
                                 />
-                                {formData.discordUserId && !isValidDiscordId(formData.discordUserId) && (
-                                    <p className="text-[11px] text-rose-600 dark:text-rose-400 mt-1">O ID do Discord tem de 17 a 20 números.</p>
-                                )}
+                                {(() => {
+                                    const linked = isValidDiscordId(formData.discordUserId);
+                                    const on = linked && formData.discordDmEnabled;
+                                    return (
+                                        <button
+                                            type="button"
+                                            onClick={() => setFormData(prev => ({ ...prev, discordDmEnabled: !prev.discordDmEnabled }))}
+                                            disabled={!linked || (isViewingOther && !isGestor)}
+                                            aria-pressed={on}
+                                            title={on ? 'Clique para desativar as notificações do bot na DM' : 'Clique para ativar as notificações do bot na DM'}
+                                            className={`mt-2 inline-flex items-center gap-2.5 px-3 py-2 rounded-xl border text-[11px] font-bold cursor-pointer transition-all disabled:opacity-50 disabled:cursor-not-allowed ${on
+                                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/15'
+                                                : 'border-rose-500/40 bg-rose-500/10 text-rose-700 dark:text-rose-400 hover:bg-rose-500/15'}`}
+                                        >
+                                            <BotStatusIcon enabled={on} />
+                                            {on ? 'Notificações do Bot na DM: Ativadas' : 'Notificações do Bot na DM: Desativadas'}
+                                        </button>
+                                    );
+                                })()}
                                 <p className="text-[11px] text-muted-hub mt-1.5 leading-relaxed">
-                                    Opcional. Com o ID informado, você recebe uma mensagem privada no Discord quando sair uma avaliação semanal, feedback ou 1:1.
-                                    Para achar o ID: Discord &gt; Configurações &gt; Avançado &gt; ative o <strong>Modo desenvolvedor</strong>, clique com o botão direito no seu nome e escolha <strong>Copiar ID do usuário</strong>.
-                                    Você precisa estar no servidor do bot e permitir mensagens diretas de membros do servidor. Para parar de receber, apague o ID e salve.
+                                    O ID do Discord é definido pela gestão e não pode ser alterado aqui. Use o botão para ativar ou desativar os avisos do bot por mensagem direta (avaliação semanal, feedback, 1:1 e tarefas).
+                                    Depois de alterar, clique em <strong>Salvar Alterações</strong>.
                                 </p>
                                 {!isViewingOther && (
                                     <button
                                         type="button"
                                         onClick={handleSendDmTest}
-                                        disabled={sendingDmTest || !isValidDiscordId(formData.discordUserId)}
+                                        disabled={sendingDmTest || !isValidDiscordId(formData.discordUserId) || !formData.discordDmEnabled}
                                         className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-strong text-secondary-hub hover:bg-subtle text-[11px] font-bold cursor-pointer disabled:opacity-50"
                                     >
                                         {sendingDmTest ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
