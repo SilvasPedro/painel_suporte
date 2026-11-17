@@ -4,6 +4,13 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.21.1] - 2026-11-17
+
+### 🐛 Corrigido (Fixed)
+- **Contatos obrigatórios reapareciam a cada login**: para a conta fora da tabela de equipe, a tela grava os contatos em `collaborators/{uid}` sem o campo `email`, e o login só buscava o cadastro por e-mail. `AuthContext` agora procura também o documento pelo uid; achado só por uid e sem cargo, é tratado como Gestor (mesmo padrão do fallback da conta master).
+
+---
+
 ## [v4.21.0] - 2026-11-17
 
 ### 🚀 Novas Funcionalidades (Added)

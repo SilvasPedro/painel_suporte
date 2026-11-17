@@ -1,13 +1,29 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.21.0';
+export const CURRENT_VERSION = 'v4.21.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.21.0',
+    version: 'v4.21.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.21.1: a tela de contatos obrigatórios deixa de reaparecer a cada login para contas fora da tabela de equipe.',
+    items: [
+      {
+        icon: Phone,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Contatos Obrigatórios Não Reaparecem',
+        category: 'Perfil',
+        description: 'No login, o cadastro passa a ser procurado também pelo uid. Quem já preencheu telefone, ramal e e-mail de contato não precisa preencher de novo a cada acesso.'
+      }
+    ]
+  },
+  {
+    version: 'v4.21.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Versão v4.21.0: perfil personalizável (fundo da tela, patterns coloridos, cor de destaque e frase de status), nova Agenda com convites por DM no Discord e dois cartões novos no Meu Desempenho (Férias e Agenda).',
     items: [
       {

@@ -4,6 +4,16 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [17/11/2026] — Versão v4.21.1 (Contatos obrigatórios no login)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.21.0` para `4.21.1`. |
+| **Alterado** | `src/context/AuthContext.jsx` | Procura o cadastro também por `collaborators/{uid}` quando a busca por e-mail não acha; documento sem cargo achado só por uid vira Gestor. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [17/11/2026] — Versão v4.21.0 (Perfil personalizável, Agenda e cartões do Meu Desempenho)
 
 | Ação | Arquivo | Descrição da Alteração |

@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 
 const AuthContext = createContext();
@@ -34,11 +34,26 @@ export const AuthProvider = ({ children }) => {
                         querySnapshot = await getDocs(qLower);
                     }
 
-                    if (!querySnapshot.empty) {
-                        colabDoc = querySnapshot.docs[0];
+                    colabDoc = querySnapshot.empty ? null : querySnapshot.docs[0];
+
+                    // Conta master fora da tabela de equipe: os contatos obrigatórios gravam collaborators/{uid}
+                    // sem e-mail, então a busca por e-mail não o acha. Procura também pelo uid, senão a tela de
+                    // contatos reaparece a cada novo login.
+                    let foundByUidOnly = false;
+                    if (!colabDoc && user.uid) {
+                        const byUid = await getDoc(doc(db, "collaborators", user.uid));
+                        if (byUid.exists()) {
+                            colabDoc = byUid;
+                            foundByUidOnly = true;
+                        }
+                    }
+
+                    if (colabDoc) {
                         colabData = colabDoc.data();
                         
-                        const applyColabData = (data, docId) => {
+                        const applyColabData = (rawData, docId) => {
+                            // Documento achado só pelo uid e sem cargo = a conta master (mesmo padrão do fallback abaixo)
+                            const data = foundByUidOnly && !rawData.role ? { ...rawData, role: 'Gestor' } : rawData;
                             const roleLower = data.role?.toLowerCase() || '';
                             const hasAdminAccess = roleLower.includes('admin') || roleLower.includes('gestor') || roleLower.includes('supervisor') || roleLower.includes('apoio');
                             
