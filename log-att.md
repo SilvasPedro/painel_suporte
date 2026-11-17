@@ -4,6 +4,24 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [17/11/2026] — Versão v4.21.0 (Perfil personalizável, Agenda e cartões do Meu Desempenho)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.20.0` para `4.21.0`. |
+| **Criado** | `src/utils/profileTheme.js` (+ teste) | Presets, patterns, normalização e estilos do tema do perfil. |
+| **Criado** | `src/components/profile/ProfileThemeModal.jsx`, `ProfileThemeLayer.jsx` (+ teste) | Modal de personalização e camada de fundo. |
+| **Alterado** | `src/pages/MyProfile.jsx`, `src/services/userProfile.js`, `src/index.css` | Botão Personalizar Perfil, tema aplicado à tela, gravação de `profileTheme`, estilo vidro. |
+| **Criado** | `src/pages/Agenda.jsx`, `src/utils/agenda.js` (+ teste) | Tela e regras da Agenda. |
+| **Alterado** | `src/pages/AdminDashboard.jsx`, `src/services/rbac.js`, `src/services/dataCache.js` | Menu, módulo `agenda` e limite de 300 eventos. |
+| **Alterado** | `api/_lib/dm.js` / `dm.test.js`, `src/services/discordDm.js` | Evento `agenda_invite` e `sendAgendaInviteDm`. |
+| **Alterado** | `firestore.rules` | Coleção `agenda_events`. |
+| **Alterado** | `src/pages/MyDashboard.jsx`, `src/utils/vacationSchedule.js` | Cartões de Férias e Agenda; `myVacationSummary`. |
+| **Alterado** | `firebase.json` | Destino `firestore` para o deploy das regras. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [17/11/2026] — Versão v4.20.0 (Feedbacks completos, contatos, Discord e Escala de Férias)
 
 | Ação | Arquivo | Descrição da Alteração |

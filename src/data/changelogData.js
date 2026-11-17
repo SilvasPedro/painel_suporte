@@ -1,13 +1,50 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.20.0';
+export const CURRENT_VERSION = 'v4.21.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.20.0',
+    version: 'v4.21.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.21.0: perfil personalizável (fundo da tela, patterns coloridos, cor de destaque e frase de status), nova Agenda com convites por DM no Discord e dois cartões novos no Meu Desempenho (Férias e Agenda).',
+    items: [
+      {
+        icon: Palette,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Perfil com a Sua Cara',
+        category: 'Perfil',
+        description: 'Novo botão Personalizar Perfil: fundo da tela (degradês ou imagem HTTPS), 11 patterns coloridos, cor de destaque, cartões translúcidos e uma frase de status abaixo do nome.'
+      },
+      {
+        icon: Calendar,
+        iconColor: 'text-violet-500 bg-violet-500/10 border-violet-500/20',
+        title: 'Agenda de Eventos',
+        category: 'Agenda',
+        description: 'A Gestão marca eventos e escolhe os participantes. Cada convidado confirma ou recusa na tela de Agenda. Mudar data ou horário zera as respostas, e o modal avisa conflitos de horário.'
+      },
+      {
+        icon: MessageSquare,
+        iconColor: 'text-indigo-500 bg-indigo-500/10 border-indigo-500/20',
+        title: 'Convite por DM no Discord',
+        category: 'Discord',
+        description: 'Quem for marcado recebe uma DM do Bot com título, data, horário e local, avisando para entrar na Agenda e confirmar ou recusar. Há também aviso de reagendamento.'
+      },
+      {
+        icon: CalendarDays,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Cartões de Férias e Agenda',
+        category: 'Meu Desempenho',
+        description: 'Dois cartões novos: Minhas Férias 2027 (período, dias restantes e total) e Eventos na Agenda (próximo evento e convites a responder).'
+      }
+    ]
+  },
+  {
+    version: 'v4.20.0',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Versão v4.20.0: feedbacks antigos deixam de sumir nos filtros, contatos obrigatórios passam a incluir o e-mail, o Discord ganha botão de ativar/desativar o Bot na DM (ID vinculado só pela Gestão) e chegam a Escala de Férias 2027 e o dashboard analítico reformulado.',
     items: [
       {

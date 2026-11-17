@@ -4,6 +4,21 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.21.0] - 2026-11-17
+
+### 🚀 Novas Funcionalidades (Added)
+- **Personalizar Perfil**: fundo da tela (10 degradês ou imagem HTTPS com escurecimento), 11 patterns CSS com cor/intensidade/tamanho, cor de destaque, cartões translúcidos e frase de status (até 80 caracteres). Gravado em `collaborators.profileTheme`, sempre normalizado (`utils/profileTheme.js`).
+- **Agenda** (`agenda_events/{id}`): calendário mensal, próximos eventos e convites pendentes. A Gestão cria/edita/apaga e marca participantes; cada convidado confirma ou recusa. Mudar data/horário zera as respostas; aviso de conflito de horário.
+- **DM `agenda_invite`**: o servidor lê o evento, só avisa quem está na lista de convidados (nunca o organizador) e ignora eventos salvos há mais de 15 minutos. Texto próprio para reagendamento. Novo item em Configurações > Notificações.
+- **Meu Desempenho**: cartões "Minhas Férias 2027" e "Eventos na Agenda".
+- RBAC: módulo `agenda` (edição só da Gestão).
+
+### ⚠️ Observações
+- **Publicar as regras do Firestore** (`firebase deploy --only firestore:rules`): nova coleção `agenda_events`.
+- O id de cada colaborador precisa ser igual ao uid de login (regras e convites dependem disso).
+
+---
+
 ## [v4.20.0] - 2026-11-17
 
 ### 🐛 Corrigido (Fixed)
