@@ -8,6 +8,9 @@ import {
     ArrowLeft, Eye, ChevronRight, TrendingUp, Palette, Image as ImageIcon,
     Bot, Ban
 } from 'lucide-react';
+import { ProfileThemeModal } from '../components/profile/ProfileThemeModal';
+import { ProfileThemeLayer } from '../components/profile/ProfileThemeLayer';
+import { sanitizeProfileTheme } from '../utils/profileTheme';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
@@ -69,6 +72,7 @@ const getInitialFormData = (u) => {
         bannerUrl: u?.bannerUrl || '',
         discordUserId: u?.discordUserId || '',
         discordDmEnabled: u?.discordDmEnabled !== false,
+        profileTheme: sanitizeProfileTheme(u?.profileTheme),
         bannerPosX: u?.bannerPosX ?? 50,
         bannerPosY: u?.bannerPosY ?? 50,
         bannerZoom: u?.bannerZoom ?? 100,
@@ -163,6 +167,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const [sendingDmTest, setSendingDmTest] = useState(false);
     const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
     const [isBannerModalOpen, setIsBannerModalOpen] = useState(false);
+    const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
     const [isTeamModalOpen, setIsTeamModalOpen] = useState(false);
     const [copiedPhone, setCopiedPhone] = useState(false);
 
@@ -488,8 +493,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
     const currentStatusStyle = getStatusStyle(userOperationalStatus);
 
     return (
-        <div className="flex-1 p-4 sm:p-6 lg:p-8 bg-canvas text-primary-hub min-h-full overflow-y-auto font-sans space-y-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex-1 bg-canvas text-primary-hub min-h-full overflow-y-auto font-sans">
+            <div className={`relative min-h-full p-4 sm:p-6 lg:p-8 ${formData.profileTheme.glass ? 'profile-glass' : ''}`}>
+            {/* Fundo personalizado da tela (imagem/degradê + pattern) */}
+            <ProfileThemeLayer theme={formData.profileTheme} />
+            <div className="relative z-10 max-w-7xl mx-auto space-y-6">
 
                 {/* AVISO DE VISUALIZAÇÃO DE OUTRO COLABORADOR */}
                 {isViewingOther && (
@@ -520,7 +528,10 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 )}
 
                 {/* 1. HERO BANNER DO PERFIL (HEADER EXECUTIVO BENTO) */}
-                <div className="bg-surface rounded-3xl border border-subtle shadow-sm overflow-hidden relative">
+                <div
+                    className="bg-surface rounded-3xl border border-subtle shadow-sm overflow-hidden relative"
+                    style={formData.profileTheme.accent ? { borderColor: formData.profileTheme.accent, boxShadow: `0 0 0 1px ${formData.profileTheme.accent}55, 0 10px 30px -12px ${formData.profileTheme.accent}66` } : undefined}
+                >
                     {/* Fundo Personalizável (8 Cores ou Imagem HTTPS) com Textura Elegante */}
                     <div 
                         className={`h-48 sm:h-56 bg-gradient-to-r ${selectedBannerPreset.gradient} p-6 relative flex items-start justify-between overflow-hidden transition-all duration-300`}
@@ -550,6 +561,17 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                 >
                                     <Palette className="w-3.5 h-3.5 text-amber-300" />
                                     <span>Personalizar Capa</span>
+                                </button>
+                            )}
+                            {(!isViewingOther || isGestor) && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsThemeModalOpen(true)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-black/35 hover:bg-black/55 text-white backdrop-blur-md border border-white/20 shadow-xs cursor-pointer transition-all active:scale-95"
+                                    title="Fundo da tela, patterns coloridos, cor de destaque e frase de status"
+                                >
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>Personalizar Perfil</span>
                                 </button>
                             )}
                         </div>
@@ -590,7 +612,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                             
                             {/* Avatar com Badge de Edição PhotoUrl */}
                             <div className="relative group">
-                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl border-4 border-white dark:border-[#111319] shadow-xl bg-surface overflow-hidden flex items-center justify-center shrink-0 relative transition-transform group-hover:scale-[1.02] ring-1 ring-subtle">
+                                <div className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl sm:rounded-3xl border-4 border-white dark:border-[#111319] shadow-xl bg-surface overflow-hidden flex items-center justify-center shrink-0 relative transition-transform group-hover:scale-[1.02] ring-1 ring-subtle" style={formData.profileTheme.accent ? { boxShadow: `0 0 0 3px ${formData.profileTheme.accent}` } : undefined}>
                                     {formData.photoURL ? (
                                         <img
                                             src={formData.photoURL}
@@ -677,6 +699,11 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                                             </button>
                                         )}
                                     </h1>
+                                    {formData.profileTheme.tagline && (
+                                        <p className="text-sm font-semibold mt-0.5" style={{ color: formData.profileTheme.accent || undefined }}>
+                                            {formData.profileTheme.tagline}
+                                        </p>
+                                    )}
                                     <p className="text-xs text-muted-hub flex items-center gap-1.5 mt-0.5 font-medium">
                                         <Mail className="w-3.5 h-3.5 opacity-70" />
                                         <span>{user?.email || 'email@empresa.com'}</span>
@@ -1171,6 +1198,7 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                 </div>
 
             </div>
+            </div>
 
             {/* ========================================================================= */}
             {/* MODAL DE FOTO DE PERFIL (PHOTOURL DO FIREBASE)                           */}
@@ -1340,6 +1368,18 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {isThemeModalOpen && (
+                <ProfileThemeModal
+                    initialTheme={formData.profileTheme}
+                    onClose={() => setIsThemeModalOpen(false)}
+                    onConfirm={(theme) => {
+                        setFormData(prev => ({ ...prev, profileTheme: theme }));
+                        setIsThemeModalOpen(false);
+                        showToast('Tema aplicado! Clique em "Salvar Alterações" para confirmar.', 'info');
+                    }}
+                />
             )}
 
             {/* ========================================================================= */}

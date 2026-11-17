@@ -1114,3 +1114,10 @@ html[data-theme="warm"] body {
 [data-theme="dark"] .markdown-content tr:hover td {
   background-color: #27272a !important;
 }
+
+/* Perfil: cartões translúcidos sobre o fundo personalizado ("vidro") */
+.profile-glass .bg-surface {
+  background-color: color-mix(in srgb, var(--bg-surface) 78%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}

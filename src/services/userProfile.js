@@ -2,6 +2,7 @@ import { updateProfile } from 'firebase/auth';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from './firebase';
 import { calculatePerformanceScore } from '../utils/scoringCalculations';
+import { sanitizeProfileTheme } from '../utils/profileTheme';
 
 const clampNumber = (value, min, max, fallback) => {
     const n = Number(value);
@@ -42,6 +43,8 @@ export const saveUserProfileData = async (user, profileData) => {
         // discordUserId é somente leitura no perfil (definido pela gestão): nunca é regravado aqui
         // Preferência do colaborador: receber (true) ou não (false) as DMs do bot
         discordDmEnabled: profileData.discordDmEnabled !== false,
+        // Tema do perfil (fundo da tela, pattern, destaque, frase): sempre normalizado antes de gravar
+        profileTheme: sanitizeProfileTheme(profileData.profileTheme),
         // Enquadramento da imagem de capa: posição (0-100%) e zoom (100-300%)
         bannerPosX: clampNumber(profileData.bannerPosX, 0, 100, 50),
         bannerPosY: clampNumber(profileData.bannerPosY, 0, 100, 50),
