@@ -1,19 +1,20 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
 import { db } from '../services/firebase';
-import { doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc } from 'firebase/firestore';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { 
     Save, Calendar, MessageSquare, Ticket, Clock, 
     Activity, AlertCircle, Plus, FileText, Edit2, Trash2, X, Filter,
     Download, TrendingDown, TrendingUp, Minus, Search, 
     CheckCircle2, ArrowUpDown, BarChart2,
-    CalendarRange, Check
+    ChevronDown, Check
 } from 'lucide-react';
 import { 
     XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
     BarChart, Bar, AreaChart, Area
 } from 'recharts';
-import { BorderBeam } from '../components/magicui/BorderBeam';
+import DailyDemandModal from '../components/DailyDemandModal';
+import KpiHeroCard from '../components/dashboard/KpiHeroCard';
 
 // Dias da semana auxiliares
 const DAYS_OF_WEEK = [
@@ -39,6 +40,9 @@ const PRESETS = [
     { id: 'all', label: 'Todo o Histórico' },
 ];
 
+// Períodos de acesso rápido (os demais ficam no seletor "Mais períodos")
+const QUICK_PRESETS = ['current_month', 'last_7', 'last_30', 'previous_month'];
+
 const COLORS = {
     chamadosInicio: '#10b981', // Verde esmeralda
     chamadosFim: '#047857',    // Verde escuro
@@ -55,6 +59,10 @@ const parseLocalDate = (dateStr) => {
     const [y, m, d] = dateStr.split('-').map(Number);
     return new Date(y, m - 1, d);
 };
+
+// Data local (YYYY-MM-DD): toISOString() usa UTC e, após 21h no Brasil, devolveria o dia seguinte
+const toLocalISO = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const todayLocalISO = () => toLocalISO(new Date());
 
 // Helper para formatar data (DD/MM/YYYY)
 const formatDisplayDate = (dateStr) => {
@@ -73,17 +81,8 @@ const getWeekdayShort = (dateStr) => {
 };
 
 export default function DailyDemandLaunch() {
-    // Modal & Form States
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [isEditing, setIsEditing] = useState(false);
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [startTickets, setStartTickets] = useState('');
-    const [startChats, setStartChats] = useState('');
-    const [endTickets, setEndTickets] = useState('');
-    const [endChats, setEndChats] = useState('');
-    const [notes, setNotes] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [message, setMessage] = useState({ text: '', type: '' });
+    // Modal de lançamento/edição: { date } quando aberto, null quando fechado
+    const [modal, setModal] = useState(null);
 
     // Modal de Confirmação de Exclusão
     const [deleteConfirmItem, setDeleteConfirmItem] = useState(null);
@@ -100,6 +99,7 @@ export default function DailyDemandLaunch() {
     const [trendFilter, setTrendFilter] = useState('all'); // all | reduced | increased | stable
     const [dayOfWeekFilter, setDayOfWeekFilter] = useState('all'); // all | 0..6
     const [searchQuery, setSearchQuery] = useState('');
+    const deferredSearch = useDeferredValue(searchQuery);
     const [sortBy, setSortBy] = useState('date_desc'); // date_desc | date_asc | tickets_desc | chats_desc | delta_asc | delta_desc
 
     // Modo de Visualização (Padrão: Gráficos)
@@ -115,101 +115,14 @@ export default function DailyDemandLaunch() {
         return () => unsubscribe();
     }, []);
 
-    // Abertura segura do modal de novo registro
+    // Abertura do modal (o formulário e seu estado vivem em DailyDemandModal)
     const handleOpenCreate = () => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        setDate(todayStr);
-        const existing = historicalData.find(d => d.date === todayStr);
-        if (existing) {
-            setIsEditing(true);
-            setStartTickets(existing.startTickets ?? '');
-            setStartChats(existing.startChats ?? '');
-            setEndTickets(existing.endTickets ?? '');
-            setEndChats(existing.endChats ?? '');
-            setNotes(existing.notes ?? '');
-        } else {
-            setIsEditing(false);
-            setStartTickets('');
-            setStartChats('');
-            setEndTickets('');
-            setEndChats('');
-            setNotes('');
-        }
-        setMessage({ text: '', type: '' });
-        setIsModalOpen(true);
+        const today = historicalData.find(d => d.date === todayLocalISO());
+        const hasStart = today && (today.startTickets != null || today.startChats != null);
+        const hasEnd = today && (today.endTickets != null || today.endChats != null);
+        setModal({ date: todayLocalISO(), focus: hasStart && !hasEnd ? 'endTickets' : 'startTickets' });
     };
-
-    // Abertura segura para edição de um registro existente
-    const handleOpenEdit = (dataRecord) => {
-        setDate(dataRecord.date);
-        setIsEditing(true);
-        setStartTickets(dataRecord.startTickets ?? '');
-        setStartChats(dataRecord.startChats ?? '');
-        setEndTickets(dataRecord.endTickets ?? '');
-        setEndChats(dataRecord.endChats ?? '');
-        setNotes(dataRecord.notes ?? '');
-        setMessage({ text: '', type: '' });
-        setIsModalOpen(true);
-    };
-
-    // Ao mudar a data no formulário, sincroniza campos se já houver registro gravado
-    const handleDateChange = (newDate) => {
-        setDate(newDate);
-        const existing = historicalData.find(d => d.date === newDate);
-        if (existing) {
-            setIsEditing(true);
-            setStartTickets(existing.startTickets ?? '');
-            setStartChats(existing.startChats ?? '');
-            setEndTickets(existing.endTickets ?? '');
-            setEndChats(existing.endChats ?? '');
-            setNotes(existing.notes ?? '');
-        } else {
-            setIsEditing(false);
-            setStartTickets('');
-            setStartChats('');
-            setEndTickets('');
-            setEndChats('');
-            setNotes('');
-        }
-    };
-
-    const handleSave = async (e) => {
-        e.preventDefault();
-
-        if (startTickets === '' && startChats === '' && endTickets === '' && endChats === '') {
-            setMessage({ text: 'Erro: Preencha pelo menos um dos campos de chamados ou chats.', type: 'error' });
-            return;
-        }
-
-        setIsSaving(true);
-        setMessage({ text: '', type: '' });
-
-        try {
-            const docRef = doc(db, 'dailyDemand', date);
-            const payload = {
-                date,
-                startTickets: startTickets !== '' ? Number(startTickets) : null,
-                startChats: startChats !== '' ? Number(startChats) : null,
-                endTickets: endTickets !== '' ? Number(endTickets) : null,
-                endChats: endChats !== '' ? Number(endChats) : null,
-                notes: notes.trim() !== '' ? notes.trim() : null,
-                updatedAt: new Date().toISOString(),
-            };
-
-            await setDoc(docRef, payload, { merge: true });
-            setMessage({ text: 'Registro diário salvo com sucesso!', type: 'success' });
-
-            setTimeout(() => {
-                setMessage({ text: '', type: '' });
-                setIsModalOpen(false);
-            }, 1200);
-        } catch (error) {
-            console.error('Erro ao salvar dados:', error);
-            setMessage({ text: 'Erro ao salvar. Verifique a conexão com o banco.', type: 'error' });
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    const handleOpenEdit = (dataRecord) => setModal({ date: dataRecord.date });
 
     const confirmDelete = async () => {
         if (!deleteConfirmItem) return;
@@ -241,19 +154,19 @@ export default function DailyDemandLaunch() {
         // Limite de 7, 15, 30 dias
         const d7 = new Date();
         d7.setDate(now.getDate() - 7);
-        const d7Str = d7.toISOString().split('T')[0];
+        const d7Str = toLocalISO(d7);
 
         const d15 = new Date();
         d15.setDate(now.getDate() - 15);
-        const d15Str = d15.toISOString().split('T')[0];
+        const d15Str = toLocalISO(d15);
 
         const d30 = new Date();
         d30.setDate(now.getDate() - 30);
-        const d30Str = d30.toISOString().split('T')[0];
+        const d30Str = toLocalISO(d30);
 
         const d90 = new Date();
         d90.setDate(now.getDate() - 90);
-        const d90Str = d90.toISOString().split('T')[0];
+        const d90Str = toLocalISO(d90);
 
         return historicalData.filter(item => {
             // 1. Filtro de Período Preset
@@ -304,8 +217,8 @@ export default function DailyDemandLaunch() {
             if (trendFilter === 'stable' && deltaTotal !== 0) return false;
 
             // 4. Busca por texto / data ou notas
-            if (searchQuery.trim() !== '') {
-                const queryLower = searchQuery.toLowerCase().trim();
+            if (deferredSearch.trim() !== '') {
+                const queryLower = deferredSearch.toLowerCase().trim();
                 const displayDate = formatDisplayDate(item.date).toLowerCase();
                 const rawDate = item.date.toLowerCase();
                 const notesText = (item.notes || '').toLowerCase();
@@ -321,7 +234,7 @@ export default function DailyDemandLaunch() {
 
             return true;
         });
-    }, [historicalData, periodPreset, customStartDate, customEndDate, dayOfWeekFilter, channelFilter, trendFilter, searchQuery]);
+    }, [historicalData, periodPreset, customStartDate, customEndDate, dayOfWeekFilter, channelFilter, trendFilter, deferredSearch]);
 
     // =========================================================================
     // ORDENAÇÃO DOS DADOS PARA TABELA
@@ -588,7 +501,7 @@ export default function DailyDemandLaunch() {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.setAttribute('href', url);
-        link.setAttribute('download', `demanda_diaria_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute('download', `demanda_diaria_${todayLocalISO()}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -613,30 +526,68 @@ export default function DailyDemandLaunch() {
         searchQuery.trim() !== '' ||
         sortBy !== 'date_desc';
 
+    // Filtros avançados recolhíveis + resumo dos filtros ativos
+    const [showFilters, setShowFilters] = useState(false);
+    const dayLabel = DAYS_OF_WEEK.find(d => d.id === dayOfWeekFilter)?.label;
+    const activeChips = [
+        channelFilter !== 'all' && { key: 'canal', label: channelFilter === 'tickets' ? 'Chamados' : 'Chats', clear: () => setChannelFilter('all') },
+        trendFilter !== 'all' && { key: 'trend', label: { reduced: 'Fila reduziu', increased: 'Fila aumentou', stable: 'Fila estável' }[trendFilter], clear: () => setTrendFilter('all') },
+        dayOfWeekFilter !== 'all' && { key: 'dow', label: dayLabel, clear: () => setDayOfWeekFilter('all') },
+        searchQuery.trim() !== '' && { key: 'q', label: `“${searchQuery.trim()}”`, clear: () => setSearchQuery('') },
+        sortBy !== 'date_desc' && { key: 'sort', label: 'Ordem alterada', clear: () => setSortBy('date_desc') },
+    ].filter(Boolean);
+    const advancedFilterCount = activeChips.length;
+
+    // Chip de fechamento do dia (hoje)
+    const todayRecord = historicalData.find(d => d.date === todayLocalISO());
+    const todayHasStart = todayRecord && (todayRecord.startTickets != null || todayRecord.startChats != null);
+    const todayHasEnd = todayRecord && (todayRecord.endTickets != null || todayRecord.endChats != null);
+    const todayChip = todayHasEnd
+        ? (() => {
+            const diff = ((todayRecord.endTickets ?? 0) + (todayRecord.endChats ?? 0)) - ((todayRecord.startTickets ?? 0) + (todayRecord.startChats ?? 0));
+            return { label: `Hoje fechado · saldo ${diff > 0 ? `+${diff}` : diff}`, dot: 'bg-emerald-500', cls: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' };
+        })()
+        : todayHasStart
+            ? { label: 'Hoje aberto · falta lançar o fim do expediente', dot: 'bg-amber-500 animate-pulse', cls: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30' }
+            : { label: 'Hoje sem lançamento · clique para registrar', dot: 'bg-rose-500 animate-pulse', cls: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30' };
+
+    // Mini gráficos dos cards: últimos 14 dias do período
+    const sparkOf = (key) => chartData.slice(-14).map(d => d[key] ?? 0);
+    const deltaTag = (v, unit) => ({
+        dir: v === 0 ? 'flat' : v > 0 ? 'up' : 'down',
+        good: v <= 0,
+        text: `${v > 0 ? '+' : ''}${v}${unit}`,
+    });
+
     return (
         <div className="h-full overflow-y-auto w-full bg-canvas font-sans">
             <div className="p-4 sm:p-6 lg:p-8 w-full space-y-6 pb-16">
                 
                 {/* CABEÇALHO PRINCIPAL COM AÇÕES RÁPIDAS */}
-                <div className="relative bg-surface rounded-3xl shadow-xs border border-subtle p-6 sm:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-5 overflow-hidden">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-radial from-rose-500/10 via-transparent to-transparent -mr-20 -mt-20 pointer-events-none rounded-full blur-2xl" />
-                    <div className="relative z-10">
-                        <div className="flex items-center gap-3">
-                            <div>
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className="flex items-center gap-2 text-xs font-semibold text-rose-500 uppercase tracking-wider"><Activity className="w-3.5 h-3.5" />Módulo Operacional • Demanda e Fila Diária</span>
-                                </div>
-                                <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
-                                    Demanda & Fila Diária
-                                </h1>
-                                <p className="text-muted-hub text-xs sm:text-sm mt-0.5">
-                                    Monitoramento operacional do fluxo de abertura, acúmulo e resolução de chamados e chats.
-                                </p>
-                            </div>
+                <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div>
+                        <div className="flex items-center gap-2 mb-1 text-xs font-semibold text-rose-500 uppercase tracking-wider">
+                            <Activity className="w-3.5 h-3.5" />
+                            <span>Módulo Operacional • Demanda e Fila Diária</span>
                         </div>
+                        <h1 className="font-brand text-2xl sm:text-3xl font-bold text-primary-hub tracking-tight">
+                            Demanda & Fila Diária
+                        </h1>
+                        <p className="text-sm text-secondary-hub mt-1">
+                            Monitoramento operacional do fluxo de abertura, acúmulo e resolução de chamados e chats.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={handleOpenCreate}
+                            title="Abrir o lançamento de hoje"
+                            className={`mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold transition-colors cursor-pointer ${todayChip.cls}`}
+                        >
+                            <span className={`w-2 h-2 rounded-full ${todayChip.dot}`} />
+                            {todayChip.label}
+                        </button>
                     </div>
-                    
-                    <div className="relative z-10 flex items-center gap-2.5 w-full md:w-auto justify-end flex-wrap">
+
+                    <div className="flex items-center gap-2.5 w-full md:w-auto md:justify-end flex-wrap">
                         <button
                             id="btn-export-demand-csv"
                             type="button"
@@ -659,72 +610,90 @@ export default function DailyDemandLaunch() {
                             <span>Novo Lançamento</span>
                         </button>
                     </div>
-                </div>
+                </header>
                     
 
                 {/* ======================================================== */}
                 {/* BARRA DE FILTROS AVANÇADOS */}
                 {/* ======================================================== */}
-                <div id="demand-filters-container" className="bg-surface rounded-3xl shadow-xs border border-subtle p-5 space-y-4">
-                    
-                    {/* Linha 1: Filtros de Período Preset (Segmented Controls) */}
-                    <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3 border-b border-zinc-100 pb-3">
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 lg:pb-0 w-full scrollbar-none">
-                            <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mr-1 shrink-0 flex items-center gap-1">
-                                <CalendarRange className="w-3.5 h-3.5 text-red-600" />
-                                Período:
-                            </span>
-
-                            {PRESETS.map(preset => (
-                                <button
-                                    key={preset.id}
-                                    type="button"
-                                    onClick={() => setPeriodPreset(preset.id)}
-                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                                        periodPreset === preset.id ? 'bg-primary-hub text-white dark:text-zinc-950 border-transparent shadow-xs' : 'bg-subtle text-secondary-hub hover:bg-surface border-subtle'
+                <div id="demand-filters-container" className="space-y-3">
+                    {/* Linha principal: chips de período + modo de visualização + botão Filtros */}
+                    <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                            {QUICK_PRESETS.map(id => {
+                                const preset = PRESETS.find(pr => pr.id === id);
+                                return (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        onClick={() => setPeriodPreset(id)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer border ${
+                                            periodPreset === id ? 'bg-primary-hub text-white dark:text-zinc-950 border-transparent shadow-xs' : 'bg-surface text-secondary-hub hover:text-primary-hub border-subtle'
+                                        }`}
+                                    >
+                                        {preset.label}
+                                    </button>
+                                );
+                            })}
+                            <div className="relative">
+                                <select
+                                    value={QUICK_PRESETS.includes(periodPreset) ? '' : periodPreset}
+                                    onChange={(e) => e.target.value && setPeriodPreset(e.target.value)}
+                                    aria-label="Mais períodos"
+                                    className={`appearance-none pl-3 pr-7 py-1.5 rounded-lg text-xs font-bold cursor-pointer border outline-none ${
+                                        QUICK_PRESETS.includes(periodPreset) ? 'bg-surface text-secondary-hub border-subtle' : 'bg-primary-hub text-white dark:text-zinc-950 border-transparent'
                                     }`}
                                 >
-                                    {preset.label}
-                                </button>
-                            ))}
+                                    <option value="" disabled>Mais períodos…</option>
+                                    {PRESETS.filter(pr => !QUICK_PRESETS.includes(pr.id)).map(pr => (
+                                        <option key={pr.id} value={pr.id} className="text-zinc-900">{pr.label}</option>
+                                    ))}
+                                </select>
+                                <ChevronDown className="w-3 h-3 absolute right-2 top-2.5 pointer-events-none opacity-70" />
+                            </div>
                         </div>
 
-                        {/* Seletor de Modo de Visualização (1. Gráficos, 2. Extrato, 3. Completo) */}
-                        <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle self-end lg:self-auto shrink-0">
+                        <div className="flex items-center gap-2 flex-wrap">
                             <button
                                 type="button"
-                                onClick={() => setViewMode('charts')}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                                    viewMode === 'charts' ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
+                                onClick={() => setShowFilters(v => !v)}
+                                aria-expanded={showFilters}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition-colors cursor-pointer ${
+                                    showFilters || advancedFilterCount > 0 ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30' : 'bg-surface text-secondary-hub border-subtle hover:text-primary-hub'
                                 }`}
                             >
-                                <BarChart2 className="w-3.5 h-3.5 text-blue-500" />
-                                <span>Gráficos</span>
+                                <Filter className="w-3.5 h-3.5" />
+                                Filtros
+                                {advancedFilterCount > 0 && (
+                                    <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white text-[10px] flex items-center justify-center">{advancedFilterCount}</span>
+                                )}
+                                <ChevronDown className={`w-3 h-3 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
                             </button>
-                            <button
-                                type="button"
-                                onClick={() => setViewMode('table')}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                                    viewMode === 'table' ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
-                                }`}
-                            >
-                                <FileText className="w-3.5 h-3.5 text-emerald-500" />
-                                <span>Extrato</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setViewMode('all')}
-                                className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
-                                    viewMode === 'all' ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
-                                }`}
-                            >
-                                <Activity className="w-3.5 h-3.5 text-red-500" />
-                                <span>Completo</span>
-                            </button>
+
+                            {/* Seletor de Modo de Visualização */}
+                            <div className="flex items-center gap-1 bg-subtle p-1 rounded-xl border border-subtle shrink-0">
+                                {[
+                                    { id: 'charts', label: 'Gráficos', Icon: BarChart2, tone: 'text-blue-500' },
+                                    { id: 'table', label: 'Extrato', Icon: FileText, tone: 'text-emerald-500' },
+                                    { id: 'all', label: 'Completo', Icon: Activity, tone: 'text-red-500' },
+                                ].map((mode) => (
+                                    <button
+                                        key={mode.id}
+                                        type="button"
+                                        onClick={() => setViewMode(mode.id)}
+                                        className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1 ${
+                                            viewMode === mode.id ? 'bg-surface text-primary-hub shadow-xs' : 'text-muted-hub hover:text-primary-hub'
+                                        }`}
+                                    >
+                                        <mode.Icon className={`w-3.5 h-3.5 ${mode.tone}`} />
+                                        <span>{mode.label}</span>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Linha 2: Datas Personalizadas se o preset 'custom' estiver ativo */}
+                    {/* Datas personalizadas (preset 'custom') */}
                     {periodPreset === 'custom' && (
                         <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-3.5 flex flex-wrap items-center gap-3">
                             <span className="text-xs font-bold text-red-800 flex items-center gap-1.5">
@@ -761,7 +730,9 @@ export default function DailyDemandLaunch() {
                         </div>
                     )}
 
-                    {/* Linha 3: Filtros Multicritério (Canal, Tendência, Dia da Semana, Busca e Ordenação) */}
+                    {/* Painel de filtros avançados (recolhível) */}
+                    {showFilters && (
+                        <div className="bg-surface rounded-2xl border border-subtle shadow-xs p-4 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 pt-1">
                         
                         {/* Filtro por Canal de Demanda */}
@@ -858,20 +829,35 @@ export default function DailyDemandLaunch() {
                             </div>
                         </div>
                     </div>
-
-                    {/* Barra inferior de status dos filtros */}
-                    <div className="flex items-center justify-between pt-2 border-t border-subtle text-xs text-muted-hub">
-                        <div>
-                            Exibindo <strong className="text-primary-hub font-bold">{filteredData.length}</strong> de <strong className="text-primary-hub font-bold">{historicalData.length}</strong> dias registrados
                         </div>
+                    )}
 
+                    {/* Resumo: contagem + filtros ativos */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-hub">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <span>
+                                Exibindo <strong className="text-primary-hub font-bold">{filteredData.length}</strong> de <strong className="text-primary-hub font-bold">{historicalData.length}</strong> dias
+                            </span>
+                            {activeChips.map(chip => (
+                                <button
+                                    key={chip.key}
+                                    type="button"
+                                    onClick={chip.clear}
+                                    title="Remover filtro"
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 text-[11px] font-bold cursor-pointer hover:bg-rose-500/20"
+                                >
+                                    {chip.label}
+                                    <X className="w-3 h-3" />
+                                </button>
+                            ))}
+                        </div>
                         {hasActiveCustomFilters && (
                             <button
                                 type="button"
                                 onClick={handleResetFilters}
                                 className="text-xs font-bold text-red-600 hover:text-red-700 hover:underline flex items-center gap-1 cursor-pointer"
                             >
-                                <X className="w-3.5 h-3.5" /> Limpar Filtros
+                                <X className="w-3.5 h-3.5" /> Limpar filtros
                             </button>
                         )}
                     </div>
@@ -880,117 +866,42 @@ export default function DailyDemandLaunch() {
                 {/* ======================================================== */}
                 {/* GRADE DE CARDS ESTATÍSTICOS DE PERFORMANCE OPERACIONAL */}
                 {/* ======================================================== */}
-                <div id="demand-kpis-grid" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                    
-                    {/* CARD 1: MÉDIA INÍCIO CHAMADOS */}
-                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                                <Ticket className="w-3 h-3 text-emerald-500" />
-                                Chamados (Início)
-                            </span>
-                        </div>
-                        <div className="text-2xl sm:text-3xl font-black text-primary-hub font-mono tracking-tight">
-                            {metrics.avgStartTickets}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
-                            <span>Média de abertura</span>
-                            <span className="font-bold text-secondary-hub">tot: {metrics.totalStartTickets}</span>
-                        </div>
-                    </div>
-
-                    {/* CARD 2: MÉDIA FIM CHAMADOS */}
-                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                                <Ticket className="w-3 h-3 text-emerald-700" />
-                                Chamados (Fim)
-                            </span>
-                        </div>
-                        <div className="text-2xl sm:text-3xl font-black text-emerald-700 font-mono tracking-tight">
-                            {metrics.avgEndTickets}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-                            <span className="text-zinc-500">Variação diária:</span>
-                            <span className={`font-bold flex items-center gap-0.5 ${metrics.netDeltaTickets <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                {metrics.netDeltaTickets <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                                {metrics.netDeltaTickets > 0 ? `+${metrics.netDeltaTickets}` : metrics.netDeltaTickets}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* CARD 3: MÉDIA INÍCIO CHATS */}
-                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                                <MessageSquare className="w-3 h-3 text-purple-500" />
-                                Chats (Início)
-                            </span>
-                        </div>
-                        <div className="text-2xl sm:text-3xl font-black text-primary-hub font-mono tracking-tight">
-                            {metrics.avgStartChats}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
-                            <span>Média de abertura</span>
-                            <span className="font-bold text-secondary-hub">tot: {metrics.totalStartChats}</span>
-                        </div>
-                    </div>
-
-                    {/* CARD 4: MÉDIA FIM CHATS */}
-                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                                <MessageSquare className="w-3 h-3 text-indigo-600" />
-                                Chats (Fim)
-                            </span>
-                        </div>
-                        <div className="text-2xl sm:text-3xl font-black text-indigo-600 font-mono tracking-tight">
-                            {metrics.avgEndChats}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-zinc-100 flex items-center justify-between text-[11px]">
-                            <span className="text-zinc-500">Variação diária:</span>
-                            <span className={`font-bold flex items-center gap-0.5 ${metrics.netDeltaChats <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                                {metrics.netDeltaChats <= 0 ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                                {metrics.netDeltaChats > 0 ? `+${metrics.netDeltaChats}` : metrics.netDeltaChats}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* CARD 5: SALDO LÍQUIDO MÉDIO DA FILA */}
-                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                                <Activity className="w-3 h-3 text-amber-500" />
-                                Saldo Médio Dia
-                            </span>
-                        </div>
-                        <div className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${metrics.netDeltaTotal <= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                            {metrics.netDeltaTotal > 0 ? `+${metrics.netDeltaTotal}` : metrics.netDeltaTotal}
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
-                            <span>Fluxo diário:</span>
-                            <span className="font-bold text-secondary-hub">
-                                {metrics.netDeltaTotal < 0 ? 'Redução' : (metrics.netDeltaTotal > 0 ? 'Sobrecarga' : 'Equilíbrio')}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* CARD 6: TAXA DE DIAS COM REDUÇÃO / EFICIÊNCIA */}
-                    <div className="bg-surface p-4 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between">
-                        <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                                Resolução Diária
-                            </span>
-                        </div>
-                        <div className="text-2xl sm:text-3xl font-black text-primary-hub font-mono tracking-tight">
-                            {metrics.resolutionRate}%
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub">
-                            <span>Dias c/ fila menor:</span>
-                            <span className="font-bold text-emerald-600">Fim &le; Início</span>
-                        </div>
-                    </div>
+                <div id="demand-kpis-grid" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <KpiHeroCard
+                        accent="emerald" label="Fila de chamados" icon={Ticket}
+                        status={metrics.netDeltaTickets <= 0 ? 'ok' : 'bad'}
+                        statusLabel={metrics.netDeltaTickets <= 0 ? 'Fila reduz no dia' : 'Fila acumula no dia'}
+                        value={metrics.avgEndTickets} caption={`Média de fechamento · abertura média ${metrics.avgStartTickets}`}
+                        spark={sparkOf('endTickets')}
+                        footer={<span>Totais <strong className="font-bold text-zinc-200">{metrics.totalStartTickets}</strong> → <strong className="font-bold text-zinc-200">{metrics.totalEndTickets}</strong></span>}
+                        delta={deltaTag(metrics.netDeltaTickets, '/dia')}
+                    />
+                    <KpiHeroCard
+                        accent="purple" label="Fila de chats" icon={MessageSquare}
+                        status={metrics.netDeltaChats <= 0 ? 'ok' : 'bad'}
+                        statusLabel={metrics.netDeltaChats <= 0 ? 'Fila reduz no dia' : 'Fila acumula no dia'}
+                        value={metrics.avgEndChats} caption={`Média de fechamento · abertura média ${metrics.avgStartChats}`}
+                        spark={sparkOf('endChats')}
+                        footer={<span>Totais <strong className="font-bold text-zinc-200">{metrics.totalStartChats}</strong> → <strong className="font-bold text-zinc-200">{metrics.totalEndChats}</strong></span>}
+                        delta={deltaTag(metrics.netDeltaChats, '/dia')}
+                    />
+                    <KpiHeroCard
+                        accent="blue" label="Saldo médio do dia" icon={Activity}
+                        status={metrics.netDeltaTotal < 0 ? 'ok' : metrics.netDeltaTotal === 0 ? 'warn' : 'bad'}
+                        statusLabel={metrics.netDeltaTotal < 0 ? 'Redução' : metrics.netDeltaTotal === 0 ? 'Equilíbrio' : 'Sobrecarga'}
+                        value={metrics.netDeltaTotal > 0 ? `+${metrics.netDeltaTotal}` : metrics.netDeltaTotal}
+                        caption="Chamados + chats: fim menos início"
+                        spark={sparkOf('deltaTotal')}
+                        footer={<span>Período <strong className="font-bold text-zinc-200">{metrics.count}</strong> dia(s)</span>}
+                    />
+                    <KpiHeroCard
+                        accent="red" label="Resolução diária" icon={CheckCircle2}
+                        status={metrics.resolutionRate >= 70 ? 'ok' : metrics.resolutionRate >= 40 ? 'warn' : 'bad'}
+                        statusLabel={metrics.resolutionRate >= 70 ? 'Operação em dia' : metrics.resolutionRate >= 40 ? 'Atenção' : 'Crítico'}
+                        value={metrics.resolutionRate} valueSuffix="%" caption="Dias em que a fila fechou menor ou igual"
+                        progress={metrics.resolutionRate} progressLabel="dias com fim ≤ início"
+                        footer={<span>Pico <strong className="font-bold text-zinc-200">{Math.max(metrics.maxTicketsDay?.val ?? 0, metrics.maxChatsDay?.val ?? 0)}</strong></span>}
+                    />
                 </div>
 
                 {/* ======================================================== */}
@@ -1315,44 +1226,44 @@ export default function DailyDemandLaunch() {
                     <div id="demand-table-container" className="bg-surface rounded-3xl shadow-xs border border-subtle overflow-hidden flex flex-col">
                         <div className="p-5 border-b border-subtle flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-surface">
                             <div>
-                                <h2 className="text-sm sm:text-base font-bold text-zinc-900 flex items-center gap-2">
+                                <h2 className="text-sm sm:text-base font-bold text-primary-hub flex items-center gap-2">
                                     <FileText className="w-4 h-4 text-red-600" />
                                     Extrato Detalhado de Registros Diários
                                 </h2>
-                                <p className="text-zinc-500 text-xs mt-0.5">
+                                <p className="text-muted-hub text-xs mt-0.5">
                                     Visualização completa com comparativo de abertura, fechamento e saldo líquido operacional do dia.
                                 </p>
                             </div>
 
-                            <span className="text-xs text-zinc-500 font-medium bg-zinc-100 px-2.5 py-1 rounded-lg">
-                                Total no filtro: <strong className="text-zinc-900">{sortedTableData.length}</strong> dia(s)
+                            <span className="text-xs text-muted-hub font-medium bg-subtle border border-subtle px-2.5 py-1 rounded-lg">
+                                Total no filtro: <strong className="text-primary-hub">{sortedTableData.length}</strong> dia(s)
                             </span>
                         </div>
 
                         <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
                             <table className="w-full text-left border-collapse">
-                                <thead className="sticky top-0 z-10 bg-subtle/90 text-muted-hub text-[11px] uppercase tracking-wider font-bold border-b border-subtle backdrop-blur-xs">
+                                <thead className="sticky top-0 z-10 bg-surface text-muted-hub text-[11px] uppercase tracking-wider font-bold border-b border-subtle backdrop-blur-xs">
                                     <tr>
                                         <th className="p-3.5 pl-5">Data & Dia</th>
-                                        <th className="p-3.5 text-center bg-zinc-800/60">
+                                        <th className="p-3.5 text-center">
                                             <span className="flex items-center justify-center gap-1">
                                                 <Clock className="w-3 h-3 text-emerald-400" />
                                                 Início (Chamados)
                                             </span>
                                         </th>
-                                        <th className="p-3.5 text-center bg-zinc-800/60">
+                                        <th className="p-3.5 text-center">
                                             <span className="flex items-center justify-center gap-1">
                                                 <Clock className="w-3 h-3 text-purple-400" />
                                                 Início (Chats)
                                             </span>
                                         </th>
-                                        <th className="p-3.5 text-center bg-zinc-850">
+                                        <th className="p-3.5 text-center">
                                             <span className="flex items-center justify-center gap-1">
                                                 <Clock className="w-3 h-3 text-emerald-500" />
                                                 Fim (Chamados)
                                             </span>
                                         </th>
-                                        <th className="p-3.5 text-center bg-zinc-850">
+                                        <th className="p-3.5 text-center">
                                             <span className="flex items-center justify-center gap-1">
                                                 <Clock className="w-3 h-3 text-indigo-400" />
                                                 Fim (Chats)
@@ -1363,7 +1274,7 @@ export default function DailyDemandLaunch() {
                                         <th className="p-3.5 pr-5 text-right">Ações</th>
                                     </tr>
                                 </thead>
-                                <tbody className="text-xs text-secondary-hub divide-y divide-zinc-100 font-medium">
+                                <tbody className="text-xs text-secondary-hub divide-y divide-subtle font-medium">
                                     {sortedTableData.length > 0 ? sortedTableData.map((row) => {
                                         const sTickets = row.startTickets ?? null;
                                         const sChats = row.startChats ?? null;
@@ -1378,7 +1289,7 @@ export default function DailyDemandLaunch() {
                                         const weekday = getWeekdayShort(row.date);
 
                                         return (
-                                            <tr key={row.id} className="border-b border-subtle last:border-b-0 hover:bg-subtle/50 transition-colors">
+                                            <tr key={row.id} className={`group border-b border-subtle last:border-b-0 hover:bg-subtle/60 transition-colors ${row.date === todayLocalISO() ? 'bg-rose-500/5 shadow-[inset_3px_0_0_0_#f43f5e]' : ''}`}>
                                                 <td className="p-3.5 pl-5">
                                                     <div className="font-bold text-primary-hub flex items-center gap-1.5">
                                                         <span>{formatDisplayDate(row.date)}</span>
@@ -1390,43 +1301,43 @@ export default function DailyDemandLaunch() {
 
                                                 {/* Início Chamados */}
                                                 <td className="p-3.5 text-center font-mono font-bold text-secondary-hub">
-                                                    {sTickets !== null ? sTickets : <span className="text-zinc-300">--</span>}
+                                                    {sTickets !== null ? sTickets : <span className="text-muted-hub opacity-50">--</span>}
                                                 </td>
 
                                                 {/* Início Chats */}
                                                 <td className="p-3.5 text-center font-mono font-bold text-secondary-hub">
-                                                    {sChats !== null ? sChats : <span className="text-zinc-300">--</span>}
+                                                    {sChats !== null ? sChats : <span className="text-muted-hub opacity-50">--</span>}
                                                 </td>
 
                                                 {/* Fim Chamados */}
-                                                <td className="p-3.5 text-center font-mono font-bold text-emerald-700 bg-emerald-50/20">
+                                                <td className="p-3.5 text-center font-mono font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-500/5">
                                                     {eTickets !== null ? (
                                                         <div className="flex items-center justify-center gap-1.5">
                                                             <span>{eTickets}</span>
                                                             {sTickets !== null && (
-                                                                <span className={`text-[10px] font-bold ${eTickets <= sTickets ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                <span className={`text-[10px] font-bold ${eTickets <= sTickets ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                                                     ({eTickets - sTickets > 0 ? `+${eTickets - sTickets}` : eTickets - sTickets})
                                                                 </span>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-zinc-300">--</span>
+                                                        <span className="text-muted-hub opacity-50">--</span>
                                                     )}
                                                 </td>
 
                                                 {/* Fim Chats */}
-                                                <td className="p-3.5 text-center font-mono font-bold text-indigo-700 bg-indigo-50/20">
+                                                <td className="p-3.5 text-center font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-500/5">
                                                     {eChats !== null ? (
                                                         <div className="flex items-center justify-center gap-1.5">
                                                             <span>{eChats}</span>
                                                             {sChats !== null && (
-                                                                <span className={`text-[10px] font-bold ${eChats <= sChats ? 'text-emerald-600' : 'text-red-600'}`}>
+                                                                <span className={`text-[10px] font-bold ${eChats <= sChats ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                                                                     ({eChats - sChats > 0 ? `+${eChats - sChats}` : eChats - sChats})
                                                                 </span>
                                                             )}
                                                         </div>
                                                     ) : (
-                                                        <span className="text-zinc-300">--</span>
+                                                        <span className="text-muted-hub opacity-50">--</span>
                                                     )}
                                                 </td>
 
@@ -1435,35 +1346,36 @@ export default function DailyDemandLaunch() {
                                                     {deltaTotal !== null ? (
                                                         <span className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-lg ${
                                                             deltaTotal < 0 
-                                                                ? 'bg-emerald-100/70 text-emerald-800' 
-                                                                : (deltaTotal > 0 ? 'bg-red-100/70 text-red-800' : 'bg-zinc-100 text-secondary-hub')
+                                                                ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300' 
+                                                                : (deltaTotal > 0 ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300' : 'bg-subtle text-secondary-hub')
                                                         }`}>
                                                             {deltaTotal < 0 ? <TrendingDown className="w-3 h-3" /> : (deltaTotal > 0 ? <TrendingUp className="w-3 h-3" /> : <Minus className="w-3 h-3" />)}
                                                             {deltaTotal > 0 ? `+${deltaTotal}` : deltaTotal}
                                                         </span>
                                                     ) : (
-                                                        <span className="text-zinc-300 font-mono">--</span>
+                                                        <span className="text-muted-hub opacity-50 font-mono">--</span>
                                                     )}
                                                 </td>
 
                                                 {/* Observações */}
-                                                <td className="p-3.5 text-zinc-600 max-w-[200px] truncate" title={row.notes || ''}>
+                                                <td className="p-3.5 max-w-[220px]" title={row.notes || ''}>
                                                     {row.notes ? (
-                                                        <span className="text-[11px] text-secondary-hub bg-zinc-100 px-2 py-0.5 rounded">
-                                                            {row.notes}
+                                                        <span className="inline-flex items-center gap-1.5 max-w-full text-[11px] text-secondary-hub bg-subtle border border-subtle px-2 py-0.5 rounded-lg">
+                                                            <MessageSquare className="w-3 h-3 shrink-0 text-amber-500" />
+                                                            <span className="truncate">{row.notes}</span>
                                                         </span>
                                                     ) : (
-                                                        <span className="text-zinc-300 text-[11px] italic">Sem obs</span>
+                                                        <span className="text-muted-hub opacity-50">—</span>
                                                     )}
                                                 </td>
 
                                                 {/* Ações */}
                                                 <td className="p-3.5 pr-5 text-right">
-                                                    <div className="flex items-center justify-end gap-1.5">
+                                                    <div className="flex items-center justify-end gap-1.5 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity">
                                                         <button 
                                                             type="button"
                                                             onClick={() => handleOpenEdit(row)} 
-                                                            className="p-1.5 text-zinc-500 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                                            className="p-1.5 text-muted-hub hover:text-amber-600 hover:bg-amber-500/10 rounded-lg transition-colors cursor-pointer"
                                                             title="Editar registro diário"
                                                         >
                                                             <Edit2 className="w-3.5 h-3.5" />
@@ -1471,7 +1383,7 @@ export default function DailyDemandLaunch() {
                                                         <button 
                                                             type="button"
                                                             onClick={() => setDeleteConfirmItem(row)} 
-                                                            className="p-1.5 text-zinc-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                                            className="p-1.5 text-muted-hub hover:text-rose-600 hover:bg-rose-500/10 rounded-lg transition-colors cursor-pointer"
                                                             title="Excluir registro"
                                                         >
                                                             <Trash2 className="w-3.5 h-3.5" />
@@ -1482,13 +1394,13 @@ export default function DailyDemandLaunch() {
                                         );
                                     }) : (
                                         <tr>
-                                            <td colSpan="8" className="p-8 text-center bg-white">
-                                                <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-zinc-500 space-y-2">
-                                                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-400">
+                                            <td colSpan="8" className="p-8 text-center">
+                                                <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-muted-hub space-y-2">
+                                                    <div className="w-10 h-10 rounded-full bg-subtle flex items-center justify-center text-muted-hub">
                                                         <Activity className="w-5 h-5" />
                                                     </div>
                                                     <h4 className="text-sm font-bold text-secondary-hub">Nenhum registro encontrado</h4>
-                                                    <p className="text-xs text-zinc-500 text-center">
+                                                    <p className="text-xs text-muted-hub text-center">
                                                         Não há lançamentos de demanda para os filtros selecionados. Tente ajustar o período ou adicionar um novo registro.
                                                     </p>
                                                     {hasActiveCustomFilters && (
@@ -1513,172 +1425,13 @@ export default function DailyDemandLaunch() {
                 {/* ======================================================== */}
                 {/* MODAL DE LANÇAMENTO / EDIÇÃO COM PRÉVIA EM TEMPO REAL */}
                 {/* ======================================================== */}
-                {isModalOpen && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-                        <div className="relative bg-surface rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-subtle"><BorderBeam size={180} duration={8} colorFrom="#f43f5e" colorTo="#e11d48" borderWidth={1.5} />
-                            
-                            {/* Cabeçalho do Modal */}
-                            <div className="p-5 border-b border-subtle flex justify-between items-center bg-surface text-primary-hub">
-                                <div className="flex items-center gap-2.5">
-                                    <div className="w-8 h-8 rounded-lg bg-red-600/20 border border-red-500/30 flex items-center justify-center text-red-400">
-                                        <Activity className="w-4 h-4" />
-                                    </div>
-                                    <div>
-                                        <h2 className="text-sm font-bold tracking-tight">
-                                            {isEditing ? 'Editar Registro Diário' : 'Novo Registro de Demanda'}
-                                        </h2>
-                                        <span className="text-[11px] text-zinc-400 block">
-                                            {formatDisplayDate(date)}
-                                        </span>
-                                    </div>
-                                </div>
-                                <button 
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)} 
-                                    className="p-1 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
-                                >
-                                    <X className="w-5 h-5" />
-                                </button>
-                            </div>
-                            
-                            <div className="p-5 sm:p-6 space-y-4">
-                                {message.text && (
-                                    <div className={`p-3 rounded-xl text-xs flex items-center gap-2 font-medium ${
-                                        message.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    }`}>
-                                        {message.type === 'error' ? <AlertCircle className="w-4 h-4 shrink-0" /> : <Check className="w-4 h-4 shrink-0" />}
-                                        <span>{message.text}</span>
-                                    </div>
-                                )}
-
-                                <form onSubmit={handleSave} className="space-y-4">
-                                    
-                                    {/* Data de Referência */}
-                                    <div>
-                                        <label className="block text-xs font-bold text-zinc-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
-                                            <Calendar className="w-3.5 h-3.5 text-red-600" />
-                                            Data de Referência
-                                        </label>
-                                        <input 
-                                            type="date" 
-                                            value={date}
-                                            onChange={(e) => handleDateChange(e.target.value)}
-                                            className="w-full px-3 py-2 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-secondary-hub font-semibold text-sm transition-all"
-                                            required
-                                        />
-                                    </div>
-
-                                    {/* Seção: Início do Expediente */}
-                                    <div className="p-3.5 bg-emerald-50/40 rounded-xl border border-emerald-200/60 space-y-3">
-                                        <h3 className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
-                                            <Clock className="w-3.5 h-3.5 text-emerald-600" /> Início do Expediente (Abertura da Fila)
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-[11px] text-zinc-600 mb-1 font-semibold">Chamados Pendentes</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    value={startTickets} 
-                                                    onChange={e => setStartTickets(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 text-sm font-mono font-bold text-secondary-hub" 
-                                                    placeholder="0" 
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[11px] text-zinc-600 mb-1 font-semibold">Chats na Fila</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    value={startChats} 
-                                                    onChange={e => setStartChats(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-emerald-500 text-sm font-mono font-bold text-secondary-hub" 
-                                                    placeholder="0" 
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Seção: Fim do Expediente */}
-                                    <div className="p-3.5 bg-indigo-50/40 rounded-xl border border-indigo-200/60 space-y-3">
-                                        <h3 className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
-                                            <Clock className="w-3.5 h-3.5 text-indigo-600" /> Fim do Expediente (Encerramento da Fila)
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div>
-                                                <label className="block text-[11px] text-zinc-600 mb-1 font-semibold">Chamados Pendentes</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    value={endTickets} 
-                                                    onChange={e => setEndTickets(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-indigo-500 text-sm font-mono font-bold text-secondary-hub" 
-                                                    placeholder="0" 
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="block text-[11px] text-zinc-600 mb-1 font-semibold">Chats na Fila</label>
-                                                <input 
-                                                    type="number" 
-                                                    min="0" 
-                                                    value={endChats} 
-                                                    onChange={e => setEndChats(e.target.value)} 
-                                                    className="w-full px-3 py-1.5 bg-white border border-zinc-200 rounded-lg outline-none focus:border-indigo-500 text-sm font-mono font-bold text-secondary-hub" 
-                                                    placeholder="0" 
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Observações Opcionais */}
-                                    <div>
-                                        <label className="block text-[11px] font-bold text-zinc-600 uppercase tracking-wider mb-1">
-                                            Observações do Dia (Opcional)
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={notes}
-                                            onChange={e => setNotes(e.target.value)}
-                                            placeholder="Ex: Queda de link externa, Feriado municipal, etc."
-                                            className="w-full px-3 py-2 border border-zinc-200 rounded-xl focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none text-xs text-secondary-hub"
-                                            maxLength={150}
-                                        />
-                                    </div>
-
-                                    {/* Prévia do Saldo Projetado */}
-                                    {(startTickets !== '' || endTickets !== '' || startChats !== '' || endChats !== '') && (
-                                        <div className="p-3 bg-zinc-50 rounded-xl border border-zinc-200 flex items-center justify-between text-xs">
-                                            <span className="text-zinc-600 font-medium">Saldo Projetado:</span>
-                                            {(() => {
-                                                const sTot = (Number(startTickets) || 0) + (Number(startChats) || 0);
-                                                const eTot = (Number(endTickets) || 0) + (Number(endChats) || 0);
-                                                const diff = eTot - sTot;
-                                                return (
-                                                    <span className={`font-mono font-bold ${diff <= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
-                                                        {diff > 0 ? `+${diff}` : diff} {diff <= 0 ? '(Fila Limpou)' : '(Fila Acumulou)'}
-                                                    </span>
-                                                );
-                                            })()}
-                                        </div>
-                                    )}
-
-                                    {/* Botão Salvar */}
-                                    <button 
-                                        type="submit" 
-                                        disabled={isSaving}
-                                        className="w-full bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-bold py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer disabled:opacity-50"
-                                    >
-                                        {isSaving ? (
-                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                        ) : (
-                                            <Save className="w-4 h-4" />
-                                        )}
-                                        <span>{isSaving ? 'Salvando...' : (isEditing ? 'Atualizar Registro' : 'Salvar Registro')}</span>
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
+                {modal && (
+                    <DailyDemandModal
+                        initialDate={modal.date}
+                        initialFocus={modal.focus}
+                        historicalData={historicalData}
+                        onClose={() => setModal(null)}
+                    />
                 )}
 
                 {/* ======================================================== */}

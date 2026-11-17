@@ -9,6 +9,7 @@ import {
     AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, ReferenceLine, Legend
 } from 'recharts';
+import KpiHeroCard from '../components/dashboard/KpiHeroCard';
 import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
@@ -540,172 +541,59 @@ const SectorKPIs = () => {
             {/* COCKPIT DE CARDS EXECUTIVOS NO TOPO (COR SÓLIDA E ÍCONES NO CANTO DIREITO) */}
             {/* ========================================================================= */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                
-                {/* 1. TMR SETOR */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-purple-500/50 transition-all group">
-                    <div>
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 block">
-                                    TMR Setor
-                                </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    isLatestTmrOk
-                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                        : 'bg-red-500/20 text-red-300 border-red-500/30'
-                                }`}>
-                                    {isLatestTmrOk ? 'Dentro da Meta' : 'Acima da Meta'}
-                                </span>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-purple-500/15 text-purple-400 border border-purple-500/25 shrink-0">
-                                <Clock className="w-5 h-5" />
-                            </div>
-                        </div>
-                        <div className="mt-1">
-                            <h3 className="text-3xl font-black text-white tracking-tight">
-                                {latestKpi ? latestKpi.tmr : '00:00:00'}
-                            </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
-                                Tempo Médio de Resposta da operação
-                            </p>
-                        </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                        <span>Meta: <strong className="text-purple-300 font-bold">≤ {goals.tmr}</strong></span>
-                        {prevKpi && (
-                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-                                latestKpi.tmrDecimal <= prevKpi.tmrDecimal ? 'text-emerald-400' : 'text-red-400'
-                            }`}>
-                                {latestKpi.tmrDecimal <= prevKpi.tmrDecimal ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                                {Math.abs(latestKpi.tmrDecimal - prevKpi.tmrDecimal).toFixed(1)}m vs anterior
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* 2. FCR (1º CONTATO) */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-emerald-500/50 transition-all group">
-                    <div>
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 block">
-                                    FCR (1º Contato)
-                                </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    isLatestFcrOk
-                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                        : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                }`}>
-                                    {isLatestFcrOk ? 'Dentro da Meta' : 'Abaixo da Meta'}
-                                </span>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 shrink-0">
-                                <Target className="w-5 h-5" />
-                            </div>
-                        </div>
-                        <div className="mt-1">
-                            <h3 className="text-3xl font-black text-emerald-400 tracking-tight">
-                                {latestKpi ? `${latestKpi.fcr}%` : '0.0%'}
-                            </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
-                                Resolução no primeiro contato
-                            </p>
-                        </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                        <span>Meta: <strong className="text-emerald-300 font-bold">≥ {goals.fcr}%</strong></span>
-                        {prevKpi && (
-                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-                                latestKpi.fcr >= prevKpi.fcr ? 'text-emerald-400' : 'text-amber-400'
-                            }`}>
-                                {latestKpi.fcr >= prevKpi.fcr ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                                {(latestKpi.fcr - prevKpi.fcr) > 0 ? `+${(latestKpi.fcr - prevKpi.fcr).toFixed(1)}%` : `${(latestKpi.fcr - prevKpi.fcr).toFixed(1)}%`}
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* 3. TAXA DE REINCIDÊNCIA */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-blue-500/50 transition-all group">
-                    <div>
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-blue-400 block">
-                                    Reincidência
-                                </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    isLatestRecOk
-                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                        : 'bg-red-500/20 text-red-300 border-red-500/30'
-                                }`}>
-                                    {isLatestRecOk ? 'Dentro da Meta' : 'Acima da Meta'}
-                                </span>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/25 shrink-0">
-                                <Activity className="w-5 h-5" />
-                            </div>
-                        </div>
-                        <div className="mt-1">
-                            <h3 className="text-3xl font-black text-white tracking-tight">
-                                {latestKpi ? `${latestKpi.reincidencia}%` : '0.0%'}
-                            </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
-                                Taxa de retorno de chamados
-                            </p>
-                        </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                        <span>Meta: <strong className="text-blue-300 font-bold">≤ {goals.recurrence}%</strong></span>
-                        {prevKpi && (
-                            <span className={`inline-flex items-center gap-0.5 text-[10px] font-bold ${
-                                latestKpi.reincidencia <= prevKpi.reincidencia ? 'text-emerald-400' : 'text-red-400'
-                            }`}>
-                                {latestKpi.reincidencia <= prevKpi.reincidencia ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-                                {(latestKpi.reincidencia - prevKpi.reincidencia) > 0 ? `+${(latestKpi.reincidencia - prevKpi.reincidencia).toFixed(1)}%` : `${(latestKpi.reincidencia - prevKpi.reincidencia).toFixed(1)}%`}
-                            </span>
-                        )}
-                    </div>
-                </div>
-
-                {/* 4. CONFORMIDADE GERAL DE METAS */}
-                <div className="bg-zinc-950 text-white p-5 rounded-2xl border border-zinc-800 shadow-sm flex flex-col justify-between hover:border-red-500/50 transition-all group">
-                    <div>
-                        <div className="flex items-start justify-between mb-3">
-                            <div className="space-y-1">
-                                <span className="text-[11px] font-bold uppercase tracking-wider text-red-400 block">
-                                    Metas Atingidas
-                                </span>
-                                <span className={`inline-block text-[10px] font-mono px-2 py-0.5 rounded-full font-bold border ${
-                                    periodStats.goalsMetLatest === 3
-                                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                                        : periodStats.goalsMetLatest === 2
-                                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                                        : 'bg-red-500/20 text-red-300 border-red-500/30'
-                                }`}>
-                                    {periodStats.goalsMetLatest === 3 ? '100% Eficiência' : `${Math.round((periodStats.goalsMetLatest / 3) * 100)}% de Metas`}
-                                </span>
-                            </div>
-                            <div className="p-2.5 rounded-xl bg-red-500/15 text-red-400 border border-red-500/25 shrink-0">
-                                <ShieldCheck className="w-5 h-5" />
-                            </div>
-                        </div>
-                        <div className="mt-1">
-                            <h3 className="text-3xl font-black text-white tracking-tight">
-                                {periodStats.goalsMetLatest} <span className="text-xl font-normal text-zinc-500">/ 3</span>
-                            </h3>
-                            <p className="text-xs text-zinc-400 mt-1">
-                                Indicadores dentro do SLA no último registro
-                            </p>
-                        </div>
-                    </div>
-                    <div className="pt-3 mt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
-                        <span>Última Referência:</span>
-                        <strong className="text-zinc-200 font-bold">
-                            {latestKpi ? formatDateBR(latestKpi.fullDate) : '--'}
-                        </strong>
-                    </div>
-                </div>
-
+                {(() => {
+                    const hist = [...rawKpis].sort((a, b) => parseDateObj(a.fullDate) - parseDateObj(b.fullDate)).slice(-12);
+                    const goalTmr = timeToDecimal(goals.tmr);
+                    const fmtDelta = (d, unit) => `${d > 0 ? '+' : ''}${d.toFixed(1)}${unit}`;
+                    const flat = (d) => Math.abs(d) < 0.05;
+                    const dTmr = prevKpi && latestKpi ? latestKpi.tmrDecimal - prevKpi.tmrDecimal : null;
+                    const dFcr = prevKpi && latestKpi ? latestKpi.fcr - prevKpi.fcr : null;
+                    const dRec = prevKpi && latestKpi ? latestKpi.reincidencia - prevKpi.reincidencia : null;
+                    const met = periodStats.goalsMetLatest;
+                    const progLower = (v, g) => (v > 0 ? Math.min(100, (g / v) * 100) : 100);
+                    return (
+                        <>
+                            <KpiHeroCard
+                                accent="purple" label="TMR Setor" icon={Clock}
+                                status={isLatestTmrOk ? 'ok' : 'bad'} statusLabel={isLatestTmrOk ? 'Dentro da meta' : 'Acima da meta'}
+                                value={latestKpi ? latestKpi.tmr : '00:00:00'} caption="Tempo médio de resposta da operação"
+                                goalLabel="Meta ≤" goalValue={goals.tmr}
+                                progress={latestKpi ? progLower(latestKpi.tmrDecimal, goalTmr) : 0}
+                                progressLabel={latestKpi ? `${Math.round(progLower(latestKpi.tmrDecimal, goalTmr))}% da meta de tempo` : undefined}
+                                spark={hist.map((k) => k.tmrDecimal)}
+                                delta={dTmr === null ? null : { dir: flat(dTmr) ? 'flat' : dTmr < 0 ? 'down' : 'up', good: dTmr <= 0, text: `${fmtDelta(dTmr, 'm')} vs anterior` }}
+                            />
+                            <KpiHeroCard
+                                accent="emerald" label="FCR (1º contato)" icon={Target}
+                                status={isLatestFcrOk ? 'ok' : 'warn'} statusLabel={isLatestFcrOk ? 'Dentro da meta' : 'Abaixo da meta'}
+                                value={latestKpi ? latestKpi.fcr : '0.0'} valueSuffix="%" caption="Resolução no primeiro contato"
+                                goalLabel="Meta ≥" goalValue={`${goals.fcr}%`}
+                                progress={latestKpi ? Math.min(100, (latestKpi.fcr / goals.fcr) * 100) : 0}
+                                progressLabel={latestKpi ? `${Math.min(100, Math.round((latestKpi.fcr / goals.fcr) * 100))}% da meta` : undefined}
+                                spark={hist.map((k) => k.fcr)}
+                                delta={dFcr === null ? null : { dir: flat(dFcr) ? 'flat' : dFcr > 0 ? 'up' : 'down', good: dFcr >= 0, text: fmtDelta(dFcr, '%') }}
+                            />
+                            <KpiHeroCard
+                                accent="blue" label="Reincidência" icon={Activity}
+                                status={isLatestRecOk ? 'ok' : 'bad'} statusLabel={isLatestRecOk ? 'Dentro da meta' : 'Acima da meta'}
+                                value={latestKpi ? latestKpi.reincidencia : '0.0'} valueSuffix="%" caption="Taxa de retorno de chamados"
+                                goalLabel="Meta ≤" goalValue={`${goals.recurrence}%`}
+                                progress={latestKpi ? progLower(latestKpi.reincidencia, goals.recurrence) : 0}
+                                progressLabel={latestKpi ? `${Math.round(progLower(latestKpi.reincidencia, goals.recurrence))}% da meta` : undefined}
+                                spark={hist.map((k) => k.reincidencia)}
+                                delta={dRec === null ? null : { dir: flat(dRec) ? 'flat' : dRec > 0 ? 'up' : 'down', good: dRec <= 0, text: fmtDelta(dRec, '%') }}
+                            />
+                            <KpiHeroCard
+                                accent="red" label="Metas atingidas" icon={ShieldCheck}
+                                status={met === 3 ? 'ok' : met === 2 ? 'warn' : 'bad'}
+                                statusLabel={met === 3 ? '100% de eficiência' : `${Math.round((met / 3) * 100)}% das metas`}
+                                value={met} valueSuffix="/ 3" caption="Indicadores dentro do SLA no último registro"
+                                segments={[{ label: 'TMR', ok: isLatestTmrOk }, { label: 'FCR', ok: isLatestFcrOk }, { label: 'Reinc.', ok: isLatestRecOk }]}
+                                footer={<span>Última referência <strong className="font-bold text-zinc-200">{latestKpi ? formatDateBR(latestKpi.fullDate) : '--'}</strong></span>}
+                            />
+                        </>
+                    );
+                })()}
             </div>
 
             {/* ========================================================================= */}
