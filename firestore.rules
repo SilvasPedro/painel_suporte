@@ -221,6 +221,26 @@ service cloud.firestore {
       allow write: if isManager();
     }
 
+    // Agenda: um documento por evento. A Gestão cria, edita e apaga; cada convidado só altera a
+    // PRÓPRIA resposta (confirmar/recusar). Leitura: gestão/supervisão, quem marcou e os convidados.
+    match /agenda_events/{eventId} {
+      allow read: if isSignedIn() && (
+        isStaffAdmin() ||
+        resource.data.creatorId == request.auth.uid ||
+        request.auth.uid in resource.data.participantIds
+      );
+      allow create: if isManager() && incoming().creatorId == request.auth.uid;
+      allow update: if isManager() || (
+        isSignedIn() &&
+        request.auth.uid in resource.data.participantIds &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['responses']) &&
+        incoming().responses.diff(existing().responses).affectedKeys().hasOnly([request.auth.uid]) &&
+        incoming().responses[request.auth.uid].status in ['pendente', 'confirmado', 'recusado'] &&
+        incoming().responses[request.auth.uid].keys().hasOnly(['status', 'name', 'at'])
+      );
+      allow delete: if isManager();
+    }
+
     match /system_settings/{settingId} {
       allow read: if isSignedIn();
       allow write: if isStaffAdmin();

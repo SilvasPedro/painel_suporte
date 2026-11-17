@@ -43,6 +43,7 @@ const DEFAULT_COLLECTION_LIMITS = {
     third_party_audits: 300,
     smart_pre_clients: 600,
     feedbacks: 300,
+    agenda_events: 300,
 };
 
 // Ordenação padrão aplicada junto com o limite (mais recentes primeiro).
@@ -55,6 +56,7 @@ const DEFAULT_COLLECTION_ORDER = {
     third_party_audits: { field: 'createdAt' },
     smart_pre_clients: { field: 'createdAt' },
     feedbacks: { field: 'createdAt' },
+    agenda_events: { field: 'date' },
 };
 
 // Chave de cache/listener: nome da coleção, ou nome + filtros quando a query é escopada

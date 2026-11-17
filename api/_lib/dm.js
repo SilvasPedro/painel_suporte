@@ -28,7 +28,7 @@ const MASTER_EMAIL = 'pedrosouzactt@gmail.com';
 // Eventos de tarefas/relatórios: status vai ao SOLICITANTE; comentário vai ao SOLICITANTE e ao RESPONSÁVEL.
 // A função lê o relatório no Firestore (nada disso vem do navegador)
 export const REPORT_EVENTS = ['report_status', 'report_comment'];
-export const DM_EVENTS = ['weekly_evaluation', 'feedback', 'monthly_evaluation', ...REPORT_EVENTS, 'test'];
+export const DM_EVENTS = ['weekly_evaluation', 'feedback', 'monthly_evaluation', ...REPORT_EVENTS, 'agenda_invite', 'test'];
 export const MAX_RECIPIENTS = 100;
 const CONCURRENCY = 5;
 
@@ -228,6 +228,15 @@ export const cleanBlock = (value, maxChars = 600, maxLines = 10) => {
 
 const safeDate = (value) => (/^[\d/-]{1,10}$/.test(String(value || '')) ? String(value) : '');
 
+// "2026-12-10" -> "10/12/2026"
+const formatDateBR = (value) => {
+    const match = safeDate(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
+};
+
+// Só aceita HH:MM (nada de texto livre na mensagem)
+const safeTime = (value) => (/^([01]\d|2[0-3]):[0-5]\d$/.test(String(value || '')) ? String(value) : '');
+
 // "2026-11" -> "11/2026"
 const formatMonth = (value) => {
     const v = safeDate(value);
@@ -270,6 +279,21 @@ export const buildDmContent = (event, params = {}, link = '') => {
             const quoted = body ? `\n${body.split('\n').map(line => `> ${line}`).join('\n')}\n` : '';
             const who = author ? `${author} comentou.` : 'Há um novo comentário.';
             return `${title}\n${label ? `${label}\n` : ''}${who}${quoted}${quoted ? '' : ' '}Abra o Hubdesk para responder.${where}`;
+        }
+        case 'agenda_invite': {
+            const title = cleanInline(params.title, 100) || 'Evento';
+            const organizer = cleanInline(params.organizer, 40);
+            const date = formatDateBR(params.date);
+            const start = safeTime(params.startTime);
+            const end = safeTime(params.endTime);
+            const place = cleanInline(params.location, 80);
+            const when = [date, start ? (end ? `${start} às ${end}` : start) : ''].filter(Boolean).join(' · ');
+            const details = `${when ? `\n🗓️ ${when}` : ''}${place ? `\n📍 ${place}` : ''}`;
+            if (params.rescheduled) {
+                return `📅 **Evento reagendado no Hubdesk**\n**${title}** mudou de data ou horário.${details}\nSua confirmação anterior foi zerada: entre na tela **Agenda** do Hubdesk para **confirmar ou recusar** novamente.${where}`;
+            }
+            const who = organizer ? `${organizer} convidou você` : 'Você foi convidado(a)';
+            return `📅 **Convite para evento marcado pelo Hubdesk**\n${who} para **${title}**.${details}\nEntre na tela **Agenda** do Hubdesk para **confirmar ou recusar** sua presença.${where}`;
         }
         case 'test':
             return '✅ **Teste do Hubdesk**\nSe você recebeu esta mensagem, os avisos por mensagem direta estão funcionando para a sua conta.';
@@ -447,6 +471,46 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
                 }
             }];
         }
+    } else if (event === 'agenda_invite') {
+        // O evento é lido no servidor: título, data, local e quem pode receber nunca vêm do navegador
+        const eventId = body?.eventId;
+        if (!isSafeDocId(eventId)) return { status: 400, json: { error: 'evento-agenda-invalido' } };
+
+        let eventDoc;
+        try {
+            eventDoc = await getFirestoreDoc(`agenda_events/${eventId}`, firestoreCtx);
+        } catch (error) {
+            return { status: error.status === 403 ? 403 : 502, json: { error: error.status === 403 ? 'sem-permissao' : 'falha-ao-ler-evento' } };
+        }
+        if (!eventDoc) return { status: 404, json: { error: 'evento-agenda-nao-encontrado' } };
+
+        const agenda = toPlain(eventDoc);
+        const isOrganizer = String(agenda.creatorId || '') === caller.uid;
+        if (!isOrganizer && !(await isStaffUser(caller, firestoreCtx))) return { status: 403, json: { error: 'sem-permissao' } };
+
+        const nothingToDo = { status: 200, json: { event, summary: summarize([]), results: [] } };
+        // Evita reenviar convites antigos: só vale logo depois de salvar o evento
+        const savedAt = Date.parse(String(agenda.updatedAt || ''));
+        if (!Number.isFinite(savedAt) || now - savedAt > 15 * 60 * 1000) return nothingToDo;
+
+        // Só recebe quem está de fato na lista de convidados do evento (a lista do navegador apenas filtra)
+        const invited = new Set((Array.isArray(agenda.participantIds) ? agenda.participantIds : []).map(String));
+        const wanted = new Set((Array.isArray(body?.recipients) ? body.recipients : []).map(r => String(r?.id)));
+        const targets = [...invited].filter(id => wanted.has(id) && isSafeDocId(id) && id !== caller.uid);
+        if (targets.length === 0) return nothingToDo;
+        if (targets.length > MAX_RECIPIENTS) return { status: 400, json: { error: 'destinatarios-demais', max: MAX_RECIPIENTS } };
+
+        const clientParams = body?.params && typeof body.params === 'object' ? body.params : {};
+        const shared = {
+            title: agenda.title || '',
+            date: agenda.date || '',
+            startTime: agenda.startTime || '',
+            endTime: agenda.endTime || '',
+            location: agenda.location || '',
+            organizer: agenda.creatorName || '',
+            rescheduled: clientParams.rescheduled === true // só muda o texto da mensagem
+        };
+        recipients = targets.map(id => ({ id, params: shared }));
     } else if (event === 'test') {
         recipients = [{ id: caller.uid, params: {} }];
     } else {
@@ -461,7 +525,8 @@ export const processDmRequest = async ({ body, idToken, env = {}, fetchImpl = fe
     }
 
     const appUrl = (env.APP_URL || origin || DEFAULT_APP_URL).replace(/\/+$/, '');
-    const link = REPORT_EVENTS.includes(event) ? `${appUrl}/home?tab=reports` : `${appUrl}/home?tab=my_history`;
+    const tab = REPORT_EVENTS.includes(event) ? 'reports' : (event === 'agenda_invite' ? 'agenda' : 'my_history');
+    const link = `${appUrl}/home?tab=${tab}`;
     const discordCtx = { token, fetchImpl };
 
     let tokenRejected = false;

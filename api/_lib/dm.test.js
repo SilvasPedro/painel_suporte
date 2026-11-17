@@ -658,3 +658,108 @@ describe('processDmRequest: eventos de tarefas e relatórios', () => {
         expect(urls).toEqual([`Bearer ${token}`]);
     });
 });
+
+describe('buildDmContent: convite da Agenda', () => {
+    it('convida com título, data, horário, local e link da Agenda', () => {
+        const text = buildDmContent('agenda_invite', {
+            title: 'Treinamento Huggy', organizer: 'Pedro', date: '2026-12-10', startTime: '14:00', endTime: '15:30', location: 'Sala 2'
+        }, 'https://hub.example/home?tab=agenda');
+        expect(text).toContain('Pedro convidou você');
+        expect(text).toContain('**Treinamento Huggy**');
+        expect(text).toContain('10/12/2026 · 14:00 às 15:30');
+        expect(text).toContain('Sala 2');
+        expect(text).toContain('confirmar ou recusar');
+        expect(text).toContain('https://hub.example/home?tab=agenda');
+    });
+
+    it('evento reagendado avisa que a confirmação foi zerada', () => {
+        const text = buildDmContent('agenda_invite', { title: 'Reunião', date: '2026-12-10', startTime: '10:00', rescheduled: true }, '');
+        expect(text).toContain('reagendado');
+        expect(text).toContain('zerada');
+    });
+
+    it('neutraliza marcações e ignora data e hora fora do formato', () => {
+        const text = buildDmContent('agenda_invite', { title: '**@everyone** `x`', date: '<script>', startTime: '99:99', organizer: '_Fulano_' }, '');
+        expect(text).not.toContain('**@everyone**');
+        expect(text).not.toContain('script');
+        expect(text).not.toContain('99:99');
+    });
+});
+
+describe('processDmRequest: convite da Agenda', () => {
+    const env = { DISCORD_BOT_TOKEN: FAKE_TOKEN, APP_URL: 'https://hub.example' };
+    const savedAt = new Date(NOW - 60 * 1000).toISOString();
+
+    const agendaDoc = (overrides = {}) => fsRaw({
+        title: 'Treinamento', creatorId: 'uid-gestor', creatorName: 'Gestor Silva',
+        date: '2026-12-10', startTime: '14:00', endTime: '15:00', location: 'Sala 2',
+        participantIds: ['ana', 'bia', 'caio'], updatedAt: savedAt, ...overrides
+    });
+
+    const run = async ({ event = {}, body = {}, callerDocs = staffDocs } = {}) => {
+        const { fetchImpl, calls } = makeFetch({ key, docs: callerDocs });
+        const wrapped = async (url, options = {}) => {
+            if (url.includes('/documents/agenda_events/')) return event === null ? json(404, {}) : json(200, event.fields ? event : agendaDoc());
+            return fetchImpl(url, options);
+        };
+        const result = await processDmRequest({
+            body: { event: 'agenda_invite', eventId: 'ev1', recipients: [{ id: 'ana' }, { id: 'bia' }], ...body },
+            idToken: signToken(key), env, fetchImpl: wrapped, now: NOW
+        });
+        return { ...result, calls };
+    };
+
+    it('o organizador avisa os convidados e o texto vem do evento salvo, não do navegador', async () => {
+        const { status, json: res, calls } = await run({ body: { params: { title: 'TÍTULO FALSO' } } });
+        expect(status).toBe(200);
+        expect(res.summary).toMatchObject({ sent: 2 });
+        const texts = calls.discord.filter(c => c.url.endsWith('/messages')).map(c => c.body.content);
+        expect(texts).toHaveLength(2);
+        texts.forEach(t => {
+            expect(t).toContain('Gestor Silva convidou você');
+            expect(t).toContain('**Treinamento**');
+            expect(t).not.toContain('FALSO');
+            expect(t).toContain('https://hub.example/home?tab=agenda');
+        });
+    });
+
+    it('só avisa quem está na lista de convidados do evento', async () => {
+        const { calls, json: res } = await run({ body: { recipients: [{ id: 'ana' }, { id: 'estranho' }] } });
+        expect(res.summary.sent).toBe(1);
+        expect(calls.discord.filter(c => c.url.endsWith('/users/@me/channels')).map(c => c.body.recipient_id)).toEqual([DISCORD_ID_ANA]);
+    });
+
+    it('quem organiza não recebe o próprio convite', async () => {
+        const event = agendaDoc({ participantIds: ['uid-gestor', 'ana'] });
+        const { calls } = await run({ event, body: { recipients: [{ id: 'uid-gestor' }, { id: 'ana' }] } });
+        expect(calls.discord.filter(c => c.url.endsWith('/users/@me/channels'))).toHaveLength(1);
+    });
+
+    it('quem não é organizador nem da gestão recebe 403', async () => {
+        const event = agendaDoc({ creatorId: 'outra-pessoa' });
+        const callerDocs = { 'collaborators/uid-gestor': { role: 'Operacional' } };
+        const { status, calls } = await run({ event, callerDocs });
+        expect(status).toBe(403);
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('evento salvo há mais de 15 minutos não reenvia convites', async () => {
+        const old = agendaDoc({ updatedAt: new Date(NOW - 20 * 60 * 1000).toISOString() });
+        const { status, calls, json: res } = await run({ event: old });
+        expect(status).toBe(200);
+        expect(res.summary.sent).toBe(0);
+        expect(calls.discord).toHaveLength(0);
+    });
+
+    it('evento inexistente responde 404 e id inseguro responde 400', async () => {
+        expect((await run({ event: null })).status).toBe(404);
+        expect((await run({ body: { eventId: '../admins/x' } })).status).toBe(400);
+    });
+
+    it('colaborador com o bot desativado não recebe', async () => {
+        const docs = { ...staffDocs, 'collaborators/ana': { name: 'Ana', discordUserId: DISCORD_ID_ANA, discordDmEnabled: false } };
+        const { json: res, calls } = await run({ callerDocs: docs, body: { recipients: [{ id: 'ana' }] } });
+        expect(res.summary).toMatchObject({ sent: 0, disabled: 1 });
+        expect(calls.discord).toHaveLength(0);
+    });
+});

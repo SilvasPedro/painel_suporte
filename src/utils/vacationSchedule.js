@@ -183,3 +183,23 @@ export const yearSpan = (start, end, year = VACATION_YEAR) => {
 
 /** Gera id estável e curto para novos períodos. */
 export const newEntryId = () => `v_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+/**
+ * Resumo das férias de um colaborador (cartão do Meu Desempenho).
+ * `current`: período em andamento hoje; `next`: próximo período que ainda vai começar.
+ */
+export const myVacationSummary = (entries, colabId, todayISO) => {
+    const mine = (Array.isArray(entries) ? entries : [])
+        .filter((e) => e && e.colabId === colabId && e.start && e.end)
+        .map((e) => ({ ...e, days: countDays(e.start, e.end) }))
+        .sort((a, b) => a.start.localeCompare(b.start));
+    const current = mine.find((e) => e.start <= todayISO && todayISO <= e.end) || null;
+    const next = mine.find((e) => e.start > todayISO) || null;
+    return {
+        entries: mine,
+        totalDays: mine.reduce((sum, e) => sum + e.days, 0),
+        current,
+        next,
+        daysUntilNext: next ? countDays(todayISO, next.start) - 1 : null,
+    };
+};

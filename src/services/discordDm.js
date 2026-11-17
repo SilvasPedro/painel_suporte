@@ -26,7 +26,8 @@ export const DM_EVENT_META = [
     { id: 'feedback', icon: '📢', label: 'Feedback' },
     { id: 'monthly_evaluation', icon: '🎯', label: 'Avaliação 1:1 mensal' },
     { id: 'report_status', icon: '🔄', label: 'Mudança de status em tarefa/relatório (ao solicitante)' },
-    { id: 'report_comment', icon: '💬', label: 'Novo comentário em tarefa/relatório (ao solicitante e ao responsável, com o texto)' }
+    { id: 'report_comment', icon: '💬', label: 'Novo comentário em tarefa/relatório (ao solicitante e ao responsável, com o texto)' },
+    { id: 'agenda_invite', icon: '📅', label: 'Convite para evento da Agenda (aos convidados, para confirmar ou recusar)' }
 ];
 
 export const DM_EVENT_IDS = DM_EVENT_META.map(e => e.id);
@@ -139,7 +140,7 @@ const countLinkedRecipients = (recipients) => {
  * - 'test': envia ao próprio usuário logado, sem depender dessa configuração.
  * @param {{ event: string, recipients?: Array<{ id: string, params?: object }> }} request
  */
-export const sendDiscordDms = async ({ event, recipients = [], reportId, params }) => {
+export const sendDiscordDms = async ({ event, recipients = [], reportId, eventId, params }) => {
     // Pula o envio e, se alguém vinculado deixaria de receber, avisa o gestor na tela
     const skip = (reason) => {
         const linked = countLinkedRecipients(recipients);
@@ -168,6 +169,7 @@ export const sendDiscordDms = async ({ event, recipients = [], reportId, params 
                 event,
                 recipients,
                 ...(reportId ? { reportId } : {}),
+                ...(eventId ? { eventId } : {}),
                 ...(params ? { params } : {})
             })
         });
@@ -210,6 +212,24 @@ export const sendReportDm = async ({ report, kind, withComment = false }) => {
         recipients,
         reportId: report.id,
         params: withComment ? { withComment: true } : undefined
+    });
+};
+
+/**
+ * Avisa por DM os convidados de um evento da Agenda.
+ * A função lê o evento no servidor (título, data, local e lista de convidados); aqui só vão os ids a avisar.
+ * @param {{ eventId: string, recipientIds: string[], rescheduled?: boolean }} args
+ *   rescheduled: o evento mudou de data/horário (só altera o texto da DM)
+ */
+export const sendAgendaInviteDm = async ({ eventId, recipientIds = [], rescheduled = false }) => {
+    const me = auth.currentUser?.uid;
+    const recipients = [...new Set(recipientIds.map(String))].filter(id => id && id !== me).map(id => ({ id }));
+    if (!eventId || recipients.length === 0) return { status: 'skipped', reason: 'sem-destinatarios' };
+    return sendDiscordDms({
+        event: 'agenda_invite',
+        recipients,
+        eventId,
+        params: rescheduled ? { rescheduled: true } : undefined
     });
 };
 

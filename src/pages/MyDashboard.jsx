@@ -4,7 +4,8 @@ import {
     ShieldCheck, Rocket, User, Hourglass, Users, CheckCircle,
     CheckCircle2, TrendingUp, TrendingDown, CalendarDays, Coffee, Calendar, 
     ChevronRight, LifeBuoy, Activity, Sparkles, Layers, Shield, FileText,
-    Spline, LineChart as LineChartIcon, BarChart3, AreaChart as AreaChartIcon, Footprints
+    Spline, LineChart as LineChartIcon, BarChart3, AreaChart as AreaChartIcon, Footprints,
+    Plane, CalendarCheck, BellRing
 } from 'lucide-react';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import {
@@ -14,6 +15,8 @@ import {
 import { timeToDecimal, formatTime } from '../utils/timeCalculations';
 import { calculatePerformanceScore, getHuggyStats } from '../utils/scoringCalculations';
 import { Card, Badge, StatCard, EmptyState } from '../components/ui';
+import { VACATION_YEAR, VACATION_COLLECTION, myVacationSummary, formatBR, toISO } from '../utils/vacationSchedule';
+import { AGENDA_COLLECTION, upcomingEvents, myResponse, summarizeResponses, formatEventWhen } from '../utils/agenda';
 import { BorderBeam } from '../components/magicui';
 import { cn } from '../utils/cn';
 
@@ -244,6 +247,8 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
     const [reportStats, setReportCounts] = useState({ pending: 0, inProgress: 0, resolved: 0 });
     const [unreadFeedbacks, setUnreadFeedbacks] = useState(0);
     const [myAudits, setMyAudits] = useState([]);
+    const [myVacationEntries, setMyVacationEntries] = useState([]);
+    const [myAgendaEvents, setMyAgendaEvents] = useState([]);
 
     useEffect(() => {
         if (!currentUserId) {
@@ -380,8 +385,18 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
             setMyAudits(fetched);
         }, currentUserId ? { where: [['colabId', '==', currentUserId]] } : {});
 
-        return () => { 
-            unsubKpi(); 
+        // Férias (escala anual) e convites/eventos da Agenda do próprio colaborador
+        const unsubVacation = subscribeSharedDocument(VACATION_COLLECTION, String(VACATION_YEAR), (docData) => {
+            setMyVacationEntries(Array.isArray(docData?.entries) ? docData.entries : []);
+        });
+        const unsubAgenda = subscribeSharedCollection(AGENDA_COLLECTION, (items) => {
+            setMyAgendaEvents(items);
+        }, { where: [['participantIds', 'array-contains', currentUserId]] });
+
+        return () => {
+            unsubVacation();
+            unsubAgenda();
+            unsubKpi();
             unsubEvals(); 
             unsubGoals(); 
             unsubColabs(); 
@@ -408,6 +423,19 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
     const nextSundayInfo = useMemo(() => formatNextDateInfo(nextSundayShift, 'plantao'), [nextSundayShift]);
     const nextDayOffInfo = useMemo(() => formatNextDateInfo(nextDayOff, 'folga'), [nextDayOff]);
+
+    // Cartões de Férias e de Agenda
+    const todayISO = toISO(new Date());
+    const vacation = useMemo(() => myVacationSummary(myVacationEntries, currentUserId, todayISO), [myVacationEntries, currentUserId, todayISO]);
+    const agenda = useMemo(() => {
+        const upcoming = upcomingEvents(myAgendaEvents.filter(e => myResponse(e, currentUserId) !== 'recusado'), todayISO);
+        return {
+            next: upcoming[0] || null,
+            upcomingCount: upcoming.length,
+            pending: upcoming.filter(e => myResponse(e, currentUserId) === 'pendente').length
+        };
+    }, [myAgendaEvents, currentUserId, todayISO]);
+    const goToTab = (tab) => window.dispatchEvent(new CustomEvent('HUBDESK_NAVIGATE_TAB', { detail: { tab } }));
 
     const { myStats, chartData, shiftAvgPts } = useMemo(() => {
         const defaultStats = {
@@ -731,6 +759,86 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                         <span className="text-emerald-500 font-bold">
                             {nextDayOff ? 'Folga programada' : 'Aguardando escala'}
                         </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* FÉRIAS E AGENDA */}
+            <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 4. Minhas Férias */}
+                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between hover:border-sky-500/40 hover:shadow-md transition-all group">
+                    <div>
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="space-y-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-sky-500 block">Minhas Férias {VACATION_YEAR}</span>
+                                <Badge variant={vacation.current ? 'success' : vacation.next ? 'info' : 'neutral'} size="sm">
+                                    {vacation.current ? 'De férias agora' : vacation.next ? `Em ${vacation.daysUntilNext} dia(s)` : 'A Definir'}
+                                </Badge>
+                            </div>
+                            <div className={cn(
+                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                vacation.entries.length ? "bg-sky-500/10 text-sky-500 border-sky-500/20" : "bg-subtle text-muted-hub border-subtle"
+                            )}>
+                                <Plane className="w-5 h-5" />
+                            </div>
+                        </div>
+                        <div className="mt-2">
+                            <h3 className="font-brand text-2xl font-black text-primary-hub tracking-tight">
+                                {vacation.current
+                                    ? `Até ${formatBR(vacation.current.end)}`
+                                    : vacation.next
+                                        ? `${formatBR(vacation.next.start)} a ${formatBR(vacation.next.end)}`
+                                        : 'Sem férias planejadas'}
+                            </h3>
+                            <p className="text-xs text-secondary-hub mt-1 leading-relaxed">
+                                {vacation.entries.length
+                                    ? `${vacation.totalDays} dia(s) em ${vacation.entries.length} período(s) na escala de ${VACATION_YEAR}.`
+                                    : `Seu nome ainda não aparece na escala de férias de ${VACATION_YEAR}.`}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-4 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub font-medium">
+                        <span>Escala de Férias</span>
+                        <button type="button" onClick={() => goToTab('vacation_schedule')} className="text-sky-500 font-bold hover:underline cursor-pointer inline-flex items-center gap-0.5">
+                            Ver escala <ChevronRight className="w-3 h-3" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* 5. Eventos na Agenda */}
+                <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs flex flex-col justify-between hover:border-violet-500/40 hover:shadow-md transition-all group">
+                    <div>
+                        <div className="flex items-start justify-between mb-3">
+                            <div className="space-y-1">
+                                <span className="text-[11px] font-bold uppercase tracking-wider text-violet-500 block">Eventos na Agenda</span>
+                                <Badge variant={agenda.pending ? 'warning' : agenda.next ? 'purple' : 'neutral'} size="sm">
+                                    {agenda.pending ? `${agenda.pending} convite(s) para responder` : agenda.next ? 'Tudo respondido' : 'Sem eventos'}
+                                </Badge>
+                            </div>
+                            <div className={cn(
+                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                agenda.pending ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                                    : agenda.next ? "bg-violet-500/10 text-violet-500 border-violet-500/20" : "bg-subtle text-muted-hub border-subtle"
+                            )}>
+                                {agenda.pending ? <BellRing className="w-5 h-5" /> : <CalendarCheck className="w-5 h-5" />}
+                            </div>
+                        </div>
+                        <div className="mt-2">
+                            <h3 className="font-brand text-2xl font-black text-primary-hub tracking-tight break-words">
+                                {agenda.next ? agenda.next.title : 'Nenhum evento marcado'}
+                            </h3>
+                            <p className="text-xs text-secondary-hub mt-1 leading-relaxed">
+                                {agenda.next
+                                    ? `${formatEventWhen(agenda.next)}${agenda.next.location ? ` · ${agenda.next.location}` : ''}`
+                                    : 'Quando a Gestão marcar um evento com você, ele aparece aqui.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="pt-3 mt-4 border-t border-subtle flex items-center justify-between text-[11px] text-muted-hub font-medium">
+                        <span>{agenda.upcomingCount} evento(s) à frente{agenda.next ? ` · ${summarizeResponses(agenda.next).confirmado} confirmado(s) no próximo` : ''}</span>
+                        <button type="button" onClick={() => goToTab('agenda')} className="text-violet-500 font-bold hover:underline cursor-pointer inline-flex items-center gap-0.5">
+                            Abrir agenda <ChevronRight className="w-3 h-3" />
+                        </button>
                     </div>
                 </div>
             </div>
