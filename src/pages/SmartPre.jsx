@@ -36,6 +36,7 @@ export default function SmartPre() {
 
     const [allClients, setAllClients] = useState([]);
     const [loaded, setLoaded] = useState(false);
+    const [loadError, setLoadError] = useState(null);
 
     const [tab, setTab] = useState('dashboard');
     const [period, setPeriod] = useState('all');
@@ -56,8 +57,9 @@ export default function SmartPre() {
     useEffect(() => {
         const unsubscribe = subscribeSharedCollection('smart_pre_clients', (items) => {
             setAllClients(items || []);
+            setLoadError(null);
             setLoaded(true);
-        });
+        }, {}, (error) => setLoadError(error));
         return () => unsubscribe && unsubscribe();
     }, []);
 
@@ -233,7 +235,16 @@ export default function SmartPre() {
                     ]}
                 />
 
-                {!loaded ? (
+                {!loaded && loadError ? (
+                    <div className="py-20 flex flex-col items-center text-center text-muted-hub px-6" role="alert">
+                        <span className="text-sm font-bold text-primary-hub">Não foi possível carregar o Smart Pré</span>
+                        <span className="text-xs mt-2 max-w-md">
+                            {loadError.code === 'permission-denied'
+                                ? 'Seu nível de acesso não tem permissão para ler estes dados. Se isso é inesperado, confira o nível do seu perfil no Hub da Equipe ou se as regras do Firestore foram publicadas.'
+                                : 'Houve uma falha ao ler os dados. Recarregue a página e tente novamente.'}
+                        </span>
+                    </div>
+                ) : !loaded ? (
                     <div className="py-20 flex flex-col items-center text-muted-hub">
                         <Loader2 className="w-6 h-6 animate-spin" />
                         <span className="text-xs mt-2">Carregando acompanhamento…</span>

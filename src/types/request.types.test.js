@@ -69,6 +69,13 @@ describe('Hubdesk v3.10.1 — RLS Visibility, Watchers, Assignee & Markdown Secu
         expect(visibleForGestor.map((t) => t.id)).toEqual(['t_unassigned']);
     });
 
+    it('permite que a Qualidade visualize todas as tarefas, com ou sem responsável', () => {
+        const qualidadeUser = { id: 'u_quality', name: 'Quality', role: 'qualidade' };
+        expect(canUserViewTask(unassignedTask, qualidadeUser)).toBe(true);
+        expect(canUserViewTask(assignedTask, qualidadeUser)).toBe(true);
+        expect(filterVisibleTasks([unassignedTask, assignedTask], qualidadeUser)).toHaveLength(2);
+    });
+
     it('restringe visualizadores estritamente ao modo somente leitura', () => {
         expect(isUserWatcherOnly(assignedTask, regularWatcher)).toBe(true);
         expect(isUserWatcherOnly(assignedTask, regularAuthor)).toBe(false);

@@ -648,6 +648,9 @@ export const isUserTaskWatcher = (task, user) => {
 export const canUserViewTask = (task, user) => {
     if (!task || !user) return false;
 
+    // Qualidade (somente leitura) visualiza todas as tarefas; nunca edita (bloqueado por isReadOnlyLevel)
+    if (String(user.role || '').trim().toLowerCase() === 'qualidade') return true;
+
     if (
         isUserTaskCreator(task, user) ||
         isUserTaskAssignee(task, user) ||

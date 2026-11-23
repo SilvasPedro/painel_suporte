@@ -211,8 +211,18 @@ const notifySubscribers = (key, data) => {
  * Se já houver um listener ativo do Firestore, reaproveita o stream singleton.
  * Entrega imediatamente dados de L1 Cache (0ms).
  */
-export const subscribeSharedCollection = (collectionName, callback, options = {}) => {
+const LISTENER_ERRORS = new Map();
+const ERROR_SUBSCRIBERS = new Map();
+
+export const subscribeSharedCollection = (collectionName, callback, options = {}, onError = null) => {
     const key = buildCollectionKey(collectionName, options);
+
+    // Telas que querem saber de falhas (ex.: permissão negada) recebem o erro em vez de ficar carregando
+    if (typeof onError === 'function') {
+        if (!ERROR_SUBSCRIBERS.has(key)) ERROR_SUBSCRIBERS.set(key, new Set());
+        ERROR_SUBSCRIBERS.get(key).add(onError);
+        if (LISTENER_ERRORS.has(key)) onError(LISTENER_ERRORS.get(key));
+    }
 
     // 1. Cancela timer de desligamento pendente
     if (TIMERS.has(key)) {
@@ -233,9 +243,16 @@ export const subscribeSharedCollection = (collectionName, callback, options = {}
         callback(cachedData);
     }
 
+    const release = () => {
+        ERROR_SUBSCRIBERS.get(key)?.delete(onError);
+        unsubscribeComponent(key, callback);
+        // Sem mais inscritos o listener é desligado; o erro antigo não deve valer para uma nova tentativa
+        if (!SUBSCRIBERS.get(key)?.size) LISTENER_ERRORS.delete(key);
+    };
+
     // 4. Se já existe um listener ativo para esta query no Firestore, não cria outro
     if (LISTENERS.has(key)) {
-        return () => unsubscribeComponent(key, callback);
+        return release;
     }
 
     // 5. Inicia O ÚNICO listener do Firestore para a query
@@ -253,6 +270,8 @@ export const subscribeSharedCollection = (collectionName, callback, options = {}
             TIMESTAMP_CACHE.set(key, Date.now());
             saveToSessionStorage(key, items);
 
+            LISTENER_ERRORS.delete(key);
+
             // Notifica todos os inscritos
             notifySubscribers(key, items);
         }, (error) => {
@@ -263,6 +282,10 @@ export const subscribeSharedCollection = (collectionName, callback, options = {}
                 return;
             }
             console.warn(`Aviso no listener compartilhado "${key}":`, error);
+            LISTENER_ERRORS.set(key, error);
+            ERROR_SUBSCRIBERS.get(key)?.forEach(cb => {
+                try { cb(error); } catch (err) { console.error(`Erro no handler de falha de ${key}:`, err); }
+            });
         });
     };
 
@@ -272,7 +295,7 @@ export const subscribeSharedCollection = (collectionName, callback, options = {}
         console.error(`Falha ao conectar listener Firestore para "${key}":`, err);
     }
 
-    return () => unsubscribeComponent(key, callback);
+    return release;
 };
 
 /**
