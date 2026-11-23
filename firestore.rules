@@ -70,6 +70,10 @@ service cloud.firestore {
         isStaffAdmin() ||
         resource.data.creatorId == request.auth.uid ||
         resource.data.assigneeId == request.auth.uid ||
+        // Campos que o app realmente grava ao atribuir/incluir visualizador (TaskFormModal / Reports)
+        resource.data.assignedToId == request.auth.uid ||
+        resource.data.assigned_to == request.auth.uid ||
+        request.auth.uid in resource.data.watcherIds ||
         resource.data.status in ['Pendente', 'Em Andamento', 'Resolvido']
       );
 
@@ -86,6 +90,12 @@ service cloud.firestore {
         (
           resource.data.creatorId == request.auth.uid &&
           incoming().creatorId == resource.data.creatorId
+        ) ||
+        // Responsável atribuído pode atualizar (status/comentários), sem trocar autoria nem a atribuição
+        (
+          resource.data.get('assignedToId', null) == request.auth.uid &&
+          incoming().creatorId == resource.data.creatorId &&
+          incoming().get('assignedToId', null) == resource.data.get('assignedToId', null)
         )
       );
 

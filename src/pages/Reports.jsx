@@ -180,7 +180,7 @@ const Reports = () => {
         // Aplicação estrita da Matriz de Acesso e Visibilidade (RLS):
         // - Usuário comum: apenas se for Criador, Responsável ou Visualizador.
         // - Gestor/Supervisor: suas próprias tarefas, onde é responsável/visualizador e todas sem responsável.
-        const unsubscribe = subscribeSharedCollection("critical_reports", (items) => {
+        const applyItems = (items) => {
             const fetchedData = filterVisibleTasks(items, effectiveUser);
 
             // Ordenação pelo mais recente
@@ -197,10 +197,43 @@ const Reports = () => {
                 return updated || null;
             });
             setLoading(false);
+        };
+
+        // Liderança: consulta completa (as regras do Firestore liberam a coleção inteira para staff).
+        if (canViewAllReports) {
+            const unsubscribe = subscribeSharedCollection("critical_reports", applyItems);
+            return () => unsubscribe();
+        }
+
+        // Colaborador: o Firestore NEGA consultas sem filtro quando a regra depende de campos do documento
+        // (regras não são filtros). Por isso busca só o que lhe diz respeito, em consultas escopadas:
+        // criador, responsável atribuído e visualizador. Depois une os resultados sem duplicar.
+        const myUserIds = [...new Set([effectiveUser.id, effectiveUser.uid].filter(Boolean).map(String))];
+        const buckets = new Map();
+        const mergeAndApply = () => {
+            const merged = new Map();
+            buckets.forEach((items) => items.forEach((item) => merged.set(item.id, item)));
+            applyItems([...merged.values()]);
+        };
+
+        const unsubs = [];
+        myUserIds.forEach((uid) => {
+            [
+                ['creatorId', '==', uid],
+                ['assignedToId', '==', uid],
+                ['assigned_to', '==', uid],
+                ['watcherIds', 'array-contains', uid]
+            ].forEach((clause) => {
+                const bucketKey = clause.join('|');
+                unsubs.push(subscribeSharedCollection("critical_reports", (items) => {
+                    buckets.set(bucketKey, items);
+                    mergeAndApply();
+                }, { where: [clause] }));
+            });
         });
 
-        return () => unsubscribe();
-    }, [effectiveUser]);
+        return () => unsubs.forEach((unsub) => unsub());
+    }, [effectiveUser, canViewAllReports]);
 
     // ==========================================
     // HELPERS E FILTRAGEM
