@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
     X, Loader2, User, Mail, Sun, Sunset, Moon, 
-    KeyRound, Check, Shield, ShieldCheck, Users, Edit3,
+    KeyRound, Check, Shield, ShieldCheck, Users, Edit3, Eye,
     Trophy, Sparkles, Headphones, Award, Star, Zap, Rocket, CalendarCheck, Network,
     ThumbsUp, TrendingUp, Clock, Bot
 } from 'lucide-react';
@@ -10,6 +10,8 @@ import { auth } from '../../services/firebase';
 import { updateCollaboratorProfile } from '../../services/adminAuth';
 import { useNotification } from '../../context/NotificationContext';
 import { usePermissions } from '../../context/PermissionsContext';
+import { useAuth } from '../../context/AuthContext';
+import { resolveAccessLevel } from '../../services/rbac';
 import { isValidDiscordId } from '../../services/discordDm';
 import { BADGES_CATALOG, calculateUserLevel, THIRD_PARTY_SCHEDULE_INFO, LEGACY_BADGE_MAP } from '../../services/userProfile';
 
@@ -27,11 +29,13 @@ const BADGE_ICONS = {
     Award
 };
 
+// Níveis de acesso. O id é o valor salvo em collaborators.accessLevel (ids internos, ver services/rbac.js).
 const ROLE_CARDS = [
-    { id: 'Operacional', title: 'Operacional', icon: User, badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
-    { id: 'Apoio', title: 'Apoio', icon: Users, badge: 'bg-blue-100 text-blue-800 border-blue-200' },
-    { id: 'Supervisor', title: 'Supervisor', icon: ShieldCheck, badge: 'bg-amber-100 text-amber-800 border-amber-200' },
-    { id: 'Gestor', title: 'Gestor', icon: Shield, badge: 'bg-red-100 text-red-700 border-red-200' }
+    { id: 'gestor', title: 'Supervisor', icon: Shield, badge: 'bg-red-100 text-red-700 border-red-200' },
+    { id: 'supervisor', title: 'Líder', icon: ShieldCheck, badge: 'bg-amber-100 text-amber-800 border-amber-200' },
+    { id: 'apoio', title: 'Apoio', icon: Users, badge: 'bg-blue-100 text-blue-800 border-blue-200' },
+    { id: 'colaborador', title: 'Operacional', icon: User, badge: 'bg-emerald-100 text-emerald-800 border-emerald-200' },
+    { id: 'qualidade', title: 'Qualidade', icon: Eye, badge: 'bg-violet-100 text-violet-800 border-violet-200' }
 ];
 
 const SHIFT_OPTIONS = [
@@ -41,9 +45,14 @@ const SHIFT_OPTIONS = [
     { id: 'Noturno', label: 'Noturno', hours: '13:45 até 20:00', icon: Moon }
 ];
 
-export const EditCollaboratorModal = ({ colab, onClose }) => {
+export const EditCollaboratorModal = ({ colab, activeSupervisorCount = 0, onClose }) => {
     const { showToast } = useNotification();
-    const { isMasterAdmin, normalizedRole } = usePermissions();
+    const { currentUser } = useAuth();
+    const { isMasterAdmin, normalizedRole, canManageTeam } = usePermissions();
+    // Só o Supervisor altera níveis e o status; ninguém altera o próprio nível
+    const isSelf = colab.id === currentUser?.firestoreId;
+    const currentLevel = resolveAccessLevel(colab);
+    const canChangeLevel = canManageTeam && !isSelf;
     // Só a Gestão vincula/altera o ID do Discord (o colaborador vê, mas não edita, em Meu Perfil)
     const canEditDiscordId = isMasterAdmin || normalizedRole === 'gestor';
     const initialShift = colab.shift === 'Manhã' ? 'Manhã I' : (colab.shift === 'Noite' ? 'Noturno' : (colab.shift || 'Manhã I'));
@@ -51,6 +60,7 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
         name: colab.name || '',
         // Registros antigos usam "Colaborador": o cartão selecionado passa a ser "Operacional"
         role: ['', 'colaborador', 'operacional'].includes(String(colab.role || '').trim().toLowerCase()) ? 'Operacional' : colab.role,
+        accessLevel: currentLevel,
         shift: initialShift,
         active: colab.active !== false,
         discordUserId: colab.discordUserId || '',
@@ -81,16 +91,31 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
             showToast('O ID do Discord deve ter de 17 a 20 números (ou ficar vazio para desvincular).', 'warning');
             return;
         }
+        if (!formData.role.trim()) {
+            showToast('Informe o cargo.', 'warning');
+            return;
+        }
+        // O último Supervisor ativo não pode ser rebaixado nem inativado
+        const losingSupervisor = currentLevel === 'gestor' && activeSupervisorCount <= 1 &&
+            ((canChangeLevel && formData.accessLevel !== 'gestor') || (canManageTeam && !formData.active));
+        if (losingSupervisor) {
+            showToast('Não é possível rebaixar ou inativar o último Supervisor ativo.', 'error');
+            return;
+        }
         setLoading(true);
         try {
             const payload = {
                 name: formData.name.trim(),
-                role: formData.role,
+                role: formData.role.trim(),
                 shift: formData.shift,
-                active: formData.active,
-                badges: formData.badges,
-                status: formData.active ? 'Ativo' : 'Inativo'
+                badges: formData.badges
             };
+            // Nível e status só vão no payload quando o Supervisor alterou: as regras do Firestore recusam os demais
+            if (canChangeLevel && formData.accessLevel !== currentLevel) payload.accessLevel = formData.accessLevel;
+            if (canManageTeam && formData.active !== (colab.active !== false)) {
+                payload.active = formData.active;
+                payload.status = formData.active ? 'Ativo' : 'Inativo';
+            }
             // Só envia quando a Gestão alterou: as regras do Firestore recusam mudança de outra função
             if (canEditDiscordId && discordChanged) payload.discordUserId = discordId;
             await updateCollaboratorProfile(colab.id, payload);
@@ -188,17 +213,27 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
 
                             {/* Cargo RBAC */}
                             <div className="bg-surface p-3.5 rounded-xl border border-subtle shadow-2xs space-y-2">
-                                <label className="block text-xs font-bold text-secondary-hub">Cargo / Nível RBAC</label>
+                                <label className="block text-xs font-bold text-secondary-hub">Cargo</label>
+                                <input
+                                    type="text"
+                                    required
+                                    value={formData.role}
+                                    onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                    placeholder="Ex: Analista de Suporte"
+                                    className="w-full px-3 py-2 bg-subtle border border-strong rounded-xl focus:bg-surface focus:ring-2 focus:ring-red-600 outline-none text-sm transition-all"
+                                />
+                                <label className="block text-xs font-bold text-secondary-hub pt-1">Nível de Acesso</label>
                                 <div className="grid grid-cols-2 gap-2">
                                     {ROLE_CARDS.map(r => {
                                         const Icon = r.icon;
-                                        const isSelected = formData.role === r.id;
+                                        const isSelected = formData.accessLevel === r.id;
                                         return (
                                             <button
                                                 type="button"
                                                 key={r.id}
-                                                onClick={() => setFormData({ ...formData, role: r.id })}
-                                                className={`p-2 rounded-xl border flex items-center justify-between transition-all cursor-pointer ${
+                                                onClick={() => setFormData({ ...formData, accessLevel: r.id })}
+                                                disabled={!canChangeLevel}
+                                                className={`p-2 rounded-xl border flex items-center justify-between transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed ${
                                                     isSelected 
                                                         ? 'border-red-600 bg-red-50/70 ring-1 ring-red-600 font-bold text-primary-hub shadow-2xs' 
                                                         : 'border-subtle bg-surface hover:bg-subtle text-secondary-hub'
@@ -215,6 +250,11 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
                                         );
                                     })}
                                 </div>
+                                {!canChangeLevel && (
+                                    <p className="text-[11px] text-muted-hub">
+                                        {isSelf ? 'Você não pode alterar o seu próprio nível.' : 'Somente o Supervisor altera o nível de acesso.'}
+                                    </p>
+                                )}
                             </div>
 
                             {/* Turno de Trabalho Oficial */}
@@ -340,7 +380,7 @@ export const EditCollaboratorModal = ({ colab, onClose }) => {
                                 <label className="relative inline-flex items-center cursor-pointer">
                                     <input 
                                         type="checkbox" 
-                                        checked={formData.active} 
+                                        checked={formData.active} disabled={!canManageTeam} 
                                         onChange={e => setFormData({ ...formData, active: e.target.checked })} 
                                         className="sr-only peer"
                                     />

@@ -3,6 +3,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth"
 import { doc, setDoc, updateDoc, collection, writeBatch } from "firebase/firestore"
 import { db, auth, firebaseConfig } from "./firebase";
 import { resolveUserName } from '../utils/userResolvers';
+import { ACCESS_LEVEL_IDS, DEFAULT_ACCESS_LEVEL } from './rbac';
 import { buildNotification, addNotificationToBatch, dispatchTeamWebhook } from './notificationEvents';
 import { sendDiscordDms } from './discordDm';
 
@@ -10,7 +11,10 @@ import { sendDiscordDms } from './discordDm';
 const adminApp = initializeApp(firebaseConfig, "AdminWorker");
 const adminAuth = getAuth(adminApp);
 
-export const registerCollaborator = async (name, email, password, role, shift) => {
+export const registerCollaborator = async (name, email, password, role, shift, accessLevel = DEFAULT_ACCESS_LEVEL) => {
+  if (!ACCESS_LEVEL_IDS.includes(accessLevel)) {
+    throw new Error("Nível de acesso inválido.");
+  }
   try {
     // 1. Cria a conta no Auth usando a instância Worker
     const userCredential = await createUserWithEmailAndPassword(adminAuth, email, password);
@@ -27,6 +31,7 @@ export const registerCollaborator = async (name, email, password, role, shift) =
       name,
       email,
       role,
+      accessLevel,
       shift,
       status: "Ativo",
       createdAt: new Date().toISOString()

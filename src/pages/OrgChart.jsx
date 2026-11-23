@@ -99,9 +99,11 @@ const OrgChart = ({ readOnly }) => {
         // Master Admin sempre edita
         if (isMasterAdmin) return true;
 
-        // Verifica cargo do usuário
-        const roleStr = String(currentUser?.role || '').toLowerCase();
-        const isGestor = normalizedRole === 'gestor' || roleStr.includes('gestor') || roleStr.includes('admin') || roleStr.includes('gerente');
+        // Qualidade é somente leitura, independentemente do cargo digitado
+        if (normalizedRole === 'qualidade') return false;
+
+        // O nível de acesso decide (o texto do cargo não concede edição)
+        const isGestor = normalizedRole === 'gestor';
 
         // Checa permissão do RBAC para 'orgchart'
         const rbacAllows = canEdit('orgchart');
@@ -118,7 +120,7 @@ const OrgChart = ({ readOnly }) => {
         if (readOnly === false) return true;
 
         return false;
-    }, [canEdit, isMasterAdmin, normalizedRole, currentUser, readOnly]);
+    }, [canEdit, isMasterAdmin, normalizedRole, readOnly]);
 
     // O status final de somente leitura
     const isReadOnly = !hasEditPermission;

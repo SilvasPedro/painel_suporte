@@ -13,7 +13,7 @@ import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { ROLES, normalizeRole, getRoleLabel } from '../services/rbac';
+import { ROLES, resolveAccessLevel, getAccessLevelInfo, getRoleLabel } from '../services/rbac';
 import { Card, Badge, Button, Tabs, EmptyState, Input } from '../components/ui';
 import { ShineBorder, BorderBeam, AnimatedShinyText, MagicCard } from '../components/magicui';
 import { cn } from '../utils/cn';
@@ -122,21 +122,27 @@ const getShiftBadgeStyle = (shift) => {
     };
 };
 
-const getRoleMeta = (roleString) => {
-    const key = normalizeRole(roleString);
-    const found = ROLES.find(r => r.id === key);
-    if (found) return found;
-    return {
-        id: 'colaborador',
-        label: getRoleLabel(roleString),
-        badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        activeBadgeColor: 'bg-emerald-600 text-white'
-    };
+// Nível de acesso do colaborador (campo accessLevel; sem ele, derivado do cargo)
+const getRoleMeta = (colab) => getAccessLevelInfo(colab);
+
+// Tag do cargo (texto livre) com a sub-tag do nível de acesso embaixo
+const RoleBadges = ({ colab, align = 'start' }) => {
+    const level = getRoleMeta(colab);
+    return (
+        <span className={cn('inline-flex flex-col gap-0.5', align === 'end' ? 'items-end' : 'items-start')}>
+            <Badge variant="outline" size="sm" className="font-semibold">
+                {getRoleLabel(colab.role)}
+            </Badge>
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-hub" title="Nível de acesso">
+                Acesso: {level.label}
+            </span>
+        </span>
+    );
 };
 
 const CollaboratorsHub = () => {
     const { showToast } = useNotification();
-    const { canEdit, activeRoleInfo, normalizedRole } = usePermissions();
+    const { canEdit, activeRoleInfo, normalizedRole, canManageTeam } = usePermissions();
     const isEditable = canEdit('hub');
 
     // Modais
@@ -199,8 +205,8 @@ const CollaboratorsHub = () => {
 
     // Alternar status ativo/inativo
     const handleToggleActive = async (colab) => {
-        if (!isEditable) {
-            showToast("Seu perfil tem apenas permissão de visualização.", "error");
+        if (!isEditable || !canManageTeam) {
+            showToast("Somente o Supervisor pode ativar ou inativar colaboradores.", "error");
             return;
         }
         try {
@@ -328,7 +334,7 @@ const CollaboratorsHub = () => {
                 return s === shiftFilter;
             })();
 
-            const matchesRole = roleFilter ? normalizeRole(colab.role) === normalizeRole(roleFilter) : true;
+            const matchesRole = roleFilter ? resolveAccessLevel(colab) === roleFilter : true;
 
             return matchesSearch && matchesStatus && matchesShift && matchesRole;
         }).sort((a, b) => {
@@ -382,13 +388,16 @@ const CollaboratorsHub = () => {
 
                 <div className="flex items-center gap-3">
                     {isEditable ? (
-                        <Button
-                            variant="primary"
-                            icon={UserPlus}
-                            onClick={() => setIsCreateModalOpen(true)}
-                        >
-                            Novo Colaborador
-                        </Button>
+                        // Só o Supervisor cadastra colaboradores
+                        canManageTeam && (
+                            <Button
+                                variant="primary"
+                                icon={UserPlus}
+                                onClick={() => setIsCreateModalOpen(true)}
+                            >
+                                Novo Colaborador
+                            </Button>
+                        )
                     ) : (
                         <div className="flex items-center gap-2 px-3 py-2 bg-surface border border-subtle text-secondary-hub rounded-xl text-xs font-medium shadow-2xs">
                             <Eye className="w-4 h-4 text-sky-500" />
@@ -682,11 +691,10 @@ const CollaboratorsHub = () => {
                             onChange={e => setRoleFilter(e.target.value)}
                             className="py-2.5 px-3 border border-subtle rounded-xl outline-none focus:ring-2 focus:ring-rose-500/30 text-xs bg-surface text-primary-hub font-medium cursor-pointer shadow-2xs"
                         >
-                            <option value="">Todos os Cargos</option>
-                            <option value="Gestor">Gestor</option>
-                            <option value="Supervisor">Supervisor</option>
-                            <option value="Apoio">Apoio</option>
-                            <option value="Operacional">Operacional</option>
+                            <option value="">Todos os Níveis</option>
+                            {ROLES.map(r => (
+                                <option key={r.id} value={r.id}>{r.label}</option>
+                            ))}
                         </select>
 
                         {/* Filtro Status */}
@@ -894,8 +902,9 @@ const CollaboratorsHub = () => {
             )}
             {editingColab && (
                 <EditCollaboratorModal 
-                    colab={editingColab} 
-                    onClose={() => setEditingColab(null)} 
+                    colab={editingColab}
+                    activeSupervisorCount={collaborators.filter(c => c.active !== false && resolveAccessLevel(c) === 'gestor').length}
+                    onClose={() => setEditingColab(null)}
                 />
             )}
             {feedbackColab && (
@@ -918,8 +927,8 @@ const CollaboratorsHub = () => {
 // COMPONENTE 1: CARD MODERNO DA GRADE (MAGIC CARD COM SPOTLIGHT)
 // =========================================================================
 const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
+    const { canManageTeam } = usePermissions();
     const score = latestEval ? calcularPontuacao(latestEval) : null;
-    const roleMeta = getRoleMeta(colab.role);
     const isActive = colab.active !== false;
     const shiftStyle = getShiftBadgeStyle(colab.shift);
     const ShiftIcon = shiftStyle.icon;
@@ -953,9 +962,7 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
                     </div>
 
                     <div className="flex flex-col items-end gap-1.5">
-                        <Badge variant="outline" size="sm" className="font-semibold">
-                            {roleMeta.label || getRoleLabel(colab.role)}
-                        </Badge>
+                        <RoleBadges colab={colab} align="end" />
                         <Badge 
                             variant="neutral" 
                             size="sm" 
@@ -1053,7 +1060,7 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
 
                 <button
                     onClick={onToggleActive}
-                    disabled={!isEditable}
+                    disabled={!isEditable || !canManageTeam}
                     className={cn(
                         "flex flex-col items-center justify-center py-1.5 px-1 rounded-lg border border-transparent transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed",
                         isActive 
@@ -1074,6 +1081,7 @@ const CollaboratorModernCard = ({ colab, latestEval, isEditable, onEdit, onFeedb
 // COMPONENTE 2: VISUALIZAÇÃO EM TABELA ENTERPRISE
 // =========================================================================
 const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
+    const { canManageTeam } = usePermissions();
     return (
         <div className="bg-surface rounded-2xl border border-subtle shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
@@ -1093,7 +1101,6 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                         {collaborators.map(colab => {
                             const evalData = latestEvalMap[colab.id];
                             const score = evalData ? calcularPontuacao(evalData) : null;
-                            const roleMeta = getRoleMeta(colab.role);
                             const isActive = colab.active !== false;
 
                             return (
@@ -1124,9 +1131,7 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
 
                                     {/* Cargo */}
                                     <td className="py-3.5 px-4">
-                                        <Badge variant="outline" size="sm" className="font-semibold">
-                                            {roleMeta.label || getRoleLabel(colab.role)}
-                                        </Badge>
+                                        <RoleBadges colab={colab} />
                                     </td>
 
                                     {/* Turno */}
@@ -1202,16 +1207,18 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
                                                     >
                                                         <Edit3 className="w-4 h-4" />
                                                     </button>
-                                                    <button
-                                                        onClick={() => onToggleActive(colab)}
-                                                        className={cn(
-                                                            "p-1.5 rounded-lg transition-colors cursor-pointer",
-                                                            isActive ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-500/10"
-                                                        )}
-                                                        title={isActive ? 'Inativar' : 'Ativar'}
-                                                    >
-                                                        {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                                                    </button>
+                                                    {canManageTeam && (
+                                                        <button
+                                                            onClick={() => onToggleActive(colab)}
+                                                            className={cn(
+                                                                "p-1.5 rounded-lg transition-colors cursor-pointer",
+                                                                isActive ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-500/10"
+                                                            )}
+                                                            title={isActive ? 'Inativar' : 'Ativar'}
+                                                        >
+                                                            {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                                        </button>
+                                                    )}
                                                 </>
                                             )}
                                         </div>
@@ -1230,8 +1237,8 @@ const CollaboratorTableView = ({ collaborators, latestEvalMap, isEditable, onEdi
 // COMPONENTE 3: VISUALIZAÇÃO EM DIRETÓRIO COMPACTO
 // =========================================================================
 const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedback, onReport, onToggleActive }) => {
+    const { canManageTeam } = usePermissions();
     const score = latestEval ? calcularPontuacao(latestEval) : null;
-    const roleMeta = getRoleMeta(colab.role);
     const isActive = colab.active !== false;
 
     return (
@@ -1254,9 +1261,7 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                 <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                         <h4 className="font-brand font-bold text-xs text-primary-hub truncate" title={colab.name}>{colab.name}</h4>
-                        <Badge variant="outline" size="sm">
-                            {roleMeta.label || getRoleLabel(colab.role)}
-                        </Badge>
+                        <RoleBadges colab={colab} />
                         {(() => {
                             const shiftStyle = getShiftBadgeStyle(colab.shift);
                             const ShiftIcon = shiftStyle.icon;
@@ -1324,16 +1329,18 @@ const CollaboratorCompactRow = ({ colab, latestEval, isEditable, onEdit, onFeedb
                             >
                                 <Edit3 className="w-4 h-4" />
                             </button>
-                            <button
-                                onClick={onToggleActive}
-                                className={cn(
-                                    "p-1.5 rounded-lg transition-colors cursor-pointer",
-                                    isActive ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-500/10"
-                                )}
-                                title={isActive ? 'Inativar' : 'Ativar'}
-                            >
-                                {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
-                            </button>
+                            {canManageTeam && (
+                                <button
+                                    onClick={onToggleActive}
+                                    className={cn(
+                                        "p-1.5 rounded-lg transition-colors cursor-pointer",
+                                        isActive ? "text-muted-hub hover:text-red-500 hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-500/10"
+                                    )}
+                                    title={isActive ? 'Inativar' : 'Ativar'}
+                                >
+                                    {isActive ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                                </button>
+                            )}
                         </>
                     )}
                 </div>
@@ -1368,9 +1375,9 @@ const CollaboratorGroupedView = ({ collaborators, groupBy, latestEvalMap, isEdit
             });
         } else {
             // por role
-            ['gestor', 'supervisor', 'apoio', 'colaborador'].forEach(r => { map[r] = []; });
+            ROLES.forEach(r => { map[r.id] = []; });
             collaborators.forEach(c => {
-                const r = normalizeRole(c.role);
+                const r = resolveAccessLevel(c);
                 if (!map[r]) map[r] = [];
                 map[r].push(c);
             });

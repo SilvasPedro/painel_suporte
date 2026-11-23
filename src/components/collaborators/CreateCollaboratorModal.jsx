@@ -9,50 +9,53 @@ import { useNotification } from '../../context/NotificationContext';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../services/firebase';
 
+// Níveis de acesso. O id é o valor salvo em collaborators.accessLevel (ids internos, ver services/rbac.js).
+// O cargo é um campo à parte, de texto livre.
 const ROLE_CARDS = [
     {
-        id: 'Operacional',
-        roleKey: 'colaborador',
-        title: 'Operacional',
-        tag: 'Analista',
-        description: 'Acesso padrão. Visualiza escalas, organograma e rankings operacionais.',
-        color: 'border-emerald-500 bg-emerald-50/50 text-emerald-900',
-        activeRing: 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/60',
-        badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-        icon: User
-    },
-    {
-        id: 'Apoio',
-        roleKey: 'apoio',
-        title: 'Apoio',
-        tag: 'Operação',
-        description: 'Monitoria diária, acompanhamento de filas e lançamento de escalas.',
-        color: 'border-blue-500 bg-blue-50/50 text-blue-900',
-        activeRing: 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/60',
-        badge: 'bg-blue-100 text-blue-800 border-blue-200',
-        icon: Users
-    },
-    {
-        id: 'Supervisor',
-        roleKey: 'supervisor',
+        id: 'gestor',
         title: 'Supervisor',
+        tag: 'Admin',
+        description: 'Acesso total. Gerencia níveis de acesso, colaboradores, configurações e todos os dados.',
+        activeRing: 'ring-2 ring-red-500 border-red-500 bg-red-50/60',
+        badge: 'bg-red-100 text-red-700 border-red-200',
+        icon: Shield
+    },
+    {
+        id: 'supervisor',
+        title: 'Líder',
         tag: 'Liderança',
-        description: 'Auditorias de qualidade (QA), acompanhamento de metas e feedbacks.',
-        color: 'border-amber-500 bg-amber-50/50 text-amber-900',
+        description: 'Acesso quase completo. Não gerencia níveis, não cadastra colaboradores e não acessa Configurações.',
         activeRing: 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/60',
         badge: 'bg-amber-100 text-amber-800 border-amber-200',
         icon: ShieldCheck
     },
     {
-        id: 'Gestor',
-        roleKey: 'gestor',
-        title: 'Gestor',
-        tag: 'Executivo',
-        description: 'Controle total. Edição de matriz RBAC, metas, métricas e auditorias.',
-        color: 'border-red-500 bg-red-50/50 text-red-900',
-        activeRing: 'ring-2 ring-red-500 border-red-500 bg-red-50/60',
-        badge: 'bg-red-100 text-red-700 border-red-200',
-        icon: Shield
+        id: 'apoio',
+        title: 'Apoio',
+        tag: 'Operação',
+        description: 'Acesso adicional em algumas telas selecionadas (demanda diária, escalas, tarefas).',
+        activeRing: 'ring-2 ring-blue-500 border-blue-500 bg-blue-50/60',
+        badge: 'bg-blue-100 text-blue-800 border-blue-200',
+        icon: Users
+    },
+    {
+        id: 'colaborador',
+        title: 'Operacional',
+        tag: 'Analista',
+        description: 'Acessa somente os seus próprios dados, além de escalas, organograma e rankings.',
+        activeRing: 'ring-2 ring-emerald-500 border-emerald-500 bg-emerald-50/60',
+        badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+        icon: User
+    },
+    {
+        id: 'qualidade',
+        title: 'Qualidade',
+        tag: 'Somente leitura',
+        description: 'Visualiza todas as telas, mas não pode criar, editar nem excluir nada.',
+        activeRing: 'ring-2 ring-violet-500 border-violet-500 bg-violet-50/60',
+        badge: 'bg-violet-100 text-violet-800 border-violet-200',
+        icon: Eye
     }
 ];
 
@@ -94,6 +97,7 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
         email: '',
         password: '',
         role: 'Operacional',
+        accessLevel: 'colaborador',
         shift: 'Manhã I',
         active: true
     });
@@ -113,6 +117,10 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
             setErrorMsg('Por favor, informe o e-mail corporativo.');
             return;
         }
+        if (!formData.role.trim()) {
+            setErrorMsg('Por favor, informe o cargo.');
+            return;
+        }
         if (!formData.password || formData.password.length < 6) {
             setErrorMsg('A senha provisória deve ter no mínimo 6 caracteres.');
             return;
@@ -124,8 +132,9 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
                 formData.name.trim(),
                 formData.email.trim().toLowerCase(),
                 formData.password,
-                formData.role,
-                formData.shift
+                formData.role.trim(),
+                formData.shift,
+                formData.accessLevel
             );
 
             // Garante o status ativo/inativo salvo
@@ -169,7 +178,7 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
                                 </span>
                             </div>
                             <p className="text-xs text-zinc-400 mt-0.5">
-                                Crie a conta de acesso e atribua o papel (RBAC) e o turno de trabalho.
+                                Crie a conta de acesso e defina o cargo, o nível de acesso e o turno de trabalho.
                             </p>
                         </div>
                     </div>
@@ -266,21 +275,35 @@ export const CreateCollaboratorModal = ({ onClose, onSuccess }) => {
                         <div className="flex justify-between items-center mb-3">
                             <h3 className="text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                 <Shield className="w-3.5 h-3.5 text-muted-hub" />
-                                2. Cargo & Perfil de Acesso (RBAC)
+                                2. Cargo & Nível de Acesso
                             </h3>
                             <span className="text-[11px] text-secondary-hub">
-                                Selecionado: <strong className="text-primary-hub">{formData.role}</strong>
+                                Nível: <strong className="text-primary-hub">{ROLE_CARDS.find(r => r.id === formData.accessLevel)?.title}</strong>
                             </span>
+                        </div>
+                        <div className="mb-3">
+                            <label className="block text-xs font-bold text-secondary-hub mb-1.5">
+                                Cargo <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                required
+                                placeholder="Ex: Analista de Suporte, Assistente de Qualidade"
+                                value={formData.role}
+                                onChange={e => setFormData({ ...formData, role: e.target.value })}
+                                className="w-full px-3.5 py-2.5 bg-gray-50/50 border border-strong rounded-xl focus:bg-surface focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm transition-all"
+                            />
+                            <p className="text-[11px] text-muted-hub mt-1">O cargo é só descritivo. O que o usuário pode acessar vem do nível abaixo.</p>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             {ROLE_CARDS.map(r => {
                                 const Icon = r.icon;
-                                const isSelected = formData.role === r.id;
+                                const isSelected = formData.accessLevel === r.id;
                                 return (
                                     <button
                                         type="button"
                                         key={r.id}
-                                        onClick={() => setFormData({ ...formData, role: r.id })}
+                                        onClick={() => setFormData({ ...formData, accessLevel: r.id })}
                                         className={`p-3.5 rounded-xl border text-left transition-all relative flex flex-col justify-between cursor-pointer ${
                                             isSelected 
                                                 ? r.activeRing 

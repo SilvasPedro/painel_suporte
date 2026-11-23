@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { collection, query, where, getDocs, getDoc, doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
+import { resolveAccessLevel } from '../services/rbac';
 
 const AuthContext = createContext();
 
@@ -54,8 +55,8 @@ export const AuthProvider = ({ children }) => {
                         const applyColabData = (rawData, docId) => {
                             // Documento achado só pelo uid e sem cargo = a conta master (mesmo padrão do fallback abaixo)
                             const data = foundByUidOnly && !rawData.role ? { ...rawData, role: 'Gestor' } : rawData;
-                            const roleLower = data.role?.toLowerCase() || '';
-                            const hasAdminAccess = roleLower.includes('admin') || roleLower.includes('gestor') || roleLower.includes('supervisor') || roleLower.includes('apoio');
+                            // Nível de acesso (accessLevel; sem ele, derivado do cargo). Qualquer nível diferente de Operacional é equipe.
+                            const hasAdminAccess = resolveAccessLevel(data) !== 'colaborador';
                             
                             setUserRole(hasAdminAccess ? 'admin' : 'colab');
 

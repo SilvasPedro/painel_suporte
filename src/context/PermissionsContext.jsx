@@ -5,7 +5,8 @@ import {
     ROLES,
     SYSTEM_MODULES,
     DEFAULT_ROLE_PERMISSIONS,
-    normalizeRole,
+    MANAGER_LEVEL,
+    resolveAccessLevel,
     subscribeRolesPermissions,
     saveRolesPermissions
 } from '../services/rbac';
@@ -44,11 +45,22 @@ export const PermissionsProvider = ({ children }) => {
         return () => unsubscribe();
     }, []);
 
-    // Determina a role normalizada do usuário atual
+    // Nível de acesso do usuário atual (campo accessLevel; sem ele, derivado do cargo)
     const normalizedRole = useMemo(() => {
         if (!currentUser) return 'colaborador';
-        return normalizeRole(currentUser.role);
+        return resolveAccessLevel(currentUser);
     }, [currentUser]);
+
+    // Qualidade visualiza tudo e nunca edita (a matriz não consegue conceder edição)
+    const isReadOnlyLevel = normalizedRole === 'qualidade';
+
+    // Só o Supervisor (id 'gestor') gerencia níveis, cadastra e inativa colaboradores
+    const canManageTeam = useMemo(() => {
+        if (!currentUser) return false;
+        const role = String(currentUser.role || '').toLowerCase();
+        const isMaster = role === 'admin' || role.includes('master');
+        return isMaster || normalizedRole === MANAGER_LEVEL;
+    }, [currentUser, normalizedRole]);
 
     // Verifica se é administrador master (acesso irrestrito)
     const isMasterAdmin = useMemo(() => {
@@ -77,10 +89,10 @@ export const PermissionsProvider = ({ children }) => {
     const canEdit = useCallback((moduleId) => {
         if (!moduleId) return false;
         if (isMasterAdmin) return true;
+        if (isReadOnlyLevel) return moduleId === 'my_profile';
 
         const rolePerms = permissionsMatrix[normalizedRole];
-        const roleStr = String(currentUser?.role || '').toLowerCase();
-        const isGestor = normalizedRole === 'gestor' || roleStr.includes('gestor') || roleStr.includes('admin');
+        const isGestor = normalizedRole === 'gestor';
 
         // Se houver configuração explícita na matriz para este cargo
         if (rolePerms && rolePerms[moduleId] && rolePerms[moduleId].edit !== undefined) {
@@ -99,7 +111,7 @@ export const PermissionsProvider = ({ children }) => {
         }
         if (!rolePerms[moduleId].view) return false;
         return Boolean(rolePerms[moduleId].edit);
-    }, [isMasterAdmin, permissionsMatrix, normalizedRole, currentUser]);
+    }, [isMasterAdmin, isReadOnlyLevel, permissionsMatrix, normalizedRole]);
 
     // Checagem se tem acesso a pelo menos uma tela administrativa/operacional
     const hasAnyAdminTabAccess = useMemo(() => {
@@ -132,6 +144,8 @@ export const PermissionsProvider = ({ children }) => {
                 normalizedRole,
                 activeRoleInfo,
                 isMasterAdmin,
+                isReadOnlyLevel,
+                canManageTeam,
                 canView,
                 canEdit,
                 hasAnyAdminTabAccess,

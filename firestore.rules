@@ -18,38 +18,68 @@ service cloud.firestore {
       return resource.data;
     }
 
-    // Verifica se o usuário tem privilégio administrativo ou supervisão
-    function isStaffAdmin() {
-      return isSignedIn() && (
-        request.auth.token.email == "pedrosouzactt@gmail.com" ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        (
-          exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
-          // trim() + lower(): o cargo é texto livre e pode estar como "gestor" ou "Gestor " no cadastro
-          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role.trim().lower() in ['admin', 'gestor', 'supervisor', 'noc', 'diretor']
+    // ---------------------------------------------------------------
+    // NÍVEIS DE ACESSO (collaborators/{uid}.accessLevel)
+    //   gestor      -> Supervisor (admin, acesso total)
+    //   supervisor  -> Líder (quase total)
+    //   apoio       -> Apoio
+    //   colaborador -> Operacional
+    //   qualidade   -> Qualidade (visualiza tudo, não escreve nada)
+    // Documentos sem accessLevel válido derivam o nível do cargo (campo role), como antes.
+    // ---------------------------------------------------------------
+    function hasColab() {
+      return isSignedIn() &&
+        exists(/databases/$(database)/documents/collaborators/$(request.auth.uid));
+    }
+
+    function colabData() {
+      return get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data;
+    }
+
+    function roleFallback() {
+      // trim() + lower(): o cargo é texto livre e pode estar como "gestor" ou "Gestor " no cadastro
+      return !(colabData().get('role', null) is string) ? 'colaborador' : (
+        colabData().role.trim().lower() in ['admin', 'gestor', 'diretor'] ? 'gestor' : (
+          colabData().role.trim().lower() in ['supervisor', 'noc'] ? 'supervisor' : (
+            colabData().role.trim().lower() == 'apoio' ? 'apoio' : 'colaborador'
+          )
         )
       );
     }
 
-    // Gestão (somente Gestor/Admin/Diretor): usado onde supervisores NÃO podem escrever (ex.: escala de férias)
+    function accessLevel() {
+      return colabData().get('accessLevel', null) in ['gestor', 'supervisor', 'apoio', 'colaborador', 'qualidade']
+        ? colabData().accessLevel
+        : roleFallback();
+    }
+
+    // Qualidade: visualiza tudo e nunca escreve
+    function isQualidade() {
+      return hasColab() && accessLevel() == 'qualidade';
+    }
+
+    // Verifica se o usuário tem privilégio administrativo ou supervisão (Supervisor e Líder)
+    function isStaffAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "pedrosouzactt@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (hasColab() && accessLevel() in ['gestor', 'supervisor'])
+      );
+    }
+
+    // Gestão (somente Supervisor/Admin/Diretor): usado onde o Líder NÃO escreve
+    // (ex.: escala de férias, níveis de acesso, cadastro/inativação, Configurações)
     function isManager() {
       return isSignedIn() && (
         request.auth.token.email == "pedrosouzactt@gmail.com" ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        (
-          exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role.trim().lower() in ['admin', 'gestor', 'diretor']
-        )
+        (hasColab() && accessLevel() == 'gestor')
       );
     }
 
     // Equipe do Smart Pre: gestão/supervisão (isStaffAdmin) + Apoio
     function isSmartPreTeam() {
-      return isStaffAdmin() || (
-        isSignedIn() &&
-        exists(/databases/$(database)/documents/collaborators/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/collaborators/$(request.auth.uid)).data.role in ['Apoio']
-      );
+      return isStaffAdmin() || (hasColab() && accessLevel() == 'apoio');
     }
 
     function isOwner(userId) {
@@ -74,18 +104,19 @@ service cloud.firestore {
         resource.data.assignedToId == request.auth.uid ||
         resource.data.assigned_to == request.auth.uid ||
         request.auth.uid in resource.data.watcherIds ||
-        resource.data.status in ['Pendente', 'Em Andamento', 'Resolvido']
+        resource.data.status in ['Pendente', 'Em Andamento', 'Resolvido'] ||
+        isQualidade()
       );
 
       // Criação de novos chamados com integridade de autoria
-      allow create: if isSignedIn() && (
+      allow create: if isSignedIn() && !isQualidade() && (
         incoming().creatorId == request.auth.uid ||
         isStaffAdmin()
       ) && incoming().title is string
         && incoming().title.size() <= 200;
 
       // Atualização: operadores só alteram status e comentários; admins alteram tudo
-      allow update: if isSignedIn() && (
+      allow update: if isSignedIn() && !isQualidade() && (
         isStaffAdmin() ||
         (
           resource.data.creatorId == request.auth.uid &&
@@ -107,17 +138,23 @@ service cloud.firestore {
     // ==========================================
     match /collaborators/{colabId} {
       allow read: if isSignedIn();
-      // Apenas Administradores podem cadastrar, desativar ou alterar cargos RBAC
-      allow create, delete: if isStaffAdmin();
-      // discordUserId (vínculo com o Discord): só a Gestão altera; supervisão e o próprio colaborador não
+      // Só o Supervisor cadastra e exclui colaboradores
+      allow create, delete: if isManager();
+      // Supervisor: altera tudo, menos o próprio nível (accessLevel).
+      // Líder: edita o perfil, mas não altera nível, status/inativação nem o vínculo com o Discord.
+      // O próprio colaborador: nunca altera cargo, nível, status, permissões nem Discord.
       allow update: if isSignedIn() && (
         (
+          isManager() &&
+          (request.auth.uid != colabId || !incoming().diff(existing()).affectedKeys().hasAny(['accessLevel']))
+        ) ||
+        (
           isStaffAdmin() &&
-          (isManager() || !incoming().diff(existing()).affectedKeys().hasAny(['discordUserId']))
+          !incoming().diff(existing()).affectedKeys().hasAny(['discordUserId', 'accessLevel', 'active', 'status', 'isInactive'])
         ) ||
         (
           request.auth.uid == colabId &&
-          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'isInactive', 'permissions', 'discordUserId'])
+          !incoming().diff(existing()).affectedKeys().hasAny(['role', 'accessLevel', 'isInactive', 'permissions', 'discordUserId'])
         )
       );
     }
@@ -137,6 +174,7 @@ service cloud.firestore {
       // Leitura permitida para o colaborador avaliado ou equipe de gestão
       allow read: if isSignedIn() && (
         isStaffAdmin() ||
+        isQualidade() ||
         resource.data.colabId == request.auth.uid ||
         resource.data.collaboratorId == request.auth.uid
       );
@@ -160,7 +198,7 @@ service cloud.firestore {
     // ==========================================
     match /dailyDemand/{demandId} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if isSignedIn() && !isQualidade();
     }
 
     match /sector_kpis/{kpiId} {
@@ -170,12 +208,12 @@ service cloud.firestore {
 
     match /qa_processes/{processId} {
       allow read: if isSignedIn();
-      allow write: if isStaffAdmin();
+      allow write: if isManager();
     }
 
     match /feedback_tags/{tagId} {
       allow read: if isSignedIn();
-      allow write: if isStaffAdmin();
+      allow write: if isManager();
     }
 
     match /third_party_audits/{auditId} {
@@ -185,7 +223,7 @@ service cloud.firestore {
 
     // Acompanhamento de clientes do Smart Pre (cadastro, relatos e dashboard): equipe de apoio, supervisão e gestão
     match /smart_pre_clients/{clientId} {
-      allow read: if isSmartPreTeam();
+      allow read: if isSmartPreTeam() || isQualidade();
       allow create: if isSmartPreTeam()
         && incoming().clientName is string
         && incoming().clientName.size() > 0
@@ -195,7 +233,7 @@ service cloud.firestore {
 
     // Credenciais compartilhadas do portal EasyAuth (Smart Pre): a equipe lê; só a gestão altera
     match /smart_pre_settings/{settingId} {
-      allow read: if isSmartPreTeam();
+      allow read: if isSmartPreTeam() || isQualidade();
       allow write: if isStaffAdmin();
     }
 
@@ -251,6 +289,7 @@ service cloud.firestore {
     match /agenda_events/{eventId} {
       allow read: if isSignedIn() && (
         isStaffAdmin() ||
+        isQualidade() ||
         resource.data.creatorId == request.auth.uid ||
         request.auth.uid in resource.data.participantIds
       );
@@ -268,7 +307,10 @@ service cloud.firestore {
 
     match /system_settings/{settingId} {
       allow read: if isSignedIn();
-      allow write: if isStaffAdmin();
+      // A matriz de permissões (roles_permissions) e as metas do setor são do Supervisor;
+      // o Líder grava os demais documentos (ex.: organograma)
+      allow write: if isManager() ||
+        (isStaffAdmin() && !(settingId in ['roles_permissions', 'sector_goals']));
     }
 
     // ==========================================
@@ -297,7 +339,8 @@ service cloud.firestore {
     // COLEÇÃO: INTEGRAÇÕES (webhook do canal da equipe) - somente gestão
     // ==========================================
     match /integrations/{integrationId} {
-      allow read, write: if isStaffAdmin();
+      allow read: if isStaffAdmin();
+      allow write: if isManager();
     }
 
     match /admins/{adminId} {

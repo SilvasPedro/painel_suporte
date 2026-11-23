@@ -63,7 +63,7 @@ function SortHeader({ label, sortKey, sort, onSort, className = '' }) {
 const Reports = () => {
     const { showToast } = useNotification();
     const { currentUser } = useAuth();
-    const { normalizedRole, isMasterAdmin, canEdit } = usePermissions();
+    const { normalizedRole, isMasterAdmin, canEdit, isReadOnlyLevel } = usePermissions();
 
     const [reports, setReports] = useState([]);
     const [collaborators, setCollaborators] = useState([]);
@@ -75,11 +75,9 @@ const Reports = () => {
     // ==========================================
     const canViewAllReports = useMemo(() => {
         if (isMasterAdmin) return true;
-        const role = String(normalizedRole || '').toLowerCase();
-        if (role === 'gestor' || role === 'supervisor') return true;
-        const rawRole = String(currentUser?.role || '').toLowerCase();
-        return rawRole.includes('gestor') || rawRole.includes('supervis') || rawRole.includes('admin') || rawRole.includes('gerente') || rawRole.includes('coordenador');
-    }, [isMasterAdmin, normalizedRole, currentUser?.role]);
+        // Supervisor (gestor), Líder (supervisor) e Qualidade (somente leitura) veem tudo
+        return ['gestor', 'supervisor', 'qualidade'].includes(String(normalizedRole || '').toLowerCase());
+    }, [isMasterAdmin, normalizedRole]);
 
     const effectiveUser = useMemo(() => {
         if (!currentUser) return null;
@@ -92,13 +90,16 @@ const Reports = () => {
     }, [currentUser, normalizedRole, canViewAllReports]);
 
     // Gestor e Supervisor podem gerenciar tickets (mudar status e dar parecer)
+    // Qualidade vê tudo, mas nunca gerencia nem edita
     const canManageTickets = useMemo(() => {
+        if (isReadOnlyLevel) return false;
         return canViewAllReports || canEdit('reports');
-    }, [canViewAllReports, canEdit]);
+    }, [isReadOnlyLevel, canViewAllReports, canEdit]);
 
     // Permissão de edição ou exclusão do registro (Visualizadores nunca podem editar/excluir)
     const canEditOrDelete = (report) => {
         if (!report || !effectiveUser) return false;
+        if (isReadOnlyLevel) return false;
         if (isUserWatcherOnly(report, effectiveUser)) return false;
         if (canManageTickets) return true;
         return isUserTaskCreator(report, effectiveUser);
@@ -357,6 +358,7 @@ const Reports = () => {
     // AÇÕES DE CRIAÇÃO E EDIÇÃO (NEW REQUEST MODAL)
     // ==========================================
     const openNewReportModal = () => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         setEditingId(null);
         setIsModalOpen(true);
     };
@@ -379,6 +381,7 @@ const Reports = () => {
     }, []);
 
     const handleSaveRequest = async (payload) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         setSaving(true);
         try {
             const reportPayload = { 
@@ -427,6 +430,7 @@ const Reports = () => {
     };
 
     const handleDelete = async () => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         try {
             await deleteDoc(doc(db, "critical_reports", deletingReport.id));
             showToast("Solicitação excluída permanentemente.", "success");
@@ -458,6 +462,7 @@ const Reports = () => {
     };
 
     const handleAssignResponsible = async (report, assigneeId) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         if (!report || !canUserAssignResponsible(report, effectiveUser)) {
             showToast("Apenas lideranças (Gestor / Supervisor) podem atribuir responsáveis.", "error");
             return;
@@ -532,6 +537,7 @@ const Reports = () => {
     };
 
     const handleAddWatcherToReport = async (report, collabId) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         if (!report || !collabId) return;
         if (!canUserManageWatchers(report, effectiveUser)) {
             showToast("Sem permissão para gerenciar visualizadores neste chamado.", "error");
@@ -580,6 +586,7 @@ const Reports = () => {
     };
 
     const handleRemoveWatcherFromReport = async (report, watcherId) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         if (!report || !watcherId) return;
         if (!canUserManageWatchers(report, effectiveUser)) {
             showToast("Sem permissão para remover visualizadores neste chamado.", "error");
@@ -602,6 +609,7 @@ const Reports = () => {
     };
 
     const handleDrawerUpdateStatus = async (reportId, newStatus) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         const target = reports.find(r => r.id === reportId) || viewingReport;
         if (target && !canUserDispatchOrCloseTask(target, effectiveUser)) {
             showToast("Visualizadores possuem acesso somente leitura e não podem alterar o status.", "error");
@@ -622,6 +630,7 @@ const Reports = () => {
     };
 
     const handleDrawerAddComment = async (reportId, content) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         const target = reports.find(r => r.id === reportId) || viewingReport;
         if (target && isUserWatcherOnly(target, effectiveUser)) {
             showToast("Visualizadores possuem permissão estritamente de leitura.", "error");
@@ -692,6 +701,7 @@ const Reports = () => {
 
     // Adicionar novo comentário na thread (Colaborador ou Gestão; bloqueado para Visualizadores somente leitura)
     const handleAddComment = async (e) => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         if (e && e.preventDefault) e.preventDefault();
         if (!viewingReport || !newCommentText.trim()) return;
         if (isUserWatcherOnly(viewingReport, effectiveUser)) {
@@ -751,6 +761,7 @@ const Reports = () => {
     };
 
     const handleQuickUpdate = async () => {
+        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         if (!viewingReport) return;
         if (!canUserDispatchOrCloseTask(viewingReport, effectiveUser)) {
             showToast("Sem permissão para alterar status ou encerrar este chamado.", "error");
@@ -1041,7 +1052,8 @@ ${report.description || 'Sem descrição'}`;
                         </button>
                     </div>
 
-                    {/* Botão Nova Solicitação */}
+                    {/* Botão Nova Solicitação (oculto para o nível Qualidade, somente leitura) */}
+                    {!isReadOnlyLevel && (
                     <button
                         type="button"
                         onClick={openNewReportModal}
@@ -1050,6 +1062,7 @@ ${report.description || 'Sem descrição'}`;
                         <Plus className="w-4 h-4" />
                         <span>Novo Chamado</span>
                     </button>
+                    )}
                 </div>
             </header>
 
@@ -1367,7 +1380,7 @@ ${report.description || 'Sem descrição'}`;
                         >
                             Limpar Filtros Ativos
                         </button>
-                    ) : (
+                    ) : isReadOnlyLevel ? null : (
                         <button 
                             onClick={openNewReportModal}
                             className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors flex items-center gap-2 cursor-pointer shadow-sm"

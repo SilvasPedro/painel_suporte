@@ -15,7 +15,7 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
 import { useNotification } from '../context/NotificationContext';
-import { ROLES, normalizeRole } from '../services/rbac';
+import { ROLES, resolveAccessLevel } from '../services/rbac';
 import {
     saveUserProfileData,
     saveSystemShiftsInfo,
@@ -215,9 +215,9 @@ const MyProfile = ({ currentUserId, currentUser: propUser }) => {
 
     // Role formatada
     const roleInfo = useMemo(() => {
-        const key = normalizeRole(user?.role);
+        const key = resolveAccessLevel({ accessLevel: user?.accessLevel, role: user?.role });
         return ROLES.find(r => r.id === key) || ROLES[3];
-    }, [user?.role]);
+    }, [user?.accessLevel, user?.role]);
 
     // Turno atual normalizado
     const currentShift = useMemo(() => {

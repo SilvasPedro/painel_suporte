@@ -3,22 +3,33 @@ import { db } from './firebase';
 import { subscribeSharedDocument, getCachedDocument } from './dataCache';
 
 // -------------------------------------------------------------
-// DEFINIÇÃO DOS 4 CARGOS OFICIAIS (ROLES)
+// NÍVEIS DE ACESSO (ROLES)
 // -------------------------------------------------------------
+// O nível de acesso é independente do cargo (campo `role`, texto livre, ex.: "Analista de Suporte").
+// Ele fica em `collaborators/{id}.accessLevel`. Documentos sem esse campo derivam o nível do cargo
+// (normalizeRole), então nada quebra antes da migração.
+//
+// Os ids internos são mantidos por compatibilidade com a matriz salva em
+// system_settings/roles_permissions e com as regras do Firestore. O que o usuário vê é o rótulo:
+//   id 'gestor'      -> Supervisor  (admin, acesso total)
+//   id 'supervisor'  -> Líder       (acesso quase completo)
+//   id 'apoio'       -> Apoio       (telas selecionadas, conforme a matriz)
+//   id 'colaborador' -> Operacional (somente os seus dados)
+//   id 'qualidade'   -> Qualidade   (visualiza todas as telas, não edita nem exclui nada)
 export const ROLES = [
     {
         id: 'gestor',
-        label: 'Gestor',
+        label: 'Supervisor',
         badgeColor: 'bg-red-100 text-red-700 border-red-200',
         activeBadgeColor: 'bg-red-600 text-white',
-        description: 'Acesso executivo total. Gerencia configurações, regras de acesso, metas e visualiza todas as métricas da operação.'
+        description: 'Administrador com acesso total. Gerencia configurações, níveis de acesso, metas e visualiza todas as métricas da operação.'
     },
     {
         id: 'supervisor',
-        label: 'Supervisor',
+        label: 'Líder',
         badgeColor: 'bg-amber-100 text-amber-800 border-amber-200',
         activeBadgeColor: 'bg-amber-600 text-white',
-        description: 'Supervisão tática da equipe. Realiza auditorias QA, acompanha métricas, organiza escalas e aplica feedbacks.'
+        description: 'Acesso quase completo. Realiza auditorias QA, acompanha métricas, organiza escalas e aplica feedbacks. Não gerencia níveis, não cadastra nem inativa colaboradores e não acessa Configurações e Gestão de Dados.'
     },
     {
         id: 'apoio',
@@ -33,9 +44,23 @@ export const ROLES = [
         label: 'Operacional',
         badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200',
         activeBadgeColor: 'bg-emerald-600 text-white',
-        description: 'Analista de atendimento operacional. Consulta escalas de trabalho, organograma da equipe e rankings de desempenho.'
+        description: 'Analista de atendimento operacional. Acessa somente os seus próprios dados, além de escalas, organograma e rankings.'
+    },
+    {
+        id: 'qualidade',
+        label: 'Qualidade',
+        badgeColor: 'bg-violet-100 text-violet-800 border-violet-200',
+        activeBadgeColor: 'bg-violet-600 text-white',
+        description: 'Visualiza todas as telas do sistema, mas não pode criar, editar nem excluir nada.'
     }
 ];
+
+// A ordem de ROLES é usada por índice em alguns pontos (ex.: ROLES[3] = Operacional): só acrescente no fim.
+export const ACCESS_LEVEL_IDS = ROLES.map(r => r.id);
+export const DEFAULT_ACCESS_LEVEL = 'colaborador';
+
+// Só o Supervisor (id 'gestor') gerencia níveis, cadastra e inativa colaboradores
+export const MANAGER_LEVEL = 'gestor';
 
 // -------------------------------------------------------------
 // LISTA DE MÓDULOS / TELAS DO SISTEMA
@@ -217,7 +242,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         my_history: { view: true, edit: false },
         dashboard: { view: true, edit: false },
         hub: { view: true, edit: true },
-        orgchart: { view: true, edit: false },
+        orgchart: { view: true, edit: true },
         metrics: { view: true, edit: true },
         monthly_evaluations: { view: true, edit: true },
         DailyQueueTracker: { view: true, edit: true },
@@ -232,7 +257,7 @@ export const DEFAULT_ROLE_PERMISSIONS = {
         vacation_schedule: { view: true, edit: false },
         agenda: { view: true, edit: false },
         schedule: { view: true, edit: true },
-        sector_kpis: { view: true, edit: false },
+        sector_kpis: { view: true, edit: true },
         data_manager: { view: false, edit: false },
         settings: { view: false, edit: false }
     },
@@ -288,6 +313,14 @@ export const DEFAULT_ROLE_PERMISSIONS = {
     }
 };
 
+// Qualidade: vê todas as telas e não edita nem exclui nada (só o próprio perfil).
+DEFAULT_ROLE_PERMISSIONS.qualidade = Object.fromEntries(
+    Object.keys(DEFAULT_ROLE_PERMISSIONS.gestor).map(moduleId => [
+        moduleId,
+        { view: true, edit: moduleId === 'my_profile' }
+    ])
+);
+
 // -------------------------------------------------------------
 // NORMALIZAÇÃO DE CARGOS DO USUÁRIO
 // -------------------------------------------------------------
@@ -305,6 +338,19 @@ export const normalizeRole = (roleString) => {
         return 'apoio';
     }
     return 'colaborador';
+};
+
+// Nível de acesso efetivo de um colaborador (documento de `collaborators` ou currentUser).
+// Usa o campo `accessLevel` quando válido; senão deriva do cargo, como era antes da migração.
+export const resolveAccessLevel = (user) => {
+    const explicit = user?.accessLevel;
+    if (explicit && ACCESS_LEVEL_IDS.includes(explicit)) return explicit;
+    return normalizeRole(user?.role);
+};
+
+export const getAccessLevelInfo = (user) => {
+    const id = resolveAccessLevel(user);
+    return ROLES.find(r => r.id === id) || ROLES.find(r => r.id === DEFAULT_ACCESS_LEVEL);
 };
 
 // Nome de exibição do cargo. Registros antigos guardam "Colaborador": aparecem como "Operacional".
