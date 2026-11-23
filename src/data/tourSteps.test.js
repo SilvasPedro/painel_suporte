@@ -12,6 +12,11 @@ describe('getTourType', () => {
         expect(getTourType({ normalizedRole: 'colaborador', isMasterAdmin: true })).toBe('leadership');
     });
 
+    it('Qualidade recebe o tour de qualidade; o admin master segue com o de liderança', () => {
+        expect(getTourType({ normalizedRole: 'qualidade', isMasterAdmin: false })).toBe('quality');
+        expect(getTourType({ normalizedRole: 'qualidade', isMasterAdmin: true })).toBe('leadership');
+    });
+
     it('Operacional e Apoio recebem o tour operacional', () => {
         expect(getTourType({ normalizedRole: 'colaborador', isMasterAdmin: false })).toBe('operational');
         expect(getTourType({ normalizedRole: 'apoio', isMasterAdmin: false })).toBe('operational');
@@ -60,6 +65,41 @@ describe('buildTourSteps', () => {
         const targets = steps.filter(s => s.target).map(s => s.target);
         expect(targets.some(t => t.includes('nav-'))).toBe(false);
         expect(targets.some(t => t.includes('sidebar'))).toBe(false);
+    });
+});
+
+describe('tour de Qualidade', () => {
+    it('apresenta os módulos e avisa que o acesso é somente de visualização', () => {
+        const steps = buildTourSteps('quality', allowAll);
+        const list = ids(steps);
+        expect(steps[0].id).toBe('welcome');
+        expect(steps[0].body).toMatch(/somente para visualização/);
+        expect(list).toContain('quality-readonly');
+        expect(steps.find(s => s.id === 'quality-readonly').body).toMatch(/não cria, edita nem exclui/);
+        expect(list).toEqual(expect.arrayContaining(['dashboard', 'audits', 'third_party_audits', 'reports', 'settings']));
+        expect(list[list.length - 1]).toBe('finish');
+        expect(steps[steps.length - 1].body).toMatch(/somente de visualização/);
+    });
+
+    it('todo módulo apresentado leva o selo de somente visualização', () => {
+        const modules = buildTourSteps('quality', allowAll).filter(s => s.target && s.target.includes('nav-'));
+        expect(modules.length).toBeGreaterThan(5);
+        modules.forEach(s => expect(s.badge).toBe('Somente visualização'));
+    });
+
+    it('só inclui módulos que o usuário pode visualizar e mantém ids únicos e alvos válidos', () => {
+        const steps = buildTourSteps('quality', (m) => ['audits', 'rankings'].includes(m));
+        expect(ids(steps)).toEqual(expect.arrayContaining(['audits', 'rankings']));
+        expect(ids(steps)).not.toContain('settings');
+        const all = buildTourSteps('quality', allowAll);
+        expect(new Set(ids(all)).size).toBe(all.length);
+        all.filter(s => s.target).forEach(s => expect(s.target).toMatch(/^\[data-tour="[\w-]+"\]$/));
+    });
+
+    it('no celular resume os módulos em um passo e mantém o aviso de visualização', () => {
+        const steps = buildTourSteps('quality', allowAll, true);
+        expect(ids(steps)).toEqual(expect.arrayContaining(['mobile-menu', 'quality-readonly', 'screens-summary']));
+        expect(steps.filter(s => s.target).some(s => s.target.includes('nav-'))).toBe(false);
     });
 });
 

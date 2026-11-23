@@ -204,7 +204,13 @@ const ProductTour = ({ steps, onFinish, onBeforeStep }) => {
                     </button>
                 </div>
 
-                <p className="mt-3 text-sm text-secondary-hub leading-relaxed whitespace-pre-line">
+                {step.badge && (
+                    <span className="mt-3 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-violet-100 text-violet-800 border border-violet-200 text-[10px] font-bold uppercase tracking-wide">
+                        {step.badge}
+                    </span>
+                )}
+
+                <p className={`${step.badge ? 'mt-2' : 'mt-3'} text-sm text-secondary-hub leading-relaxed whitespace-pre-line`}>
                     {step.body}
                 </p>
 

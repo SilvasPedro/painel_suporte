@@ -3,6 +3,7 @@
  *
  * - operational: Operacional e Apoio
  * - leadership:  Gestor e Supervisor (e administrador master)
+ * - quality:     Qualidade (acessa todas as telas, somente para visualização)
  *
  * Cada passo aponta para um elemento marcado com data-tour="..." na interface.
  * Passos sem "target" são exibidos centralizados. Passos com "requires" só entram
@@ -12,11 +13,11 @@
 // Aumentar este número reapresenta o tour para todos os usuários (ex.: após grandes mudanças)
 export const TOUR_VERSION = 1;
 
-export const getTourType = ({ normalizedRole, isMasterAdmin }) => (
-    isMasterAdmin || normalizedRole === 'gestor' || normalizedRole === 'supervisor'
-        ? 'leadership'
-        : 'operational'
-);
+export const getTourType = ({ normalizedRole, isMasterAdmin }) => {
+    if (isMasterAdmin || normalizedRole === 'gestor' || normalizedRole === 'supervisor') return 'leadership';
+    if (normalizedRole === 'qualidade') return 'quality';
+    return 'operational';
+};
 
 export const getTourStorageKey = (userId) => `hubdesk_tour_v${TOUR_VERSION}_${userId}`;
 
@@ -76,6 +77,28 @@ const MOBILE_MENU = {
     target: '[data-tour="mobile-menu"]',
     title: 'Menu de navegação',
     body: 'Toque aqui para abrir a lista de telas: desempenho, histórico, escalas, solicitações e muito mais.'
+};
+
+// ---- Tour do nível Qualidade (somente visualização) ----
+const VIEW_ONLY_BADGE = 'Somente visualização';
+
+const WELCOME_QUALITY = {
+    id: 'welcome',
+    title: 'Bem-vindo(a), Qualidade! 👋',
+    body: 'Este tour apresenta os módulos que você acompanha e como cada um funciona. Seu nível acessa todas as telas do sistema, sempre somente para visualização. Você pode pular quando quiser e rever depois pelo menu lateral.'
+};
+
+const QUALITY_READONLY = {
+    id: 'quality-readonly',
+    badge: VIEW_ONLY_BADGE,
+    title: 'Acesso somente de visualização',
+    body: 'O nível Qualidade enxerga todos os módulos, mas não cria, edita nem exclui nada: lançamentos, auditorias, escalas, solicitações e configurações ficam apenas para consulta. Você pode filtrar, pesquisar e abrir detalhes livremente. Se tentar uma ação de alteração, o sistema avisa que o seu nível é somente leitura. A única edição liberada é o seu próprio perfil (foto, capa e contatos).'
+};
+
+const FINISH_QUALITY = {
+    id: 'finish',
+    title: 'Tudo pronto! 🚀',
+    body: 'Agora é só acompanhar a operação. Lembre-se: o seu acesso é somente de visualização. Para pedir ajustes em qualquer módulo, fale com a liderança. Bom trabalho!'
 };
 
 const FINISH = {
@@ -210,13 +233,97 @@ const LEADERSHIP_SCREENS = [
     }
 ];
 
+const QUALITY_SCREENS = [
+    {
+        id: 'dashboard', menu: 'gestao', requires: 'dashboard',
+        title: 'Visão Geral KPIs',
+        body: 'O cockpit da operação: TMR, FCR, reincidência, conformidade QA, indicadores da terceirizada e a evolução histórica. Use os filtros de período e as abas (Visão Geral, Equipe, Canais, Qualidade e Metas) para analisar os números.'
+    },
+    {
+        id: 'audits', menu: 'operacional', requires: 'audits',
+        title: 'Auditorias QA',
+        body: 'Auditorias de qualidade por checklist, com pontuação calculada automaticamente. Consulte as auditorias por colaborador, período e resultado e abra cada uma para ver o checklist, as observações e a nota.'
+    },
+    {
+        id: 'third_party_audits', menu: 'operacional', requires: 'third_party_audits',
+        title: 'Auditoria Terceirizada',
+        body: 'Auditoria dos atendimentos da empresa terceirizada (ATSOC atual e UpCall como histórico). Acompanhe FCR, procedimentos conformes, qualidade positiva x negativa e reincidência, com filtros por período, operador e processo.'
+    },
+    {
+        id: 'metrics', menu: 'operacional', requires: 'metrics',
+        title: 'Avaliações Semanais',
+        body: 'Métricas semanais lançadas pela liderança: ligações, Huggy iniciados e finalizados e tempos médios. Aqui você apenas consulta os lançamentos e as semanas apuradas.'
+    },
+    {
+        id: 'monthly_evaluations', menu: 'operacional', requires: 'monthly_evaluations',
+        title: 'Análise Mensal (1:1)',
+        body: 'Registros dos alinhamentos 1:1 de cada colaborador, escritos em Markdown, com a confirmação de ciência e a trilha de auditoria. Você lê o histórico, sem poder registrar ou alterar.'
+    },
+    {
+        id: 'reports', menu: 'operacional', requires: 'reports',
+        title: 'Tarefas & Relatórios',
+        body: 'Central de solicitações da equipe, com pareceres e histórico de cada chamado. Você acompanha o andamento e lê os comentários, mas não abre, responde nem despacha solicitações.'
+    },
+    {
+        id: 'DailyQueueTracker', menu: 'operacional', requires: 'DailyQueueTracker',
+        title: 'Demanda Diária',
+        body: 'Volume de filas por faixa de horário e os picos de atendimento do dia, para correlacionar a demanda com a qualidade.'
+    },
+    {
+        id: 'smart_pre', menu: 'operacional', requires: 'smart_pre',
+        title: 'Smart Pre',
+        body: 'Acompanhamento dos clientes do novo serviço: contato após a instalação, problema relatado, tratativa (remota, visita técnica ou TI) e a dashboard de saúde do serviço.'
+    },
+    {
+        id: 'hub', menu: 'equipe', requires: 'hub',
+        title: 'Hub da Equipe',
+        body: 'Os colaboradores, seus turnos e cargos, com o histórico de feedbacks e o relatório individual de cada um. Consulte sem alterar cadastros.'
+    },
+    {
+        id: 'rankings', menu: 'equipe', requires: 'rankings',
+        title: 'Rankings da Equipe',
+        body: 'Pontuação por colaborador e turno, com detalhamento semanal, para identificar destaques e pontos de atenção.'
+    },
+    {
+        id: 'orgchart', menu: 'equipe', requires: 'orgchart',
+        title: 'Organograma',
+        body: 'A estrutura da equipe, as lideranças e a distribuição por função, apenas para consulta.'
+    },
+    {
+        id: 'day_off_schedule', menu: 'escalas', requires: 'day_off_schedule',
+        title: 'Escala de Folgas',
+        body: 'Calendário de folgas do mês, com os feriados em destaque. Você vê a escala montada pela liderança, sem mover colaboradores.'
+    },
+    {
+        id: 'daily_schedule', menu: 'escalas', requires: 'daily_schedule',
+        title: 'Escala Diária & Plantão',
+        body: 'Distribuição diária entre telefonia, Huggy e apoio e a escala de plantões dos domingos, em modo de consulta.'
+    },
+    {
+        id: 'sector_kpis', menu: 'gestao', requires: 'sector_kpis',
+        title: 'KPIs do Setor',
+        body: 'Metas globais do setor (TMR, FCR e reincidência) e os SLAs, para comparar com o resultado real.'
+    },
+    {
+        id: 'data_manager', menu: 'gestao', requires: 'data_manager',
+        title: 'Gestão de Dados',
+        body: 'Consulta aos registros do sistema com a auditoria de integridade. Edição e exclusão ficam com a liderança.'
+    },
+    {
+        id: 'settings', menu: 'gestao', requires: 'settings',
+        title: 'Configurações',
+        body: 'Processos de QA, tags de feedback, metas e a matriz de permissões por cargo, em modo de leitura.'
+    }
+];
+
 const toNavStep = (screen) => ({
     id: screen.id,
     target: nav(screen.id),
     menu: screen.menu,
     requires: screen.requires,
     title: screen.title,
-    body: screen.body
+    body: screen.body,
+    ...(screen.badge && { badge: screen.badge })
 });
 
 /**
@@ -226,11 +333,16 @@ const toNavStep = (screen) => ({
  * @param {boolean} isMobile  em telas estreitas o menu lateral fica oculto
  */
 export const buildTourSteps = (type, canView, isMobile = false) => {
-    const screens = (type === 'leadership' ? LEADERSHIP_SCREENS : OPERATIONAL_SCREENS)
+    const isQuality = type === 'quality';
+    const source = type === 'leadership' ? LEADERSHIP_SCREENS : isQuality ? QUALITY_SCREENS : OPERATIONAL_SCREENS;
+    const screens = source
         .filter(screen => !screen.requires || canView(screen.requires))
-        .map(toNavStep);
+        // No tour de Qualidade, todo módulo leva o selo de somente visualização
+        .map(screen => toNavStep(isQuality ? { ...screen, badge: VIEW_ONLY_BADGE } : screen));
 
-    const intro = isMobile ? [WELCOME, MOBILE_MENU] : [WELCOME, SIDEBAR, PROFILE];
+    const welcome = isQuality ? WELCOME_QUALITY : WELCOME;
+    const intro = isMobile ? [welcome, MOBILE_MENU] : [welcome, SIDEBAR, PROFILE];
+    if (isQuality) intro.push(QUALITY_READONLY);
     // No celular os itens do menu não estão visíveis: as telas são resumidas em um único passo
     const middle = isMobile
         ? [{
@@ -241,5 +353,5 @@ export const buildTourSteps = (type, canView, isMobile = false) => {
         : screens;
     const tools = isMobile ? [SEARCH, NOTIFICATIONS, THEME] : [SEARCH, NOTIFICATIONS, THEME, REPLAY];
 
-    return [...intro, ...middle, ...tools, FINISH];
+    return [...intro, ...middle, ...tools, isQuality ? FINISH_QUALITY : FINISH];
 };

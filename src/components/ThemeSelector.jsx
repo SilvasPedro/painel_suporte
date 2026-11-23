@@ -1,36 +1,62 @@
-import React from 'react';
+import React, { useId } from 'react';
+import { motion as Motion, useReducedMotion } from 'framer-motion';
 import { useTheme, THEMES } from '../context/ThemeContext';
 import { Check, Sun, Moon, Coffee } from 'lucide-react';
 
 export default function ThemeSelector({ variant = 'compact', showLabels = true, className = '' }) {
   const { theme, setTheme } = useTheme();
+  const pillId = useId(); // layoutId único: o destaque desliza entre os itens
+  const reduceMotion = useReducedMotion();
+  const spring = reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 32, mass: 0.8 };
 
   // 1. Variante COMPACTA (Ideal para Topbars, cabeçalhos de páginas e menus rápidos)
+  // Fundo translúcido com blur; o destaque desliza entre os itens e os ícones ganham leve profundidade 3D.
   if (variant === 'compact') {
     return (
-      <div 
+      <div
         id="theme-selector-compact"
-        className={`inline-flex items-center p-1 rounded-xl bg-gray-200/80 border border-gray-300/80 shadow-2xs gap-0.5 transition-colors ${className}`}
+        className={`relative inline-flex items-center p-1 rounded-xl bg-gray-200/45 backdrop-blur-md border border-white/50 shadow-2xs gap-0.5 transition-colors ${className}`}
         role="group"
         aria-label="Selecionar modo de visualização"
       >
         {Object.values(THEMES).map((item) => {
           const Icon = item.icon;
           const isActive = theme === item.id;
+          const iconColor = item.id === 'light' ? 'text-amber-500' : item.id === 'warm' ? 'text-amber-700' : 'text-red-500';
           return (
             <button
               key={item.id}
               type="button"
               onClick={() => setTheme(item.id)}
               title={`${item.name}: ${item.description}`}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all duration-150 cursor-pointer ${
-                isActive
-                  ? 'bg-white text-gray-900 shadow-xs scale-100 font-bold'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100/60'
+              aria-pressed={isActive}
+              className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-colors duration-200 cursor-pointer ${
+                isActive ? 'text-gray-900 font-bold' : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? (item.id === 'light' ? 'text-amber-500' : item.id === 'warm' ? 'text-amber-700' : 'text-red-500') : 'text-gray-400'}`} />
-              {showLabels && <span className="whitespace-nowrap">{item.shortName}</span>}
+              {isActive && (
+                <Motion.span
+                  layoutId={pillId}
+                  transition={spring}
+                  aria-hidden="true"
+                  className="absolute inset-0 rounded-lg bg-white/80 backdrop-blur-sm border border-white/70 shadow-[0_2px_6px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]"
+                />
+              )}
+              <span className="relative z-[1] flex items-center gap-1.5" style={{ perspective: 120 }}>
+                <Motion.span
+                  className="flex"
+                  style={{ transformStyle: 'preserve-3d' }}
+                  animate={reduceMotion ? undefined : { rotateY: isActive ? 0 : -28, rotateX: isActive ? -12 : 0, scale: isActive ? 1.22 : 1, y: isActive ? -0.5 : 0 }}
+                  whileHover={reduceMotion ? undefined : { rotateY: isActive ? 12 : -8, scale: 1.18 }}
+                  transition={spring}
+                >
+                  <Icon
+                    className={`w-3.5 h-3.5 shrink-0 transition-colors duration-200 ${isActive ? iconColor : 'text-gray-400'}`}
+                    style={{ filter: isActive ? 'drop-shadow(0 2px 1px rgba(0,0,0,0.28))' : 'drop-shadow(0 1px 0.5px rgba(0,0,0,0.15))' }}
+                  />
+                </Motion.span>
+                {showLabels && <span className="whitespace-nowrap">{item.shortName}</span>}
+              </span>
             </button>
           );
         })}

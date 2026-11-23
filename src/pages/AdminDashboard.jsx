@@ -6,7 +6,7 @@ import {
     TrendingUp, Clock, Star, ClipboardList, Target, Trophy,
     Rocket, Activity, CheckSquare, Phone, MessageCircle,
     Award, AlertTriangle, Database, CheckCircle, Loader2, ShieldCheck, CalendarDays, Calendar, Network,
-    ChevronDown, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi, SlidersHorizontal, Plane, CalendarCheck
+    ChevronDown, ChevronUp, ChevronRight, Menu, X, FileText, Info, Shield, User, History, Lock, Sparkles, Headphones, Coffee, Search, Compass, Wifi, SlidersHorizontal, Plane, CalendarCheck
 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { logout } from '../services/auth';
@@ -166,6 +166,7 @@ const AdminDashboard = () => {
     }, [setActiveTab]);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isFooterToolsOpen, setIsFooterToolsOpen] = useState(false); // Personalizar menu e Tour guiado ficam recolhidos no rodapé
     const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [isChangelogModalOpen, setIsChangelogModalOpen] = useState(false);
@@ -254,9 +255,10 @@ const AdminDashboard = () => {
     // Prepara a tela para o passo atual: menu lateral aberto e grupo do item expandido
     const handleTourBeforeStep = useCallback((step) => {
         if (step.target && !step.target.includes('mobile-menu')) setIsSidebarCollapsed(false);
+        if (step.target?.includes('tour-replay')) setIsFooterToolsOpen(true);
         const sectionId = findSectionOfItem(navMenus, step.requires || step.id) || step.menu;
         if (sectionId) setExpandedMenus(prev => (prev[sectionId] ? prev : { ...prev, [sectionId]: true }));
-    }, [setIsSidebarCollapsed, setExpandedMenus, navMenus]);
+    }, [setIsSidebarCollapsed, setExpandedMenus, setIsFooterToolsOpen, navMenus]);
 
     const handleTourFinish = useCallback(async () => {
         setTourOpen(false);
@@ -274,10 +276,11 @@ const AdminDashboard = () => {
     }, [tourUserId, tourType]);
 
     const handleReplayTour = useCallback(() => {
+        setIsFooterToolsOpen(false);
         setIsMobileMenuOpen(false);
         setTourIsMobile(window.innerWidth < 768);
         setTourOpen(true);
-    }, [setIsMobileMenuOpen]);
+    }, [setIsMobileMenuOpen, setIsFooterToolsOpen]);
 
     const toggleMenu = (menuId) => {
         if (isSidebarCollapsed) {
@@ -408,21 +411,21 @@ const AdminDashboard = () => {
 
                 {/* Topo: Logo & Botão de Recolher */}
                 <div className={cn(
-                    "p-4 flex items-center shrink-0 h-20 border-b border-zinc-800/80 relative z-10",
+                    "px-3 py-2 flex items-center shrink-0 h-14 border-b border-zinc-800/80 relative z-10",
                     isSidebarCollapsed ? "justify-center flex-col gap-1" : "justify-between"
                 )}>
                     {!isSidebarCollapsed ? (
-                        <div className="flex items-center gap-3 overflow-hidden group">
-                            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-2 shadow-lg shadow-rose-950/40 relative">
+                        <div className="flex items-center gap-2.5 overflow-hidden group">
+                            <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-1.5 shadow-lg shadow-rose-950/40 relative">
                                 <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain filter drop-shadow" />
                             </div>
                             <div className="min-w-0">
                                 <div className="flex items-center gap-1.5">
-                                    <span className="font-brand text-lg font-black tracking-tight text-white select-none">
+                                    <span className="font-brand text-base leading-none font-black tracking-tight text-white select-none">
                                         HUB<span className="text-rose-500">DESK</span>
                                     </span>
                                 </div>
-                                <p className="text-[10px] text-zinc-500 font-medium truncate uppercase tracking-widest mt-0.5">
+                                <p className="text-[9px] text-zinc-500 font-medium truncate uppercase tracking-widest mt-1">
                                     Central de Operações
                                 </p>
                             </div>
@@ -430,7 +433,7 @@ const AdminDashboard = () => {
                     ) : (
                         <button 
                             onClick={() => setIsSidebarCollapsed(false)} 
-                            className="w-10 h-10 rounded-2xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-2 shadow-lg shadow-rose-950/40 cursor-pointer hover:scale-105 transition-transform" 
+                            className="w-8 h-8 rounded-xl bg-gradient-to-br from-rose-500/20 via-zinc-900 to-zinc-950 border border-rose-500/30 flex items-center justify-center shrink-0 p-1.5 shadow-lg shadow-rose-950/40 cursor-pointer hover:scale-105 transition-transform" 
                             title="Expandir menu lateral"
                         >
                             <img src={logo} alt="HubDesk Logo" className="w-full h-full object-contain" />
@@ -440,7 +443,7 @@ const AdminDashboard = () => {
                     <button 
                         onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} 
                         className={cn(
-                            "p-2 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-xl transition-colors cursor-pointer shrink-0 border border-transparent hover:border-zinc-700/50",
+                            "p-1.5 text-zinc-400 hover:text-white hover:bg-zinc-800/80 rounded-lg transition-colors cursor-pointer shrink-0 border border-transparent hover:border-zinc-700/50",
                             isSidebarCollapsed && "hidden"
                         )} 
                         title="Recolher menu lateral"
@@ -667,20 +670,7 @@ const AdminDashboard = () => {
 
                 {/* Rodapé Executivo da Barra Lateral */}
                 <div className="p-3 border-t border-zinc-800/80 shrink-0 bg-zinc-950/80 space-y-1 relative z-10">
-                    <div className={cn("grid gap-1", isSidebarCollapsed ? "grid-cols-1" : "grid-cols-2")}>
-                        <button 
-                            id="btn-sidebar-change-password"
-                            onClick={() => setIsPasswordModalOpen(true)} 
-                            className={cn(
-                                "flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
-                                isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
-                            )} 
-                            title="Alterar Senha de Acesso"
-                        >
-                            <Lock className="w-3.5 h-3.5 shrink-0" />
-                            {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Senha</span>}
-                        </button>
-
+                    <div className="grid gap-1 grid-cols-1">
                         <button 
                             id="btn-sidebar-logout"
                             onClick={() => setIsLogoutModalOpen(true)} 
@@ -695,35 +685,81 @@ const AdminDashboard = () => {
                         </button>
                     </div>
 
-                    {/* Personalizar o menu lateral */}
+                    {/* Ferramentas do menu (Personalizar menu e Tour guiado): recolhidas, só aparecem ao clicar */}
                     <button
                         type="button"
-                        data-tour="menu-customize"
-                        onClick={() => setIsMenuCustomizerOpen(true)}
+                        id="btn-sidebar-tools-toggle"
+                        onClick={() => setIsFooterToolsOpen(open => !open)}
+                        aria-expanded={isFooterToolsOpen}
+                        aria-controls="sidebar-tools-panel"
                         className={cn(
-                            "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                            "w-full flex items-center rounded-xl text-zinc-500 hover:text-zinc-200 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-1.5",
                             isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
                         )}
-                        title="Personalizar o menu: nome e ordem das seções e posição das telas"
+                        title={isFooterToolsOpen ? "Recolher ferramentas do menu" : "Mais opções do menu"}
                     >
                         <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
-                        {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Personalizar menu</span>}
-                    </button>
-
-                    {/* Rever o tour guiado */}
-                    <button
-                        type="button"
-                        data-tour="tour-replay"
-                        onClick={handleReplayTour}
-                        className={cn(
-                            "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
-                            isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                        {!isSidebarCollapsed && (
+                            <>
+                                <span className="text-[11px] font-medium truncate">Mais opções</span>
+                                <ChevronUp className={cn("w-3.5 h-3.5 ml-auto shrink-0 transition-transform duration-200", !isFooterToolsOpen && "rotate-180")} />
+                            </>
                         )}
-                        title="Rever o tour guiado"
-                    >
-                        <Compass className="w-3.5 h-3.5 shrink-0" />
-                        {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Tour guiado</span>}
                     </button>
+                    <div
+                        id="sidebar-tools-panel"
+                        className={cn(
+                            "grid transition-[grid-template-rows] duration-200 ease-out",
+                            isFooterToolsOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                        )}
+                        aria-hidden={!isFooterToolsOpen}
+                        inert={!isFooterToolsOpen}
+                    >
+                        <div className="overflow-hidden min-h-0 space-y-1">
+                        <button 
+                            id="btn-sidebar-change-password"
+                            onClick={() => { setIsFooterToolsOpen(false); setIsPasswordModalOpen(true); }} 
+                            className={cn(
+                                "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                                isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                            )} 
+                            title="Alterar Senha de Acesso"
+                        >
+                            <Lock className="w-3.5 h-3.5 shrink-0" />
+                            {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Senha</span>}
+                        </button>
+
+                        {/* Personalizar o menu lateral */}
+                        <button
+                            type="button"
+                            data-tour="menu-customize"
+                            onClick={() => { setIsFooterToolsOpen(false); setIsMenuCustomizerOpen(true); }}
+                            className={cn(
+                                "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                                isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                            )}
+                            title="Personalizar o menu: nome e ordem das seções e posição das telas"
+                        >
+                            <SlidersHorizontal className="w-3.5 h-3.5 shrink-0" />
+                            {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Personalizar menu</span>}
+                        </button>
+
+                        {/* Rever o tour guiado */}
+                        <button
+                            type="button"
+                            data-tour="tour-replay"
+                            onClick={handleReplayTour}
+                            className={cn(
+                                "w-full flex items-center rounded-xl text-zinc-400 hover:text-zinc-100 hover:bg-zinc-900 border border-transparent hover:border-zinc-800 transition-all cursor-pointer py-2",
+                                isSidebarCollapsed ? "justify-center px-0" : "px-2.5 gap-2"
+                            )}
+                            title="Rever o tour guiado"
+                        >
+                            <Compass className="w-3.5 h-3.5 shrink-0" />
+                            {!isSidebarCollapsed && <span className="text-[11px] font-medium truncate">Tour guiado</span>}
+                        </button>
+                        </div>
+                    </div>
 
                     {/* Versão do Sistema & Trigger do Changelog */}
                     <button
@@ -883,24 +919,42 @@ const AdminDashboard = () => {
                         {/* Rodapé mobile */}
                         <div className="p-3 border-t border-zinc-800/80 shrink-0 bg-zinc-950/80">
                             <button
-                                onClick={() => {
-                                    setIsMobileMenuOpen(false);
-                                    setIsMenuCustomizerOpen(true);
-                                }}
-                                className="w-full mb-2 py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
+                                type="button"
+                                onClick={() => setIsFooterToolsOpen(open => !open)}
+                                aria-expanded={isFooterToolsOpen}
+                                className="w-full mb-2 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-200 flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                             >
-                                <SlidersHorizontal className="w-3.5 h-3.5" /> Personalizar menu
+                                Mais opções <ChevronUp className={cn("w-3.5 h-3.5 transition-transform duration-200", !isFooterToolsOpen && "rotate-180")} />
                             </button>
+                            {isFooterToolsOpen && (
+                                <div className="grid grid-cols-1 gap-2 mb-2">
+                                    <button
+                                        onClick={() => {
+                                            setIsMobileMenuOpen(false);
+                                            setIsPasswordModalOpen(true);
+                                        }}
+                                        className="w-full py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
+                                    >
+                                        <Lock className="w-3.5 h-3.5" /> Senha
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            setIsMobileMenuOpen(false);
+                                            setIsMenuCustomizerOpen(true);
+                                        }}
+                                        className="w-full py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
+                                    >
+                                        <SlidersHorizontal className="w-3.5 h-3.5" /> Personalizar menu
+                                    </button>
+                                    <button
+                                        onClick={handleReplayTour}
+                                        className="w-full py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
+                                    >
+                                        <Compass className="w-3.5 h-3.5" /> Tour guiado
+                                    </button>
+                                </div>
+                            )}
                             <div className="flex gap-2">
-                                <button
-                                    onClick={() => {
-                                        setIsMobileMenuOpen(false);
-                                        setIsPasswordModalOpen(true);
-                                    }}
-                                    className="flex-1 py-2 text-xs font-semibold text-zinc-300 hover:text-white bg-zinc-900 hover:bg-zinc-800 rounded-xl flex items-center justify-center gap-1.5 transition-colors border border-zinc-800"
-                                >
-                                    <Lock className="w-3.5 h-3.5" /> Senha
-                                </button>
                                 <button
                                     onClick={() => {
                                         setIsMobileMenuOpen(false);
