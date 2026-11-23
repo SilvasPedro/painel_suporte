@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import ProcessBars3D from '../components/audits/ProcessBars3D';
+import ExcelIcon from '../components/common/ExcelIcon';
 import { 
     Headphones, PhoneIncoming, PhoneMissed, CheckCircle2, XCircle, 
     AlertCircle, ThumbsUp, ThumbsDown, Plus, Search, Filter, 
     Download, Edit2, Trash2, Eye, X, Save, Loader2, Calendar, 
     User, FileText, Database, TrendingUp, BarChart2, Check, 
     Copy, ArrowRight, ShieldCheck, Target, Clock, AlertTriangle, 
-    Users, RefreshCw, Sparkles, ChevronRight, Upload, FileUp, FileSpreadsheet
+    Users, RefreshCw, Sparkles, ChevronRight, Upload, FileUp, FileSpreadsheet, Crown, CalendarClock
 } from 'lucide-react';
 import { 
     collection, doc, addDoc, updateDoc, deleteDoc, setDoc, writeBatch 
@@ -15,10 +17,6 @@ import { subscribeSharedCollection, fetchQueryOnce } from '../services/dataCache
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { usePermissions } from '../context/PermissionsContext';
-import { 
-    ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, 
-    Legend, Cell, PieChart, Pie 
-} from 'recharts';
 import { exportThirdPartyAuditsPDF } from '../services/pdfExportService';
 
 // Lista oficial dos processos exigidos
@@ -385,6 +383,36 @@ export default function ThirdPartyAudits() {
         onlyRepeatsFilter, clientHistoryMap
     ]);
 
+    // Última vez que alguém lançou/atualizou uma auditoria concluída (momento do lançamento, não a data do atendimento)
+    const lastLaunch = useMemo(() => {
+        const toMs = (v) => {
+            if (!v) return null;
+            if (typeof v.toMillis === 'function') return v.toMillis();
+            if (typeof v.toDate === 'function') return v.toDate().getTime();
+            // Timestamp do Firestore após passar pelo cache em JSON
+            const secs = v.seconds ?? v._seconds;
+            if (typeof secs === 'number') return secs * 1000;
+            const t = new Date(v).getTime();
+            return Number.isNaN(t) ? null : t;
+        };
+        let best = null;
+        audits.forEach(a => {
+            if (!isAuditCompleted(a)) return;
+            const ms = toMs(a.updatedAt) ?? toMs(a.createdAt);
+            if (ms !== null && (!best || ms > best.ms)) best = { ms, by: a.lastUpdatedBy || a.auditorName || '' };
+        });
+        if (!best) return null;
+        const d = new Date(best.ms);
+        const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(best.ms).setHours(0, 0, 0, 0)) / 86400000);
+        return {
+            date: d.toLocaleDateString('pt-BR'),
+            time: d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            rel: days <= 0 ? 'hoje' : days === 1 ? 'ontem' : `há ${days} dias`,
+            stale: days > 7,
+            by: best.by
+        };
+    }, [audits]);
+
     // ========================================================
     // CÁLCULO DAS MÉTRICAS E INDICADORES OFICIAIS
     // ========================================================
@@ -662,7 +690,8 @@ export default function ThirdPartyAudits() {
                 outcome: formData.outcome,
                 notes: (formData.notes || '').trim(),
                 company: editingAudit ? getAuditCompany(editingAudit) : selectedCompany,
-                updatedAt: new Date()
+                updatedAt: new Date(),
+                lastUpdatedBy: currentUser?.name || currentUser?.displayName || 'Auditor'
             };
 
             if (editingAudit) {
@@ -1129,10 +1158,10 @@ export default function ThirdPartyAudits() {
                         <button
                             type="button"
                             onClick={handleDownloadTemplate}
-                            className="px-3 py-2 bg-surface hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="btn-excel px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
                             title="Baixar modelo de CSV com colunas pré-formatadas para importação"
                         >
-                            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                            <ExcelIcon className="w-4 h-4" />
                             <span>Modelo CSV</span>
                         </button>
 
@@ -1142,10 +1171,10 @@ export default function ThirdPartyAudits() {
                                 type="button"
                                 disabled={isImporting}
                                 onClick={() => fileInputRef.current?.click()}
-                                className="px-3.5 py-2 bg-surface hover:bg-blue-50 text-blue-800 text-xs font-bold rounded-xl border border-blue-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                className="btn-3d btn-3d-blue px-3.5 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                                 title="Importar atendimentos via arquivo .CSV (Data e Protocolo)"
                             >
-                                {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-600" /> : <Upload className="w-3.5 h-3.5 text-blue-600" />}
+                                {isImporting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}
                                 <span>Importar CSV</span>
                             </button>
                         )}
@@ -1154,10 +1183,10 @@ export default function ThirdPartyAudits() {
                         <button
                             type="button"
                             onClick={handleExportCSV}
-                            className="px-3 py-2 bg-surface hover:bg-emerald-50 text-emerald-800 text-xs font-bold rounded-xl border border-emerald-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                            className="btn-excel px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer"
                             title="Exportar dados filtrados em CSV com protocolos em formato de texto"
                         >
-                            <Download className="w-3.5 h-3.5 text-emerald-600" />
+                            <ExcelIcon className="w-4 h-4" />
                             <span>Exportar CSV</span>
                         </button>
 
@@ -1166,10 +1195,10 @@ export default function ThirdPartyAudits() {
                             type="button"
                             disabled={isExportingPDF}
                             onClick={handleExportPDF}
-                            className="px-3 py-2 bg-surface hover:bg-red-50 text-red-800 text-xs font-bold rounded-xl border border-red-200 shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                            className="btn-3d btn-3d-red px-3 py-2 text-xs font-bold rounded-xl flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                             title="Exportar relatório e protocolos unificados em formato .PDF para anexo"
                         >
-                            {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin text-red-600" /> : <FileText className="w-3.5 h-3.5 text-red-600" />}
+                            {isExportingPDF ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
                             <span>Exportar PDF</span>
                         </button>
 
@@ -1353,83 +1382,114 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 <div className="bg-zinc-950 text-white rounded-2xl p-5 sm:p-6 shadow-sm border border-zinc-800 relative overflow-hidden">
                     <div className="absolute right-0 top-0 bottom-0 w-96 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none"></div>
+                    <div
+                        className="pointer-events-none absolute -left-16 -top-16 w-56 h-56 rounded-full blur-3xl opacity-25"
+                        style={{ background: metrics.progressPercent === 100 && metrics.total > 0 ? '#34d399' : metrics.progressPercent >= 70 ? '#fbbf24' : '#f87171' }}
+                    />
 
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4 relative z-10">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-zinc-300 border border-white/20">
-                                    <Clock className="w-3 h-3 text-amber-400" />
-                                    Progresso do Período ({activePeriodLabel})
-                                </span>
-                                <span className="text-[11px] text-zinc-400 font-medium">
-                                    Acompanhamento em tempo real de atendimentos preenchidos
-                                </span>
-                            </div>
-                            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white mt-1 flex items-baseline gap-2">
-                                <span>{metrics.completedCount} auditorias concluídas</span>
-                                <span className="text-xs font-normal text-zinc-400">
-                                    de {metrics.total} registradas no período
-                                </span>
-                            </h2>
-                        </div>
-
-                        {/* Indicador Numérico Grande e Resumo de Pendentes */}
-                        <div className="flex items-center gap-4">
-                            <div className="text-right">
-                                <span className={`text-3xl sm:text-4xl font-black ${
-                                    metrics.progressPercent === 100 && metrics.total > 0
-                                        ? 'text-emerald-400'
-                                        : metrics.progressPercent >= 70
-                                        ? 'text-amber-400'
-                                        : 'text-red-400'
-                                }`}>
-                                    {metrics.progressPercent}%
-                                </span>
-                                <span className="block text-[10px] uppercase tracking-wider text-zinc-400 font-bold">
-                                    Progresso Atual
-                                </span>
-                            </div>
-
-                            <div className="border-l border-zinc-800 pl-4 space-y-1">
-                                <div className="flex items-center gap-1.5">
-                                    <span className={`w-2.5 h-2.5 rounded-full ${metrics.pendingCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`}></span>
-                                    <span className="text-xs font-bold text-zinc-200">
-                                        {metrics.pendingCount} pendente{metrics.pendingCount !== 1 ? 's' : ''}
-                                    </span>
+                    <div className="relative z-10 flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8">
+                        {/* Anel de progresso */}
+                        {(() => {
+                            const tone = metrics.progressPercent === 100 && metrics.total > 0 ? '#34d399' : metrics.progressPercent >= 70 ? '#fbbf24' : '#f87171';
+                            const circ = 2 * Math.PI * 50;
+                            return (
+                                <div className="relative w-28 h-28 shrink-0 self-center lg:self-auto">
+                                    <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90" aria-hidden="true">
+                                        <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="11" />
+                                        <circle
+                                            cx="60" cy="60" r="50" fill="none"
+                                            stroke={tone} strokeWidth="11" strokeLinecap="round"
+                                            strokeDasharray={circ}
+                                            strokeDashoffset={circ * (1 - metrics.progressPercent / 100)}
+                                            style={{ transition: 'stroke-dashoffset 800ms ease-out', filter: `drop-shadow(0 0 6px ${tone}99)` }}
+                                        />
+                                    </svg>
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                        <span className="text-3xl font-black leading-none tabular-nums" style={{ color: tone }}>{metrics.progressPercent}%</span>
+                                        <span className="mt-1 text-[9px] uppercase tracking-widest text-zinc-400 font-bold">Progresso</span>
+                                    </div>
                                 </div>
-                                {metrics.pendingCount > 0 && (
-                                    <button
-                                        type="button"
-                                        onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
-                                        className="text-[11px] text-amber-400 hover:text-amber-300 underline font-bold cursor-pointer block"
+                            );
+                        })()}
+
+                        {/* Título, tags e barra */}
+                        <div className="flex-1 min-w-0 space-y-3">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/10 text-zinc-300 border border-white/15">
+                                    <Clock className="w-3 h-3 text-amber-400" />
+                                    Período: {activePeriodLabel}
+                                </span>
+                                {lastLaunch ? (
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
+                                            lastLaunch.stale ? 'bg-amber-500/10 text-amber-300 border-amber-400/30' : 'bg-emerald-500/10 text-emerald-300 border-emerald-400/30'
+                                        }`}
+                                        title="Última vez que uma auditoria foi lançada ou atualizada (não é a data do atendimento)"
                                     >
-                                        {statusFilter === 'pending' ? 'Ver todas' : 'Filtrar pendentes'}
-                                    </button>
+                                        <CalendarClock className="w-3 h-3" />
+                                        Último lançamento: {lastLaunch.date} às {lastLaunch.time}
+                                        <span className="opacity-70 font-semibold">· {lastLaunch.rel}{lastLaunch.by ? ` · ${lastLaunch.by}` : ''}</span>
+                                    </span>
+                                ) : (
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/5 text-zinc-400 border border-white/10">
+                                        <CalendarClock className="w-3 h-3" />
+                                        Nenhum lançamento ainda
+                                    </span>
                                 )}
                             </div>
-                        </div>
-                    </div>
 
-                    {/* Barra de Progresso com Gradiente */}
-                    <div className="space-y-1.5 relative z-10">
-                        <div className="w-full h-3 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/60 p-0.5">
-                            <div 
-                                className="h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-red-600 via-amber-500 to-emerald-500 shadow-sm"
-                                style={{ width: `${metrics.progressPercent}%` }}
-                            />
+                            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex flex-wrap items-baseline gap-x-2">
+                                <span>{metrics.completedCount} auditorias concluídas</span>
+                                <span className="text-xs font-normal text-zinc-400">de {metrics.total} registradas no período</span>
+                            </h2>
+
+                            <div className="space-y-1.5">
+                                <div className="w-full h-2.5 bg-zinc-800 rounded-full overflow-hidden border border-zinc-700/60">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-700 ease-out bg-gradient-to-r from-red-600 via-amber-500 to-emerald-500"
+                                        style={{ width: `${metrics.progressPercent}%` }}
+                                    />
+                                </div>
+                                <p className="text-[11px] text-zinc-400">
+                                    {metrics.total === 0 ? (
+                                        'Nenhum atendimento importado neste período'
+                                    ) : metrics.pendingCount === 0 ? (
+                                        <strong className="text-emerald-400">Todos os atendimentos do período estão 100% auditados!</strong>
+                                    ) : (
+                                        `Faltam preencher ${metrics.pendingCount} atendimento(s) pendente(s)`
+                                    )}
+                                </p>
+                            </div>
                         </div>
-                        <div className="flex items-center justify-between text-[11px] text-zinc-400">
-                            <span>0%</span>
-                            <span>
-                                {metrics.total === 0 ? (
-                                    'Nenhum atendimento importado neste período'
-                                ) : metrics.pendingCount === 0 ? (
-                                    <strong className="text-emerald-400">🎉 Todos os atendimentos do período estão 100% auditados!</strong>
-                                ) : (
-                                    `Faltam preencher ${metrics.pendingCount} atendimento(s) pendente(s)`
-                                )}
-                            </span>
-                            <span>100%</span>
+
+                        {/* Resumo: concluídas / pendentes / total */}
+                        <div className="grid grid-cols-3 lg:grid-cols-1 gap-2 lg:w-44 shrink-0">
+                            <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
+                                <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Concluídas</p>
+                                <p className="text-lg font-black text-emerald-400 tabular-nums leading-tight">{metrics.completedCount}</p>
+                            </div>
+                            <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
+                                <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold flex items-center gap-1.5">
+                                    <span className={`w-1.5 h-1.5 rounded-full ${metrics.pendingCount > 0 ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
+                                    Pendentes
+                                </p>
+                                <div className="flex items-center justify-between gap-2">
+                                    <p className={`text-lg font-black tabular-nums leading-tight ${metrics.pendingCount > 0 ? 'text-amber-400' : 'text-zinc-300'}`}>{metrics.pendingCount}</p>
+                                    {metrics.pendingCount > 0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setStatusFilter(statusFilter === 'pending' ? 'all' : 'pending')}
+                                            className="text-[10px] text-amber-400 hover:text-amber-300 underline font-bold cursor-pointer"
+                                        >
+                                            {statusFilter === 'pending' ? 'Ver todas' : 'Filtrar'}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="rounded-xl bg-white/5 border border-white/10 px-3 py-2">
+                                <p className="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Total</p>
+                                <p className="text-lg font-black text-zinc-200 tabular-nums leading-tight">{metrics.total}</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1440,13 +1500,13 @@ export default function ThirdPartyAudits() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     
                     {/* CARD 1: FCR (FIRST CALL RESOLUTION) */}
-                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
+                    <div className="group bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 FCR (Resolução 1ª Chamada)
                             </span>
-                            <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                                <CheckCircle2 className="w-4 h-4" />
+                            <div className="icon-3d w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 flex items-center justify-center">
+                                <CheckCircle2 className="w-[18px] h-[18px]" />
                             </div>
                         </div>
                         <div className="flex items-baseline justify-between">
@@ -1472,13 +1532,13 @@ export default function ThirdPartyAudits() {
                     </div>
 
                     {/* CARD 2: REINCIDÊNCIA DE CLIENTES FORA DE HORÁRIO */}
-                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
+                    <div className="group bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 Taxa de Reincidência
                             </span>
-                            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                                <RefreshCw className="w-4 h-4" />
+                            <div className="icon-3d w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25 flex items-center justify-center">
+                                <RefreshCw className="w-[18px] h-[18px]" />
                             </div>
                         </div>
                         <div className="flex items-baseline justify-between">
@@ -1502,13 +1562,13 @@ export default function ThirdPartyAudits() {
                     </div>
 
                     {/* CARD 3: CONFORMIDADE DE PROCEDIMENTOS */}
-                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
+                    <div className="group bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 Conformidade de Procedimentos
                             </span>
-                            <div className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                                <ShieldCheck className="w-4 h-4" />
+                            <div className="icon-3d w-9 h-9 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/25 flex items-center justify-center">
+                                <ShieldCheck className="w-[18px] h-[18px]" />
                             </div>
                         </div>
                         <div className="flex items-baseline justify-between">
@@ -1532,13 +1592,13 @@ export default function ThirdPartyAudits() {
                     </div>
 
                     {/* CARD 4: QUALIDADE DO ATENDIMENTO */}
-                    <div className="bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
+                    <div className="group bg-surface p-5 rounded-2xl border border-subtle shadow-xs space-y-2 hover:border-red-200 transition-all">
                         <div className="flex items-center justify-between">
                             <span className="text-[11px] font-bold text-secondary-hub uppercase tracking-wider">
                                 Qualidade (Positivos x Negativos)
                             </span>
-                            <div className="w-8 h-8 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
-                                <ThumbsUp className="w-4 h-4" />
+                            <div className="icon-3d w-9 h-9 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/25 flex items-center justify-center">
+                                <ThumbsUp className="w-[18px] h-[18px]" />
                             </div>
                         </div>
                         <div className="flex items-baseline justify-between">
@@ -1561,23 +1621,41 @@ export default function ThirdPartyAudits() {
                 {/* ======================================================== */}
                 {/* 4. SEÇÃO GRÁFICA: PROCESSOS & OPERADORES TERCEIRIZADOS   */}
                 {/* ======================================================== */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="space-y-6">
                     
-                    {/* Card 1: Gráfico de Processos Realizados */}
-                    <div className="bg-surface rounded-2xl border border-subtle p-5 shadow-2xs space-y-3">
+                    {/* Card 1: Gráfico de Processos Realizados (linha inteira) */}
+                    <div className="group bg-surface rounded-2xl border border-subtle p-5 shadow-2xs space-y-3">
                         <div className="flex items-center justify-between border-b border-subtle pb-3">
                             <div>
-                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-1.5">
-                                    <BarChart2 className="w-4 h-4 text-red-600" />
+                                <h3 className="text-xs font-bold text-primary-hub uppercase tracking-wider flex items-center gap-2">
+                                    <span className="w-7 h-7 rounded-lg bg-red-500/10 text-red-500 border border-red-500/25 flex items-center justify-center"><BarChart2 className="w-4 h-4" /></span>
                                     Demandas por Processo
                                 </h3>
                                 <p className="text-[11px] text-muted-hub">
                                     Motivos dos atendimentos auditados
                                 </p>
                             </div>
-                            <span className="text-xs font-bold text-secondary-hub bg-subtle px-2 py-0.5 rounded-lg">
-                                {periodAudits.length}
-                            </span>
+                            <div className="flex items-center gap-3">
+                                {processChartData[0]?.quantidade > 0 && (
+                                    <div
+                                        className="flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-xl bg-amber-500/10 border border-amber-500/25"
+                                        title={`Processo líder: ${processChartData[0].name} (${processChartData[0].quantidade} de ${periodAudits.length} atendimentos)`}
+                                    >
+                                        <span className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-500 border border-amber-500/30 flex items-center justify-center shrink-0">
+                                            <Crown className="w-4 h-4" />
+                                        </span>
+                                        <span className="leading-tight">
+                                            <span className="block text-[9px] font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400">Líder</span>
+                                            <span className="block text-xs font-black text-primary-hub max-w-[160px] truncate">
+                                                {processChartData[0].name} · {processChartData[0].percent}%
+                                            </span>
+                                        </span>
+                                    </div>
+                                )}
+                                <span className="text-xs font-bold text-secondary-hub bg-subtle px-2 py-0.5 rounded-lg" title="Total de atendimentos auditados">
+                                    {periodAudits.length}
+                                </span>
+                            </div>
                         </div>
 
                         {periodAudits.length === 0 ? (
@@ -1585,28 +1663,11 @@ export default function ThirdPartyAudits() {
                                 Nenhum lançamento no período.
                             </div>
                         ) : (
-                            <div className="h-60 pt-2">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <BarChart data={processChartData} layout="vertical" margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                                        <XAxis type="number" stroke="#9ca3af" fontSize={10} allowDecimals={false} />
-                                        <YAxis dataKey="name" type="category" width={110} stroke="#4b5563" fontSize={10} tickLine={false} />
-                                        <Tooltip 
-                                            formatter={(value) => [`${value} atendimentos`, 'Volume']}
-                                            labelFormatter={(label) => `Processo: ${label}`}
-                                            contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '12px', color: '#fff', fontSize: '11px' }}
-                                        />
-                                        <Bar dataKey="quantidade" radius={[0, 8, 8, 0]}>
-                                            {processChartData.map((entry, index) => {
-                                                const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
-                                                return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                                            })}
-                                        </Bar>
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            </div>
+                            <ProcessBars3D data={processChartData} limit={5} />
                         )}
                     </div>
 
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     {/* Card 2: Desempenho dos Operadores Terceirizados */}
                     <div className="bg-surface rounded-2xl border border-subtle p-5 shadow-2xs space-y-3 flex flex-col justify-between">
                         <div>
@@ -1715,6 +1776,7 @@ export default function ThirdPartyAudits() {
                         <div className="pt-2 border-t border-subtle text-[10px] text-muted-hub text-center">
                             Acompanhe para evitar desgaste do cliente no plantão
                         </div>
+                    </div>
                     </div>
 
                 </div>

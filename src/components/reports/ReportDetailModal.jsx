@@ -29,6 +29,7 @@ import { StatusPill } from './detail/badges';
 import StatusStepper from './detail/StatusStepper';
 import ActivityFeed from './detail/ActivityFeed';
 import Composer from './detail/Composer';
+import StatusActions from './detail/StatusActions';
 import DetailSidebar from './detail/DetailSidebar';
 
 const CATEGORY_ICON = {
@@ -65,7 +66,6 @@ export default function ReportDetailModal({
     showToast = () => {}
 }) {
     const [sending, setSending] = useState(false);
-    const [composerRequest, setComposerRequest] = useState(null);
     const [copiedSummary, setCopiedSummary] = useState(false);
     const [copiedSolution, setCopiedSolution] = useState(false);
     const dialogRef = useRef(null);
@@ -283,64 +283,44 @@ export default function ReportDetailModal({
         }
     };
 
-    // Mudança direta de status (atalho "Iniciar")
-    const handleStartWork = async () => {
-        if (!canDispatch) return;
-        try {
-            const event = createEvent({ type: 'status', actor, from: status, to: 'Em Andamento' });
-            await persist({ fields: { status: 'Em Andamento' }, events: [event] });
-            void sendReportDm({ report, kind: 'status', withComment: false });
-            showToast('Atendimento iniciado.', 'success');
-        } catch (err) {
-            showToast('Erro ao atualizar o chamado: ' + err.message, 'error');
-        }
-    };
-
-    // Atalhos que pedem texto (Suspender, Resolver): preparam o campo de parecer
-    const handleRequestStatus = (target) => {
-        setComposerRequest({
-            nonce: Date.now(),
-            tab: 'opinion',
-            status: target,
-            placeholder: target === 'Suspenso' ? 'Informe o motivo da suspensão' : 'Descreva a solução aplicada para encerrar o chamado'
-        });
-    };
-
-    // Envio do campo único (comentário ou parecer, com ou sem mudança de status)
-    const handleComposerSubmit = async ({ tab, text, status: target }) => {
-        if (isWatcher || sending) return false;
-        const statusChanged = canDispatch && normalizeStatus(target) !== status;
-        const newStatus = statusChanged ? normalizeStatus(target) : status;
+    // Comentário simples: nunca altera o status
+    const handleComment = async ({ text }) => {
+        if (isWatcher || sending || !text) return false;
         setSending(true);
         try {
-            const events = [];
-            const comments = [];
-            const fields = {};
-            if (statusChanged) {
-                fields.status = newStatus;
-                events.push(createEvent({ type: 'status', actor, from: status, to: newStatus }));
-            }
-            if (tab === 'opinion' && canDispatch) {
-                if (text) {
-                    fields.adminComment = text;
-                    const lastOpinion = [...(Array.isArray(report.comments) ? report.comments : [])].reverse().find(c => c.kind === 'opinion');
-                    const duplicated = lastOpinion && lastOpinion.content === text && !statusChanged;
-                    if (!duplicated) comments.push(createComment({ text, actor, isStaff: true, kind: 'opinion', status: newStatus }));
-                }
-            } else if (text) {
-                comments.push(createComment({ text, actor, isStaff: Boolean(canManageTickets) }));
-            }
-            if (!events.length && !comments.length && !Object.keys(fields).length) return true;
-
-            await persist({ fields, events, comments });
-
-            // Aviso ao solicitante: mudança de status (com o texto junto) ou só o comentário
-            if (statusChanged) void sendReportDm({ report, kind: 'status', withComment: Boolean(text) });
-            else if (comments.length) void sendReportDm({ report, kind: 'comment' });
-            showToast(tab === 'opinion' ? 'Parecer registrado.' : 'Comentário adicionado.', 'success');
+            const comment = createComment({ text, actor, isStaff: Boolean(canManageTickets) });
+            await persist({ fields: {}, events: [], comments: [comment] });
+            void sendReportDm({ report, kind: 'comment' });
+            showToast('Comentário adicionado.', 'success');
             return true;
         } catch (err) {
             showToast('Erro ao enviar: ' + err.message, 'error');
+            return false;
+        } finally {
+            setSending(false);
+        }
+    };
+
+    // Única forma de mudar o status (botões de "Status da tarefa"): comentário opcional/obrigatório + confirmação
+    const handleStatusChange = async ({ target, text }) => {
+        if (!canDispatch || isWatcher || sending) return false;
+        const newStatus = normalizeStatus(target);
+        if (newStatus === status) return false;
+        setSending(true);
+        try {
+            const events = [createEvent({ type: 'status', actor, from: status, to: newStatus })];
+            const comments = [];
+            const fields = { status: newStatus };
+            if (text) {
+                fields.adminComment = text;
+                comments.push(createComment({ text, actor, isStaff: true, kind: 'opinion', status: newStatus }));
+            }
+            await persist({ fields, events, comments });
+            void sendReportDm({ report, kind: 'status', withComment: Boolean(text) });
+            showToast(newStatus === 'Resolvido' ? 'Tarefa encerrada.' : `Status alterado para ${getStatusLabel(newStatus)}.`, 'success');
+            return true;
+        } catch (err) {
+            showToast('Erro ao atualizar o chamado: ' + err.message, 'error');
             return false;
         } finally {
             setSending(false);
@@ -459,15 +439,21 @@ export default function ReportDetailModal({
 
                             <ActivityFeed report={report} currentUserId={actorId} />
 
+                            {!isWatcher && canDispatch && (
+                                <StatusActions
+                                    status={status}
+                                    sending={sending}
+                                    onSubmit={handleStatusChange}
+                                />
+                            )}
+
                             {!isWatcher && (
                                 <Composer
                                     key={report.id}
                                     report={report}
-                                    canDispatch={canDispatch}
                                     canManageTickets={canManageTickets}
                                     sending={sending}
-                                    request={composerRequest}
-                                    onSubmit={handleComposerSubmit}
+                                    onSubmit={handleComment}
                                 />
                             )}
                         </div>
@@ -482,13 +468,10 @@ export default function ReportDetailModal({
                             collaborators={collaborators}
                             canAssign={canAssign}
                             canWatch={canWatch}
-                            canDispatch={canDispatch}
                             canModify={canModify}
                             isMine={isMine}
                             onAssign={handleAssign}
                             onAssumeSelf={handleAssumeSelf}
-                            onStartWork={handleStartWork}
-                            onRequestStatus={handleRequestStatus}
                             onAddWatcher={handleAddWatcher}
                             onRemoveWatcher={handleRemoveWatcher}
                             onEdit={() => onEdit(report)}

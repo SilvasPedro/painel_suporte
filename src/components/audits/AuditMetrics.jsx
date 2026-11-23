@@ -15,9 +15,9 @@ function StatCard({ icon: Icon, tone, label, badge, value, suffix, progress, foo
     const tones = TONES[tone];
 
     return (
-        <div className={`bg-surface p-5 rounded-3xl border border-subtle shadow-xs hover:shadow-md ${tones.hover} transition-all flex flex-col gap-4`}>
+        <div className={`group bg-surface p-5 rounded-3xl border border-subtle shadow-xs hover:shadow-md ${tones.hover} transition-all flex flex-col gap-4`}>
             <div className="flex items-center justify-between">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${tones.chip}`}>
+                <div className={`icon-3d w-10 h-10 rounded-2xl flex items-center justify-center ${tones.chip}`}>
                     <Icon className="w-5 h-5" />
                 </div>
                 {badge && (
@@ -66,7 +66,7 @@ export default function AuditMetrics({ stats, targetRate = 80 }) {
             <div className="bg-zinc-950 text-white p-5 rounded-3xl border border-zinc-800 shadow-md flex flex-col gap-4 relative overflow-hidden">
                 <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-red-600/20 blur-2xl pointer-events-none" />
                 <div className="flex items-center justify-between relative">
-                    <div className="w-10 h-10 rounded-2xl bg-white/10 text-red-400 flex items-center justify-center">
+                    <div className="icon-3d w-10 h-10 rounded-2xl bg-white/10 text-red-400 flex items-center justify-center">
                         <ShieldCheck className="w-5 h-5" />
                     </div>
                     <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${

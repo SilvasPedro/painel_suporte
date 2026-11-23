@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useLayoutEffect } from 'react';
 import { 
     Plus, Search, Eye, Edit2, Trash2, X, Loader2, 
     AlertTriangle, CheckCircle, Clock, Filter, 
@@ -608,27 +608,6 @@ const Reports = () => {
         }
     };
 
-    const handleDrawerUpdateStatus = async (reportId, newStatus) => {
-        if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
-        const target = reports.find(r => r.id === reportId) || viewingReport;
-        if (target && !canUserDispatchOrCloseTask(target, effectiveUser)) {
-            showToast("Visualizadores possuem acesso somente leitura e não podem alterar o status.", "error");
-            return;
-        }
-        try {
-            await updateDoc(doc(db, "critical_reports", reportId), {
-                status: newStatus,
-                updatedAt: new Date()
-            });
-            if (target && target.status !== newStatus) void sendReportDm({ report: target, kind: 'status' });
-            showToast(`Status atualizado para ${newStatus}!`, "success");
-            setViewingReport(prev => prev ? { ...prev, status: newStatus } : null);
-        } catch (err) {
-            console.error("Erro ao atualizar status:", err);
-            showToast("Falha ao atualizar status: " + err.message, "error");
-        }
-    };
-
     const handleDrawerAddComment = async (reportId, content) => {
         if (isReadOnlyLevel) { showToast('Seu nível de acesso é somente leitura.', 'warning'); return; }
         const target = reports.find(r => r.id === reportId) || viewingReport;
@@ -951,6 +930,26 @@ ${report.description || 'Sem descrição'}`;
         }
     };
 
+    // Indicador deslizante entre os cartões de status (anima a troca de seleção)
+    const SUMMARY_COLORS = { all: '#f43f5e', 'Pendente': '#f59e0b', 'Em Andamento': '#3b82f6', 'Suspenso': '#a855f7', 'Resolvido': '#10b981', impact: '#f43f5e' };
+    const summaryKey = clientImpactFilter === 'Sim' ? 'impact' : (statusFilter || 'all');
+    const summaryGridRef = useRef(null);
+    const summaryCardRefs = useRef({});
+    const [indicator, setIndicator] = useState(null);
+    useLayoutEffect(() => {
+        const measure = () => {
+            const el = summaryCardRefs.current[summaryKey];
+            if (!el || !showSummary) { setIndicator(null); return; }
+            setIndicator(prev => ({ x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight, animate: !!prev }));
+        };
+        measure();
+        const grid = summaryGridRef.current;
+        if (!grid || typeof ResizeObserver === 'undefined') return undefined;
+        const ro = new ResizeObserver(measure);
+        ro.observe(grid);
+        return () => ro.disconnect();
+    }, [summaryKey, showSummary, loading]);
+
     if (loading) {
         return (
             <div className="flex-1 flex flex-col items-center justify-center bg-canvas text-primary-hub h-full p-8">
@@ -1070,13 +1069,29 @@ ${report.description || 'Sem descrição'}`;
             {/* CARTÕES EXECUTIVOS DE STATUS & QUANTIDADE (6 CARDS BENTO FLUIDO)          */}
             {/* ========================================================================= */}
             {showSummary && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-2 shrink-0 animate-in fade-in duration-150">
+                <div ref={summaryGridRef} className="relative grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 mb-2 shrink-0 animate-in fade-in duration-150">
+                    {indicator && (
+                        <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute left-0 top-0 z-10 rounded-2xl border-2"
+                            style={{
+                                width: indicator.w,
+                                height: indicator.h,
+                                transform: `translate(${indicator.x}px, ${indicator.y}px)`,
+                                borderColor: SUMMARY_COLORS[summaryKey],
+                                boxShadow: `0 0 0 3px ${SUMMARY_COLORS[summaryKey]}33, 0 6px 18px ${SUMMARY_COLORS[summaryKey]}40`,
+                                transition: indicator.animate && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                                    ? 'transform 420ms cubic-bezier(0.3, 1.3, 0.5, 1), width 420ms cubic-bezier(0.3, 1.3, 0.5, 1), height 420ms ease, border-color 300ms ease, box-shadow 300ms ease'
+                                    : 'none',
+                            }}
+                        />
+                    )}
                     {/* Card 1: Total Geral */}
-                    <button 
+                    <button ref={(el) => { summaryCardRefs.current['all'] = el; }} 
                         onClick={() => { setStatusFilter(''); setClientImpactFilter(''); }}
-                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 group ${
                             statusFilter === '' && clientImpactFilter === ''
-                                ? 'bg-surface border-rose-500 ring-2 ring-rose-500/30' 
+                                ? 'bg-surface border-rose-500' 
                                 : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Ver todas as solicitações"
@@ -1089,17 +1104,17 @@ ${report.description || 'Sem descrição'}`;
                                 {metricsSummary.total}
                             </span>
                         </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-subtle text-primary-hub border-subtle shadow-xs">
-                            <Sparkles className="w-4 h-4 text-rose-500" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-subtle text-primary-hub border-subtle icon-3d">
+                            <Sparkles className="w-[18px] h-[18px] text-rose-500" />
                         </div>
                     </button>
 
                     {/* Card 2: Pendentes */}
-                    <button 
+                    <button ref={(el) => { summaryCardRefs.current['Pendente'] = el; }} 
                         onClick={() => { setStatusFilter('Pendente'); setClientImpactFilter(''); }}
-                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 group ${
                             statusFilter === 'Pendente' 
-                                ? 'bg-amber-500/10 border-amber-500 ring-2 ring-amber-500/30' 
+                                ? 'bg-amber-500/10 border-amber-500' 
                                 : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por solicitações pendentes"
@@ -1112,17 +1127,17 @@ ${report.description || 'Sem descrição'}`;
                                 {metricsSummary.pending}
                             </span>
                         </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 shadow-xs">
-                            <Clock className="w-4 h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20 icon-3d">
+                            <Clock className="w-[18px] h-[18px]" />
                         </div>
                     </button>
 
                     {/* Card 3: Em Andamento */}
-                    <button 
+                    <button ref={(el) => { summaryCardRefs.current['Em Andamento'] = el; }} 
                         onClick={() => { setStatusFilter('Em Andamento'); setClientImpactFilter(''); }}
-                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 group ${
                             statusFilter === 'Em Andamento' 
-                                ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30' 
+                                ? 'bg-blue-500/10 border-blue-500' 
                                 : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por solicitações em andamento"
@@ -1135,17 +1150,17 @@ ${report.description || 'Sem descrição'}`;
                                 {metricsSummary.inProgress}
                             </span>
                         </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 shadow-xs">
-                            <Clock className="w-4 h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 icon-3d">
+                            <Clock className="w-[18px] h-[18px]" />
                         </div>
                     </button>
 
                     {/* Card 4: Suspensos (NOVO STATUS) */}
-                    <button 
+                    <button ref={(el) => { summaryCardRefs.current['Suspenso'] = el; }} 
                         onClick={() => { setStatusFilter('Suspenso'); setClientImpactFilter(''); }}
-                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 group ${
                             statusFilter === 'Suspenso' 
-                                ? 'bg-purple-500/10 border-purple-500 ring-2 ring-purple-500/30' 
+                                ? 'bg-purple-500/10 border-purple-500' 
                                 : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por chamados suspensos (aguardando terceiro / cliente)"
@@ -1158,17 +1173,17 @@ ${report.description || 'Sem descrição'}`;
                                 {metricsSummary.suspended || 0}
                             </span>
                         </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 shadow-xs">
-                            <Hourglass className="w-4 h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20 icon-3d">
+                            <Hourglass className="w-[18px] h-[18px]" />
                         </div>
                     </button>
 
                     {/* Card 5: Resolvidos */}
-                    <button 
+                    <button ref={(el) => { summaryCardRefs.current['Resolvido'] = el; }} 
                         onClick={() => { setStatusFilter('Resolvido'); setClientImpactFilter(''); }}
-                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 group ${
                             statusFilter === 'Resolvido' 
-                                ? 'bg-emerald-500/10 border-emerald-500 ring-2 ring-emerald-500/30' 
+                                ? 'bg-emerald-500/10 border-emerald-500' 
                                 : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por solicitações resolvidas"
@@ -1181,17 +1196,17 @@ ${report.description || 'Sem descrição'}`;
                                 {metricsSummary.resolved}
                             </span>
                         </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 shadow-xs">
-                            <CheckCircle className="w-4 h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 icon-3d">
+                            <CheckCircle className="w-[18px] h-[18px]" />
                         </div>
                     </button>
 
                     {/* Card 6: Afeta Cliente */}
-                    <button 
+                    <button ref={(el) => { summaryCardRefs.current['impact'] = el; }} 
                         onClick={() => { setClientImpactFilter('Sim'); setStatusFilter(''); }}
-                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 ${
+                        className={`rounded-2xl p-3.5 border shadow-xs flex items-center justify-between gap-3 transition-all text-left cursor-pointer active:scale-98 group ${
                             clientImpactFilter === 'Sim' 
-                                ? 'bg-rose-500/10 border-rose-500 ring-2 ring-rose-500/30' 
+                                ? 'bg-rose-500/10 border-rose-500' 
                                 : 'bg-surface border-subtle hover:border-border-hub hover:bg-subtle/50'
                         }`}
                         title="Filtrar por chamados que impactaram o cliente"
@@ -1204,8 +1219,8 @@ ${report.description || 'Sem descrição'}`;
                                 {metricsSummary.clientImpact}
                             </span>
                         </div>
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 shadow-xs">
-                            <AlertTriangle className="w-4 h-4" />
+                        <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 icon-3d">
+                            <AlertTriangle className="w-[18px] h-[18px]" />
                         </div>
                     </button>
                 </div>
@@ -1930,7 +1945,6 @@ ${report.description || 'Sem descrição'}`;
                     setViewingReport(null);
                     setIsFullModalOpen(false);
                 }}
-                onUpdateStatus={handleDrawerUpdateStatus}
                 onAddComment={handleDrawerAddComment}
                 canManage={canUserDispatchOrCloseTask(viewingReport, effectiveUser)}
                 onExpandFull={() => setIsFullModalOpen(true)}

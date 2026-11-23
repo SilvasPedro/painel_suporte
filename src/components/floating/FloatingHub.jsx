@@ -13,6 +13,13 @@ import ChatPanel from './ChatPanel';
  * panel: 'extensions' | 'chat' | null — qual janela está aberta.
  * Os dois painéis ficam montados para a conversa e a busca continuarem ao minimizar.
  */
+// Efeito 3D: brilho no topo, sombra interna na base e sombra projetada (sem inclinar)
+const BTN_3D = {
+    backgroundImage: 'linear-gradient(160deg, rgba(255,255,255,0.28), rgba(255,255,255,0) 55%), linear-gradient(340deg, rgba(0,0,0,0.28), transparent 60%)',
+    boxShadow: 'inset 0 2px 2px rgba(255,255,255,0.4), inset 0 -4px 6px rgba(0,0,0,0.35), 0 8px 16px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.3)',
+};
+const ICON_3D = { filter: 'drop-shadow(0 2px 2px rgba(0,0,0,0.5))' };
+
 export default function FloatingHub() {
     const { currentUser } = useAuth();
     const [menuOpen, setMenuOpen] = useState(false);
@@ -93,11 +100,12 @@ export default function FloatingHub() {
                                 role="menuitem"
                                 tabIndex={menuOpen ? 0 : -1}
                                 onClick={() => openPanel(option.id)}
+                                style={BTN_3D}
                                 className={cn('w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer', option.tone)}
                                 aria-label={option.id === 'chat' ? 'Abrir chat com a IA' : 'Abrir lista de ramais'}
                                 title={option.label}
                             >
-                                <Icon className="w-5 h-5" aria-hidden="true" />
+                                <Icon className="w-5 h-5" style={ICON_3D} aria-hidden="true" />
                             </button>
                         </div>
                     );
@@ -109,6 +117,7 @@ export default function FloatingHub() {
                 type="button"
                 id="floating-hub-btn"
                 onClick={handleMainClick}
+                style={BTN_3D}
                 aria-expanded={active}
                 aria-haspopup={aiAllowed ? 'menu' : 'dialog'}
                 className={cn(
@@ -118,7 +127,7 @@ export default function FloatingHub() {
                 aria-label={active ? 'Fechar' : (aiAllowed ? 'Abrir atalhos: Ramais e Chat IA' : 'Abrir ramais')}
                 title={active ? 'Fechar' : (aiAllowed ? 'Ramais e Chat IA' : 'Ramais')}
             >
-                {active ? <X className="w-6 h-6" aria-hidden="true" /> : <MessageCircle className="w-6 h-6" aria-hidden="true" />}
+                {active ? <X className="w-6 h-6" style={ICON_3D} aria-hidden="true" /> : <MessageCircle className="w-6 h-6" style={ICON_3D} aria-hidden="true" />}
             </button>
         </div>
     );

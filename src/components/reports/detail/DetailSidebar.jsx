@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    UserPlus, Play, PauseCircle, CheckCircle2, Edit2, Trash2, Plus, X, Building, AlarmClock, UserCheck
+    UserPlus, Edit2, Trash2, Plus, X, Building, AlarmClock, UserCheck
 } from 'lucide-react';
 import { PriorityPill } from './badges';
 import { formatDateOnly, formatDateTime, normalizeStatus, toMillis } from '../../../utils/reportTimeline';
@@ -18,8 +18,8 @@ const isInactive = (c) => ['inativo', 'inactive', 'desligado'].includes(String(c
 /** Barra lateral com todos os dados e ações rápidas do chamado. */
 export default function DetailSidebar({
     report, catMeta, originDept, sla, assignee, watchers, collaborators,
-    canAssign, canWatch, canDispatch, canModify, isMine,
-    onAssign, onAssumeSelf, onStartWork, onRequestStatus, onAddWatcher, onRemoveWatcher, onEdit, onDelete
+    canAssign, canWatch, canModify, isMine,
+    onAssign, onAssumeSelf, onAddWatcher, onRemoveWatcher, onEdit, onDelete
 }) {
     const [addingWatcher, setAddingWatcher] = useState(false);
     const status = normalizeStatus(report.status);
@@ -45,20 +45,9 @@ export default function DetailSidebar({
                     <p className="text-xs text-muted-hub">Sem responsável. Roteado para a liderança.</p>
                 )}
 
-                {open && (canAssign || canDispatch) && (
+                {open && canAssign && !isMine && (
                     <div className="flex flex-wrap gap-1.5 mt-2.5">
-                        {canAssign && !isMine && (
-                            <button type="button" className={quickBtn} onClick={onAssumeSelf}><UserPlus className="w-3.5 h-3.5" aria-hidden="true" />Assumir</button>
-                        )}
-                        {canDispatch && status === 'Pendente' && (
-                            <button type="button" className={quickBtn} onClick={onStartWork}><Play className="w-3.5 h-3.5" aria-hidden="true" />Iniciar</button>
-                        )}
-                        {canDispatch && status !== 'Suspenso' && (
-                            <button type="button" className={quickBtn} onClick={() => onRequestStatus('Suspenso')}><PauseCircle className="w-3.5 h-3.5" aria-hidden="true" />Suspender</button>
-                        )}
-                        {canDispatch && (
-                            <button type="button" className={quickBtn} onClick={() => onRequestStatus('Resolvido')}><CheckCircle2 className="w-3.5 h-3.5" aria-hidden="true" />Resolver</button>
-                        )}
+                        <button type="button" className={quickBtn} onClick={onAssumeSelf}><UserPlus className="w-3.5 h-3.5" aria-hidden="true" />Assumir</button>
                     </div>
                 )}
             </div>

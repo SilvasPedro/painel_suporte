@@ -7,8 +7,8 @@ import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 
+import Donut3D from '../components/audits/Donut3D';
 import AuditMetrics from '../components/audits/AuditMetrics';
 import AuditFilters from '../components/audits/AuditFilters';
 import AuditRanking from '../components/audits/AuditRanking';
@@ -79,7 +79,7 @@ export default function Audits() {
             const list = [];
             items.forEach(d => {
                 map[d.id] = d.name;
-                list.push({ id: d.id, name: d.name });
+                list.push({ id: d.id, name: d.name, photoUrl: d.photoUrl || d.photoURL || null });
             });
             list.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
             setCollaboratorsMap(map);
@@ -242,9 +242,23 @@ export default function Audits() {
         stats.taxa = stats.total > 0 ? ((stats.conformes / stats.total) * 100).toFixed(1) : '0.0';
         stats.evaluatedColabsCount = Object.keys(colabStats).length;
 
+        // Data da última análise de cada colaborador (considera todo o histórico, não só o filtro atual)
+        const lastAuditByColab = {};
+        audits.forEach(a => {
+            const d = a.colabId ? getAuditLocalDate(a) : null;
+            if (!d) return;
+            const t = d.getTime();
+            if (!lastAuditByColab[a.colabId] || t > lastAuditByColab[a.colabId]) lastAuditByColab[a.colabId] = t;
+        });
+
+        const photoByColab = {};
+        collaboratorsList.forEach(c => { if (c.photoUrl) photoByColab[c.id] = c.photoUrl; });
+
         const ranking = Object.values(colabStats).map(c => ({
             ...c,
-            taxa: ((c.conformes / c.total) * 100).toFixed(1)
+            taxa: ((c.conformes / c.total) * 100).toFixed(1),
+            lastAuditAt: lastAuditByColab[c.id] || null,
+            photoUrl: photoByColab[c.id] || null
         })).sort((a, b) => parseFloat(b.taxa) - parseFloat(a.taxa) || b.total - a.total); 
 
         const pData = [
@@ -253,7 +267,7 @@ export default function Audits() {
         ];
 
         return { dashboardStats: stats, rankingData: ranking, pieData: pData };
-    }, [filteredAudits, collaboratorsMap, collaboratorsList]);
+    }, [audits, filteredAudits, collaboratorsMap, collaboratorsList]);
 
     const hasActiveFilters = searchTerm !== '' || periodFilter !== 'all' || dateFilter !== '' || statusFilter !== 'all' || processFilter !== 'all' || colabFilter !== 'all' || sortBy !== 'recent';
 
@@ -435,39 +449,17 @@ export default function Audits() {
                         </span>
                     </div>
 
-                    <div className="h-56 my-auto flex items-center justify-center">
+                    <div className="min-h-56 py-3 my-auto flex items-center justify-center">
                         {dashboardStats.total === 0 ? (
                             <div className="text-center text-muted-hub text-xs">
                                 Sem dados no período filtrado.
                             </div>
                         ) : (
-                            <ResponsiveContainer width="100%" height="100%">
-                                <PieChart>
-                                    <Pie 
-                                        data={pieData} 
-                                        cx="50%" 
-                                        cy="50%" 
-                                        innerRadius={55} 
-                                        outerRadius={80} 
-                                        paddingAngle={5} 
-                                        dataKey="value"
-                                    >
-                                        {pieData.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <RechartsTooltip 
-                                        contentStyle={{
-                                            borderRadius: '12px', 
-                                            border: '1px solid #e5e7eb', 
-                                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                                            fontSize: '12px',
-                                            fontWeight: 'bold'
-                                        }} 
-                                    />
-                                    <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{ fontSize: '11px', fontWeight: 600 }} />
-                                </PieChart>
-                            </ResponsiveContainer>
+                            <Donut3D
+                                data={pieData}
+                                centerValue={`${dashboardStats.taxa}%`}
+                                centerLabel="conformidade"
+                            />
                         )}
                     </div>
 

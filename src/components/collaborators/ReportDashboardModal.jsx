@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ExcelIcon from '../common/ExcelIcon';
 import { 
     X, Loader2, Calendar, Phone, PhoneMissed, CheckCircle, Clock, 
     Filter, FileText, MessageSquare, Award, ArrowUpRight, TrendingUp,
@@ -613,9 +614,9 @@ export const ReportDashboardModal = ({ colab, onClose }) => {
                             onClick={handleExportCSV}
                             title="Exportar dados deste relatório em CSV"
                             disabled={displayedEvals.length === 0}
-                            className="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 disabled:opacity-50 text-zinc-200 border border-zinc-700/80 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="btn-excel px-3 py-2 disabled:opacity-50 rounded-xl text-xs font-semibold flex items-center gap-1.5 cursor-pointer"
                         >
-                            <Download className="w-3.5 h-3.5 text-zinc-400" />
+                            <ExcelIcon className="w-4 h-4" />
                             <span className="hidden sm:inline">Exportar CSV</span>
                         </button>
 

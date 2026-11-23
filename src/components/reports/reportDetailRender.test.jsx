@@ -86,12 +86,17 @@ describe('ReportDetailModal (novo layout)', () => {
         expect(html.indexOf('abriu o chamado')).toBeLessThan(html.indexOf('Voltou a acontecer'));
     });
 
-    it('gestor vê as duas abas do compositor e os atalhos de despacho', () => {
+    it('gestor vê os botões de status (incluindo "Encerrar tarefa") e o campo de comentário separado', () => {
         const html = render();
-        expect(html).toContain('Comentário');
-        expect(html).toContain('Parecer e encerramento');
+        expect(html).toContain('Status da tarefa');
+        expect(html).toContain('Encerrar tarefa');
         expect(html).toContain('Suspender');
-        expect(html).toContain('Resolver');
+        expect(html).toContain('Cancelar tarefa');
+        expect(html).toContain('Enviar comentário');
+        expect(html).toContain('Comentar não altera o status da tarefa.');
+        expect(html).not.toContain('Parecer e encerramento');
+        // o painel de confirmação só aparece depois do clique
+        expect(html).not.toContain('Tenho certeza');
         expect(html).toContain('Editar solicitação');
         expect(html).not.toContain('anexo');
     });
@@ -104,7 +109,8 @@ describe('ReportDetailModal (novo layout)', () => {
             canEditOrDelete: () => false
         });
         expect(html).toContain('Enviar comentário');
-        expect(html).not.toContain('Parecer e encerramento');
+        expect(html).not.toContain('Status da tarefa');
+        expect(html).not.toContain('Encerrar tarefa');
         expect(html).not.toContain('Suspender');
         expect(html).not.toContain('Excluir');
     });

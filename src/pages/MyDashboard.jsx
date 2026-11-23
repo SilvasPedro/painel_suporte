@@ -214,7 +214,7 @@ const DashboardCard = ({ title, value, subtitle, goalText, icon, trend }) => (
         <div>
             <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[11px] font-bold text-muted-hub uppercase tracking-wider">{title}</h3>
-                <div className="p-2 bg-subtle rounded-xl border border-subtle text-primary-hub transition-transform group-hover:scale-105">{icon}</div>
+                <div className="icon-3d p-2 bg-subtle rounded-xl border border-subtle text-primary-hub">{icon}</div>
             </div>
             <div className="flex items-baseline gap-2 mt-1">
                 <div className="text-2xl lg:text-3xl font-brand font-black tracking-tight text-primary-hub tabular-nums">{value}</div>
@@ -577,12 +577,12 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                             : "bg-subtle/60 border-subtle text-secondary-hub"
                     )}>
                         <div className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
+                            "icon-3d w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
                             unreadFeedbacks > 0
                                 ? "bg-fuchsia-500/20 text-fuchsia-600 dark:text-fuchsia-300 border-fuchsia-500/30"
                                 : "bg-surface text-muted-hub border-subtle"
                         )}>
-                            <MessageSquare className="w-4 h-4" />
+                            <MessageSquare className="w-5 h-5" />
                         </div>
                         <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider block text-muted-hub">
@@ -602,12 +602,12 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                             : "bg-subtle/60 border-subtle text-secondary-hub"
                     )}>
                         <div className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
+                            "icon-3d w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border",
                             reportStats.pending > 0
                                 ? "bg-amber-500/20 text-amber-600 dark:text-amber-300 border-amber-500/30"
                                 : "bg-surface text-muted-hub border-subtle"
                         )}>
-                            <Clock className="w-4 h-4" />
+                            <Clock className="w-5 h-5" />
                         </div>
                         <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider block text-muted-hub">
@@ -621,8 +621,8 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
 
                     {/* Relatos Concluídos */}
                     <div className="flex items-center gap-3.5 px-4 py-3 rounded-2xl border border-subtle bg-subtle/60 text-secondary-hub">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                            <CheckCircle2 className="w-4 h-4" />
+                        <div className="icon-3d w-10 h-10 rounded-xl flex items-center justify-center shrink-0 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                            <CheckCircle2 className="w-5 h-5" />
                         </div>
                         <div>
                             <span className="text-[10px] font-bold uppercase tracking-wider block text-muted-hub">
@@ -651,7 +651,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                 </Badge>
                             </div>
                             <div className={cn(
-                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                "icon-3d w-10 h-10 rounded-xl border flex items-center justify-center shrink-0",
                                 myTaskToday 
                                     ? "bg-blue-500/10 text-blue-500 border-blue-500/20" 
                                     : "bg-subtle text-muted-hub border-subtle"
@@ -699,7 +699,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                 </Badge>
                             </div>
                             <div className={cn(
-                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                "icon-3d w-10 h-10 rounded-xl border flex items-center justify-center shrink-0",
                                 nextSundayShift 
                                     ? "bg-amber-500/10 text-amber-500 border-amber-500/20" 
                                     : "bg-subtle text-muted-hub border-subtle"
@@ -737,7 +737,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                 </Badge>
                             </div>
                             <div className={cn(
-                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                "icon-3d w-10 h-10 rounded-xl border flex items-center justify-center shrink-0",
                                 nextDayOff 
                                     ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
                                     : "bg-subtle text-muted-hub border-subtle"
@@ -776,7 +776,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                 </Badge>
                             </div>
                             <div className={cn(
-                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                "icon-3d plane-egg cursor-pointer w-10 h-10 rounded-xl border flex items-center justify-center shrink-0",
                                 vacation.entries.length ? "bg-sky-500/10 text-sky-500 border-sky-500/20" : "bg-subtle text-muted-hub border-subtle"
                             )}>
                                 <Plane className="w-5 h-5" />
@@ -816,7 +816,7 @@ const MyDashboard = ({ currentUserId, currentUser }) => {
                                 </Badge>
                             </div>
                             <div className={cn(
-                                "w-10 h-10 rounded-xl border flex items-center justify-center shrink-0 shadow-2xs",
+                                "icon-3d w-10 h-10 rounded-xl border flex items-center justify-center shrink-0",
                                 agenda.pending ? "bg-amber-500/10 text-amber-500 border-amber-500/20"
                                     : agenda.next ? "bg-violet-500/10 text-violet-500 border-violet-500/20" : "bg-subtle text-muted-hub border-subtle"
                             )}>

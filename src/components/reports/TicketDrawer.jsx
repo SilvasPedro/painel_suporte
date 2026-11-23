@@ -21,7 +21,6 @@ export default function TicketDrawer({
     report,
     isOpen,
     onClose,
-    onUpdateStatus,
     onAddComment,
     canManage,
     onExpandFull,
@@ -217,54 +216,20 @@ export default function TicketDrawer({
                         {canManage && !watcherOnly && (
                             <div className="p-3 bg-slate-800/60 rounded-xl border border-slate-700/60 space-y-2">
                                 <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                                    Atualizar Fila / Status
+                                    Status da tarefa
                                 </div>
-                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                <p className="text-xs text-slate-400">
+                                    Para encerrar ou alterar o status é preciso registrar um comentário e confirmar, na tela completa.
+                                </p>
+                                {onExpandFull && (
                                     <button
                                         type="button"
-                                        onClick={() => onUpdateStatus(report.id, 'Pendente')}
-                                        className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                                            report.status === 'Pendente'
-                                                ? 'bg-amber-600 text-white border-amber-500'
-                                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                        }`}
+                                        onClick={onExpandFull}
+                                        className="w-full py-2 px-3 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer"
                                     >
-                                        Pendente
+                                        Alterar status / Encerrar tarefa
                                     </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => onUpdateStatus(report.id, 'Em Andamento')}
-                                        className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                                            report.status === 'Em Andamento'
-                                                ? 'bg-sky-600 text-white border-sky-500'
-                                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                        }`}
-                                    >
-                                        Em Andamento
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => onUpdateStatus(report.id, 'Suspenso')}
-                                        className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                                            report.status === 'Suspenso'
-                                                ? 'bg-purple-600 text-white border-purple-500'
-                                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                        }`}
-                                    >
-                                        Suspenso
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => onUpdateStatus(report.id, 'Resolvido')}
-                                        className={`py-1.5 px-2 text-xs font-medium rounded-lg border transition-all cursor-pointer ${
-                                            report.status === 'Resolvido'
-                                                ? 'bg-emerald-600 text-white border-emerald-500'
-                                                : 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700'
-                                        }`}
-                                    >
-                                        Resolvido
-                                    </button>
-                                </div>
+                                )}
                             </div>
                         )}
 

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useDeferredValue } from 'react';
+import ExcelIcon from '../components/common/ExcelIcon';
 import { db } from '../services/firebase';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { subscribeSharedCollection } from '../services/dataCache';
@@ -443,6 +444,35 @@ export default function DailyDemandLaunch() {
     }, [filteredData]);
 
     // =========================================================================
+    // DIA DA SEMANA COM MAIOR / MENOR DEMANDA (respeita todos os filtros ativos)
+    // Demanda do dia = fila no fechamento (chamados + chats, conforme o canal filtrado);
+    // sem fechamento lançado, usa a fila de abertura.
+    // =========================================================================
+    const demandExtremes = useMemo(() => {
+        const acc = {};
+        filteredData.forEach(d => {
+            const hasEnd = d.endTickets != null || d.endChats != null;
+            const hasStart = d.startTickets != null || d.startChats != null;
+            if (!hasEnd && !hasStart) return;
+            const t = hasEnd ? (d.endTickets ?? 0) : (d.startTickets ?? 0);
+            const c = hasEnd ? (d.endChats ?? 0) : (d.startChats ?? 0);
+            const vol = channelFilter === 'tickets' ? t : channelFilter === 'chats' ? c : t + c;
+            const localD = parseLocalDate(d.date);
+            if (!localD) return;
+            const w = localD.getDay();
+            if (!acc[w]) acc[w] = { w, sum: 0, count: 0, peak: 0 };
+            acc[w].sum += vol;
+            acc[w].count += 1;
+            acc[w].peak = Math.max(acc[w].peak, vol);
+        });
+        const list = Object.values(acc).map(x => ({ ...x, avg: x.sum / x.count }));
+        if (list.length < 2) return { max: null, min: null, single: list[0] || null };
+        const max = list.reduce((a, b) => (b.avg > a.avg ? b : a));
+        const min = list.reduce((a, b) => (b.avg < a.avg ? b : a));
+        return { max, min, single: null };
+    }, [filteredData, channelFilter]);
+
+    // =========================================================================
     // EXPORTAÇÃO CSV COMPLETA
     // =========================================================================
     const handleExportCSV = () => {
@@ -594,9 +624,9 @@ export default function DailyDemandLaunch() {
                             onClick={handleExportCSV}
                             disabled={sortedTableData.length === 0}
                             title="Exportar dados filtrados para CSV"
-                            className="px-3.5 py-2.5 bg-subtle hover:bg-surface text-secondary-hub hover:text-primary-hub border border-subtle rounded-xl text-xs font-bold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                            className="btn-excel px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer disabled:opacity-50"
                         >
-                            <Download className="w-3.5 h-3.5 text-muted-hub" />
+                            <ExcelIcon className="w-4 h-4" />
                             <span className="hidden sm:inline">Exportar CSV</span>
                         </button>
 
@@ -902,6 +932,35 @@ export default function DailyDemandLaunch() {
                         progress={metrics.resolutionRate} progressLabel="dias com fim ≤ início"
                         footer={<span>Pico <strong className="font-bold text-zinc-200">{Math.max(metrics.maxTicketsDay?.val ?? 0, metrics.maxChatsDay?.val ?? 0)}</strong></span>}
                     />
+                </div>
+
+                {/* Dia da semana com maior e menor demanda (conforme filtros) */}
+                <div id="demand-extremes-grid" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {[
+                        { key: 'max', data: demandExtremes.max, accent: 'red', label: 'Dia com maior demanda', icon: TrendingUp, status: 'bad', statusLabel: 'Pico de demanda' },
+                        { key: 'min', data: demandExtremes.min, accent: 'emerald', label: 'Dia com menor demanda', icon: TrendingDown, status: 'ok', statusLabel: 'Menor demanda' },
+                    ].map(({ key, data, accent, label, icon, status, statusLabel }) => {
+                        const dayName = data ? DAYS_OF_WEEK.find(w => w.id === String(data.w))?.label : null;
+                        const periodLabel = PRESETS.find(p => p.id === periodPreset)?.label.toLowerCase();
+                        return (
+                            <KpiHeroCard
+                                key={key}
+                                compact
+                                accent={accent} label={label} icon={icon}
+                                status={data ? status : 'warn'}
+                                statusLabel={data ? statusLabel : 'Dados insuficientes'}
+                                value={dayName || '—'}
+                                caption={data
+                                    ? `Média de ${Math.round(data.avg)} ${channelFilter === 'tickets' ? 'chamados' : channelFilter === 'chats' ? 'chats' : 'atendimentos'} na fila de fechamento · ${periodLabel}`
+                                    : demandExtremes.single
+                                        ? 'Os filtros deixam apenas um dia da semana; remova o filtro de dia para comparar.'
+                                        : 'Sem lançamentos para os filtros selecionados.'}
+                                footer={data
+                                    ? <span>Pico <strong className="font-bold text-zinc-200">{data.peak}</strong> · <strong className="font-bold text-zinc-200">{data.count}</strong> {data.count === 1 ? 'ocorrência' : 'ocorrências'}</span>
+                                    : <span>Mínimo de 2 dias da semana com dados</span>}
+                            />
+                        );
+                    })}
                 </div>
 
                 {/* ======================================================== */}

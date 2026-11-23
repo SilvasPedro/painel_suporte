@@ -49,7 +49,7 @@ const Spark = ({ values, color }) => {
  */
 export const KpiHeroCard = ({
     accent = 'purple', label, icon, status, statusLabel, value, valueSuffix, caption,
-    goalLabel, goalValue, delta, progress, progressLabel, segments, footer, spark,
+    goalLabel, goalValue, delta, progress, progressLabel, segments, footer, spark, compact = false,
 }) => {
     const Icon = icon;
     const a = ACCENTS[accent] || ACCENTS.purple;
@@ -58,13 +58,13 @@ export const KpiHeroCard = ({
 
     return (
         <div
-            className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black p-5 text-white shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${a.ring}`}
+            className={`group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-zinc-900 via-zinc-950 to-black ${compact ? "p-3.5" : "p-5"} text-white shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl ${a.ring}`}
         >
             {/* brilho de acento + linha superior */}
             <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full blur-2xl transition-opacity duration-300 group-hover:opacity-100 opacity-80" style={{ background: a.glow }} />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px" style={{ background: `linear-gradient(90deg, transparent, ${a.solid}, transparent)` }} />
 
-            <div className="relative flex h-full flex-col gap-4">
+            <div className={`relative flex h-full flex-col ${compact ? "gap-2" : "gap-4"}`}>
                 {/* topo: rótulo + status + ícone */}
                 <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 space-y-2">
@@ -74,19 +74,30 @@ export const KpiHeroCard = ({
                             {statusLabel}
                         </span>
                     </div>
-                    <div className={`shrink-0 rounded-xl border p-2.5 backdrop-blur-sm ${a.chip}`}>
-                        <Icon className="h-5 w-5" />
+                    <div className="shrink-0 [perspective:400px]">
+                        <div
+                            className={`relative rounded-xl border ${compact ? "p-1.5" : "p-2.5"} backdrop-blur-sm transition-transform duration-300 ease-out [transform-style:preserve-3d] group-hover:[transform:translateZ(6px)_scale(1.08)] ${a.chip}`}
+                            style={{
+                                backgroundImage: `linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%), linear-gradient(315deg, ${a.glow}, transparent)`,
+                                boxShadow: `inset 0 1px 1px rgba(255,255,255,0.45), inset 0 -3px 5px rgba(0,0,0,0.4), 4px 7px 14px rgba(0,0,0,0.5), 0 0 16px ${a.glow}`,
+                            }}
+                        >
+                            <Icon
+                                className={`${compact ? "h-4 w-4" : "h-5 w-5"} [transform:translateZ(10px)]`}
+                                style={{ filter: `drop-shadow(0 2px 2px rgba(0,0,0,0.55)) drop-shadow(0 0 5px ${a.solid}88)` }}
+                            />
+                        </div>
                     </div>
                 </div>
 
                 {/* valor + sparkline */}
                 <div className="space-y-2">
                     <div className="min-w-0">
-                        <p className="font-brand text-4xl font-black leading-none tracking-tight tabular-nums">
+                        <p className={`font-brand ${compact ? "text-2xl" : "text-4xl"} font-black leading-none tracking-tight tabular-nums`}>
                             {value}
                             {valueSuffix && <span className="ml-1 text-xl font-semibold text-zinc-500">{valueSuffix}</span>}
                         </p>
-                        <p className="mt-2 text-xs leading-snug text-zinc-400">{caption}</p>
+                        <p className={`${compact ? "mt-1" : "mt-2"} text-xs leading-snug text-zinc-400`}>{caption}</p>
                     </div>
                     {spark && <Spark values={spark} color={a.solid} />}
                 </div>
@@ -111,7 +122,7 @@ export const KpiHeroCard = ({
                 )}
 
                 {/* rodapé */}
-                <div className="mt-auto flex items-center justify-between gap-2 border-t border-white/10 pt-3 text-xs text-zinc-400">
+                <div className={`mt-auto flex items-center justify-between gap-2 border-t border-white/10 ${compact ? "pt-2" : "pt-3"} text-xs text-zinc-400`}>
                     {footer ? (
                         footer
                     ) : (

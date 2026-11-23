@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import ExcelIcon from '../components/common/ExcelIcon';
 import {
     History, MessageSquare, TrendingUp, FileText, ShieldCheck,
     Search, Filter, Database, Hourglass, Eye, CalendarDays,
@@ -634,10 +635,10 @@ const MyHistory = ({ currentUserId }) => {
                     <button
                         type="button"
                         onClick={handleExportCsv}
-                        className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-surface hover:bg-subtle text-secondary-hub border border-subtle shadow-2xs"
+                        className="btn-excel px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer flex items-center gap-1.5"
                         title="Exportar registros filtrados para CSV"
                     >
-                        <Download className="w-3.5 h-3.5 text-muted-hub" />
+                        <ExcelIcon className="w-4 h-4" />
                         <span className="hidden md:inline">CSV</span>
                     </button>
                 </div>
@@ -649,7 +650,7 @@ const MyHistory = ({ currentUserId }) => {
                     {summaryStats.map((stat, idx) => {
                         const IconComponent = stat.icon;
                         return (
-                            <div key={idx} className="bg-surface rounded-2xl px-4 py-3 border border-subtle shadow-xs flex items-center justify-between gap-3 min-w-0">
+                            <div key={idx} className="bg-surface rounded-2xl px-4 py-3 border border-subtle shadow-xs flex items-center justify-between gap-3 min-w-0 group">
                                 <div className="min-w-0 flex-1">
                                     <span className="text-[10px] font-bold text-muted-hub uppercase tracking-wider block truncate">
                                         {stat.label}
@@ -658,8 +659,8 @@ const MyHistory = ({ currentUserId }) => {
                                         {stat.value}
                                     </span>
                                 </div>
-                                <div className={`w-9 h-9 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0 border border-subtle shadow-2xs`}>
-                                    <IconComponent className="w-4 h-4" />
+                                <div className={`w-9 h-9 rounded-xl ${stat.bg} ${stat.color} flex items-center justify-center shrink-0 border border-subtle icon-3d`}>
+                                    <IconComponent className="w-[18px] h-[18px]" />
                                 </div>
                             </div>
                         );

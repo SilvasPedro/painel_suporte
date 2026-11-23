@@ -1,4 +1,5 @@
 import React from 'react';
+import ExcelIcon from '../common/ExcelIcon';
 import { 
     Search, Filter, X, Download, SlidersHorizontal, 
     User, Layers, Calendar
@@ -92,10 +93,10 @@ export default function AuditFilters({
                     <button
                         type="button"
                         onClick={onExportCsv}
-                        className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-surface hover:bg-subtle border border-subtle text-secondary-hub rounded-full transition-colors cursor-pointer shadow-2xs"
+                        className="btn-excel inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-full cursor-pointer"
                         title="Exportar auditorias filtradas em formato CSV"
                     >
-                        <Download className="w-3.5 h-3.5 text-secondary-hub" />
+                        <ExcelIcon className="w-4 h-4" />
                         <span>Exportar CSV</span>
                     </button>
                 </div>

@@ -111,6 +111,16 @@ const PRIORITIES_CONFIG = [
     }
 ];
 
+// Atalhos de responsável no formulário de abertura
+const QUICK_ASSIGNEES = ['Pedro Silva', 'Eduardo Caetano'];
+const normName = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const findCollaboratorByName = (list, name) => {
+    const target = normName(name);
+    return list.find((c) => normName(c.name) === target)
+        || list.find((c) => normName(c.name).startsWith(target))
+        || null;
+};
+
 /**
  * TaskFormModal (Hubdesk v4.0.0)
  * Modal de Nova Solicitação / Ordem de Serviço totalmente repaginado.
@@ -147,7 +157,7 @@ export default function TaskFormModal({
 
     // 3. Estados dos Campos da O.S.
     const [title, setTitle] = useState(editingReport?.title || '');
-    const [originDepartment, setOriginDepartment] = useState(initialDept);
+    const originDepartment = initialDept; // sem campo no formulario: apenas preserva o valor existente
     const [selectedType, setSelectedType] = useState(initialType);
     const [priority, setPriority] = useState(editingReport?.priority || 'Normal');
     const [dueDate, setDueDate] = useState(initialDueDate);
@@ -283,8 +293,8 @@ export default function TaskFormModal({
             errors.title = 'O título deve ter no mínimo 3 caracteres.';
         }
 
-        if (!cleanDept) {
-            errors.department = 'Selecione o departamento de origem.';
+        if (canAssign && !selectedAssigneeId) {
+            errors.assignee = 'Selecione quem será o responsável pela tarefa.';
         }
 
         if (!cleanDueDate) {
@@ -387,7 +397,7 @@ export default function TaskFormModal({
                 {/* 1. CABEÇALHO REVOLUCIONADO V4.0 */}
                 <div className="px-6 py-5 bg-surface text-primary-hub flex justify-between items-center shrink-0 border-b border-subtle">
                     <div className="flex items-center gap-3.5">
-                        <div className={`p-3 rounded-2xl border ${currentCategory.badgeClass} flex items-center justify-center transition-all duration-300`}>
+                        <div className={`icon-3d p-3 rounded-2xl border ${currentCategory.badgeClass} flex items-center justify-center`}>
                             <CategoryIcon className="w-5 h-5" />
                         </div>
                         <div>
@@ -395,13 +405,9 @@ export default function TaskFormModal({
                                 <h3 id="task-form-modal-title" className="text-base sm:text-lg font-bold text-primary-hub font-brand tracking-tight">
                                     {editingReport ? 'Editar Ordem de Serviço' : 'Nova Solicitação / Ordem de Serviço'}
                                 </h3>
-                                {editingReport ? (
+                                {editingReport && (
                                     <span className="text-[11px] px-2 py-0.5 rounded-lg font-mono bg-subtle border border-subtle text-secondary-hub font-bold">
                                         #{String(editingReport.id).slice(0, 8).toUpperCase()}
-                                    </span>
-                                ) : (
-                                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-500 border border-rose-500/20">
-                                        v4.0 Hubdesk
                                     </span>
                                 )}
                             </div>
@@ -454,8 +460,8 @@ export default function TaskFormModal({
                                             }`}
                                         >
                                             <div className="flex items-center justify-between mb-2">
-                                                <div className={`p-1.5 rounded-xl border ${isSelected ? cat.badgeClass : 'border-subtle bg-subtle text-muted-hub'}`}>
-                                                    <IconComp className="w-4 h-4" />
+                                                <div className={`icon-3d p-1.5 rounded-xl border ${isSelected ? cat.badgeClass : 'border-subtle bg-subtle text-muted-hub'}`}>
+                                                    <IconComp className="w-[18px] h-[18px]" />
                                                 </div>
                                                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border ${isSelected ? cat.badgeClass : 'border-subtle text-muted-hub bg-canvas'}`}>
                                                     {cat.sla.split(' ')[0]}
@@ -535,42 +541,6 @@ export default function TaskFormModal({
                         <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-subtle shadow-xs space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 
-                                {/* COLUNA 1: DEPARTAMENTO DE ORIGEM */}
-                                <div className="space-y-1.5">
-                                    <label htmlFor="task-department" className="block text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
-                                        <Building className="w-3.5 h-3.5 text-indigo-500" />
-                                        Departamento de Origem <span className="text-rose-500">*</span>
-                                    </label>
-                                    <select
-                                        id="task-department"
-                                        value={originDepartment}
-                                        onChange={(e) => {
-                                            setOriginDepartment(e.target.value);
-                                            setFormErrors((prev) => ({ ...prev, department: '' }));
-                                        }}
-                                        aria-invalid={!!formErrors.department}
-                                        aria-describedby={formErrors.department ? 'task-department-error' : undefined}
-                                        className={`w-full px-3.5 py-2.5 border rounded-xl outline-none text-sm bg-canvas text-primary-hub transition-all font-medium ${
-                                            formErrors.department
-                                                ? 'border-rose-400 bg-rose-500/5 focus:ring-2 focus:ring-rose-500'
-                                                : 'border-subtle focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
-                                        }`}
-                                    >
-                                        <option value="">Selecione o setor de origem...</option>
-                                        {ERROR_DEPARTMENTS.map((dept) => (
-                                            <option key={dept} value={dept}>
-                                                {dept}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {formErrors.department && (
-                                        <p id="task-department-error" role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1 font-medium">
-                                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-                                            {formErrors.department}
-                                        </p>
-                                    )}
-                                </div>
-
                                 {/* COLUNA 2: NÍVEL DE PRIORIDADE (SELETOR DE PILLS) */}
                                 <div className="space-y-1.5">
                                     <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
@@ -683,18 +653,46 @@ export default function TaskFormModal({
                                 <div className="space-y-1.5">
                                     <label htmlFor="task-assignee" className="block text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
                                         <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
-                                        Pessoa Responsável
+                                        Pessoa Responsável {canAssign && <span className="text-rose-500">*</span>}
                                     </label>
                                     {canAssign ? (
+                                        <>
+                                        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Atalhos de responsável">
+                                            {QUICK_ASSIGNEES.map((q) => {
+                                                const match = findCollaboratorByName(collaborators, q);
+                                                if (!match) return null;
+                                                const cid = String(match.id || match.uid || match.email || match.name);
+                                                const active = String(selectedAssigneeId) === cid;
+                                                return (
+                                                    <button
+                                                        key={q}
+                                                        type="button"
+                                                        aria-pressed={active}
+                                                        onClick={() => { setSelectedAssigneeId(cid); setFormErrors((prev) => ({ ...prev, assignee: '' })); }}
+                                                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer ${
+                                                            active
+                                                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40'
+                                                                : 'bg-subtle text-secondary-hub border-subtle hover:border-emerald-500/40 hover:text-primary-hub'
+                                                        }`}
+                                                    >
+                                                        <UserCheck className="w-3 h-3" aria-hidden="true" />{match.name}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
                                         <select
                                             id="task-assignee"
                                             value={selectedAssigneeId}
-                                            onChange={(e) => setSelectedAssigneeId(e.target.value)}
-                                            className="w-full px-3.5 py-2.5 border border-subtle rounded-xl focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none text-sm bg-canvas text-primary-hub font-medium"
+                                            onChange={(e) => { setSelectedAssigneeId(e.target.value); setFormErrors((prev) => ({ ...prev, assignee: '' })); }}
+                                            aria-invalid={!!formErrors.assignee}
+                                            aria-describedby={formErrors.assignee ? 'task-assignee-error' : undefined}
+                                            className={`w-full px-3.5 py-2.5 border rounded-xl outline-none text-sm bg-canvas text-primary-hub font-medium ${
+                                                formErrors.assignee
+                                                    ? 'border-rose-400 bg-rose-500/5 focus:ring-2 focus:ring-rose-500'
+                                                    : 'border-subtle focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                                            }`}
                                         >
-                                            <option value="">
-                                                Sem responsável direto (Direcionar para Gestores/Supervisores)
-                                            </option>
+                                            <option value="">Selecione o responsável...</option>
                                             {collaborators.map((c) => {
                                                 const cid = String(c.id || c.uid || c.email || c.name);
                                                 return (
@@ -704,6 +702,13 @@ export default function TaskFormModal({
                                                 );
                                             })}
                                         </select>
+                                        {formErrors.assignee && (
+                                            <p id="task-assignee-error" role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1 font-medium">
+                                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                                {formErrors.assignee}
+                                            </p>
+                                        )}
+                                        </>
                                     ) : (
                                         <div className="px-3.5 py-2.5 rounded-xl bg-subtle border border-subtle text-xs text-secondary-hub font-medium flex items-center gap-2">
                                             <Info className="w-4 h-4 text-muted-hub shrink-0" />
@@ -715,7 +720,7 @@ export default function TaskFormModal({
                                         </div>
                                     )}
                                     <p className="text-[11px] text-muted-hub">
-                                        {selectedAssigneeId ? 'Notificação direta enviada ao colaborador.' : 'Supervisores farão a triagem e distribuição da demanda.'}
+                                        {selectedAssigneeId ? 'Notificação direta enviada ao colaborador.' : (canAssign ? 'Escolha um responsável ou use os atalhos acima.' : 'Supervisores farão a triagem e distribuição da demanda.')}
                                     </p>
                                 </div>
                             </div>
