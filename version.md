@@ -4,6 +4,28 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.22.0] - 2026-11-23
+
+### 🚀 Novas Funcionalidades (Added)
+- **Níveis de acesso**: o cargo (texto livre) fica separado do nível de acesso (`collaborators.accessLevel`): Supervisor, Líder, Apoio, Operacional e Qualidade. Os ids internos foram preservados (`gestor` = Supervisor, `supervisor` = Líder, `apoio`, `colaborador` = Operacional, `qualidade`). Sem `accessLevel`, o nível é derivado do cargo, então os usuários atuais não perdem acesso.
+- **Qualidade (somente visualização)**: vê todas as telas, nunca edita (só o próprio perfil); a matriz de permissões não concede edição a esse nível.
+- **Hub e modais**: cargo em texto livre e nível de acesso em cartões, tag do cargo com sub-tag do nível, e travas para o próprio nível e para o último Supervisor ativo. Só o Supervisor cadastra, inativa e altera níveis.
+- **Tour guiado da Qualidade**: novo roteiro com 16 módulos, passo "Acesso somente de visualização" e selo em cada módulo (`getTourType` devolve `quality`).
+- **Menu lateral**: Senha, Personalizar menu e Tour guiado recolhidos em "Mais opções" (fechado por padrão; o tour abre o painel no passo do botão) e topo mais baixo.
+- **Seletor de tema**: fundo translúcido, destaque deslizante e ícones com leve 3D (respeita `prefers-reduced-motion`).
+- `scripts/migrate-access-levels.mjs`: preenche `accessLevel` preservando o acesso atual (simulação por padrão, `--apply` grava).
+
+### 🔄 Alterado (Changed)
+- **Líder**: ganha edição em Organograma e KPIs do Setor; não cria nem inativa colaborador e não altera nível, matriz de permissões, metas, processos de QA e integrações.
+- **Reports e OrgChart** deixam de conceder acesso pelo texto do cargo.
+- **firestore.rules**: helpers por `accessLevel` com fallback pelo cargo; a Qualidade só lê.
+
+### ⚠️ Observações
+- **Ordem de publicação**: rodar `node scripts/migrate-access-levels.mjs` (simulação), corrigir o que apontar (inclusive id do documento diferente do uid do Firebase Auth), rodar com `--apply` e só então publicar as regras com `firebase deploy --only firestore:rules`.
+- O tour de Qualidade abre sozinho só no primeiro acesso; quem já concluiu o tour o revê em Mais opções, Tour guiado.
+
+---
+
 ## [v4.21.2] - 2026-11-17
 
 ### 🐛 Corrigido (Fixed)

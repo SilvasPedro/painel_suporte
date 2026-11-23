@@ -1,13 +1,57 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.21.2';
+export const CURRENT_VERSION = 'v4.22.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.21.2',
+    version: 'v4.22.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.22.0: cinco níveis de acesso (Supervisor, Líder, Apoio, Operacional e Qualidade) separados do cargo, tour guiado do nível Qualidade, menu lateral mais compacto com "Mais opções" e seletor de tema translúcido e animado.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-violet-500 bg-violet-500/10 border-violet-500/20',
+        title: 'Níveis de Acesso Separados do Cargo',
+        category: 'Permissões',
+        description: 'O cargo continua sendo texto livre e o nível de acesso passa a ser escolhido à parte (Supervisor, Líder, Apoio, Operacional ou Qualidade), no Hub da Equipe e nos modais de cadastro. Quem não tem nível definido mantém o acesso atual, derivado do cargo. O Supervisor é o único que cadastra, inativa e altera níveis, e o último Supervisor ativo não pode ser rebaixado.'
+      },
+      {
+        icon: Lock,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Qualidade com Acesso Somente de Visualização',
+        category: 'Permissões',
+        description: 'O nível Qualidade enxerga todas as telas, mas não cria, edita nem exclui nada; a matriz de permissões não concede edição a ele. A única edição liberada é o próprio perfil. As regras do Firestore reforçam isso no servidor, e o Líder deixa de alterar níveis, matriz de permissões, metas, processos de QA e integrações.'
+      },
+      {
+        icon: Sparkles,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Tour Guiado do Nível Qualidade',
+        category: 'Tour Guiado',
+        description: 'Roteiro próprio que apresenta os 16 módulos que a Qualidade acompanha e como cada um funciona, com um passo dedicado e um selo "Somente visualização" avisando que o acesso é só de consulta. Abre no primeiro acesso e pode ser revisto em Mais opções, Tour guiado.'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Menu Lateral Mais Compacto',
+        category: 'Interface',
+        description: 'Senha, Personalizar menu e Tour guiado ficam recolhidos em "Mais opções", no fundo do menu, e só aparecem ao clicar (sempre começam fechados). O topo com logo e botão de recolher ficou mais baixo, dando mais espaço às telas. No celular, o rodapé segue a mesma ideia.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Seletor de Tema Animado',
+        category: 'Interface',
+        description: 'O seletor de tema ganhou fundo translúcido com desfoque, destaque que desliza entre Claro, Morno e Escuro e ícones com leve efeito 3D. A animação respeita a preferência do sistema por menos movimento.'
+      }
+    ]
+  },
+  {
+    version: 'v4.21.2',
+    date: 'Novembro 2026',
+    isCurrent: false,
+    tag: 'Versão Anterior',
     summary: 'Correção v4.21.2: colaboradores voltam a conseguir marcar feedbacks e 1:1 como lidos, a checagem de cargo nas regras ignora maiúsculas e espaços, e a Agenda mostra o erro real ao salvar.',
     items: [
       {

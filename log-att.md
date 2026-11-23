@@ -4,6 +4,23 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [23/11/2026] — Versão v4.22.0 (Níveis de acesso, tour de Qualidade e menu compacto)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.21.2` para `4.22.0`. |
+| **Alterado** | `src/services/rbac.js` / `src/context/PermissionsContext.jsx` / `src/context/AuthContext.jsx` | Cinco níveis de acesso (`accessLevel`), `isReadOnlyLevel` para a Qualidade e `canManageTeam` só para o Supervisor. |
+| **Alterado** | `src/pages/CollaboratorsHub.jsx` / `src/components/collaborators/*` | Cargo livre e nível de acesso em cartões, com travas do próprio nível e do último Supervisor. |
+| **Alterado** | `src/pages/Reports.jsx` / `src/pages/OrgChart.jsx` / `src/pages/MyProfile.jsx` / `src/services/adminAuth.js` | Deixam de conceder acesso pelo texto do cargo; Qualidade só lê. |
+| **Alterado** | `firestore.rules` | Helpers por `accessLevel` com fallback pelo cargo; Líder e Qualidade com escrita restrita. |
+| **Criado** | `scripts/migrate-access-levels.mjs` | Migração do `accessLevel` preservando o acesso (simulação por padrão). |
+| **Alterado** | `src/data/tourSteps.js` / `src/data/tourSteps.test.js` / `src/components/tour/ProductTour.jsx` | Tour da Qualidade (16 módulos, selo "Somente visualização") e testes. |
+| **Alterado** | `src/pages/AdminDashboard.jsx` | "Mais opções" recolhido no rodapé do menu (Senha, Personalizar menu, Tour guiado) e topo mais baixo. |
+| **Alterado** | `src/components/ThemeSelector.jsx` | Fundo translúcido, destaque deslizante e ícones com leve 3D na variante compacta. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [17/11/2026] — Versão v4.21.2 (Regras: marcar lido, 1:1 e cargo)
 
 | Ação | Arquivo | Descrição da Alteração |
