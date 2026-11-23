@@ -252,12 +252,15 @@ export const DayOffSchedule = ({ readOnly = false }) => {
         if (readOnly) return;
         setSaving(true);
         try {
+            // Sem merge: com { merge: true } o Firestore mescla o mapa "assignments" chave a chave,
+            // então um dia que ficou sem ninguém (chave removida do objeto) nunca era apagado
+            // no servidor e a folga reaparecia depois de salvar.
             await setDoc(doc(db, "day_off_schedules", documentId), {
                 month: documentId,
                 assignments: schedule,
                 totalOffs: totalOffsInMonth,
                 updatedAt: new Date()
-            }, { merge: true });
+            });
             
             setOriginalSchedule(schedule);
             showToast("Escala de folgas salva com sucesso!", "success");
