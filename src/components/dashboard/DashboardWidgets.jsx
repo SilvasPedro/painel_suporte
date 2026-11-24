@@ -91,12 +91,12 @@ export const KpiTile = ({ label, value, unit, icon: Icon, delta, inverse, goalTe
         neutral: 'bg-subtle text-secondary-hub',
     }[status];
     return (
-        <Card hover={Boolean(onClick)} onClick={onClick} className={cn('p-4 flex flex-col gap-2', ring)}>
+        <Card hover={Boolean(onClick)} onClick={onClick} className={cn('group p-4 flex flex-col gap-2', ring)}>
             <div className="flex items-center justify-between gap-2">
                 <span className="text-[11px] font-bold uppercase tracking-wider text-secondary-hub truncate">{label}</span>
                 {Icon && (
-                    <span className={cn('w-7 h-7 rounded-lg flex items-center justify-center shrink-0', chip)}>
-                        <Icon className="w-3.5 h-3.5" />
+                    <span className={cn('icon-3d w-8 h-8 rounded-xl flex items-center justify-center shrink-0', chip)}>
+                        <Icon className="w-4 h-4" />
                     </span>
                 )}
             </div>

@@ -338,7 +338,7 @@ const AdminDashboard = () => {
                     {firstAllowedTab && (
                         <button
                             onClick={() => setActiveTab(firstAllowedTab)}
-                            className="mt-6 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg shadow-sm transition-all cursor-pointer"
+                            className="mt-6 text-white cursor-pointer btn-primary-std"
                         >
                             Ir para Início
                         </button>

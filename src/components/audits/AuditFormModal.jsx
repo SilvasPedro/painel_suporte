@@ -731,7 +731,7 @@ if (listFilter === 'failed' && currentVal !== 'Falhou') return null;
                             form="auditForm"
                             disabled={isSaving || !colabId || !processId}
 title={!colabId ? 'Selecione o colaborador auditado' : !processId ? 'Selecione o processo auditado' : undefined}
-                            className="flex-1 sm:flex-none px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs transition-all shadow-xs hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+                            className="flex-1 sm:flex-none disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer btn-primary-std"
                         >
                             {isSaving ? (
                                 <>

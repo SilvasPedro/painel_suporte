@@ -8,7 +8,7 @@ import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 
-import Donut3D from '../components/audits/Donut3D';
+import DonutChart from '../components/audits/DonutChart';
 import AuditMetrics from '../components/audits/AuditMetrics';
 import AuditFilters from '../components/audits/AuditFilters';
 import AuditRanking from '../components/audits/AuditRanking';
@@ -401,7 +401,7 @@ export default function Audits() {
                 <button
                     id="btn-nova-auditoria"
                     onClick={handleOpenNewModal}
-                    className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-full transition-all shadow-md shadow-red-600/20 hover:shadow-lg cursor-pointer active:scale-95"
+                    className="w-full sm:w-auto flex items-center justify-center gap-2 text-white cursor-pointer btn-primary-std"
                 >
                     <Plus className="w-4 h-4" />
                     <span>Nova Auditoria</span>
@@ -455,7 +455,7 @@ export default function Audits() {
                                 Sem dados no período filtrado.
                             </div>
                         ) : (
-                            <Donut3D
+                            <DonutChart
                                 data={pieData}
                                 centerValue={`${dashboardStats.taxa}%`}
                                 centerLabel="conformidade"
@@ -542,7 +542,7 @@ export default function Audits() {
                             <button 
                                 type="button"
                                 onClick={handleDeleteAudit} 
-                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors shadow-xs cursor-pointer"
+                                className="flex-1 text-white cursor-pointer btn-primary-std"
                             >
                                 Sim, Excluir
                             </button>

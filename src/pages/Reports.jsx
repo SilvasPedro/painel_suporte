@@ -1398,7 +1398,7 @@ ${report.description || 'Sem descrição'}`;
                     ) : isReadOnlyLevel ? null : (
                         <button 
                             onClick={openNewReportModal}
-                            className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-sm rounded-xl transition-colors flex items-center gap-2 cursor-pointer shadow-sm"
+                            className="text-white flex items-center gap-2 cursor-pointer btn-primary-std"
                         >
                             <Plus className="w-4 h-4" /> Nova Solicitação
                         </button>
@@ -1925,7 +1925,7 @@ ${report.description || 'Sem descrição'}`;
                             </button>
                             <button 
                                 onClick={handleDelete} 
-                                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                                className="flex-1 text-white cursor-pointer btn-primary-std"
                             >
                                 Sim, Excluir
                             </button>

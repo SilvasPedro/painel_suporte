@@ -78,7 +78,7 @@ export default function LogoutConfirmModal({ isOpen, onClose, onConfirm, userNam
             id="btn-confirm-logout"
             type="button"
             onClick={onConfirm}
-            className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black transition-all shadow-sm hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full sm:w-auto text-white flex items-center justify-center gap-2 cursor-pointer btn-primary-std"
           >
             <LogOut className="w-4 h-4" />
             <span>Sim, quero sair</span>

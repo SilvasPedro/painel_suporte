@@ -353,7 +353,7 @@ export default function ChangePasswordModal({ isOpen, onClose, showToast }) {
               id="submit-change-password-btn"
               type="submit"
               disabled={loading || !newPassword || newPassword !== confirmPassword || newPassword.length < 6}
-              className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-black transition-all shadow-sm hover:shadow flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-white flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed btn-primary-std"
             >
               {loading ? (
                 <>

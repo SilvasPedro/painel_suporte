@@ -78,7 +78,7 @@ export default function AccountInactive() {
         <button
           id="btn-inactive-logout"
           onClick={handleLogout}
-          className="w-full sm:w-auto min-w-[200px] px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs sm:text-sm font-bold tracking-wide transition-all duration-150 shadow-sm hover:shadow flex items-center justify-center gap-2.5 cursor-pointer"
+          className="w-full sm:w-auto text-white flex items-center justify-center gap-2.5 cursor-pointer btn-primary-std"
         >
           <LogOut className="w-4 h-4" />
           <span>Sair da conta e voltar ao login</span>

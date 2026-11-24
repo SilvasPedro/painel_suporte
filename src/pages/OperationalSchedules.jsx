@@ -142,6 +142,7 @@ export const OperationalSchedules = ({
     const [draggedColab, setDraggedColab] = useState(null);
     const [dragSource, setDragSource] = useState(null); // { type: 'daily'|'plantao', dayId, roleKey, dateString }
     const [dropHighlight, setDropHighlight] = useState(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false); // lista de colaboradores recolhida por padrão
 
     // Controle de recolhimento das abas (Telefonia, Huggy/Chat, Apoio) na Escala Diária
     // Padrão: todas recolhidas destacando a quantidade de pessoas alocadas
@@ -666,6 +667,24 @@ export const OperationalSchedules = ({
                 </div>
 
                 <div className="flex items-center gap-2.5 flex-wrap">
+                    {/* Mostrar/ocultar lista de colaboradores (usada para montar a escala) */}
+                    {!readOnly && (
+                        <button
+                            type="button"
+                            onClick={() => setSidebarOpen(v => !v)}
+                            aria-pressed={sidebarOpen}
+                            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                sidebarOpen
+                                    ? 'bg-red-600 text-white border-red-500'
+                                    : 'bg-subtle text-secondary-hub border-subtle hover:text-primary-hub'
+                            }`}
+                            title={sidebarOpen ? 'Recolher lista de colaboradores' : 'Mostrar colaboradores para montar a escala'}
+                        >
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Colaboradores</span>
+                        </button>
+                    )}
+
                     {/* Switch de Abas: Escala Diária vs Escala de Plantão */}
                     <div className="flex items-center bg-subtle p-0.5 rounded-xl border border-subtle text-xs font-bold">
                         <button
@@ -817,7 +836,7 @@ export const OperationalSchedules = ({
             {/* CORPO PRINCIPAL COM SIDEBAR ARRASTÁVEL E QUADRO DE ESCALA */}
             <div className="flex-1 flex overflow-hidden">
                 {/* 1. BARRA LATERAL DE EQUIPE ATIVA (DRAGGABLE) */}
-                {!readOnly && (
+                {!readOnly && sidebarOpen && (
                     <aside
                         onDragOver={(e) => handleDragOver(e, 'trash')}
                         onDrop={(e) => {
@@ -875,11 +894,11 @@ export const OperationalSchedules = ({
                                         draggable={!readOnly}
                                         onDragStart={(e) => handleDragStart(e, colab, { type: activeTab, colabId: colab.id })}
                                         onDragEnd={handleDragEnd}
-                                        className="p-2 bg-surface hover:bg-red-50/40 rounded-xl border border-subtle hover:border-red-300 shadow-2xs cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-2 group select-none"
+                                        className="colab-card p-2 bg-surface hover:bg-red-50/40 rounded-xl border border-subtle hover:border-red-300 shadow-2xs cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-2 group select-none"
                                     >
                                         <div className="flex items-center gap-2 min-w-0">
                                             <GripVertical className="w-3.5 h-3.5 text-muted-hub group-hover:text-red-500 shrink-0" />
-                                            <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0 overflow-hidden border border-red-200">
+                                            <div className="colab-avatar w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0 overflow-hidden border border-red-200">
                                                 {colab.photoURL ? (
                                                     <img src={colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
                                                 ) : (
@@ -890,7 +909,7 @@ export const OperationalSchedules = ({
                                                 <p className="text-xs font-bold text-primary-hub truncate leading-tight group-hover:text-red-700">
                                                     {colab.name}
                                                 </p>
-                                                <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded border ${SHIFT_BADGES[colab.shift] || SHIFT_BADGES.default}`}>
+                                                <span className={`shift-tag inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded border ${SHIFT_BADGES[colab.shift] || SHIFT_BADGES.default}`}>
                                                     {colab.shift}
                                                 </span>
                                             </div>
@@ -1090,7 +1109,7 @@ export const OperationalSchedules = ({
                                                                                     draggable={!readOnly}
                                                                                     onDragStart={(e) => handleDragStart(e, colab, { type: 'daily', dayId: day.id, roleKey: role.key })}
                                                                                     onDragEnd={handleDragEnd}
-                                                                                    className="bg-surface border border-subtle p-2 rounded-xl shadow-2xs flex items-center justify-between gap-2 transition-all group select-none hover:border-strong cursor-grab active:cursor-grabbing"
+                                                                                    className="colab-chip bg-surface border border-subtle p-2 rounded-xl shadow-2xs flex items-center justify-between gap-2 transition-all group select-none hover:border-strong cursor-grab active:cursor-grabbing"
                                                                                 >
                                                                                     <div className="flex items-center gap-2 min-w-0">
                                                                                         <div className="w-6 h-6 rounded-lg bg-subtle text-secondary-hub font-bold text-xs flex items-center justify-center shrink-0">
@@ -1206,17 +1225,17 @@ export const OperationalSchedules = ({
                                                             draggable={!readOnly}
                                                             onDragStart={(e) => handleDragStart(e, colab, { type: 'plantao', dateString })}
                                                             onDragEnd={handleDragEnd}
-                                                            className="p-2.5 rounded-xl bg-surface border border-subtle hover:border-red-300 hover:bg-red-50/20 shadow-2xs flex items-center justify-between gap-2 transition-all group select-none cursor-grab active:cursor-grabbing border-l-4 border-l-red-500"
+                                                            className="colab-chip p-2.5 rounded-xl bg-surface border border-subtle hover:border-red-300 hover:bg-red-50/20 shadow-2xs flex items-center justify-between gap-2 transition-all group select-none cursor-grab active:cursor-grabbing border-l-4 border-l-red-500"
                                                         >
                                                             <div className="flex items-center gap-2.5 min-w-0">
-                                                                <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0">
+                                                                <div className="colab-avatar w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0">
                                                                     {colab.name.charAt(0).toUpperCase()}
                                                                 </div>
                                                                 <div className="min-w-0">
                                                                     <p className="text-xs font-bold text-primary-hub truncate">
                                                                         {colab.name}
                                                                     </p>
-                                                                    <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded border ${SHIFT_BADGES[colab.shift] || SHIFT_BADGES.default}`}>
+                                                                    <span className={`shift-tag text-[10px] font-semibold px-1.5 py-0.2 rounded border ${SHIFT_BADGES[colab.shift] || SHIFT_BADGES.default}`}>
                                                                         {colab.shift}
                                                                     </span>
                                                                 </div>

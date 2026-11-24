@@ -3101,7 +3101,7 @@ const ExportModal = ({
                         type="submit"
                         form="exportForm"
                         disabled={count === 0}
-                        className="px-5 py-2.5 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white rounded-xl font-bold text-xs transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="text-white flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed btn-primary-std"
                     >
                         <Download className="w-4 h-4" />
                         <span>Baixar Arquivo ({format.toUpperCase()})</span>

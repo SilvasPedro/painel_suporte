@@ -671,7 +671,7 @@ function QaProcessModalContent({
                             type="submit" 
                             form="qaProcessForm" 
                             disabled={isSaving || validCount === 0 || !processName.trim()} 
-                            className="flex-1 sm:flex-none px-6 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-xl font-bold text-xs transition-all shadow-xs hover:shadow flex items-center justify-center gap-2 cursor-pointer"
+                            className="flex-1 sm:flex-none disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer btn-primary-std"
                         >
                             {isSaving ? (
                                 <>

@@ -154,7 +154,7 @@ const SectorKPIs = () => {
         const month = String(today.getMonth() + 1).padStart(2, '0');
         return `${year}-${month}`;
     };
-    const [filterPeriod, setFilterPeriod] = useState('all'); // 'all', '30days', '90days', 'year', 'month'
+    const [filterPeriod, setFilterPeriod] = useState('month'); // padrão: mês vigente. 'all', '30days', '90days', 'year', 'month'
     const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth());
     const [sortAsc, setSortAsc] = useState(false); // false = mais recente primeiro
     const [chartViewMode, setChartViewMode] = useState('cards'); // 'cards' ou 'consolidated'
@@ -799,6 +799,17 @@ const SectorKPIs = () => {
                     </span>
                     <button
                         type="button"
+                        onClick={() => setFilterPeriod('month')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            filterPeriod === 'month'
+                                ? 'bg-zinc-950 text-white shadow-2xs'
+                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
+                        }`}
+                    >
+                        Por Mês
+                    </button>
+                    <button
+                        type="button"
                         onClick={() => setFilterPeriod('all')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                             filterPeriod === 'all'
@@ -840,17 +851,6 @@ const SectorKPIs = () => {
                         }`}
                     >
                         Ano Vigente
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setFilterPeriod('month')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                            filterPeriod === 'month'
-                                ? 'bg-zinc-950 text-white shadow-2xs'
-                                : 'bg-subtle text-secondary-hub hover:bg-gray-200'
-                        }`}
-                    >
-                        Por Mês
                     </button>
                 </div>
 

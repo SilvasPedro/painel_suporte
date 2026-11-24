@@ -80,7 +80,9 @@ export const getHolidaysForYear = (year) => {
         { month: 10, day: 2, name: 'Finados' },
         { month: 10, day: 15, name: 'Proclamação da República' },
         { month: 10, day: 20, name: 'Dia da Consciência Negra' },
-        { month: 11, day: 25, name: 'Natal' }
+        { month: 11, day: 25, name: 'Natal' },
+        // Feriado municipal (Itanhaém) - válido somente para a equipe que atua na cidade
+        { month: 11, day: 8, name: 'Nossa Sra. da Conceição', scope: 'municipal', note: 'Festa da Padroeira (feriado municipal de Itanhaém). Válido apenas para a equipe que atua em Itanhaém.' }
     ];
 
     // Feriados Nacionais Móveis vinculados ao ciclo da Páscoa
@@ -95,7 +97,7 @@ export const getHolidaysForYear = (year) => {
     const holidayMap = {};
 
     // Adiciona feriados fixos
-    fixedHolidays.forEach(({ month, day, name }) => {
+    fixedHolidays.forEach(({ month, day, name, scope, note }) => {
         const date = new Date(year, month, day, 12, 0, 0);
         const dateString = formatDateKey(date);
         const dayOfWeek = date.getDay();
@@ -105,6 +107,8 @@ export const getHolidaysForYear = (year) => {
             date,
             dateString,
             name,
+            scope: scope || 'nacional',
+            note: note || '',
             dayOfWeek,
             isSunday,
             isEligibleHE100: !isSunday
@@ -169,4 +173,15 @@ export const getHoliday = (dateInput) => {
 export const isHolidayHE100 = (dateInput) => {
     const holiday = getHoliday(dateInput);
     return Boolean(holiday && holiday.isEligibleHE100);
+};
+
+/**
+ * Texto de tooltip de um feriado (inclui o aviso de escopo para feriados municipais).
+ * @param {{ name: string, scope?: string, note?: string }} holiday
+ * @returns {string}
+ */
+export const holidayTooltip = (holiday) => {
+    if (!holiday) return '';
+    const kind = holiday.scope === 'municipal' ? 'Feriado municipal' : 'Feriado';
+    return `${holiday.name} - ${kind} - 100% H.E${holiday.note ? `. ${holiday.note}` : ''}`;
 };

@@ -173,7 +173,7 @@ export default function QaProcessPreviewModal({
                                 onClose();
                                 onEdit(process);
                             }}
-                            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
+                            className="text-white flex items-center gap-1.5 cursor-pointer btn-primary-std"
                         >
                             <Edit2 className="w-3.5 h-3.5" />
                             <span>Editar Processo</span>

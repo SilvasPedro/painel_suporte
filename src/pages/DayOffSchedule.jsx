@@ -10,7 +10,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { subscribeSharedCollection, subscribeSharedDocument } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
-import { getHolidaysForYear } from '../utils/holidays';
+import { getHolidaysForYear, holidayTooltip } from '../utils/holidays';
 
 // Helper para obter dias do mês formatados em grade de calendário (com padding)
 const getCalendarMatrix = (year, month) => {
@@ -106,6 +106,7 @@ export const DayOffSchedule = ({ readOnly = false }) => {
     const { showToast } = useNotification();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [viewMode, setViewMode] = useState('calendar'); // 'calendar' | 'cards'
+    const [sidebarOpen, setSidebarOpen] = useState(false); // lista de colaboradores recolhida por padrão
     const [cardsGroupBy, setCardsGroupBy] = useState('days'); // 'days' | 'collaborators'
     
     const [collaborators, setCollaborators] = useState([]);
@@ -404,6 +405,24 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                    {/* Mostrar/ocultar lista de colaboradores (usada para adicionar folgas) */}
+                    {!readOnly && (
+                        <button
+                            type="button"
+                            onClick={() => setSidebarOpen(v => !v)}
+                            aria-pressed={sidebarOpen}
+                            className={`px-3 py-1.5 rounded-xl border text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                                sidebarOpen
+                                    ? 'bg-red-600 text-white border-red-500'
+                                    : 'bg-subtle text-secondary-hub border-subtle hover:text-primary-hub'
+                            }`}
+                            title={sidebarOpen ? 'Recolher lista de colaboradores' : 'Mostrar colaboradores para adicionar folgas'}
+                        >
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Colaboradores</span>
+                        </button>
+                    )}
+
                     {/* Seletor de Modo de Visualização (Calendário x Cards) */}
                     <div className="flex items-center bg-subtle p-0.5 rounded-xl border border-subtle text-xs font-bold">
                         <button
@@ -510,7 +529,7 @@ export const DayOffSchedule = ({ readOnly = false }) => {
             {/* CORPO PRINCIPAL COM SIDEBAR ARRASTÁVEL E CONTEÚDO */}
             <div className="flex-1 flex overflow-hidden">
                 {/* 1. BARRA LATERAL: COLABORADORES ATIVOS (DRAGGABLE) */}
-                {!readOnly && (
+                {!readOnly && sidebarOpen && (
                     <aside className="w-64 sm:w-72 bg-surface border-r border-subtle flex flex-col shrink-0 overflow-hidden shadow-xs z-10">
                         <div className="p-3.5 border-b border-subtle space-y-2.5 bg-gray-50/50">
                             <div className="flex items-center justify-between">
@@ -563,11 +582,11 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                             draggable={!readOnly}
                                             onDragStart={(e) => handleDragStart(e, colab, null)}
                                             onDragEnd={handleDragEnd}
-                                            className="p-2 bg-surface hover:bg-red-50/40 rounded-xl border border-subtle hover:border-red-300 shadow-2xs cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-2 group select-none"
+                                            className="colab-card p-2 bg-surface hover:bg-red-50/40 rounded-xl border border-subtle hover:border-red-300 shadow-2xs cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-2 group select-none"
                                         >
                                             <div className="flex items-center gap-2 min-w-0">
                                                 <GripVertical className="w-3.5 h-3.5 text-muted-hub group-hover:text-red-500 shrink-0" />
-                                                <div className="w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0 overflow-hidden border border-red-200">
+                                                <div className="colab-avatar w-7 h-7 rounded-lg bg-red-100 text-red-700 font-black text-xs flex items-center justify-center shrink-0 overflow-hidden border border-red-200">
                                                     {colab.photoURL ? (
                                                         <img src={colab.photoURL} alt={colab.name} className="w-full h-full object-cover" />
                                                     ) : (
@@ -578,7 +597,7 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                     <p className="text-xs font-bold text-primary-hub truncate leading-tight group-hover:text-red-700">
                                                         {colab.name}
                                                     </p>
-                                                    <span className={`inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded border ${getShiftBadgeClass(colab.shift)}`}>
+                                                    <span className={`shift-tag inline-block text-[10px] font-semibold px-1.5 py-0.2 rounded border ${getShiftBadgeClass(colab.shift)}`}>
                                                         {colab.shift}
                                                     </span>
                                                 </div>
@@ -588,7 +607,7 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                             <span 
                                                 className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
                                                     offCount > 0 
-                                                        ? 'bg-amber-100 text-amber-800 border border-amber-200' 
+                                                        ? 'off-badge bg-amber-100 text-amber-800 border border-amber-200' 
                                                         : 'bg-subtle text-secondary-hub'
                                                 }`}
                                                 title={`${offCount} folga(s) agendada(s) em ${MONTH_NAMES[month]}`}
@@ -641,8 +660,8 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                             onDragOver={(e) => handleDragOver(e, cell.dateString)}
                                             onDragLeave={handleDragLeave}
                                             onDrop={(e) => handleDrop(e, cell.dateString)}
-                                            title={isEligibleHoliday ? `${holiday.name} - Feriado - 100% H.E` : undefined}
-                                            aria-label={isEligibleHoliday ? `${cell.dayNumber} de ${MONTH_NAMES[month]} - ${holiday.name} - Feriado 100% H.E` : undefined}
+                                            title={isEligibleHoliday ? holidayTooltip(holiday) : undefined}
+                                            aria-label={isEligibleHoliday ? `${cell.dayNumber} de ${MONTH_NAMES[month]} - ${holidayTooltip(holiday)}` : undefined}
                                             className={`aspect-square p-2 flex flex-col transition-all relative rounded-2xl border overflow-hidden ${
                                                 !cell.isCurrentMonth
                                                     ? 'bg-gray-100/50 border-subtle text-muted-hub opacity-60'
@@ -675,17 +694,17 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                     {isEligibleHoliday && (
                                                         <span 
                                                             className="inline-flex items-center gap-1 text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-200 text-amber-900 border border-amber-300 shadow-2xs truncate cursor-help"
-                                                            title={`${holiday.name} - Feriado - 100% H.E`}
+                                                            title={holidayTooltip(holiday)}
                                                         >
                                                             <Sparkles className="w-2.5 h-2.5 text-amber-700 shrink-0" />
-                                                            <span className="truncate">100% H.E</span>
+                                                            <span className="truncate">100%</span>
                                                         </span>
                                                     )}
                                                 </div>
 
                                                 <div className="flex items-center gap-1 shrink-0">
                                                     {assigned.length > 0 && (
-                                                        <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-red-100 text-red-700 border border-red-200">
+                                                        <span className="off-badge text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-red-100 text-red-700 border border-red-200">
                                                             {assigned.length} {assigned.length === 1 ? 'folga' : 'folgas'}
                                                         </span>
                                                     )}
@@ -710,7 +729,7 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                             {isEligibleHoliday && (
                                                 <div 
                                                     className="mb-1 px-1.5 py-0.5 rounded text-[10px] font-bold text-amber-900 bg-amber-100/90 border border-amber-200 truncate select-none shadow-2xs"
-                                                    title={`${holiday.name} - Feriado - 100% H.E`}
+                                                    title={holidayTooltip(holiday)}
                                                 >
                                                     {holiday.name}
                                                 </div>
@@ -724,10 +743,10 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                         draggable={!readOnly}
                                                         onDragStart={(e) => handleDragStart(e, colab, cell.dateString)}
                                                         onDragEnd={handleDragEnd}
-                                                        className="px-2 py-1 rounded-lg bg-subtle border border-subtle text-primary-hub hover:border-red-300 hover:bg-red-50/50 flex items-center justify-between gap-1 shadow-2xs group text-[11px] cursor-grab active:cursor-grabbing transition-all select-none"
+                                                        className="colab-chip px-2 py-1 rounded-lg bg-subtle border border-subtle text-primary-hub hover:border-red-300 hover:bg-red-50/50 flex items-center justify-between gap-1 shadow-2xs group text-[11px] cursor-grab active:cursor-grabbing transition-all select-none"
                                                     >
                                                         <div className="flex items-center gap-1.5 truncate">
-                                                            <div className="w-4 h-4 rounded-full bg-red-100 text-red-600 font-bold text-[9px] flex items-center justify-center shrink-0">
+                                                            <div className="colab-avatar w-4 h-4 rounded-full bg-red-100 text-red-600 font-bold text-[9px] flex items-center justify-center shrink-0">
                                                                 {colab.name.charAt(0).toUpperCase()}
                                                             </div>
                                                             <span 
@@ -824,8 +843,8 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                     onDragOver={(e) => handleDragOver(e, cell.dateString)}
                                                     onDragLeave={handleDragLeave}
                                                     onDrop={(e) => handleDrop(e, cell.dateString)}
-                                                    title={isEligibleHoliday ? `${holiday.name} - Feriado - 100% H.E` : undefined}
-                                                    aria-label={isEligibleHoliday ? `${cell.dayNumber} de ${MONTH_NAMES[month]} - ${holiday.name} - Feriado 100% H.E` : undefined}
+                                                    title={isEligibleHoliday ? holidayTooltip(holiday) : undefined}
+                                                    aria-label={isEligibleHoliday ? `${cell.dayNumber} de ${MONTH_NAMES[month]} - ${holidayTooltip(holiday)}` : undefined}
                                                     className={`bg-surface rounded-2xl border p-4 shadow-xs flex flex-col justify-between transition-all ${
                                                         isDropTarget
                                                             ? 'border-red-500 ring-2 ring-red-400/40 bg-red-50/30'
@@ -875,10 +894,10 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                                     draggable={!readOnly}
                                                                     onDragStart={(e) => handleDragStart(e, colab, cell.dateString)}
                                                                     onDragEnd={handleDragEnd}
-                                                                    className="p-2 rounded-xl bg-subtle border border-subtle hover:border-red-300 hover:bg-red-50/30 flex items-center justify-between gap-2 transition-all cursor-grab active:cursor-grabbing group shadow-2xs"
+                                                                    className="colab-chip p-2 rounded-xl bg-subtle border border-subtle hover:border-red-300 hover:bg-red-50/30 flex items-center justify-between gap-2 transition-all cursor-grab active:cursor-grabbing group shadow-2xs"
                                                                 >
                                                                     <div className="flex items-center gap-2 min-w-0">
-                                                                        <div className="w-6 h-6 rounded-lg bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                                                        <div className="colab-avatar w-6 h-6 rounded-lg bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center shrink-0">
                                                                             {colab.name.charAt(0).toUpperCase()}
                                                                         </div>
                                                                         <div className="min-w-0">
@@ -991,8 +1010,8 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                                                     return (
                                                                         <span
                                                                             key={dStr}
-                                                                            title={isOffEligibleHE ? `${offHoliday.name} - Feriado - 100% H.E` : undefined}
-                                                                            aria-label={isOffEligibleHE ? `Dia ${dayNum} - ${offHoliday.name} - Feriado 100% H.E` : undefined}
+                                                                            title={isOffEligibleHE ? holidayTooltip(offHoliday) : undefined}
+                                                                            aria-label={isOffEligibleHE ? `Dia ${dayNum} - ${holidayTooltip(offHoliday)}` : undefined}
                                                                             className={`text-xs font-mono font-bold px-2.5 py-1 rounded-lg border flex items-center gap-1.5 shadow-2xs ${
                                                                                 isOffEligibleHE
                                                                                     ? 'bg-amber-100 text-amber-900 border-amber-300'
@@ -1085,7 +1104,7 @@ export const DayOffSchedule = ({ readOnly = false }) => {
                                             }`}
                                         >
                                             <div className="flex items-center gap-2 truncate">
-                                                <div className="w-6 h-6 rounded-lg bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center shrink-0">
+                                                <div className="colab-avatar w-6 h-6 rounded-lg bg-red-100 text-red-700 font-bold text-xs flex items-center justify-center shrink-0">
                                                     {colab.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <span className="text-xs font-bold text-primary-hub truncate">

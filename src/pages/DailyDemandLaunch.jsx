@@ -1521,7 +1521,7 @@ export default function DailyDemandLaunch() {
                                     type="button"
                                     onClick={confirmDelete}
                                     disabled={isDeleting}
-                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                                    className="flex-1 text-white cursor-pointer flex items-center justify-center gap-1.5 btn-primary-std"
                                 >
                                     {isDeleting ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : <Trash2 className="w-3.5 h-3.5" />}
                                     <span>Excluir</span>

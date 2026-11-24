@@ -1207,7 +1207,7 @@ export default function ThirdPartyAudits() {
                             <button
                                 type="button"
                                 onClick={handleOpenCreateModal}
-                                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl shadow-md shadow-red-950/20 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                                className="text-white flex items-center gap-1.5 cursor-pointer btn-primary-std"
                             >
                                 <Plus className="w-4 h-4" />
                                 <span>Lançar Manual</span>
@@ -2630,7 +2630,7 @@ export default function ThirdPartyAudits() {
                                     form="auditThirdPartyForm"
                                     disabled={saving || Boolean(duplicateProtocolAudit)}
                                     title={duplicateProtocolAudit ? 'Protocolo já existente no sistema' : 'Salvar auditoria'}
-                                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5 shadow-sm cursor-pointer"
+                                    className="flex-1 text-white disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-1.5 cursor-pointer btn-primary-std"
                                 >
                                     {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                                     Salvar Auditoria
@@ -2801,7 +2801,7 @@ export default function ThirdPartyAudits() {
                                 <button
                                     type="button"
                                     onClick={() => handleDelete(deletingId)}
-                                    className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                                    className="flex-1 text-white cursor-pointer btn-primary-std"
                                 >
                                     Sim, Excluir
                                 </button>

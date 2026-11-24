@@ -68,7 +68,7 @@ export class ErrorBoundary extends React.Component {
                             <button
                                 type="button"
                                 onClick={this.handleReset}
-                                className="flex-1 py-2.5 px-4 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                className="flex-1 text-white flex items-center justify-center gap-2 cursor-pointer btn-primary-std"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 Recarregar Módulo
