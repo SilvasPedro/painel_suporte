@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import {
-    Edit2, Trash2, Send, MessageSquare, Phone, MapPin, Calendar, Clock, Hash, Mail, User, Plus, FileText, Save, X, AlertCircle
+    Edit2, Trash2, Phone, MapPin, Calendar, Clock, Hash, Mail, User, Plus, FileText, Save, X, AlertCircle
 } from 'lucide-react';
 import { Modal, Button, Badge } from '../ui';
 import PillSelect from './PillSelect';
+import SmartPreComments from './SmartPreComments';
 import { cn } from '../../utils/cn';
 import {
     SMART_PRE_ISSUES, SMART_PRE_CHANNELS, SMART_PRE_RESOLUTIONS, PROTOCOL_STATUSES,
@@ -21,10 +22,7 @@ const formatDate = (value) => {
     return `${d}/${m}/${y}`;
 };
 
-const formatDateTime = (iso) => {
-    const date = new Date(iso);
-    return Number.isNaN(date.getTime()) ? '' : date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-};
+const PROTOCOLS_PREVIEW = 4;
 
 const todayKey = () => toDateKey(new Date());
 
@@ -176,29 +174,25 @@ function ProtocolForm({ client, initial, authorName, saving, onCancel, onSave })
 /** Detalhe do cliente: protocolos de atendimento e relatos. Remontado a cada cliente (o pai usa `key`). */
 export default function SmartPreDetailModal({
     client, onClose, canEdit, authorName, onEdit, onDelete, onSaveProtocol, onDeleteProtocol, onSubmitComment,
-    submitting, savingProtocol, deleting
+    onEditComment, onDeleteComment, submitting, savingProtocol, savingComment, deleting
 }) {
-    const [text, setText] = useState('');
     const [protocolForm, setProtocolForm] = useState(null); // null = fechado, 'new' = novo, objeto = edição
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [confirmProtocolId, setConfirmProtocolId] = useState('');
+    const [protocolFilter, setProtocolFilter] = useState('all'); // all | open | closed
+    const [showAllProtocols, setShowAllProtocols] = useState(false);
 
     const statusMeta = getStatusMeta(getClientStatus(client));
     const protocols = getProtocols(client);
     const days = getDaysToFirstContact(client);
     const firstContact = getFirstContactDate(client);
     const comments = Array.isArray(client.comments) ? client.comments : [];
+    const orderedProtocols = [...protocols].reverse().filter(p => protocolFilter === 'all' || (protocolFilter === 'closed') === (p.status === 'closed'));
+    const visibleProtocols = showAllProtocols ? orderedProtocols : orderedProtocols.slice(0, PROTOCOLS_PREVIEW);
 
     const handleSaveProtocol = async (record) => {
         const ok = await onSaveProtocol(record);
         if (ok) setProtocolForm(null);
-    };
-
-    const handleComment = async (e) => {
-        e.preventDefault();
-        if (!text.trim()) return;
-        const ok = await onSubmitComment(text);
-        if (ok) setText('');
     };
 
     return (
@@ -225,7 +219,7 @@ export default function SmartPreDetailModal({
         >
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                 {/* Resumo do cliente */}
-                <div className="lg:col-span-2 space-y-4">
+                <div className="lg:col-span-2 space-y-4 lg:sticky lg:top-0 lg:self-start">
                     <Badge variant={statusMeta.variant} dot>{statusMeta.label}</Badge>
                     <div className="space-y-3">
                         <Info icon={Phone} label="Celular">{client.phone}</Info>
@@ -258,6 +252,16 @@ export default function SmartPreDetailModal({
                             )}
                         </div>
 
+                        {protocols.length > PROTOCOLS_PREVIEW && (
+                            <div role="group" aria-label="Filtrar protocolos" className="flex gap-1.5 mb-3">
+                                {[['all', 'Todos'], ['open', 'Em aberto'], ['closed', 'Finalizados']].map(([id, label]) => (
+                                    <button key={id} type="button" aria-pressed={protocolFilter === id} onClick={() => { setProtocolFilter(id); setShowAllProtocols(false); }}
+                                        className={cn('px-3 py-1 rounded-full text-[11px] font-semibold border cursor-pointer transition-colors',
+                                            protocolFilter === id ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/40' : 'bg-surface text-secondary-hub border-subtle hover:border-strong')}>{label}</button>
+                                ))}
+                            </div>
+                        )}
+
                         {protocolForm && (
                             <div className="mb-3">
                                 <ProtocolForm
@@ -278,7 +282,7 @@ export default function SmartPreDetailModal({
                             </p>
                         ) : (
                             <ul className="space-y-2.5">
-                                {[...protocols].reverse().map(p => {
+                                {visibleProtocols.map(p => {
                                     const st = getProtocolStatusMeta(p.status);
                                     const res = getResolutionMeta(p.resolutionType);
                                     const duration = getProtocolDuration(p);
@@ -320,49 +324,23 @@ export default function SmartPreDetailModal({
                                 })}
                             </ul>
                         )}
-                    </section>
 
-                    <section>
-                        <h3 className="flex items-center gap-2 text-sm font-bold text-primary-hub mb-3">
-                            <MessageSquare className="w-4 h-4 text-rose-500" /> Relatos e acompanhamento
-                            <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-subtle border border-subtle text-secondary-hub">{comments.length}</span>
-                        </h3>
-
-                        <div className="space-y-3 max-h-64 overflow-y-auto pr-1">
-                            {comments.length === 0 ? (
-                                <p className="text-xs text-muted-hub py-5 text-center rounded-xl border border-dashed border-subtle">Nenhum relato registrado ainda.</p>
-                            ) : comments.map(c => (
-                                <div key={c.id} className="rounded-xl border border-subtle bg-surface p-3">
-                                    <div className="flex items-center justify-between gap-2 mb-1">
-                                        <span className="text-xs font-bold text-primary-hub truncate">
-                                            {c.authorName}
-                                            {c.authorRole && <span className="ml-1.5 font-medium text-muted-hub">• {c.authorRole}</span>}
-                                        </span>
-                                        <span className="text-[10px] text-muted-hub shrink-0">{formatDateTime(c.createdAt)}</span>
-                                    </div>
-                                    <p className="text-sm text-secondary-hub whitespace-pre-wrap break-words">{c.content}</p>
-                                </div>
-                            ))}
-                        </div>
-
-                        {canEdit ? (
-                            <form onSubmit={handleComment} className="mt-3 space-y-2 rounded-2xl border border-subtle bg-subtle/40 p-3">
-                                <textarea
-                                    rows={3}
-                                    value={text}
-                                    onChange={e => setText(e.target.value)}
-                                    maxLength={2000}
-                                    placeholder="Registre um relato: o que o cliente informou, o que foi feito, próximos passos…"
-                                    className={cn(inputCls, 'resize-none')}
-                                />
-                                <div className="flex justify-end">
-                                    <Button type="submit" size="sm" icon={Send} loading={submitting} disabled={!text.trim()}>Registrar relato</Button>
-                                </div>
-                            </form>
-                        ) : (
-                            <p className="mt-3 text-[11px] text-muted-hub">Seu perfil tem acesso somente de leitura nesta tela.</p>
+                        {orderedProtocols.length > PROTOCOLS_PREVIEW && (
+                            <button type="button" onClick={() => setShowAllProtocols(v => !v)} className="mt-2.5 w-full py-2 rounded-xl border border-subtle text-xs font-semibold text-secondary-hub hover:bg-subtle cursor-pointer">
+                                {showAllProtocols ? 'Mostrar só os mais recentes' : `Mostrar todos os protocolos (${orderedProtocols.length - PROTOCOLS_PREVIEW} a mais)`}
+                            </button>
                         )}
                     </section>
+
+                    <SmartPreComments
+                        comments={comments}
+                        canEdit={canEdit}
+                        submitting={submitting}
+                        savingComment={savingComment}
+                        onSubmit={onSubmitComment}
+                        onEdit={onEditComment}
+                        onDelete={onDeleteComment}
+                    />
                 </div>
             </div>
         </Modal>

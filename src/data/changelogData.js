@@ -1,13 +1,34 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.23.0';
+export const CURRENT_VERSION = 'v4.23.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.23.0',
+    version: 'v4.23.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.23.1: relatos do Smart Pre podem ser editados e excluídos, e o detalhe do cliente ficou mais fácil de usar com muitos atendimentos.',
+    items: [
+      {
+        icon: Edit2,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Editar e Excluir Relatos no Smart Pre',
+        category: 'Smart Pre',
+        description: 'Cada relato do cliente ganhou os botões de editar e excluir (com confirmação). O relato editado mostra quem alterou e quando. Quem só consulta continua sem esses botões.'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Detalhe do Cliente com Muitos Atendimentos',
+        category: 'Smart Pre',
+        description: 'O campo de novo relato fica no topo e os relatos aparecem do mais novo ao mais antigo, de 5 em 5, com busca por texto ou autor e "Ver relato completo" nos textos longos. Os protocolos mostram os 4 mais recentes, com filtro (Todos, Em aberto, Finalizados) e "Mostrar todos". Os dados do cliente ficam fixos ao lado ao rolar.'
+      }
+    ]
+  },
+  {
+    version: 'v4.23.0',
+    date: 'Novembro 2026',
     summary: 'Versão v4.23.0: eventos da Agenda passam a enviar lembretes por DM no Discord, 15 minutos antes e no horário de início.',
     items: [
       {

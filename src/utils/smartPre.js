@@ -431,3 +431,25 @@ export const createSmartPreComment = ({ authorId, authorName, authorRole, text, 
     content: String(text || '').trim(),
     createdAt: now.toISOString()
 });
+
+export const MAX_COMMENT_LENGTH = 2000;
+
+/** Troca o texto de um relato, guardando quem e quando editou. Os demais relatos ficam intactos. */
+export const editComment = (comments, commentId, text, { editorName = '', now = new Date() } = {}) => {
+    const content = String(text || '').trim().slice(0, MAX_COMMENT_LENGTH);
+    return (Array.isArray(comments) ? comments : []).map(c => (
+        c.id === commentId && content ? { ...c, content, editedAt: now.toISOString(), editedBy: editorName } : c
+    ));
+};
+
+export const removeComment = (comments, commentId) =>
+    (Array.isArray(comments) ? comments : []).filter(c => c.id !== commentId);
+
+/** Relatos do mais novo para o mais antigo, filtrados por texto ou autor (sem acento e sem diferenciar maiúsculas). */
+export const filterComments = (comments, query = '') => {
+    const norm = (v) => String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const q = norm(query).trim();
+    return [...(Array.isArray(comments) ? comments : [])]
+        .filter(c => !q || norm(c.content).includes(q) || norm(c.authorName).includes(q))
+        .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+};

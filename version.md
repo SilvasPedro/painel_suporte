@@ -4,6 +4,16 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.23.1] - 2026-11-25
+
+### 🐛 Corrigido (Fixed)
+- **Smart Pre, relatos**: agora é possível editar e excluir um relato (com confirmação). O relato editado guarda `editedAt` e `editedBy`. Só quem tem permissão de edição vê os botões.
+
+### 🔄 Alterado (Changed)
+- **Smart Pre, detalhe do cliente**: campo de novo relato no topo; relatos do mais novo ao mais antigo, de 5 em 5, com busca e "Ver relato completo"; protocolos com os 4 mais recentes, filtro por situação e "Mostrar todos"; resumo do cliente fixo ao rolar.
+
+---
+
 ## [v4.23.0] - 2026-11-25
 
 ### 🚀 Novas Funcionalidades (Added)

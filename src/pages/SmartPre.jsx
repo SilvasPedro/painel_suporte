@@ -15,7 +15,7 @@ import EasyAuthShortcut from '../components/smartpre/EasyAuthShortcut';
 import {
     SMART_PRE_STATUSES, SMART_PRE_RESOLUTIONS, SMART_PRE_ISSUES, SMART_PRE_PERIODS,
     getStatusMeta, getClientStatus, getProtocols, getResolutionMeta, getDaysToFirstContact, getIssueLabel,
-    filterByPeriod, matchesSearch, flattenProtocols, buildSmartPrePayload, createSmartPreComment, upsertProtocol, removeProtocol, toDateKey
+    filterByPeriod, matchesSearch, flattenProtocols, buildSmartPrePayload, createSmartPreComment, editComment, removeComment, upsertProtocol, removeProtocol, toDateKey
 } from '../utils/smartPre';
 
 const PAGE_SIZE = 40;
@@ -52,6 +52,7 @@ export default function SmartPre() {
     const [saving, setSaving] = useState(false);
     const [submittingUpdate, setSubmittingUpdate] = useState(false);
     const [savingProtocol, setSavingProtocol] = useState(false);
+    const [savingComment, setSavingComment] = useState(false);
     const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
@@ -168,6 +169,35 @@ export default function SmartPre() {
             setSubmittingUpdate(false);
         }
     };
+
+    // Edição e exclusão de relato: regrava a lista de relatos do cliente aberto
+    const writeComments = async (comments, successMessage, errorMessage) => {
+        if (!viewing || !hasEditPermission) return false;
+        setSavingComment(true);
+        try {
+            const now = new Date();
+            await updateDoc(doc(db, 'smart_pre_clients', viewing.id), {
+                comments, updatedAt: now, lastActivityAt: now, lastUpdatedBy: author.authorName
+            });
+            showToast(successMessage, 'success');
+            return true;
+        } catch (error) {
+            console.error('Erro ao alterar relato Smart Pre:', error);
+            showToast(errorMessage, 'error');
+            return false;
+        } finally {
+            setSavingComment(false);
+        }
+    };
+
+    const handleEditComment = (commentId, text) => writeComments(
+        editComment(viewing?.comments, commentId, text, { editorName: author.authorName }),
+        'Relato atualizado.', 'Não foi possível atualizar o relato.'
+    );
+
+    const handleDeleteComment = (commentId) => writeComments(
+        removeComment(viewing?.comments, commentId), 'Relato excluído.', 'Não foi possível excluir o relato.'
+    );
 
     const handleDelete = async (client) => {
         if (!hasEditPermission) return;
@@ -386,6 +416,9 @@ export default function SmartPre() {
                     onSaveProtocol={handleSaveProtocol}
                     onDeleteProtocol={handleDeleteProtocol}
                     onSubmitComment={handleSubmitComment}
+                    onEditComment={handleEditComment}
+                    onDeleteComment={handleDeleteComment}
+                    savingComment={savingComment}
                     savingProtocol={savingProtocol}
                     submitting={submittingUpdate}
                     deleting={deleting}

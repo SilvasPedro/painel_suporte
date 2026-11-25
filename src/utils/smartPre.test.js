@@ -3,7 +3,7 @@ import {
     toDateKey, daysBetween, getProtocols, getClientStatus, getDaysToFirstContact, getProtocolDuration,
     computeSmartPreStats, getServiceHealth, filterByPeriod, buildMonthlyTimeline, matchesSearch,
     validateSmartPreClient, validateProtocol, formatPhone, flattenProtocols, matchesProtocolSearch, getProtocolIssueLabel, SMART_PRE_ISSUES, buildSmartPrePayload, buildProtocolRecord,
-    upsertProtocol, removeProtocol, createSmartPreComment, getResolutionMeta
+    upsertProtocol, removeProtocol, createSmartPreComment, getResolutionMeta, editComment, removeComment, filterComments
 } from './smartPre';
 
 const proto = (over = {}) => ({
@@ -317,5 +317,29 @@ describe('formatPhone', () => {
         expect(formatPhone('11999998888')).toBe('(11) 99999-8888');
         expect(formatPhone('1133334444')).toBe('(11) 3333-4444');
         expect(formatPhone('119999988889999')).toBe('(11) 99999-8888');
+    });
+});
+
+describe('editar, excluir e buscar relatos', () => {
+    const list = [
+        { id: 'a', authorName: 'Ana', content: 'Cliente ligou', createdAt: '2026-11-01T10:00:00.000Z' },
+        { id: 'b', authorName: 'Bruno', content: 'Visita técnica agendada', createdAt: '2026-11-03T10:00:00.000Z' }
+    ];
+    it('edita só o relato escolhido e registra quem editou', () => {
+        const out = editComment(list, 'a', '  Cliente ligou de novo  ', { editorName: 'Carla', now: new Date('2026-11-05T12:00:00Z') });
+        expect(out[0]).toMatchObject({ id: 'a', content: 'Cliente ligou de novo', editedBy: 'Carla', editedAt: '2026-11-05T12:00:00.000Z', createdAt: list[0].createdAt });
+        expect(out[1]).toEqual(list[1]);
+    });
+    it('não apaga o relato ao editar com texto vazio', () => {
+        expect(editComment(list, 'a', '   ')).toEqual(list);
+    });
+    it('exclui só o relato escolhido', () => {
+        expect(removeComment(list, 'a').map(c => c.id)).toEqual(['b']);
+        expect(removeComment(undefined, 'a')).toEqual([]);
+    });
+    it('lista do mais novo ao mais antigo e busca sem acento', () => {
+        expect(filterComments(list).map(c => c.id)).toEqual(['b', 'a']);
+        expect(filterComments(list, 'tecnica').map(c => c.id)).toEqual(['b']);
+        expect(filterComments(list, 'ANA').map(c => c.id)).toEqual(['a']);
     });
 });

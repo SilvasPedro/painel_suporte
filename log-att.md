@@ -4,6 +4,19 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [25/11/2026] — Versão v4.23.1 (Smart Pre: editar/excluir relato e detalhe do cliente)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.23.0` para `4.23.1`. |
+| **Criado** | `src/components/smartpre/SmartPreComments.jsx` | Relatos com editar, excluir (confirmação), busca, paginação e texto longo recolhido. |
+| **Alterado** | `src/components/smartpre/SmartPreDetailModal.jsx` | Usa o novo componente; protocolos com filtro e "Mostrar todos"; resumo fixo. |
+| **Alterado** | `src/pages/SmartPre.jsx` | `handleEditComment` e `handleDeleteComment` regravam a lista de relatos. |
+| **Alterado** | `src/utils/smartPre.js` / `src/utils/smartPre.test.js` / `src/components/smartpre/smartPreRender.test.jsx` | `editComment`, `removeComment`, `filterComments` e testes. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [25/11/2026] — Versão v4.23.0 (Lembretes de eventos da Agenda por DM)
 
 | Ação | Arquivo | Descrição da Alteração |

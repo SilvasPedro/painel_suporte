@@ -81,6 +81,26 @@ describe('telas do Smart Pre (renderização)', () => {
         expect(html).not.toContain('Copiar senha'); // painel fechado: nada de senha na tela
     });
 
+    it('detalhe com muitos atendimentos recolhe a lista e oferece editar/excluir relato', () => {
+        const many = {
+            ...clients[0],
+            protocols: Array.from({ length: 7 }, (_, i) => ({ id: `p${i}`, protocol: `26${i}`, openedAt: '2026-11-03', classification: 'slow', status: i % 2 ? 'closed' : 'open', closedAt: '2026-11-04', resolutionType: 'remote' })),
+            comments: Array.from({ length: 12 }, (_, i) => ({ id: `c${i}`, authorName: 'Maria', content: `Relato ${i}`, createdAt: `2026-11-${String(i + 1).padStart(2, '0')}T10:00:00.000Z` }))
+        };
+        const html = renderToString(<SmartPreDetailModal client={many} canEdit {...detailProps} />);
+        const text = html.replace(/<!-- -->/g, '');
+        expect(text).toContain('Mostrar todos os protocolos (3 a mais)');
+        expect(text).toContain('Mostrar mais relatos (7 restantes)');
+        expect(html).toContain('Buscar nos relatos');
+        expect(html).toContain('Editar relato');
+        expect(html).toContain('Excluir relato');
+        expect(html).toContain('Relato 11');
+        expect(html).not.toContain('Relato 0<');
+        const readOnly = renderToString(<SmartPreDetailModal client={many} canEdit={false} {...detailProps} />);
+        expect(readOnly).not.toContain('Editar relato');
+        expect(readOnly).not.toContain('Excluir relato');
+    });
+
     it('quem só consulta não vê botões nem campos de edição', () => {
         const html = renderToString(<SmartPreDetailModal client={clients[0]} canEdit={false} {...detailProps} />);
         expect(html).toContain('somente de leitura');
