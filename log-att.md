@@ -4,6 +4,20 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [25/11/2026] — Versão v4.23.0 (Lembretes de eventos da Agenda por DM)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.22.0` para `4.23.0`. |
+| **Alterado** | `src/pages/Agenda.jsx` / `src/utils/agenda.js` / `src/utils/agenda.test.js` | Campo `remind` no evento (caixa de lembretes) e `remindersSent` zerado ao reagendar. |
+| **Criado** | `api/_lib/agendaReminders.js` / `api/_lib/agendaReminders.test.js` | Regras e envio dos lembretes (15 min antes e no horário de início) e testes. |
+| **Criado** | `api/cron-agenda-reminders.js` | Função chamada pelo agendador, protegida por `CRON_SECRET`. |
+| **Alterado** | `api/_lib/dm.js` / `src/services/discordDm.js` | Texto da DM `agenda_reminder` e novo item em Configurações > Notificações. |
+| **Alterado** | `.env.example` | `CRON_SECRET` e `FIREBASE_SERVICE_ACCOUNT`. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [23/11/2026] — Versão v4.22.0 (Níveis de acesso, tour de Qualidade e menu compacto)
 
 | Ação | Arquivo | Descrição da Alteração |
