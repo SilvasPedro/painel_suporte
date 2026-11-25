@@ -1,13 +1,27 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.22.0';
+export const CURRENT_VERSION = 'v4.23.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.22.0',
+    version: 'v4.23.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.23.0: eventos da Agenda passam a enviar lembretes por DM no Discord, 15 minutos antes e no horário de início.',
+    items: [
+      {
+        icon: Bell,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Lembretes de Eventos por DM',
+        category: 'Agenda',
+        description: 'Ao criar ou editar um evento, a opção "Enviar lembretes na DM do Discord" avisa o organizador e os convidados que não recusaram 15 minutos antes e no horário de início. Reagendar libera os lembretes de novo. Pode ser desligado por tipo em Configurações > Notificações.'
+      }
+    ]
+  },
+  {
+    version: 'v4.22.0',
+    date: 'Novembro 2026',
     summary: 'Versão v4.22.0: cinco níveis de acesso (Supervisor, Líder, Apoio, Operacional e Qualidade) separados do cargo, tour guiado do nível Qualidade, menu lateral mais compacto com "Mais opções" e seletor de tema translúcido e animado.',
     items: [
       {

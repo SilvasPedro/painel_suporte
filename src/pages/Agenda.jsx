@@ -42,6 +42,7 @@ function EventModal({ initial, people, events, saving, onSave, onClose }) {
         startTime: initial?.startTime || '',
         endTime: initial?.endTime || '',
         participantIds: initial?.participantIds || [],
+        remind: initial ? initial.remind === true : true, // evento novo já vem com lembrete ligado
     });
     const [query, setQuery] = useState('');
     const [errors, setErrors] = useState([]);
@@ -124,6 +125,14 @@ function EventModal({ initial, people, events, saving, onSave, onClose }) {
                 <label className="block">
                     <span className="text-[11px] font-bold text-secondary-hub">Descrição (opcional)</span>
                     <textarea value={form.description} onChange={set('description')} maxLength={1000} rows={2} className={cn(inputCls, 'mt-1 resize-none')} />
+                </label>
+
+                <label className="flex items-start gap-2.5 p-3 rounded-xl border border-subtle cursor-pointer hover:bg-subtle">
+                    <input type="checkbox" checked={form.remind} onChange={(e) => setForm((f) => ({ ...f, remind: e.target.checked }))} className="w-4 h-4 mt-0.5 accent-rose-600" />
+                    <span className="text-xs">
+                        <span className="font-bold text-primary-hub flex items-center gap-1.5"><BellRing className="w-3.5 h-3.5 text-rose-600" />Enviar lembretes na DM do Discord</span>
+                        <span className="block text-[11px] text-muted-hub mt-0.5">Organizador e convidados que não recusaram recebem um aviso 15 minutos antes e outro no horário de início.</span>
+                    </span>
                 </label>
 
                 <div>

@@ -27,7 +27,8 @@ export const DM_EVENT_META = [
     { id: 'monthly_evaluation', icon: '🎯', label: 'Avaliação 1:1 mensal' },
     { id: 'report_status', icon: '🔄', label: 'Mudança de status em tarefa/relatório (ao solicitante)' },
     { id: 'report_comment', icon: '💬', label: 'Novo comentário em tarefa/relatório (ao solicitante e ao responsável, com o texto)' },
-    { id: 'agenda_invite', icon: '📅', label: 'Convite para evento da Agenda (aos convidados, para confirmar ou recusar)' }
+    { id: 'agenda_invite', icon: '📅', label: 'Convite para evento da Agenda (aos convidados, para confirmar ou recusar)' },
+    { id: 'agenda_reminder', icon: '⏰', label: 'Lembrete de evento da Agenda (15 min antes e no horário de início)' }
 ];
 
 export const DM_EVENT_IDS = DM_EVENT_META.map(e => e.id);

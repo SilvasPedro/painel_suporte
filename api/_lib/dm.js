@@ -295,6 +295,20 @@ export const buildDmContent = (event, params = {}, link = '') => {
             const who = organizer ? `${organizer} convidou você` : 'Você foi convidado(a)';
             return `📅 **Convite para evento marcado pelo Hubdesk**\n${who} para **${title}**.${details}\nEntre na tela **Agenda** do Hubdesk para **confirmar ou recusar** sua presença.${where}`;
         }
+        case 'agenda_reminder': {
+            const title = cleanInline(params.title, 100) || 'Evento';
+            const date = formatDateBR(params.date);
+            const start = safeTime(params.startTime);
+            const end = safeTime(params.endTime);
+            const place = cleanInline(params.location, 80);
+            const minutes = Math.round(Number(params.minutes));
+            const when = [date, start ? (end ? `${start} às ${end}` : start) : ''].filter(Boolean).join(' · ');
+            const details = `${when ? `\n🗓️ ${when}` : ''}${place ? `\n📍 ${place}` : ''}`;
+            if (Number.isFinite(minutes) && minutes > 0) {
+                return `⏰ **Lembrete: seu evento começa em ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}**\n**${title}**${details}${where}`;
+            }
+            return `🔔 **Seu evento começa agora**\n**${title}**${details}${where}`;
+        }
         case 'test':
             return '✅ **Teste do Hubdesk**\nSe você recebeu esta mensagem, os avisos por mensagem direta estão funcionando para a sua conta.';
         default:

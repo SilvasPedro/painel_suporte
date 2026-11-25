@@ -4,6 +4,18 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.23.0] - 2026-11-25
+
+### 🚀 Novas Funcionalidades (Added)
+- **Lembretes de eventos da Agenda por DM**: novo campo `remind` no evento (caixa "Enviar lembretes na DM do Discord", ligada por padrão em evento novo). O organizador e os convidados que não recusaram recebem a DM 15 minutos antes e no horário de início. O que já saiu fica em `remindersSent` e é zerado ao mudar data/horário.
+- `/api/cron-agenda-reminders` (protegida por `CRON_SECRET`) e novo tipo de aviso `agenda_reminder` em Configurações > Notificações.
+
+### ⚠️ Observações
+- **Configurar na Vercel**: `CRON_SECRET` e `FIREBASE_SERVICE_ACCOUNT` (JSON da conta de serviço) e um agendador chamando `GET /api/cron-agenda-reminders` com `Authorization: Bearer <CRON_SECRET>` a cada 1 a 5 minutos (Vercel Cron no plano Pro ou cron-job.org). Sem isso, nenhum lembrete é enviado.
+- Eventos antigos ficam sem lembrete até serem editados e marcados.
+
+---
+
 ## [v4.22.0] - 2026-11-23
 
 ### 🚀 Novas Funcionalidades (Added)

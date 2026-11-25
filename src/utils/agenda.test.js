@@ -152,3 +152,18 @@ describe('myVacationSummary', () => {
         expect(myVacationSummary(undefined, 'a', '2027-01-01')).toMatchObject({ entries: [], totalDays: 0, current: null, next: null });
     });
 });
+
+describe('buildEventPayload: lembretes', () => {
+    const creator = { id: 'g', name: 'Gestor' };
+    it('grava remind e começa sem lembretes enviados', () => {
+        const { payload } = buildEventPayload(form({ remind: true }), creator, null);
+        expect(payload.remind).toBe(true);
+        expect(payload.remindersSent).toEqual({});
+        expect(buildEventPayload(form(), creator, null).payload.remind).toBe(false);
+    });
+    it('mantém os enviados ao editar sem mudar o horário e zera ao reagendar', () => {
+        const existing = { ...buildEventPayload(form({ remind: true }), creator, null).payload, remindersSent: { m15: 'x' } };
+        expect(buildEventPayload(form({ remind: true, title: 'Novo título' }), creator, existing).payload.remindersSent).toEqual({ m15: 'x' });
+        expect(buildEventPayload(form({ remind: true, startTime: '16:00' }), creator, existing).payload.remindersSent).toEqual({});
+    });
+});

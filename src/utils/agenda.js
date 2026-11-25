@@ -7,6 +7,8 @@
  *     date: 'YYYY-MM-DD', startTime: 'HH:MM', endTime: 'HH:MM' | '',
  *     creatorId, creatorName,
  *     participantIds: [uid],                       // usado nas consultas e nas regras
+ *     remind: boolean,                             // lembretes por DM: 15 min antes e no horário de início
+ *     remindersSent: { m15?: ISO, start?: ISO },   // gravado pelo servidor ao enviar; zera se o horário mudar
  *     responses: { [uid]: { status, name, at } },  // status: pendente | confirmado | recusado
  *     createdAt, updatedAt
  *   }
@@ -89,6 +91,9 @@ export const buildEventPayload = (form, creator, existing = null, nowISO = new D
         endTime: form.endTime || '',
         participantIds: ids,
         responses,
+        remind: form.remind === true,
+        // Já enviados continuam valendo; se data/horário mudaram, os lembretes valem de novo
+        remindersSent: scheduleChanged ? {} : (existing?.remindersSent || {}),
         creatorId: existing?.creatorId || creator.id,
         creatorName: existing?.creatorName || creator.name || '',
         createdAt: existing?.createdAt || nowISO,
