@@ -1,13 +1,34 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.24.0';
+export const CURRENT_VERSION = 'v4.24.1';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.24.0',
+    version: 'v4.24.1',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Correção v4.24.1: o assistente de IA passa a conseguir ler o banco de dados e os lembretes da Agenda voltam a poder abrir a conexão do servidor.',
+    items: [
+      {
+        icon: Zap,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Assistente com acesso ao banco',
+        category: 'Assistente de IA',
+        description: 'O servidor usava um jeito antigo de abrir a conexão com o banco, que não existe mais na versão instalada, e o chat respondia que estava sem acesso. A conexão foi refeita e agora é testada de verdade.'
+      },
+      {
+        icon: Bell,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Lembretes da Agenda',
+        category: 'Agenda',
+        description: 'A função dos lembretes por DM tinha o mesmo problema de conexão e foi corrigida junto.'
+      }
+    ]
+  },
+  {
+    version: 'v4.24.0',
+    date: 'Novembro 2026',
     summary: 'Versão v4.24.0: o assistente de IA agora usa o Claude e lê todos os dados do banco (somente leitura) para montar os relatórios que a gestão pedir.',
     items: [
       {

@@ -1,5 +1,5 @@
-import admin from 'firebase-admin';
 import { timingSafeEqual } from 'node:crypto';
+import { getAgendaDb } from './_lib/adminDb.js';
 import { processAgendaReminders } from './_lib/agendaReminders.js';
 
 /**
@@ -21,18 +21,7 @@ const safeEqual = (a, b) => {
     return x.length === y.length && timingSafeEqual(x, y);
 };
 
-const getDb = () => {
-    if (!admin.apps.length) {
-        const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
-        if (!raw) return null;
-        const credentials = JSON.parse(raw);
-        admin.initializeApp({
-            credential: admin.credential.cert(credentials),
-            projectId: process.env.FIREBASE_PROJECT_ID || credentials.project_id
-        });
-    }
-    return admin.firestore();
-};
+const getDb = () => getAgendaDb(process.env);
 
 const buildStore = (db) => ({
     listEvents: async (dates) => {

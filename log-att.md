@@ -4,6 +4,18 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [26/11/2026] — Versão v4.24.1 (Correção da conexão com o banco no assistente e no cron)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.24.0` para `4.24.1`. |
+| **Alterado** | `api/_lib/adminDb.js` | API modular do `firebase-admin` v14; novo `getAgendaDb`. |
+| **Criado** | `api/_lib/adminDb.test.js` | Teste com o SDK real (sem rede). |
+| **Alterado** | `api/cron-agenda-reminders.js` | Usa `getAgendaDb` em vez do `admin.apps` antigo. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [26/11/2026] — Versão v4.24.0 (Chat com Claude e leitura de todo o banco)
 
 | Ação | Arquivo | Descrição da Alteração |

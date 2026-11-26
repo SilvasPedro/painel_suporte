@@ -4,6 +4,18 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.24.1] - 2026-11-26
+
+### 🐛 Corrigido (Fixed)
+- **Assistente de IA "sem acesso ao banco"**: `api/_lib/adminDb.js` usava `admin.apps`, `admin.credential` e `admin.firestore()`, que não existem no `firebase-admin` v14 (só a API modular). Abrir a conexão falhava com `Cannot read properties of undefined (reading 'find')` e o chat seguia sem as ferramentas de leitura. Passa a usar `getApps`, `initializeApp`, `cert` e `getFirestore`.
+- **Lembretes da Agenda**: `api/cron-agenda-reminders.js` tinha o mesmo padrão antigo (`admin.apps.length`) e agora usa `getAgendaDb` (app nomeado `agenda-cron`).
+- `api/_lib/adminDb.test.js` abre a conexão com o SDK real (chave gerada na hora, sem rede), o que o banco falso dos outros testes não pegava.
+
+### ⚠️ Observações
+- Novo deploy necessário. Sem mudança de variáveis nem nas regras do Firestore.
+
+---
+
 ## [v4.24.0] - 2026-11-26
 
 ### 🚀 Novas Funcionalidades (Added)
