@@ -4,6 +4,21 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [26/11/2026] — Versão v4.24.2 (Chat: selo Claude, redimensionar e janela flutuante)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.24.1` para `4.24.2`. |
+| **Criado** | `src/components/floating/ClaudeBadge.jsx` | Logo da Claude em SVG e selo "Powered by Claude AI". |
+| **Criado** | `src/utils/chatLayout.js` / `src/utils/chatLayout.test.js` | Limites, arrasto, teclado e armazenamento do tamanho do chat, com testes. |
+| **Criado** | `src/utils/chatPip.js` / `src/utils/chatPip.test.js` | Janela flutuante: suporte, cópia de estilos, tema e abertura, com testes. |
+| **Alterado** | `src/components/floating/ChatPanel.jsx` | Selo, alça de redimensionar, botão e portal da janela flutuante. |
+| **Alterado** | `src/components/floating/FloatingHub.jsx` | Passa `onRestore` ao chat. |
+| **Alterado** | `src/components/floating/floating.test.jsx` | Testes do selo, do botão e da alça. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [26/11/2026] — Versão v4.24.1 (Correção da conexão com o banco no assistente e no cron)
 
 | Ação | Arquivo | Descrição da Alteração |

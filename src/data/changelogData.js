@@ -1,13 +1,41 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.24.1';
+export const CURRENT_VERSION = 'v4.24.2';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.24.1',
+    version: 'v4.24.2',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.24.2: o chat da IA ganha o selo "Powered by Claude AI", pode ser redimensionado e pode virar uma janela flutuante que fica por cima de tudo.',
+    items: [
+      {
+        icon: Sparkles,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Selo "Powered by Claude AI"',
+        category: 'Assistente de IA',
+        description: 'O cabeçalho do chat mostra o logo da Claude e o selo "Powered by Claude AI", fixo e legível nos três temas.'
+      },
+      {
+        icon: Layout,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Chat redimensionável',
+        category: 'Assistente de IA',
+        description: 'Arraste a alça do canto superior esquerdo para aumentar ou diminuir o chat (ou use as setas do teclado). Duplo clique ou Enter restaura o tamanho padrão. O tamanho escolhido fica salvo neste navegador e sempre cabe na tela.'
+      },
+      {
+        icon: Layers,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Janela flutuante (Picture-in-Picture)',
+        category: 'Assistente de IA',
+        description: 'O botão do cabeçalho leva o chat para uma janela pequena que fica sempre por cima das outras, até de outros programas, com o mesmo tema do painel. A conversa continua de onde parou e "Voltar ao painel" (ou fechar a janela) traz o chat de volta. Disponível no Chrome e no Edge.'
+      }
+    ]
+  },
+  {
+    version: 'v4.24.1',
+    date: 'Novembro 2026',
     summary: 'Correção v4.24.1: o assistente de IA passa a conseguir ler o banco de dados e os lembretes da Agenda voltam a poder abrir a conexão do servidor.',
     items: [
       {

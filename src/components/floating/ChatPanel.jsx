@@ -1,11 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, Minus, Send, RotateCcw, Copy, Check, AlertCircle, ShieldCheck } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Sparkles, Minus, Send, RotateCcw, Copy, Check, AlertCircle, ShieldCheck, PictureInPicture, PictureInPicture2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getCachedCollection } from '../../services/dataCache';
 import { getAuthHeaders, readAiError } from '../../services/apiAuth';
 import { cn } from '../../utils/cn';
 import { buildChatContext, buildChatHistory, SUGGESTED_PROMPTS, CHAT_LIMITS } from '../../utils/floatingHub';
+import {
+    CHAT_SIZE, WIDE_BREAKPOINT, PIP_SIZE, clampChatSize, defaultChatSize, resizeFromCorner, resizeByKey,
+    loadChatSize, saveChatSize, clearChatSize
+} from '../../utils/chatLayout';
+import { supportsDocumentPip, openChatPip, watchTheme } from '../../utils/chatPip';
+import ClaudeBadge from './ClaudeBadge';
 
 const GREETING = {
     id: 'greeting',
@@ -44,11 +51,21 @@ function TypingDots() {
     );
 }
 
+const IS_BROWSER = typeof window !== 'undefined';
+const viewport = () => ({ w: window.innerWidth, h: window.innerHeight });
+const getStorage = () => {
+    try { return window.localStorage; } catch { return null; } // pode lançar erro em janela privada
+};
+
 /**
  * Chat com o assistente de IA (exclusivo da gestão). Fica montado enquanto o botão flutuante existe,
  * então a conversa continua ao minimizar. O botão e a abertura ficam no FloatingHub.
+ *
+ * Tamanho: a alça no canto superior esquerdo redimensiona o painel (o tamanho fica salvo no navegador).
+ * Janela flutuante: o botão do cabeçalho leva o chat para uma janela Picture-in-Picture que fica por cima
+ * de tudo (Chrome/Edge); fechá-la devolve o chat ao painel. `onRestore` reabre o painel nesse retorno.
  */
-export default function ChatPanel({ isOpen, onClose }) {
+export default function ChatPanel({ isOpen, onClose, onRestore }) {
     const [messages, setMessages] = useState([GREETING]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -56,6 +73,101 @@ export default function ChatPanel({ isOpen, onClose }) {
     const endRef = useRef(null);
     const inputRef = useRef(null);
     const counter = useRef(0);
+
+    // Tamanho do painel
+    const [size, setSize] = useState(() => (IS_BROWSER
+        ? loadChatSize(getStorage(), viewport())
+        : { w: CHAT_SIZE.defaultW, h: CHAT_SIZE.defaultH }));
+    const [wide, setWide] = useState(() => IS_BROWSER && window.innerWidth >= WIDE_BREAKPOINT);
+    const [resizing, setResizing] = useState(false);
+    const sizeRef = useRef(size);
+    const dragRef = useRef(null);
+
+    // Janela flutuante
+    const [pipWindow, setPipWindow] = useState(null);
+    const [pipNotice, setPipNotice] = useState('');
+    const pipRef = useRef(null);
+    const onRestoreRef = useRef(onRestore);
+    const pipSupported = supportsDocumentPip();
+
+    useEffect(() => { onRestoreRef.current = onRestore; }, [onRestore]);
+
+    const applySize = (next) => {
+        sizeRef.current = next;
+        setSize(next);
+    };
+
+    // Ao girar ou redimensionar a janela do navegador, o painel continua cabendo na tela
+    useEffect(() => {
+        const onWindowResize = () => {
+            setWide(window.innerWidth >= WIDE_BREAKPOINT);
+            const next = clampChatSize(sizeRef.current, viewport());
+            sizeRef.current = next;
+            setSize(next);
+        };
+        window.addEventListener('resize', onWindowResize);
+        return () => window.removeEventListener('resize', onWindowResize);
+    }, []);
+
+    // Fechar o chat fecha também a janela flutuante
+    useEffect(() => () => { pipRef.current?.close(); }, []);
+
+    const startResize = (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        e.currentTarget.setPointerCapture?.(e.pointerId);
+        dragRef.current = { w: sizeRef.current.w, h: sizeRef.current.h, x: e.clientX, y: e.clientY };
+        setResizing(true);
+        e.preventDefault();
+    };
+    const moveResize = (e) => {
+        if (!dragRef.current) return;
+        applySize(resizeFromCorner(dragRef.current, { x: e.clientX, y: e.clientY }, viewport()));
+    };
+    const endResize = (e) => {
+        if (!dragRef.current) return;
+        dragRef.current = null;
+        setResizing(false);
+        e.currentTarget.releasePointerCapture?.(e.pointerId);
+        saveChatSize(getStorage(), sizeRef.current);
+    };
+    const resetSize = () => {
+        clearChatSize(getStorage());
+        applySize(defaultChatSize(viewport()));
+    };
+    const keyResize = (e) => {
+        if (e.key === 'Enter' || e.key === 'Home') { e.preventDefault(); resetSize(); return; }
+        const next = resizeByKey(sizeRef.current, e.key, viewport());
+        if (next === sizeRef.current) return;
+        e.preventDefault();
+        applySize(next);
+        saveChatSize(getStorage(), next);
+    };
+
+    const showPipNotice = (text) => {
+        setPipNotice(text);
+        setTimeout(() => setPipNotice(''), 5000);
+    };
+
+    const openPip = async () => {
+        try {
+            const pip = await openChatPip(window, PIP_SIZE);
+            const stopTheme = watchTheme(document, pip.document);
+            const handleClose = () => {
+                stopTheme();
+                pip.removeEventListener('pagehide', handleClose);
+                if (pipRef.current === pip) pipRef.current = null;
+                setPipWindow(null);
+                onRestoreRef.current?.(); // devolve o chat ao painel
+            };
+            pip.addEventListener('pagehide', handleClose);
+            pipRef.current = pip;
+            setPipWindow(pip);
+        } catch (error) {
+            console.error('Não foi possível abrir a janela flutuante:', error);
+            showPipNotice('Não foi possível abrir a janela flutuante.');
+        }
+    };
+    const closePip = () => pipRef.current?.close();
 
     const nextId = () => { counter.current += 1; return `m${counter.current}`; };
     const hasConversation = messages.some(m => !m.greeting);
@@ -65,10 +177,10 @@ export default function ChatPanel({ isOpen, onClose }) {
         endRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'end' });
     }, [messages, isLoading, isOpen]);
 
-    // Foco no campo ao abrir
+    // Foco no campo ao abrir (no painel ou na janela flutuante)
     useEffect(() => {
-        if (isOpen) inputRef.current?.focus();
-    }, [isOpen]);
+        if (isOpen || pipWindow) inputRef.current?.focus();
+    }, [isOpen, pipWindow]);
 
     const send = async (rawText, { isRetry = false } = {}) => {
         const text = String(rawText || '').trim();
@@ -163,31 +275,74 @@ export default function ChatPanel({ isOpen, onClose }) {
         setTimeout(() => setCopiedId(null), 1800);
     };
 
-    return (
+    const inPip = Boolean(pipWindow);
+    const pipTitle = !pipSupported
+        ? 'Janela flutuante indisponível neste navegador (use o Chrome ou o Edge)'
+        : (inPip ? 'Voltar ao painel' : 'Janela flutuante: fica por cima de tudo');
+
+    const panel = (
         <section
             id="floating-chat-panel"
             role="dialog"
             aria-label="Assistente de IA do Hubdesk"
-            aria-hidden={!isOpen}
-            className={cn(
-                'fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[26rem] z-50 origin-bottom-right transition-all duration-200',
-                'bg-surface border border-subtle rounded-3xl shadow-2xl flex flex-col overflow-hidden',
-                isOpen ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none invisible'
-            )}
-            style={{ height: '36rem', maxHeight: 'calc(100vh - 8rem)' }}
+            aria-hidden={!isOpen && !inPip}
+            className={inPip
+                ? 'w-screen h-screen bg-surface flex flex-col overflow-hidden'
+                : cn(
+                    'fixed bottom-24 right-4 sm:right-6 w-[calc(100vw-2rem)] sm:w-[26rem] z-50 origin-bottom-right transition-all duration-200',
+                    'bg-surface border border-subtle rounded-3xl shadow-2xl flex flex-col overflow-hidden',
+                    isOpen ? 'scale-100 opacity-100 pointer-events-auto' : 'scale-90 opacity-0 pointer-events-none invisible',
+                    resizing && 'transition-none select-none'
+                )}
+            style={inPip
+                ? undefined
+                : (wide
+                    ? { width: size.w, height: size.h, maxHeight: 'calc(100vh - 8rem)' }
+                    : { height: '36rem', maxHeight: 'calc(100vh - 8rem)' })}
         >
+            {/* Alça de redimensionar (canto superior esquerdo): arraste, use as setas ou clique duas vezes para restaurar */}
+            {wide && !inPip && (
+                <div
+                    role="separator"
+                    aria-orientation="vertical"
+                    aria-label="Redimensionar o chat. Arraste ou use as setas do teclado; Enter restaura o tamanho."
+                    tabIndex={isOpen ? 0 : -1}
+                    onPointerDown={startResize}
+                    onPointerMove={moveResize}
+                    onPointerUp={endResize}
+                    onPointerCancel={endResize}
+                    onDoubleClick={resetSize}
+                    onKeyDown={keyResize}
+                    title="Arraste para redimensionar (duplo clique restaura o tamanho)"
+                    className="absolute top-1.5 left-1.5 z-10 w-6 h-6 flex items-center justify-center rounded-lg cursor-nwse-resize touch-none text-muted-hub hover:text-rose-600 hover:bg-subtle focus-visible:text-rose-600 focus-visible:bg-subtle focus-visible:outline-none transition-colors"
+                >
+                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                        <path d="M10.5 1.5 1.5 10.5M10.5 6 6 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                    </svg>
+                </div>
+            )}
+
             {/* Cabeçalho */}
-            <header className="px-4 py-3 border-b border-subtle flex items-center gap-3 shrink-0 bg-surface">
+            <header className={cn('py-3 border-b border-subtle flex items-center gap-1 sm:gap-2 shrink-0 bg-surface', wide && !inPip ? 'pl-9 pr-3' : 'pl-3 pr-2 sm:px-4')}>
                 <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
                     <Sparkles className="w-5 h-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold text-primary-hub leading-tight font-brand">Assistente Hubdesk</h3>
-                    <p className="text-xs text-muted-hub flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                        Claude com leitura de todos os dados
-                    </p>
+                    <h3 className="text-sm font-bold text-primary-hub leading-tight font-brand truncate">Assistente Hubdesk</h3>
+                    <div className="mt-1">
+                        <ClaudeBadge />
+                    </div>
                 </div>
+                <button
+                    type="button"
+                    onClick={inPip ? closePip : openPip}
+                    disabled={!pipSupported}
+                    className="p-2 rounded-xl text-secondary-hub hover:text-primary-hub hover:bg-subtle disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                    title={pipTitle}
+                    aria-label={inPip ? 'Voltar o chat para o painel' : 'Abrir o chat em janela flutuante'}
+                >
+                    {inPip ? <PictureInPicture className="w-4 h-4" aria-hidden="true" /> : <PictureInPicture2 className="w-4 h-4" aria-hidden="true" />}
+                </button>
                 <button
                     type="button"
                     onClick={handleNewConversation}
@@ -198,15 +353,17 @@ export default function ChatPanel({ isOpen, onClose }) {
                 >
                     <RotateCcw className="w-4 h-4" aria-hidden="true" />
                 </button>
-                <button
-                    type="button"
-                    onClick={onClose}
-                    className="p-2 rounded-xl text-secondary-hub hover:text-primary-hub hover:bg-subtle transition-colors cursor-pointer"
-                    title="Minimizar (a conversa é mantida)"
-                    aria-label="Minimizar chat"
-                >
-                    <Minus className="w-4 h-4" aria-hidden="true" />
-                </button>
+                {!inPip && (
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        className="p-2 rounded-xl text-secondary-hub hover:text-primary-hub hover:bg-subtle transition-colors cursor-pointer"
+                        title="Minimizar (a conversa é mantida)"
+                        aria-label="Minimizar chat"
+                    >
+                        <Minus className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                )}
             </header>
 
             {/* Mensagens */}
@@ -329,7 +486,13 @@ export default function ChatPanel({ isOpen, onClose }) {
                     <ShieldCheck className="w-3 h-3 shrink-0" aria-hidden="true" />
                     Exclusivo da gestão. A IA pode errar: confira os dados importantes.
                 </p>
+                {pipNotice && (
+                    <p role="status" className="mt-1 text-xs text-rose-600 dark:text-rose-400 px-1">{pipNotice}</p>
+                )}
             </form>
         </section>
     );
+
+    // Na janela flutuante o mesmo painel é desenhado dentro do documento dela; o painel fixo some do site
+    return inPip ? createPortal(panel, pipWindow.document.body) : panel;
 }

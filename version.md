@@ -4,6 +4,24 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.24.2] - 2026-11-26
+
+### 🚀 Novas Funcionalidades (Added)
+- **Selo "Powered by Claude AI"** no cabeçalho do chat, com o logo da Claude em SVG (`ClaudeBadge.jsx`), estático e em uma linha também no celular.
+- **Chat redimensionável**: alça no canto superior esquerdo (arrastar, setas do teclado; duplo clique ou Enter restaura). Tamanho mínimo 352×420, máximo o que cabe na tela, salvo em `localStorage` (`hubdesk_chat_size`) e reajustado ao redimensionar a janela do navegador. No celular (menos de 640 px) o chat segue ocupando a largura da tela, sem alça.
+- **Janela flutuante (Picture-in-Picture)**: botão no cabeçalho abre o chat na Document Picture-in-Picture API (Chrome e Edge 116+), sempre por cima, com estilos e tema copiados e acompanhando trocas de tema. O React desenha o mesmo painel dentro da janela, então a conversa e o rascunho continuam; fechar a janela ou "Voltar ao painel" devolve o chat ao painel. Em navegadores sem a API o botão fica desativado com explicação.
+- `src/utils/chatLayout.js` (tamanho) e `src/utils/chatPip.js` (janela flutuante), com testes.
+
+### 🔄 Alterado (Changed)
+- Cabeçalho do chat: o selo substitui a linha "Claude com leitura de todos os dados" e o ponto verde; espaçamento menor em tela estreita.
+- `FloatingHub` passa `onRestore` ao chat para reabrir o painel quando a janela flutuante é fechada.
+
+### ⚠️ Observações
+- A janela flutuante só abre por clique do usuário (regra do navegador) e só pode existir uma por página.
+- Sem mudança de variáveis nem nas regras do Firestore. Novo deploy necessário.
+
+---
+
 ## [v4.24.1] - 2026-11-26
 
 ### 🐛 Corrigido (Fixed)

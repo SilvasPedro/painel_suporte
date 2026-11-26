@@ -56,6 +56,23 @@ describe('ChatPanel', () => {
         expect(html).toContain('Exclusivo da gestão');
     });
 
+    it('mostra o selo "Powered by Claude AI" com o logo no cabeçalho', () => {
+        const html = renderToString(<ChatPanel isOpen onClose={() => {}} />);
+        expect(html).toContain('Powered by Claude AI');
+        expect(html).toContain('#D97757'); // cor do logo
+    });
+
+    it('traz o botão de janela flutuante (desativado sem suporte do navegador)', () => {
+        const html = renderToString(<ChatPanel isOpen onClose={() => {}} />);
+        expect(html).toContain('aria-label="Abrir o chat em janela flutuante"');
+        expect(html).toMatch(/<button[^>]*disabled=""[^>]*aria-label="Abrir o chat em janela flutuante"|<button[^>]*aria-label="Abrir o chat em janela flutuante"[^>]*disabled=""/);
+    });
+
+    it('na tela larga não mostra a alça de redimensionar (sem navegador, o layout é o estreito)', () => {
+        const html = renderToString(<ChatPanel isOpen onClose={() => {}} />);
+        expect(html).not.toContain('role="separator"');
+    });
+
     it('fechado, fica oculto mas montado', () => {
         const html = renderToString(<ChatPanel isOpen={false} onClose={() => {}} />);
         expect(html).toContain('invisible');

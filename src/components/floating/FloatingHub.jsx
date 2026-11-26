@@ -72,7 +72,7 @@ export default function FloatingHub() {
     return (
         <div ref={rootRef}>
             <ExtensionsPanel isOpen={panel === 'extensions'} onClose={() => setPanel(null)} />
-            {aiAllowed && <ChatPanel isOpen={panel === 'chat'} onClose={() => setPanel(null)} />}
+            {aiAllowed && <ChatPanel isOpen={panel === 'chat'} onClose={() => setPanel(null)} onRestore={() => setPanel('chat')} />}
 
             {/* Bolinhas de escolha (aparecem acima do botão) */}
             <div
