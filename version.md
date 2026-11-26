@@ -4,6 +4,29 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.24.0] - 2026-11-26
+
+### 🚀 Novas Funcionalidades (Added)
+- **Assistente de IA com acesso de leitura a todo o banco**: o chat consulta o Firestore sozinho por quatro ferramentas (`listar_colecoes`, `ler_documento`, `consultar_colecao` e `agregar`), incluindo subcoleções e grupos de coleções, para emitir relatórios por período, rankings e comparações. A resposta traz o resumo do que foi consultado ("Consultou: ...").
+- **Somente leitura**: não existe ferramenta de escrita; campos com nome de senha, token, chave, credencial ou webhook voltam como `[oculto]` e o prompt proíbe repetir segredos.
+- **Prompt caching** do contexto e das instruções (mais rápido e barato nas perguntas seguintes) e limite de rodadas e de tempo por resposta.
+- `api/_lib/adminDb.js` (conexão de leitura), `api/_lib/dbTools.js` (ferramentas), `api/_lib/aiClient.js` (cliente e laço de ferramentas), com testes.
+
+### 🔄 Alterado (Changed)
+- **Gemini substituído pelo Claude** em `/api/chat` e `/api/insights` (`@anthropic-ai/sdk`; `@google/genai` removido). Modelo padrão `claude-sonnet-5-5`, com `claude-haiku-5-5` de reserva; `ANTHROPIC_MODEL` opcional escolhe outro.
+- Erros da IA reescritos para a API da Anthropic (chave inválida, sem crédito, limite, modelo indisponível, sobrecarga, tempo esgotado) e conferência da chave `ANTHROPIC_API_KEY` (prefixo `sk-ant-`).
+- Prompt do chat: relatórios completos em estrutura fixa (título, fontes, resumo executivo, tabelas, pontos de atenção, próximo passo) e regras contra instruções escondidas nos dados.
+- Chat: boas-vindas, sugestões e placeholder novos. `vercel.json`: `maxDuration` de 60 s para `/api/chat` e `/api/insights`.
+
+### ⚠️ Observações
+- **Configurar na Vercel**: `ANTHROPIC_API_KEY` (console.anthropic.com > API Keys, sem prefixo `VITE_`). `GEMINI_API_KEY` e `GEMINI_MODEL` não são mais usadas.
+- **Acesso ao banco**: usa `FIREBASE_AI_SERVICE_ACCOUNT` ou, se ausente, `FIREBASE_SERVICE_ACCOUNT` (a mesma do lembrete da Agenda). Recomendado criar uma conta de serviço própria só com o papel "Leitor do Cloud Datastore". Sem nenhuma das duas, o chat responde só com o contexto do navegador e avisa que não tem acesso ao banco.
+- A conta de serviço ignora as regras do Firestore; quem usa o chat é só a gestão (mesma regra de antes). Sem mudança nas regras do Firestore.
+- Os dados consultados passam a ser enviados à Anthropic para gerar a resposta.
+- Novo deploy na Vercel necessário. O `bun.lock` ainda lista o `@google/genai` até alguém rodar `bun install`.
+
+---
+
 ## [v4.23.1] - 2026-11-25
 
 ### 🐛 Corrigido (Fixed)

@@ -11,7 +11,7 @@ const GREETING = {
     id: 'greeting',
     role: 'assistant',
     greeting: true,
-    content: 'Olá! Sou o assistente do Hubdesk. Posso resumir o desempenho da equipe, apontar pontos de atenção e ajudar a interpretar os KPIs.'
+    content: 'Olá! Sou o assistente do Hubdesk e leio todos os dados do painel (somente leitura). Peça relatórios, rankings, comparações de período ou resumos de qualquer área: equipe, avaliações, chamados, escalas, agenda e Smart Pre.'
 };
 
 // Estilo das respostas em Markdown (o projeto não usa o plugin typography do Tailwind)
@@ -113,7 +113,10 @@ export default function ChatPanel({ isOpen, onClose }) {
             const data = await response.json().catch(() => null);
 
             if (response.ok && data?.reply) {
-                setMessages(prev => [...prev, { id: nextId(), role: 'assistant', content: data.reply }]);
+                setMessages(prev => [...prev, {
+                    id: nextId(), role: 'assistant', content: data.reply,
+                    consultas: Array.isArray(data.consultas) ? data.consultas.slice(0, 12) : []
+                }]);
             } else {
                 const failure = response.ok
                     ? { message: 'A IA não devolveu uma resposta. Tente reformular a pergunta.', detail: `HTTP ${response.status} • resposta vazia`, retryable: true }
@@ -182,7 +185,7 @@ export default function ChatPanel({ isOpen, onClose }) {
                     <h3 className="text-sm font-bold text-primary-hub leading-tight font-brand">Assistente Hubdesk</h3>
                     <p className="text-xs text-muted-hub flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                        IA com os dados do painel
+                        Claude com leitura de todos os dados
                     </p>
                 </div>
                 <button
@@ -231,6 +234,11 @@ export default function ChatPanel({ isOpen, onClose }) {
                                         <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                                     ) : (
                                         <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>{msg.content}</ReactMarkdown>
+                                    )}
+                                    {!isUser && !msg.error && msg.consultas?.length > 0 && (
+                                        <p className="mt-2 pt-2 border-t border-subtle text-xs text-muted-hub break-words" title="Dados lidos no banco para montar esta resposta">
+                                            Consultou: {msg.consultas.join(' · ')}
+                                        </p>
                                     )}
                                     {msg.error && msg.detail && (
                                         <p className="mt-1.5 text-xs font-mono opacity-80 break-words" title="Detalhe técnico do erro">
@@ -302,7 +310,7 @@ export default function ChatPanel({ isOpen, onClose }) {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Pergunte sobre a equipe, KPIs ou escalas"
+                        placeholder="Peça um relatório ou pergunte sobre qualquer dado"
                         aria-label="Mensagem para o assistente"
                         maxLength={CHAT_LIMITS.message}
                         disabled={isLoading}

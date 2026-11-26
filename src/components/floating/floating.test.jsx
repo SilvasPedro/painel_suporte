@@ -49,7 +49,7 @@ describe('ChatPanel', () => {
         expect(html).toContain('Assistente Hubdesk');
         expect(html).toContain('Olá! Sou o assistente do Hubdesk');
         expect(html).toContain('Sugestões');
-        expect(html).toContain('Faça um resumo do desempenho da equipe');
+        expect(html).toContain('Relatório do desempenho da equipe no mês');
         expect(html).toContain('aria-label="Mensagem para o assistente"');
         expect(html).toContain('aria-label="Enviar mensagem"');
         expect(html).toContain('aria-label="Minimizar chat"');

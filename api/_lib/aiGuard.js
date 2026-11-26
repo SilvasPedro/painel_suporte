@@ -1,7 +1,7 @@
 /**
  * Proteção das rotas de IA (/api/chat e /api/insights).
  *
- * Antes, qualquer pessoa que conhecesse o endereço podia chamar o Gemini e gastar a cota da chave.
+ * Antes, qualquer pessoa que conhecesse o endereço podia chamar a IA e gastar o saldo da chave.
  * Agora cada chamada precisa de:
  *  1. login válido (ID token do Firebase, com assinatura verificada);
  *  2. perfil da gestão (mesma regra do Firestore: gestor, supervisor, admin, noc, diretor);

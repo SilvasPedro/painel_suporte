@@ -1,22 +1,19 @@
-import { GoogleGenAI } from '@google/genai';
 import { authorizeAiRequest, validateChatBody, sendGuardError } from './_lib/aiGuard.js';
 import { buildChatSystemPrompt } from './_lib/aiPrompts.js';
-import { generateWithFallback } from './_lib/aiModels.js';
-import { classifyGeminiError, emptyReplyError, errorBody, sanitizeDetail, inspectApiKey } from './_lib/aiErrors.js';
+import { classifyAiError, emptyReplyError, errorBody, sanitizeDetail } from './_lib/aiErrors.js';
+import { getAiClient, buildMessages, runWithTools } from './_lib/aiClient.js';
+import { getAiReaderDb } from './_lib/adminDb.js';
+import { createDbTools, TOOL_DEFINITIONS } from './_lib/dbTools.js';
 
-let aiInstance = null;
-let aiInstanceKey = '';
-
-// Só a variável do servidor: qualquer variável VITE_* vai para o código público do site.
-// O valor é conferido antes de usar (aspas curvas, espaços e texto junto à chave quebram a chamada).
-function getAI() {
-  const inspected = inspectApiKey(process.env.GEMINI_API_KEY);
-  if (!inspected.ok) return { failure: inspected };
-  if (!aiInstance || aiInstanceKey !== inspected.key) {
-    aiInstance = new GoogleGenAI({ apiKey: inspected.key });
-    aiInstanceKey = inspected.key;
+// Conexão de leitura com o banco; sem conta de serviço, o chat segue só com os dados de contexto
+function getDbTools() {
+  try {
+    const db = getAiReaderDb(process.env);
+    return db ? createDbTools({ db }) : null;
+  } catch (error) {
+    console.error('Banco indisponível para a IA:', sanitizeDetail(error?.message, 200));
+    return null;
   }
-  return { ai: aiInstance };
 }
 
 export default async function handler(req, res) {
@@ -34,46 +31,35 @@ export default async function handler(req, res) {
   if (!parsed.ok) return res.status(parsed.status).json({ error: 'pedido-invalido', message: parsed.error });
   const { message, history, contextData } = parsed.value;
 
-  const { ai, failure: keyFailure } = getAI();
+  const { ai, failure: keyFailure } = getAiClient(process.env);
   if (!ai) {
     return res.status(503).json(errorBody({ ...keyFailure, retryable: false }));
   }
 
   try {
-    const formattedHistory = history.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
-
-    const { response } = await generateWithFallback({
+    const dbTools = getDbTools();
+    const { response, text, consultas } = await runWithTools({
       ai,
       env: process.env,
       onModelSkipped: (model) => console.warn(`Modelo ${model} indisponível; tentando o próximo.`),
-      request: {
-        contents: [
-          ...formattedHistory,
-          { role: 'user', parts: [{ text: message }] }
-        ],
-        config: {
-          systemInstruction: buildChatSystemPrompt({ contextData }),
-          temperature: 0.2,
-          maxOutputTokens: 1200,
-          thinkingConfig: { thinkingBudget: 0 } // respostas curtas e rápidas, sem gastar o limite pensando
-        }
-      }
+      // cache_control: o contexto e as instruções são reaproveitados nas perguntas seguintes (mais rápido e barato)
+      system: [{ type: 'text', text: buildChatSystemPrompt({ contextData, dbAvailable: Boolean(dbTools) }), cache_control: { type: 'ephemeral' } }],
+      messages: buildMessages(history, message),
+      tools: dbTools ? TOOL_DEFINITIONS : [],
+      execute: dbTools ? dbTools.execute : undefined,
+      maxTokens: 3500
     });
 
-    const reply = (response.text || '').trim();
-    if (!reply) {
+    if (!text) {
       const failure = emptyReplyError(response);
       return res.status(failure.httpStatus).json(errorBody(failure));
     }
-    return res.status(200).json({ reply });
+    return res.status(200).json({ reply: text, consultas });
 
   } catch (error) {
-    const failure = classifyGeminiError(error);
+    const failure = classifyAiError(error);
     // O motivo completo fica nos logs da Vercel (sem chaves) e o resumo vai para a tela
-    console.error('Erro na rota de chat (Gemini):', failure.error, sanitizeDetail(error?.message, 400));
+    console.error('Erro na rota de chat (Claude):', failure.error, sanitizeDetail(error?.message, 400));
     return res.status(failure.httpStatus).json(errorBody(failure));
   }
 }

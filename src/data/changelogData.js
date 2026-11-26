@@ -1,13 +1,41 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.23.1';
+export const CURRENT_VERSION = 'v4.24.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.23.1',
+    version: 'v4.24.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.24.0: o assistente de IA agora usa o Claude e lê todos os dados do banco (somente leitura) para montar os relatórios que a gestão pedir.',
+    items: [
+      {
+        icon: Sparkles,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Chat com o Claude',
+        category: 'Assistente de IA',
+        description: 'O chat e a análise de desempenho passam a usar o Claude, da Anthropic, no lugar do Gemini. As respostas ficam mais completas e o contexto das instruções é reaproveitado entre as perguntas.'
+      },
+      {
+        icon: FileText,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Relatórios com todos os dados',
+        category: 'Assistente de IA',
+        description: 'O assistente consulta o banco por conta própria: equipe, avaliações, chamados, escalas, agenda, KPIs e Smart Pre. Peça relatórios por período, rankings e comparações. Cada resposta mostra, no rodapé, o que foi consultado.'
+      },
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20',
+        title: 'Somente leitura e sem segredos',
+        category: 'Segurança',
+        description: 'A IA só consegue ler: não grava, altera nem apaga nada. Senhas, tokens, chaves e links de webhook aparecem ocultos para ela. O acesso continua exclusivo da gestão, com limite de uso por minuto.'
+      }
+    ]
+  },
+  {
+    version: 'v4.23.1',
+    date: 'Novembro 2026',
     summary: 'Correção v4.23.1: relatos do Smart Pre podem ser editados e excluídos, e o detalhe do cliente ficou mais fácil de usar com muitos atendimentos.',
     items: [
       {

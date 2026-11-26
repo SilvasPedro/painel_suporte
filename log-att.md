@@ -4,6 +4,25 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [26/11/2026] — Versão v4.24.0 (Chat com Claude e leitura de todo o banco)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.23.1` para `4.24.0`; `@google/genai` removido e `@anthropic-ai/sdk` adicionado. |
+| **Criado** | `api/_lib/adminDb.js` | Conexão de leitura com o Firestore (`FIREBASE_AI_SERVICE_ACCOUNT` ou `FIREBASE_SERVICE_ACCOUNT`). |
+| **Criado** | `api/_lib/dbTools.js` / `api/_lib/dbTools.test.js` | Ferramentas de leitura (`listar_colecoes`, `ler_documento`, `consultar_colecao`, `agregar`), ocultação de segredos e testes. |
+| **Criado** | `api/_lib/aiClient.js` / `api/_lib/aiClient.test.js` | Cliente do Claude, montagem das mensagens e laço de ferramentas com limite de rodadas e tempo. |
+| **Alterado** | `api/chat.js` / `api/insights.js` | Trocam o Gemini pelo Claude; o chat usa as ferramentas do banco e devolve `consultas`. |
+| **Alterado** | `api/_lib/aiErrors.js` / `api/_lib/aiErrors.test.js` | Erros da Anthropic (`classifyAiError`), chave `sk-ant-` e motivo de resposta vazia. |
+| **Alterado** | `api/_lib/aiModels.js` / `api/_lib/aiModels.test.js` | Modelos `claude-sonnet-5-5` e `claude-haiku-5-5`, `ANTHROPIC_MODEL` e salto por 404. |
+| **Alterado** | `api/_lib/aiPrompts.js` | Prompt com acesso ao banco, relatórios completos e regras de segurança. |
+| **Alterado** | `src/components/floating/ChatPanel.jsx` / `src/utils/floatingHub.js` / `src/components/floating/floating.test.jsx` / `src/services/apiAuth.test.js` | Textos novos, sugestões de relatório e rodapé "Consultou". |
+| **Alterado** | `vercel.json` | `maxDuration` de 60 s para as rotas de IA. |
+| **Alterado** | `.env.example` / `metadata.json` | Variáveis do Claude e do acesso ao banco; capacidade do Gemini removida. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [25/11/2026] — Versão v4.23.1 (Smart Pre: editar/excluir relato e detalhe do cliente)
 
 | Ação | Arquivo | Descrição da Alteração |

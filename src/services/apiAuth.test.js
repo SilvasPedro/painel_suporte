@@ -6,9 +6,9 @@ import { readAiError, describeAiError } from './apiAuth';
 
 describe('readAiError', () => {
     it('usa a explicação do servidor e monta o detalhe técnico', () => {
-        const r = readAiError(502, { error: 'chave-invalida', message: 'A chave do Gemini foi recusada.', detail: '400 • INVALID_ARGUMENT', retryable: false });
-        expect(r.message).toBe('A chave do Gemini foi recusada.');
-        expect(r.detail).toBe('HTTP 502 • chave-invalida • 400 • INVALID_ARGUMENT');
+        const r = readAiError(502, { error: 'chave-invalida', message: 'A chave da Anthropic foi recusada.', detail: '401 • authentication_error', retryable: false });
+        expect(r.message).toBe('A chave da Anthropic foi recusada.');
+        expect(r.detail).toBe('HTTP 502 • chave-invalida • 401 • authentication_error');
         expect(r.retryable).toBe(false);
     });
 

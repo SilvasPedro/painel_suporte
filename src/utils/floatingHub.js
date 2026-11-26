@@ -22,10 +22,10 @@ export const canUseAiChat = (user) => {
 };
 
 export const SUGGESTED_PROMPTS = [
-    'Faça um resumo do desempenho da equipe',
+    'Relatório do desempenho da equipe no mês',
     'Quais colaboradores precisam de atenção?',
-    'Quais KPIs do setor estão abaixo da meta?',
-    'Sugira ações para melhorar os resultados'
+    'Resumo dos chamados críticos em aberto',
+    'Quais KPIs do setor estão abaixo da meta?'
 ];
 
 // Campos que só pesam no envio (anexos, textos longos e listas aninhadas) são deixados de fora

@@ -1,23 +1,8 @@
-import { GoogleGenAI } from '@google/genai';
 import { authorizeAiRequest, validateInsightsBody, sendGuardError } from './_lib/aiGuard.js';
 import { buildInsightsPrompts } from './_lib/aiPrompts.js';
 import { generateWithFallback } from './_lib/aiModels.js';
-import { classifyGeminiError, emptyReplyError, errorBody, sanitizeDetail, inspectApiKey } from './_lib/aiErrors.js';
-
-let aiInstance = null;
-let aiInstanceKey = '';
-
-// Só a variável do servidor: qualquer variável VITE_* vai para o código público do site.
-// O valor é conferido antes de usar (aspas curvas, espaços e texto junto à chave quebram a chamada).
-function getAI() {
-  const inspected = inspectApiKey(process.env.GEMINI_API_KEY);
-  if (!inspected.ok) return { failure: inspected };
-  if (!aiInstance || aiInstanceKey !== inspected.key) {
-    aiInstance = new GoogleGenAI({ apiKey: inspected.key });
-    aiInstanceKey = inspected.key;
-  }
-  return { ai: aiInstance };
-}
+import { classifyAiError, emptyReplyError, errorBody, sanitizeDetail } from './_lib/aiErrors.js';
+import { getAiClient, textOf } from './_lib/aiClient.js';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -35,7 +20,7 @@ export default async function handler(req, res) {
   if (!parsed.ok) return res.status(parsed.status).json({ error: 'pedido-invalido', message: parsed.error });
   const { dadosColaborador, periodo, tipoAnalise } = parsed.value;
 
-  const { ai, failure: keyFailure } = getAI();
+  const { ai, failure: keyFailure } = getAiClient(process.env);
   if (!ai) {
     return res.status(503).json(errorBody({ ...keyFailure, retryable: false }));
   }
@@ -47,18 +32,15 @@ export default async function handler(req, res) {
       ai,
       env: process.env,
       onModelSkipped: (model) => console.warn(`Modelo ${model} indisponível; tentando o próximo.`),
+      requestOptions: { timeout: 50000 },
       request: {
-        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
-        config: {
-          systemInstruction: systemPrompt,
-          temperature: 0.2,
-          maxOutputTokens: 1000,
-          thinkingConfig: { thinkingBudget: 0 }
-        }
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+        max_tokens: 1500
       }
     });
 
-    const insights = (response.text || '').trim();
+    const insights = textOf(response);
     if (!insights) {
       const failure = emptyReplyError(response);
       return res.status(failure.httpStatus).json(errorBody(failure));
@@ -66,8 +48,8 @@ export default async function handler(req, res) {
     return res.status(200).json({ insights });
 
   } catch (error) {
-    const failure = classifyGeminiError(error);
-    console.error('Erro na rota de insights (Gemini):', failure.error, sanitizeDetail(error?.message, 400));
+    const failure = classifyAiError(error);
+    console.error('Erro na rota de insights (Claude):', failure.error, sanitizeDetail(error?.message, 400));
     return res.status(failure.httpStatus).json(errorBody(failure));
   }
 }
