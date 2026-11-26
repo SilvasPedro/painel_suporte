@@ -1,24 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles, Minus, Send, RotateCcw, Copy, Check, AlertCircle, ShieldCheck, PictureInPicture, PictureInPicture2 } from 'lucide-react';
+import { Minus, Send, RotateCcw, Copy, Check, AlertCircle, ShieldCheck, PictureInPicture, PictureInPicture2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { getCachedCollection } from '../../services/dataCache';
 import { getAuthHeaders, readAiError } from '../../services/apiAuth';
 import { cn } from '../../utils/cn';
-import { buildChatContext, buildChatHistory, SUGGESTED_PROMPTS, CHAT_LIMITS } from '../../utils/floatingHub';
+import { buildChatContext, buildChatHistory, SUGGESTED_PROMPTS, CHAT_LIMITS, AI_AGENT_NAME, AI_AGENT_TITLE } from '../../utils/floatingHub';
 import {
     CHAT_SIZE, WIDE_BREAKPOINT, PIP_SIZE, clampChatSize, defaultChatSize, resizeFromCorner, resizeByKey,
     loadChatSize, saveChatSize, clearChatSize
 } from '../../utils/chatLayout';
 import { supportsDocumentPip, openChatPip, watchTheme } from '../../utils/chatPip';
 import ClaudeBadge from './ClaudeBadge';
+import AtlasAvatar from './AtlasAvatar';
 
 const GREETING = {
     id: 'greeting',
     role: 'assistant',
     greeting: true,
-    content: 'Olá! Sou o assistente do Hubdesk e leio todos os dados do painel (somente leitura). Peça relatórios, rankings, comparações de período ou resumos de qualquer área: equipe, avaliações, chamados, escalas, agenda e Smart Pre.'
+    content: `${AI_AGENT_NAME}: extração de dados do painel, somente leitura. Informe o relatório, o período e os filtros. Áreas: equipe, avaliações, chamados, escalas, agenda e Smart Pre.`
 };
 
 // Estilo das respostas em Markdown (o projeto não usa o plugin typography do Tailwind)
@@ -284,7 +285,7 @@ export default function ChatPanel({ isOpen, onClose, onRestore }) {
         <section
             id="floating-chat-panel"
             role="dialog"
-            aria-label="Assistente de IA do Hubdesk"
+            aria-label={`${AI_AGENT_NAME}, ${AI_AGENT_TITLE}`}
             aria-hidden={!isOpen && !inPip}
             className={inPip
                 ? 'w-screen h-screen bg-surface flex flex-col overflow-hidden'
@@ -324,12 +325,11 @@ export default function ChatPanel({ isOpen, onClose, onRestore }) {
 
             {/* Cabeçalho */}
             <header className={cn('py-3 border-b border-subtle flex items-center gap-1 sm:gap-2 shrink-0 bg-surface', wide && !inPip ? 'pl-9 pr-3' : 'pl-3 pr-2 sm:px-4')}>
-                <div className="w-10 h-10 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-5 h-5" aria-hidden="true" />
-                </div>
+                <AtlasAvatar size={44} className="shrink-0 rounded-2xl shadow-sm ring-1 ring-rose-500/30" />
                 <div className="min-w-0 flex-1">
-                    <h3 className="text-sm font-bold text-primary-hub leading-tight font-brand truncate">Assistente Hubdesk</h3>
-                    <div className="mt-1">
+                    <h3 className="text-sm font-bold text-primary-hub leading-tight font-brand truncate">{AI_AGENT_NAME}</h3>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                        <span className="text-xs text-muted-hub whitespace-nowrap">{AI_AGENT_TITLE}</span>
                         <ClaudeBadge />
                     </div>
                 </div>
@@ -375,9 +375,9 @@ export default function ChatPanel({ isOpen, onClose, onRestore }) {
                             {!isUser && (
                                 <div className={cn(
                                     'w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 border',
-                                    msg.error ? 'bg-rose-500/10 border-rose-500/30 text-rose-600' : 'bg-surface border-subtle text-rose-600 dark:text-rose-400'
+                                    msg.error ? 'bg-rose-500/10 border-rose-500/30 text-rose-600' : 'border-subtle overflow-hidden'
                                 )}>
-                                    {msg.error ? <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" /> : <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />}
+                                    {msg.error ? <AlertCircle className="w-3.5 h-3.5" aria-hidden="true" /> : <AtlasAvatar size={28} shape="circle" />}
                                 </div>
                             )}
                             <div className={cn('max-w-[85%] min-w-0 group', isUser && 'flex justify-end')}>
@@ -449,8 +449,8 @@ export default function ChatPanel({ isOpen, onClose, onRestore }) {
 
                 {isLoading && (
                     <div className="flex gap-2.5">
-                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 bg-surface border border-subtle text-rose-600 dark:text-rose-400">
-                            <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+                        <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-subtle overflow-hidden">
+                            <AtlasAvatar size={28} shape="circle" />
                         </div>
                         <div className="px-4 py-3 rounded-2xl rounded-tl-md bg-surface border border-subtle"><TypingDots /></div>
                     </div>
@@ -467,7 +467,7 @@ export default function ChatPanel({ isOpen, onClose, onRestore }) {
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder="Peça um relatório ou pergunte sobre qualquer dado"
+                        placeholder="Informe o relatório, o período e os filtros"
                         aria-label="Mensagem para o assistente"
                         maxLength={CHAT_LIMITS.message}
                         disabled={isLoading}

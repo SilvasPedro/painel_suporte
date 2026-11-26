@@ -1,14 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, X, Phone, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Phone } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { cn } from '../../utils/cn';
-import { canUseAiChat } from '../../utils/floatingHub';
+import { canUseAiChat, AI_AGENT_NAME } from '../../utils/floatingHub';
 import ExtensionsPanel from './ExtensionsPanel';
 import ChatPanel from './ChatPanel';
+import AtlasAvatar from './AtlasAvatar';
 
 /**
  * Botão flutuante único, no canto inferior direito. Ao clicar, abre duas bolinhas:
- * "Ramais" (todos os usuários) e "Chat IA" (somente a gestão). Sem acesso ao chat, o botão abre os ramais direto.
+ * "Ramais" (todos os usuários) e o Atlas Bot (chat de IA, somente a gestão). Sem acesso ao chat, o botão abre os ramais direto.
  *
  * panel: 'extensions' | 'chat' | null — qual janela está aberta.
  * Os dois painéis ficam montados para a conversa e a busca continuarem ao minimizar.
@@ -65,7 +66,7 @@ export default function FloatingHub() {
     };
 
     const options = [
-        { id: 'chat', label: 'Chat IA', icon: Sparkles, show: aiAllowed, tone: 'bg-rose-600 text-white hover:bg-rose-500' },
+        { id: 'chat', label: AI_AGENT_NAME, icon: null, show: aiAllowed, tone: 'bg-rose-600 text-white hover:bg-rose-500 overflow-hidden' },
         { id: 'extensions', label: 'Ramais', icon: Phone, show: true, tone: 'bg-surface text-sky-600 dark:text-sky-400 border border-subtle hover:border-sky-500/40' }
     ].filter(o => o.show);
 
@@ -102,10 +103,12 @@ export default function FloatingHub() {
                                 onClick={() => openPanel(option.id)}
                                 style={BTN_3D}
                                 className={cn('w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer', option.tone)}
-                                aria-label={option.id === 'chat' ? 'Abrir chat com a IA' : 'Abrir lista de ramais'}
+                                aria-label={option.id === 'chat' ? `Abrir o chat com o ${AI_AGENT_NAME}` : 'Abrir lista de ramais'}
                                 title={option.label}
                             >
-                                <Icon className="w-5 h-5" style={ICON_3D} aria-hidden="true" />
+                                {Icon
+                                    ? <Icon className="w-5 h-5" style={ICON_3D} aria-hidden="true" />
+                                    : <AtlasAvatar size={48} shape="circle" className="w-full h-full" />}
                             </button>
                         </div>
                     );
@@ -124,8 +127,8 @@ export default function FloatingHub() {
                     'fixed bottom-6 right-4 sm:right-6 w-14 h-14 rounded-full text-white shadow-xl z-50 flex items-center justify-center transition-all duration-200 cursor-pointer',
                     active ? 'bg-zinc-800 hover:bg-zinc-700 rotate-0' : 'bg-rose-600 hover:bg-rose-500 hover:scale-105'
                 )}
-                aria-label={active ? 'Fechar' : (aiAllowed ? 'Abrir atalhos: Ramais e Chat IA' : 'Abrir ramais')}
-                title={active ? 'Fechar' : (aiAllowed ? 'Ramais e Chat IA' : 'Ramais')}
+                aria-label={active ? 'Fechar' : (aiAllowed ? `Abrir atalhos: Ramais e ${AI_AGENT_NAME}` : 'Abrir ramais')}
+                title={active ? 'Fechar' : (aiAllowed ? `Ramais e ${AI_AGENT_NAME}` : 'Ramais')}
             >
                 {active ? <X className="w-6 h-6" style={ICON_3D} aria-hidden="true" /> : <MessageCircle className="w-6 h-6" style={ICON_3D} aria-hidden="true" />}
             </button>

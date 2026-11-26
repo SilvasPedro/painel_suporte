@@ -4,6 +4,22 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [26/11/2026] — Versão v4.25.0 (Atlas Bot: nome, avatar e prompt de coletor de dados)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.24.2` para `4.25.0`. |
+| **Criado** | `src/utils/atlasBot.js` | Nome, título, paleta e geometria da marca do Hubdesk. |
+| **Criado** | `src/components/floating/AtlasAvatar.jsx` / `AtlasAvatar.test.jsx` | Avatar do Atlas Bot em SVG e testes. |
+| **Criado** | `scripts/generate-atlas-svg.mjs` / `public/atlas-bot.svg` | Gera a imagem do personagem a partir do componente. |
+| **Alterado** | `api/_lib/aiPrompts.js` / `api/_lib/aiErrors.test.js` | Prompt de agente coletor de dados, `AI_AGENT_NAME` e testes. |
+| **Alterado** | `api/_lib/aiGuard.js` / `src/services/apiAuth.js` | Mensagem 403 com o nome Atlas Bot. |
+| **Alterado** | `src/components/floating/ChatPanel.jsx` / `FloatingHub.jsx` | Avatar, nome, título, bolinha do botão e textos. |
+| **Alterado** | `src/utils/floatingHub.js` / `floatingHub.test.js` / `floating.test.jsx` | Nome do agente, sugestões objetivas e testes. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [26/11/2026] — Versão v4.24.2 (Chat: selo Claude, redimensionar e janela flutuante)
 
 | Ação | Arquivo | Descrição da Alteração |

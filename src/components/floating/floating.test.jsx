@@ -10,18 +10,20 @@ vi.mock('../../services/dataCache', () => ({ getCachedCollection: () => [] }));
 import FloatingHub from './FloatingHub';
 import ChatPanel from './ChatPanel';
 import ExtensionsPanel from './ExtensionsPanel';
+import { AI_AGENT_NAME } from '../../utils/floatingHub';
 
 beforeEach(() => { authState.currentUser = null; });
 
 describe('FloatingHub', () => {
-    it('gestão vê o botão com as duas bolinhas (Chat IA e Ramais) e os dois painéis', () => {
+    it('gestão vê o botão com as duas bolinhas (Atlas Bot e Ramais) e os dois painéis', () => {
         authState.currentUser = { role: 'Gestor' };
         const html = renderToString(<FloatingHub />);
         expect(html).toContain('id="floating-hub-btn"');
-        expect(html).toContain('Abrir atalhos: Ramais e Chat IA');
-        expect(html).toContain('Abrir chat com a IA');
+        expect(html).toContain('Abrir atalhos: Ramais e Atlas Bot');
+        expect(html).toContain('Abrir o chat com o Atlas Bot');
         expect(html).toContain('Abrir lista de ramais');
-        expect(html).toContain('Assistente de IA do Hubdesk');
+        expect(html).toContain('Atlas Bot, Agente de IA Hubdesk');
+        expect(html).not.toContain('<title>'); // o avatar é decorativo: não duplica o nome para leitores de tela
         expect(html).toContain('Ramais telefônicos');
         // começa fechado: menu e painéis ocultos
         expect(html).toContain('aria-hidden="true"');
@@ -31,8 +33,8 @@ describe('FloatingHub', () => {
         authState.currentUser = { role: 'Operacional' };
         const html = renderToString(<FloatingHub />);
         expect(html).toContain('Abrir ramais');
-        expect(html).not.toContain('Abrir chat com a IA');
-        expect(html).not.toContain('Assistente de IA do Hubdesk');
+        expect(html).not.toContain('Abrir o chat com o Atlas Bot');
+        expect(html).not.toContain('Atlas Bot, Agente de IA Hubdesk');
         expect(html).toContain('Ramais telefônicos');
     });
 
@@ -46,14 +48,22 @@ describe('FloatingHub', () => {
 describe('ChatPanel', () => {
     it('mostra saudação, sugestões, campo de mensagem e o aviso de uso', () => {
         const html = renderToString(<ChatPanel isOpen onClose={() => {}} />);
-        expect(html).toContain('Assistente Hubdesk');
-        expect(html).toContain('Olá! Sou o assistente do Hubdesk');
+        expect(html).toContain(AI_AGENT_NAME);
+        expect(html).toContain('extração de dados do painel, somente leitura');
         expect(html).toContain('Sugestões');
         expect(html).toContain('Relatório do desempenho da equipe no mês');
         expect(html).toContain('aria-label="Mensagem para o assistente"');
         expect(html).toContain('aria-label="Enviar mensagem"');
         expect(html).toContain('aria-label="Minimizar chat"');
         expect(html).toContain('Exclusivo da gestão');
+    });
+
+    it('cabeçalho com o nome "Atlas Bot", o título "Agente de IA Hubdesk" e o avatar do personagem', () => {
+        const html = renderToString(<ChatPanel isOpen onClose={() => {}} />);
+        expect(html).toContain('>Atlas Bot</h3>');
+        expect(html).toContain('Agente de IA Hubdesk');
+        expect(html).toContain('viewBox="0 0 256 256"'); // AtlasAvatar
+        expect(html).not.toContain('Assistente Hubdesk');
     });
 
     it('mostra o selo "Powered by Claude AI" com o logo no cabeçalho', () => {

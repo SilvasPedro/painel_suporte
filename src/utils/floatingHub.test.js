@@ -1,5 +1,13 @@
 import { describe, it, expect } from 'vitest';
-import { canUseAiChat, buildChatContext, buildChatHistory, CHAT_LIMITS, SUGGESTED_PROMPTS } from './floatingHub';
+import { canUseAiChat, buildChatContext, buildChatHistory, CHAT_LIMITS, SUGGESTED_PROMPTS, AI_AGENT_NAME } from './floatingHub';
+import { AI_AGENT_NAME as SERVER_AGENT_NAME } from '../../api/_lib/aiPrompts.js';
+
+describe('nome do agente de IA', () => {
+    it('é o mesmo no chat (front) e no prompt do servidor', () => {
+        expect(AI_AGENT_NAME).toBe(SERVER_AGENT_NAME);
+        expect(AI_AGENT_NAME.trim().length).toBeGreaterThan(0);
+    });
+});
 
 describe('canUseAiChat', () => {
     it('só a gestão ativa usa a IA', () => {

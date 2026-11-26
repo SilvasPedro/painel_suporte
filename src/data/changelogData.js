@@ -1,13 +1,41 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.24.2';
+export const CURRENT_VERSION = 'v4.25.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.24.2',
+    version: 'v4.25.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.25.0: o agente de IA ganha nome e rosto, o Atlas Bot, e passa a entregar só os dados pedidos, em relatórios organizados e sem conversa.',
+    items: [
+      {
+        icon: Sparkles,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Atlas Bot, Agente de IA Hubdesk',
+        category: 'Assistente de IA',
+        description: 'O chat agora é o Atlas Bot: um robô de headset que sustenta o globo (como o Titã Atlas) com a marca do Hubdesk no peito. O nome e o avatar aparecem no botão flutuante, no cabeçalho e nas mensagens, nos três temas e no celular.'
+      },
+      {
+        icon: FileText,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Só dados, sem conversa',
+        category: 'Assistente de IA',
+        description: 'O Atlas Bot coleta e entrega: abre com "Relatório solicitado:", mostra Período, Filtros, tabelas, Fonte e Limitações, e não escreve insights, recomendações nem "Próximo passo". Dado inexistente vira "Dado não encontrado" e assunto fora do Hubdesk recebe só "Fora do escopo". Análise só sai se você pedir de forma explícita.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-amber-500 bg-amber-500/10 border-amber-500/20',
+        title: 'Imagem do personagem',
+        category: 'Identidade',
+        description: 'A imagem do Atlas Bot fica em public/atlas-bot.svg (vetor, qualquer tamanho), gerada pelo mesmo desenho usado no chat.'
+      }
+    ]
+  },
+  {
+    version: 'v4.24.2',
+    date: 'Novembro 2026',
     summary: 'Versão v4.24.2: o chat da IA ganha o selo "Powered by Claude AI", pode ser redimensionado e pode virar uma janela flutuante que fica por cima de tudo.',
     items: [
       {

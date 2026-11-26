@@ -14,7 +14,7 @@ export const getAuthHeaders = async () => {
 /** Mensagem para o usuário a partir do status da resposta das rotas de IA. */
 export const describeAiError = (status, fallback = 'Erro ao comunicar com a IA.') => {
     if (status === 401) return 'Sua sessão expirou. Entre novamente para usar a IA.';
-    if (status === 403) return 'O assistente de IA é exclusivo da gestão.';
+    if (status === 403) return 'O Atlas Bot é exclusivo da gestão.';
     if (status === 413) return 'Há dados demais para enviar à IA. Tente com uma pergunta ou período menor.';
     if (status === 429) return 'Muitas chamadas seguidas. Aguarde alguns segundos e tente de novo.';
     return fallback;

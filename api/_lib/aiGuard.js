@@ -70,7 +70,7 @@ export const authorizeAiRequest = async ({ req, env = {}, fetchImpl = fetch, now
         staff = false;
     }
     if (!staff) {
-        return { ok: false, status: 403, json: { error: 'sem-permissao', message: 'O assistente de IA é exclusivo da gestão.' } };
+        return { ok: false, status: 403, json: { error: 'sem-permissao', message: 'O Atlas Bot é exclusivo da gestão.' } };
     }
 
     const limit = checkRateLimit(user.uid, now);

@@ -3,6 +3,8 @@
  * Os limites espelham o servidor (api/_lib/aiGuard.js): passar deles resulta em erro 413.
  */
 
+import { ATLAS_NAME, ATLAS_TITLE } from './atlasBot';
+
 // Mesmos cargos que o servidor aceita nas rotas de IA (api/_lib/dm.js > isStaffUser)
 export const STAFF_AI_ROLES = ['admin', 'gestor', 'supervisor', 'noc', 'diretor'];
 const MASTER_EMAIL = 'pedrosouzactt@gmail.com';
@@ -21,11 +23,16 @@ export const canUseAiChat = (user) => {
     return STAFF_AI_ROLES.includes(String(user.role || '').trim().toLowerCase());
 };
 
+// Nome do agente de IA (Atlas Bot). É o mesmo do prompt do servidor (AI_AGENT_NAME em api/_lib/aiPrompts.js; um teste confere).
+export const AI_AGENT_NAME = ATLAS_NAME;
+export const AI_AGENT_TITLE = ATLAS_TITLE;
+
+// Pedidos de dados, no formato que o agente entrega melhor: o quê, de quando e como ordenar
 export const SUGGESTED_PROMPTS = [
     'Relatório do desempenho da equipe no mês',
-    'Quais colaboradores precisam de atenção?',
-    'Resumo dos chamados críticos em aberto',
-    'Quais KPIs do setor estão abaixo da meta?'
+    'Ranking de notas da última semana',
+    'Chamados críticos em aberto',
+    'KPIs do setor abaixo da meta'
 ];
 
 // Campos que só pesam no envio (anexos, textos longos e listas aninhadas) são deixados de fora

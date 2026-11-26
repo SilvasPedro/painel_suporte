@@ -4,6 +4,24 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.25.0] - 2026-11-26
+
+### 🚀 Novas Funcionalidades (Added)
+- **Atlas Bot, Agente de IA Hubdesk**: nome e avatar do agente de IA. O avatar (`AtlasAvatar.jsx`, SVG puro) é um robô de headset que sustenta o globo, como o Titã Atlas, com a marca do Hubdesk (trevo de elipses) no peito; formatos `tile` e `circle`, com fundo próprio, igual nos temas claro, papel e escuro.
+- **Imagem do personagem** em `public/atlas-bot.svg`, gerada por `npx tsx scripts/generate-atlas-svg.mjs` a partir do mesmo componente (um só desenho para o arquivo e para a tela).
+- `src/utils/atlasBot.js`: nome, título, paleta e geometria da marca (`trefoilPetals`), com testes.
+
+### 🔄 Alterado (Changed)
+- **Prompt do chat reescrito como agente coletor de dados**: sem saudação, conversa, oferta de ajuda, insight, recomendação, ponto de atenção nem "Próximo passo". Relatório abre com `Relatório solicitado:` e segue o formato fixo (título, **Período**, **Filtros**, **Gerado em**, tabelas, **Fonte**, **Limitações**). Dado inexistente: `Dado não encontrado: <o que faltou>`; assunto fora do Hubdesk: `Fora do escopo: o agente só extrai dados do Hubdesk.`; pedido ambíguo assume o recorte mais recente e declara em **Filtros**. Análise só quando pedida de forma explícita (até 3 tópicos). Datas dd/mm/aaaa, horas HH:mm, números no padrão brasileiro.
+- Interface: cabeçalho com avatar, "Atlas Bot", "Agente de IA Hubdesk" e o selo "Powered by Claude AI"; avatar nas mensagens e no indicador de digitação; bolinha do botão flutuante com o rosto do Atlas Bot; saudação, sugestões e placeholder objetivos; textos de acessibilidade e de permissão (403) com o novo nome.
+- `AI_AGENT_NAME` agora é "Atlas Bot" no servidor (`api/_lib/aiPrompts.js`) e no front (`src/utils/floatingHub.js`); um teste confere que são iguais.
+
+### ⚠️ Observações
+- Sem mudança de variáveis nem nas regras do Firestore. Novo deploy necessário.
+- A análise de desempenho (`/api/insights`) não mudou.
+
+---
+
 ## [v4.24.2] - 2026-11-26
 
 ### 🚀 Novas Funcionalidades (Added)
