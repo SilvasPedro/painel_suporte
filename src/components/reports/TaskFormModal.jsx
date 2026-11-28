@@ -153,11 +153,11 @@ export default function TaskFormModal({
     const initialDept = getTaskOriginDepartment(editingReport) || editingReport?.department || (user?.department || '');
     const initialType = normalizeCategory(editingReport?.category || editingReport?.type || 'task');
     const initialDueDate = editingReport?.due_date || editingReport?.dueDate || editingReport?.date || new Date().toISOString().split('T')[0];
-    const initialAffectedClient = editingReport?.affectedClient || editingReport?.metadata?.affectedClient || 'Não';
+    const initialAffectedClient = editingReport?.affectedClient || editingReport?.metadata?.affectedClient || (editingReport ? 'Não' : '');
     const initialHowAffected = editingReport?.howAffected || editingReport?.metadata?.howAffected || '';
     const initialClientName = editingReport?.clientName || editingReport?.metadata?.clientName || '';
     const initialAnalysisProtocol = editingReport?.analysisProtocol || editingReport?.metadata?.analysisProtocol || '';
-    const initialNeedsProtocol = editingReport?.needsProtocol || editingReport?.metadata?.needsProtocol || (initialAnalysisProtocol ? 'Sim' : 'Não');
+    const initialNeedsProtocol = editingReport?.needsProtocol || editingReport?.metadata?.needsProtocol || (initialAnalysisProtocol ? 'Sim' : (editingReport ? 'Não' : ''));
 
     // 3. Estados dos Campos da O.S.
     const [title, setTitle] = useState(editingReport?.title || '');
@@ -306,6 +306,13 @@ export default function TaskFormModal({
 
         if (!cleanDueDate) {
             errors.due_date = 'Informe o prazo de entrega da solicitação.';
+        }
+
+        if (!needsProtocol) {
+            errors.needsProtocol = 'Informe se é necessário analisar um protocolo ou ID.';
+        }
+        if (!affectedClient) {
+            errors.affectedClient = 'Informe se houve impacto no cliente / assinante.';
         }
 
         Object.assign(errors, validateProtocolAndClient({ needsProtocol, analysisProtocol, affectedClient, clientName }));
@@ -834,7 +841,7 @@ export default function TaskFormModal({
                                         onClick={() => {
                                             setNeedsProtocol(opt);
                                             if (opt === 'Não') setAnalysisProtocol('');
-                                            setFormErrors((prev) => ({ ...prev, analysisProtocol: '' }));
+                                            setFormErrors((prev) => ({ ...prev, analysisProtocol: '', needsProtocol: '' }));
                                         }}
                                         className={`p-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
                                             needsProtocol === opt
@@ -846,6 +853,12 @@ export default function TaskFormModal({
                                     </button>
                                 ))}
                             </div>
+                            {formErrors.needsProtocol && (
+                                <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
+                                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                    {formErrors.needsProtocol}
+                                </p>
+                            )}
                             {needsProtocol === 'Sim' && (
                                 <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
                                     <label htmlFor="task-analysis-protocol" className="block text-xs font-bold text-secondary-hub uppercase tracking-wider">
@@ -899,7 +912,7 @@ export default function TaskFormModal({
                                             setAffectedClient('Não');
                                             setHowAffected('');
                                             setClientName('');
-                                            setFormErrors((prev) => ({ ...prev, howAffected: '', clientName: '' }));
+                                            setFormErrors((prev) => ({ ...prev, howAffected: '', clientName: '', affectedClient: '' }));
                                         }}
                                         className={`p-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                                             affectedClient === 'Não'
@@ -912,7 +925,7 @@ export default function TaskFormModal({
                                     </button>
                                     <button
                                         type="button"
-                                        onClick={() => setAffectedClient('Sim')}
+                                        onClick={() => { setAffectedClient('Sim'); setFormErrors((prev) => ({ ...prev, affectedClient: '' })); }}
                                         className={`p-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                                             affectedClient === 'Sim'
                                                 ? 'bg-rose-500/15 border-rose-500/50 text-rose-600 dark:text-rose-400 ring-2 ring-rose-500/30'
@@ -924,6 +937,13 @@ export default function TaskFormModal({
                                     </button>
                                 </div>
                             </div>
+
+                            {formErrors.affectedClient && (
+                                <p role="alert" className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
+                                    <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                    {formErrors.affectedClient}
+                                </p>
+                            )}
 
                             {/* Campo Expansivo: Como afetou o cliente? */}
                             {affectedClient === 'Sim' && (
