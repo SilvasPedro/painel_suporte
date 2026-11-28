@@ -74,7 +74,7 @@ export default function DonutChart({ data = [], centerValue = '', centerLabel = 
                 {/* trilho de fundo */}
                 <circle cx={CX} cy={CY} r={(R_OUT + R_IN) / 2} fill="none" stroke="currentColor" className="text-subtle" strokeOpacity="0.5" strokeWidth={R_OUT - R_IN} />
 
-                <g transform={`translate(${CX} ${CY})`} filter={`url(#${uid}-shadow)`}>
+                <g className="depth-shadow" transform={`translate(${CX} ${CY})`} filter={`url(#${uid}-shadow)`}>
                     {slices.map((s) => (
                         <g
                             key={s.name}
@@ -87,7 +87,7 @@ export default function DonutChart({ data = [], centerValue = '', centerLabel = 
                             tabIndex={0}
                         >
                             <path d={s.path} fill={s.color} opacity={active && active !== s.name ? 0.55 : 1} style={{ transition: 'opacity 200ms ease' }} />
-                            <path d={s.path} fill={`url(#${uid}-gloss)`} />
+                            <path className="depth-gloss" d={s.path} fill={`url(#${uid}-gloss)`} />
                         </g>
                     ))}
                 </g>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, ArrowRight, Sparkles, Sun, Moon, Coffee, 
-  Lock, LogOut, FileText, CornerDownLeft, X 
+  Lock, LogOut, FileText, CornerDownLeft, X, Layers 
 } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,7 +19,7 @@ export const CommandPalette = ({
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef(null);
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, depth, setDepth } = useTheme();
 
   // Foco automático ao abrir
   useEffect(() => {
@@ -96,6 +96,17 @@ export const CommandPalette = ({
     });
 
     list.push({
+      id: 'action-depth-toggle',
+      title: depth === 'flat' ? 'Ativar efeito 3D nos ícones e botões' : 'Ativar visual flat (sem efeito 3D)',
+      category: 'Aparência',
+      icon: Layers,
+      action: () => {
+        setDepth(depth === 'flat' ? '3d' : 'flat');
+        onClose();
+      }
+    });
+
+    list.push({
       id: 'action-theme-light',
       title: 'Ativar Modo Claro',
       category: 'Aparência',
@@ -118,7 +129,7 @@ export const CommandPalette = ({
     });
 
     return list;
-  }, [menus, onSelectTab, onOpenPasswordModal, onOpenChangelogModal, onOpenLogoutModal, setTheme, onClose]);
+  }, [menus, onSelectTab, onOpenPasswordModal, onOpenChangelogModal, onOpenLogoutModal, setTheme, depth, setDepth, onClose]);
 
   // Itens filtrados pela busca
   const filteredItems = useMemo(() => {

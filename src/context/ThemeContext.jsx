@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { THEMES } from '../constants/themeConstants';
+import { DEPTH_STORAGE_KEY, normalizeDepth, readSavedDepth, applyDepth } from '../utils/depthMode';
 
 export { THEMES };
 
@@ -49,6 +50,20 @@ export const ThemeProvider = ({ children }) => {
     }
   }, [theme]);
 
+  // Profundidade visual: ícones e botões em 3D ou flat
+  const [depth, setDepthState] = useState(readSavedDepth);
+
+  useEffect(() => {
+    applyDepth(depth);
+    try {
+      localStorage.setItem(DEPTH_STORAGE_KEY, depth);
+    } catch {
+      // Ignora erro ao salvar no localStorage
+    }
+  }, [depth]);
+
+  const setDepth = (value) => setDepthState(normalizeDepth(value));
+
   const setTheme = (newTheme) => {
     if (newTheme === 'light' || newTheme === 'warm' || newTheme === 'dark') {
       setThemeState(newTheme);
@@ -69,6 +84,9 @@ export const ThemeProvider = ({ children }) => {
         theme,
         setTheme,
         toggleTheme,
+        depth,
+        setDepth,
+        isFlat: depth === 'flat',
         isDark: theme === 'dark',
         isWarm: theme === 'warm',
         isLight: theme === 'light',

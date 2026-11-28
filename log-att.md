@@ -4,6 +4,22 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [28/11/2026] — Versão v4.28.0 (Efeito 3D ou Flat)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.27.0` para `4.28.0`. |
+| **Criado** | `src/utils/depthMode.js` / `depthMode.test.js` | Preferência 3d/flat (leitura, normalização, atributo no html) e testes. |
+| **Criado** | `src/components/DepthSelector.jsx` | Alternador 3D | Flat. |
+| **Alterado** | `src/context/ThemeContext.jsx` / `src/main.jsx` | Estado `depth`, persistência e aplicação antecipada. |
+| **Alterado** | `src/index.css` | Bloco `html[data-depth="flat"]` com o visual flat. |
+| **Alterado** | `src/components/ThemeSelector.jsx` / `ui/CommandPalette.jsx` | Sem rotação 3D no flat; ação de alternar na busca. |
+| **Alterado** | `src/pages/AdminDashboard.jsx` / `CollaboratorDashboard.jsx` | Seletor nos cabeçalhos. |
+| **Alterado** | `audits/DonutChart.jsx` / `dashboard/KpiHeroCard.jsx` / `floating/FloatingHub.jsx` / `pages/ThirdPartyAudits.jsx` | Marcadores `depth-*` nos efeitos inline. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [28/11/2026] — Versão v4.27.0 (Solicitações: protocolo/ID e nome do cliente)
 
 | Ação | Arquivo | Descrição da Alteração |

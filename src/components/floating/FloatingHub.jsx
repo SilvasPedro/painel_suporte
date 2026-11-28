@@ -102,12 +102,12 @@ export default function FloatingHub() {
                                 tabIndex={menuOpen ? 0 : -1}
                                 onClick={() => openPanel(option.id)}
                                 style={BTN_3D}
-                                className={cn('w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer', option.tone)}
+                                className={cn('depth-btn w-12 h-12 rounded-full shadow-lg flex items-center justify-center transition-transform hover:scale-105 cursor-pointer', option.tone)}
                                 aria-label={option.id === 'chat' ? `Abrir o chat com o ${AI_AGENT_NAME}` : 'Abrir lista de ramais'}
                                 title={option.label}
                             >
                                 {Icon
-                                    ? <Icon className="w-5 h-5" style={ICON_3D} aria-hidden="true" />
+                                    ? <Icon className="depth-fx w-5 h-5" style={ICON_3D} aria-hidden="true" />
                                     : <AtlasAvatar size={48} shape="circle" className="w-full h-full" />}
                             </button>
                         </div>
@@ -124,13 +124,13 @@ export default function FloatingHub() {
                 aria-expanded={active}
                 aria-haspopup={aiAllowed ? 'menu' : 'dialog'}
                 className={cn(
-                    'fixed bottom-6 right-4 sm:right-6 w-14 h-14 rounded-full text-white shadow-xl z-50 flex items-center justify-center transition-all duration-200 cursor-pointer',
+                    'depth-btn fixed bottom-6 right-4 sm:right-6 w-14 h-14 rounded-full text-white shadow-xl z-50 flex items-center justify-center transition-all duration-200 cursor-pointer',
                     active ? 'bg-zinc-800 hover:bg-zinc-700 rotate-0' : 'bg-rose-600 hover:bg-rose-500 hover:scale-105'
                 )}
                 aria-label={active ? 'Fechar' : (aiAllowed ? `Abrir atalhos: Ramais e ${AI_AGENT_NAME}` : 'Abrir ramais')}
                 title={active ? 'Fechar' : (aiAllowed ? `Ramais e ${AI_AGENT_NAME}` : 'Ramais')}
             >
-                {active ? <X className="w-6 h-6" style={ICON_3D} aria-hidden="true" /> : <MessageCircle className="w-6 h-6" style={ICON_3D} aria-hidden="true" />}
+                {active ? <X className="depth-fx w-6 h-6" style={ICON_3D} aria-hidden="true" /> : <MessageCircle className="depth-fx w-6 h-6" style={ICON_3D} aria-hidden="true" />}
             </button>
         </div>
     );

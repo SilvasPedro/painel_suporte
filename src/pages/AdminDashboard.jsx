@@ -47,6 +47,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
+import DepthSelector from '../components/DepthSelector';
 import NotificationBell from '../components/NotificationBell';
 import { CommandPalette } from '../components/ui';
 import { CURRENT_VERSION } from '../data/changelogData';
@@ -1020,6 +1021,9 @@ const AdminDashboard = () => {
                         </div>
                         <div data-tour="theme" className="flex items-center">
                             <ThemeSelector variant="compact" />
+                        </div>
+                        <div className="hidden md:flex items-center">
+                            <DepthSelector />
                         </div>
                     </div>
                 </header>

@@ -1,13 +1,34 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.27.0';
+export const CURRENT_VERSION = 'v4.28.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.27.0',
+    version: 'v4.28.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.28.0: você escolhe se ícones e botões aparecem em 3D ou em um visual flat elegante.',
+    items: [
+      {
+        icon: Layers,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Efeito 3D ou Flat',
+        category: 'Aparência',
+        description: 'Novo seletor "3D | Flat" ao lado do tema, no topo das telas (também na busca Ctrl + K, em Aparência). A escolha fica salva no navegador. O padrão continua 3D.'
+      },
+      {
+        icon: Palette,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Flat trabalhado, não só liso',
+        category: 'Aparência',
+        description: 'Ícones viram tiles chapados com contorno fino e halo suave no hover. Botões ficam com cor chapada, aro interno translúcido, sombra difusa ao passar o mouse e leve compressão ao clicar. Gráficos, cartões de KPI e o botão flutuante também perdem o relevo.'
+      }
+    ]
+  },
+  {
+    version: 'v4.27.0',
+    date: 'Novembro 2026',
     summary: 'Versão v4.27.0: o formulário de solicitações passa a pedir o protocolo ou ID a analisar e o nome completo do cliente impactado.',
     items: [
       {

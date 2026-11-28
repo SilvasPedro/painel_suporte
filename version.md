@@ -4,6 +4,20 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.28.0] - 2026-11-28
+
+### 🚀 Novas Funcionalidades (Added)
+- **Efeito 3D ou Flat para ícones e botões**: preferência `depth` (`3d` padrão ou `flat`) no `ThemeContext`, salva em `localStorage` (`hubdesk_depth`) e aplicada como `data-depth` no `<html>` (também no `main.jsx`, antes do React montar, para não piscar).
+- Seletor `DepthSelector` ao lado do `ThemeSelector` nos cabeçalhos de Admin e Colaborador (a partir de `md`) e ação "Aparência" na busca Ctrl + K (`CommandPalette`).
+- **Modo flat elegante** em `index.css` (`html[data-depth="flat"]`): ícones `.icon-3d` viram tiles chapados com contorno fino e halo no hover; botões `.btn-3d`, `.btn-excel` e `.btn-gloss` ficam com cor chapada, aro interno translúcido, sombra difusa só no hover e compressão no clique; foco visível por contorno.
+- Marcadores `depth-fx`, `depth-shadow`, `depth-gloss`, `depth-chip` e `depth-btn` achatam efeitos inline: `DonutChart`, `KpiHeroCard`, `FloatingHub`, anel de progresso da `ThirdPartyAudits` e o `ThemeSelector` (sem rotação 3D).
+- `src/utils/depthMode.js`, com testes.
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore. A preferência é por navegador, não por usuário.
+
+---
+
 ## [v4.27.0] - 2026-11-28
 
 ### 🚀 Novas Funcionalidades (Added)

@@ -1397,7 +1397,7 @@ export default function ThirdPartyAudits() {
                                     <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90" aria-hidden="true">
                                         <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="11" />
                                         <circle
-                                            cx="60" cy="60" r="50" fill="none"
+                                            cx="60" cy="60" r="50" fill="none" className="depth-fx"
                                             stroke={tone} strokeWidth="11" strokeLinecap="round"
                                             strokeDasharray={circ}
                                             strokeDashoffset={circ * (1 - metrics.progressPercent / 100)}

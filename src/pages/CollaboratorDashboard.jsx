@@ -17,6 +17,7 @@ import ChangePasswordModal from '../components/ChangePasswordModal';
 import LogoutConfirmModal from '../components/LogoutConfirmModal';
 import VersionChangelogModal from '../components/VersionChangelogModal';
 import ThemeSelector from '../components/ThemeSelector';
+import DepthSelector from '../components/DepthSelector';
 import NotificationBell from '../components/NotificationBell';
 import MyHistory from './MyHistory';
 import MyProfile from './MyProfile';
@@ -510,6 +511,9 @@ const CollaboratorDashboard = ({ currentUserId }) => {
                     <div className="flex items-center gap-2 sm:gap-3 shrink-0">
                         <NotificationBell />
                         <ThemeSelector variant="compact" />
+                        <div className="hidden md:flex items-center">
+                            <DepthSelector />
+                        </div>
                     </div>
                 </header>
 

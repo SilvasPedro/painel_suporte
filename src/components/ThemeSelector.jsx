@@ -4,7 +4,7 @@ import { useTheme, THEMES } from '../context/ThemeContext';
 import { Check, Sun, Moon, Coffee } from 'lucide-react';
 
 export default function ThemeSelector({ variant = 'compact', showLabels = true, className = '' }) {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, isFlat } = useTheme();
   const pillId = useId(); // layoutId único: o destaque desliza entre os itens
   const reduceMotion = useReducedMotion();
   const spring = reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 32, mass: 0.8 };
@@ -39,20 +39,20 @@ export default function ThemeSelector({ variant = 'compact', showLabels = true, 
                   layoutId={pillId}
                   transition={spring}
                   aria-hidden="true"
-                  className="absolute inset-0 rounded-lg bg-white/80 backdrop-blur-sm border border-white/70 shadow-[0_2px_6px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]"
+                  className={`absolute inset-0 rounded-lg bg-white/80 backdrop-blur-sm border border-white/70 ${isFlat ? 'shadow-[0_0_0_1px_rgba(0,0,0,0.06)]' : 'shadow-[0_2px_6px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.9)]'}`}
                 />
               )}
               <span className="relative z-[1] flex items-center gap-1.5" style={{ perspective: 120 }}>
                 <Motion.span
                   className="flex"
                   style={{ transformStyle: 'preserve-3d' }}
-                  animate={reduceMotion ? undefined : { rotateY: isActive ? 0 : -28, rotateX: isActive ? -12 : 0, scale: isActive ? 1.22 : 1, y: isActive ? -0.5 : 0 }}
-                  whileHover={reduceMotion ? undefined : { rotateY: isActive ? 12 : -8, scale: 1.18 }}
+                  animate={reduceMotion || isFlat ? undefined : { rotateY: isActive ? 0 : -28, rotateX: isActive ? -12 : 0, scale: isActive ? 1.22 : 1, y: isActive ? -0.5 : 0 }}
+                  whileHover={reduceMotion || isFlat ? undefined : { rotateY: isActive ? 12 : -8, scale: 1.18 }}
                   transition={spring}
                 >
                   <Icon
                     className={`w-3.5 h-3.5 shrink-0 transition-colors duration-200 ${isActive ? iconColor : 'text-gray-400'}`}
-                    style={{ filter: isActive ? 'drop-shadow(0 2px 1px rgba(0,0,0,0.28))' : 'drop-shadow(0 1px 0.5px rgba(0,0,0,0.15))' }}
+                    style={isFlat ? undefined : { filter: isActive ? 'drop-shadow(0 2px 1px rgba(0,0,0,0.28))' : 'drop-shadow(0 1px 0.5px rgba(0,0,0,0.15))' }}
                   />
                 </Motion.span>
                 {showLabels && <span className="whitespace-nowrap">{item.shortName}</span>}

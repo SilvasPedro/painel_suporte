@@ -1238,6 +1238,103 @@ button.btn-primary-std {
 button.btn-primary-std:hover:not(:disabled) { background-color: #f43f5e; }
 button.btn-primary-std:active:not(:disabled) { background-color: #be123c; }
 
+/* =====================================================================
+   MODO FLAT (html[data-depth="flat"]): alternativa elegante ao efeito 3D.
+   Sem brilho, relevo nem sombra pesada. Em troca: cores chapadas, contorno
+   fino de 1px, realce suave em halo no hover e clique com leve compressão.
+   ===================================================================== */
+
+/* Ícones de cartão: tile chapado com contorno fino; no hover ganha um halo suave */
+html[data-depth="flat"] .icon-3d {
+    background-image: none;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+    transition: box-shadow 0.2s ease, background-color 0.2s ease;
+}
+html[data-depth="flat"] .icon-3d > svg {
+    filter: none;
+}
+html[data-depth="flat"] .group:hover .icon-3d {
+    transform: none;
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 38%, transparent), 0 0 0 4px color-mix(in srgb, currentColor 10%, transparent);
+}
+
+/* Botões coloridos (.btn-3d / .btn-excel): cor chapada, aro interno translúcido e sombra difusa só no hover */
+html[data-depth="flat"] .btn-3d,
+html[data-depth="flat"] .btn-excel {
+    background-image: none;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1), 0 1px 2px rgba(15, 23, 42, 0.14);
+    transition: transform 0.18s ease, box-shadow 0.2s ease, filter 0.18s ease;
+}
+html[data-depth="flat"] .btn-3d:hover:not(:disabled),
+html[data-depth="flat"] .btn-excel:hover:not(:disabled) {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px -8px var(--btn3d-glow, rgba(15, 23, 42, 0.4)), 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+html[data-depth="flat"] .btn-3d:active:not(:disabled),
+html[data-depth="flat"] .btn-excel:active:not(:disabled) {
+    transform: scale(0.985);
+    filter: brightness(0.96);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(15, 23, 42, 0.14);
+}
+html[data-depth="flat"] .btn-3d > svg,
+html[data-depth="flat"] .btn-excel > svg {
+    filter: none;
+}
+
+/* Demais botões de fundo sólido (classe .btn-gloss aplicada por utils/buttonGloss.js) */
+html[data-depth="flat"] button.btn-gloss:not(.btn-3d):not(.btn-excel) {
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+        var(--tw-ring-offset-shadow, 0 0 #0000),
+        var(--tw-ring-shadow, 0 0 #0000),
+        var(--tw-shadow, 0 0 #0000);
+}
+html[data-depth="flat"] button.btn-gloss:not(.btn-3d):not(.btn-excel):not([class*="bg-gradient"]) {
+    background-image: none;
+}
+html[data-depth="flat"] button.btn-gloss:not(.btn-3d):not(.btn-excel):hover:not(:disabled) {
+    filter: brightness(1.05);
+    transform: translateY(-1px);
+    box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+        0 8px 16px -8px rgba(15, 23, 42, 0.45),
+        var(--tw-ring-offset-shadow, 0 0 #0000),
+        var(--tw-ring-shadow, 0 0 #0000);
+}
+html[data-depth="flat"] button.btn-gloss:not(.btn-3d):not(.btn-excel):active:not(:disabled) {
+    transform: scale(0.985);
+    filter: brightness(0.96);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+html[data-depth="flat"] button.btn-gloss:focus-visible,
+html[data-depth="flat"] .btn-3d:focus-visible,
+html[data-depth="flat"] .btn-excel:focus-visible {
+    outline: 2px solid color-mix(in srgb, currentColor 55%, transparent);
+    outline-offset: 2px;
+}
+
+/* Marcadores usados em componentes com efeito inline (gráficos, KPI, botão flutuante) */
+html[data-depth="flat"] .depth-fx {
+    filter: none !important;
+    transform: none !important;
+}
+html[data-depth="flat"] .depth-shadow {
+    filter: none;
+}
+html[data-depth="flat"] .depth-gloss {
+    display: none;
+}
+html[data-depth="flat"] .depth-chip {
+    background-image: none !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16) !important;
+    transform: none !important;
+}
+html[data-depth="flat"] .depth-btn {
+    background-image: none !important;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 6px 16px -8px rgba(15, 23, 42, 0.5) !important;
+}
+
 /* Crescimento das barras 3D (Demandas por processo) */
 @keyframes bar3d-grow {
     from { transform: scaleX(0); opacity: 0.4; }

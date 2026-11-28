@@ -76,14 +76,14 @@ export const KpiHeroCard = ({
                     </div>
                     <div className="shrink-0 [perspective:400px]">
                         <div
-                            className={`relative rounded-xl border ${compact ? "p-1.5" : "p-2.5"} backdrop-blur-sm transition-transform duration-300 ease-out [transform-style:preserve-3d] group-hover:[transform:translateZ(6px)_scale(1.08)] ${a.chip}`}
+                            className={`depth-chip relative rounded-xl border ${compact ? "p-1.5" : "p-2.5"} backdrop-blur-sm transition-transform duration-300 ease-out [transform-style:preserve-3d] group-hover:[transform:translateZ(6px)_scale(1.08)] ${a.chip}`}
                             style={{
                                 backgroundImage: `linear-gradient(145deg, rgba(255,255,255,0.22), rgba(255,255,255,0) 55%), linear-gradient(315deg, ${a.glow}, transparent)`,
                                 boxShadow: `inset 0 1px 1px rgba(255,255,255,0.45), inset 0 -3px 5px rgba(0,0,0,0.4), 4px 7px 14px rgba(0,0,0,0.5), 0 0 16px ${a.glow}`,
                             }}
                         >
                             <Icon
-                                className={`${compact ? "h-4 w-4" : "h-5 w-5"} [transform:translateZ(10px)]`}
+                                className={`depth-fx ${compact ? "h-4 w-4" : "h-5 w-5"} [transform:translateZ(10px)]`}
                                 style={{ filter: `drop-shadow(0 2px 2px rgba(0,0,0,0.55)) drop-shadow(0 0 5px ${a.solid}88)` }}
                             />
                         </div>
