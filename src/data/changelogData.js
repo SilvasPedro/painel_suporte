@@ -1,13 +1,48 @@
 import { Palette, ShieldCheck, Sliders, Sparkles, Layout, Flame, History, Layers, Filter, CheckCircle2, Award, BarChart3, TrendingUp, Activity, Network, Moon, Sun, Coffee, User, Trophy, Zap, Mail, Phone, FileSpreadsheet, Edit2, Headphones, MessageSquare, Bell, Volume2, RefreshCw, FileText, Tag, CheckCheck, CalendarDays, Calendar, Target, Lock } from 'lucide-react';
 
-export const CURRENT_VERSION = 'v4.25.0';
+export const CURRENT_VERSION = 'v4.27.0';
 
 export const CHANGELOG_VERSIONS = [
   {
-    version: 'v4.25.0',
+    version: 'v4.27.0',
     date: 'Novembro 2026',
     isCurrent: true,
     tag: 'Versão Atual',
+    summary: 'Versão v4.27.0: o formulário de solicitações passa a pedir o protocolo ou ID a analisar e o nome completo do cliente impactado.',
+    items: [
+      {
+        icon: FileText,
+        iconColor: 'text-sky-500 bg-sky-500/10 border-sky-500/20',
+        title: 'Protocolo ou ID na solicitação',
+        category: 'Solicitações',
+        description: 'Nova pergunta "É necessário analisar um protocolo ou ID?". Respondendo Sim, abre o campo para informar o protocolo ou ID, que passa a aparecer no detalhe do chamado.'
+      },
+      {
+        icon: User,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Nome completo do cliente impactado',
+        category: 'Solicitações',
+        description: 'Ao marcar que houve impacto no cliente, é obrigatório informar o nome completo (nome e sobrenome). O nome aparece no detalhe e no resumo copiado do chamado.'
+      }
+    ]
+  },
+  {
+    version: 'v4.26.0',
+    date: 'Novembro 2026',
+    summary: 'Versão v4.26.0: a Análise QA do time passa a barrar protocolos que já foram auditados.',
+    items: [
+      {
+        icon: ShieldCheck,
+        iconColor: 'text-rose-500 bg-rose-500/10 border-rose-500/20',
+        title: 'Protocolo duplicado na auditoria',
+        category: 'Qualidade',
+        description: 'Ao digitar o protocolo em uma nova auditoria, o sistema confere se ele já foi analisado. Se já existir, mostra quando, de quem e por quem foi auditado, e bloqueia o salvamento. A comparação ignora "#", espaços e maiúsculas.'
+      }
+    ]
+  },
+  {
+    version: 'v4.25.0',
+    date: 'Novembro 2026',
     summary: 'Versão v4.25.0: o agente de IA ganha nome e rosto, o Atlas Bot, e passa a entregar só os dados pedidos, em relatórios organizados e sem conversa.',
     items: [
       {

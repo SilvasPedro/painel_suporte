@@ -15,7 +15,8 @@ import {
     getTaskAssignee,
     getTaskWatchers,
     canUserAssignResponsible,
-    canUserManageWatchers
+    canUserManageWatchers,
+    validateProtocolAndClient
 } from '../../types/request.types';
 import SafeMarkdown from './SafeMarkdown';
 import { BorderBeam } from '../magicui/BorderBeam';
@@ -154,6 +155,9 @@ export default function TaskFormModal({
     const initialDueDate = editingReport?.due_date || editingReport?.dueDate || editingReport?.date || new Date().toISOString().split('T')[0];
     const initialAffectedClient = editingReport?.affectedClient || editingReport?.metadata?.affectedClient || 'Não';
     const initialHowAffected = editingReport?.howAffected || editingReport?.metadata?.howAffected || '';
+    const initialClientName = editingReport?.clientName || editingReport?.metadata?.clientName || '';
+    const initialAnalysisProtocol = editingReport?.analysisProtocol || editingReport?.metadata?.analysisProtocol || '';
+    const initialNeedsProtocol = editingReport?.needsProtocol || editingReport?.metadata?.needsProtocol || (initialAnalysisProtocol ? 'Sim' : 'Não');
 
     // 3. Estados dos Campos da O.S.
     const [title, setTitle] = useState(editingReport?.title || '');
@@ -166,6 +170,9 @@ export default function TaskFormModal({
     const [watcherToAddId, setWatcherToAddId] = useState('');
     const [affectedClient, setAffectedClient] = useState(initialAffectedClient);
     const [howAffected, setHowAffected] = useState(initialHowAffected);
+    const [clientName, setClientName] = useState(initialClientName);
+    const [needsProtocol, setNeedsProtocol] = useState(initialNeedsProtocol);
+    const [analysisProtocol, setAnalysisProtocol] = useState(initialAnalysisProtocol);
     const [description, setDescription] = useState(editingReport?.description || '');
     const [activeTab, setActiveTab] = useState('write'); // 'write' | 'preview'
 
@@ -301,6 +308,8 @@ export default function TaskFormModal({
             errors.due_date = 'Informe o prazo de entrega da solicitação.';
         }
 
+        Object.assign(errors, validateProtocolAndClient({ needsProtocol, analysisProtocol, affectedClient, clientName }));
+
         if (affectedClient === 'Sim' && !howAffected.trim()) {
             errors.howAffected = 'Descreva brevemente como a ocorrência afetou o cliente.';
         }
@@ -357,6 +366,9 @@ export default function TaskFormModal({
             date: cleanDueDate,
             affectedClient,
             howAffected: affectedClient === 'Sim' ? howAffected.trim() : '',
+            clientName: affectedClient === 'Sim' ? clientName.trim().replace(/\s+/g, ' ') : '',
+            needsProtocol,
+            analysisProtocol: needsProtocol === 'Sim' ? analysisProtocol.trim() : '',
             assignedTo: resolvedAssignee,
             assigned_to: resolvedAssignee ? resolvedAssignee.id : null,
             assignedToId: resolvedAssignee ? resolvedAssignee.id : null,
@@ -372,6 +384,9 @@ export default function TaskFormModal({
                 type: resolvedTypeLabel,
                 affectedClient,
                 howAffected: affectedClient === 'Sim' ? howAffected.trim() : '',
+                clientName: affectedClient === 'Sim' ? clientName.trim().replace(/\s+/g, ' ') : '',
+                needsProtocol,
+                analysisProtocol: needsProtocol === 'Sim' ? analysisProtocol.trim() : '',
                 due_date: cleanDueDate
             },
             updatedAt: new Date()
@@ -803,6 +818,67 @@ export default function TaskFormModal({
                             </div>
                         </div>
 
+                        {/* 2.3b PROTOCOLO / ID A ANALISAR */}
+                        <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-subtle shadow-xs space-y-3">
+                            <label className="block text-xs font-bold text-secondary-hub uppercase tracking-wider flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-sky-500" />
+                                É necessário analisar um protocolo ou ID? <span className="text-rose-500">*</span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="É necessário analisar um protocolo ou ID?">
+                                {['Não', 'Sim'].map((opt) => (
+                                    <button
+                                        key={opt}
+                                        type="button"
+                                        role="radio"
+                                        aria-checked={needsProtocol === opt}
+                                        onClick={() => {
+                                            setNeedsProtocol(opt);
+                                            if (opt === 'Não') setAnalysisProtocol('');
+                                            setFormErrors((prev) => ({ ...prev, analysisProtocol: '' }));
+                                        }}
+                                        className={`p-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                                            needsProtocol === opt
+                                                ? 'bg-sky-500/10 border-sky-500/40 text-sky-600 dark:text-sky-400 ring-1 ring-sky-500/30'
+                                                : 'bg-canvas text-secondary-hub border-subtle hover:bg-subtle'
+                                        }`}
+                                    >
+                                        {opt}
+                                    </button>
+                                ))}
+                            </div>
+                            {needsProtocol === 'Sim' && (
+                                <div className="space-y-1.5 animate-in fade-in slide-in-from-top-2 duration-200">
+                                    <label htmlFor="task-analysis-protocol" className="block text-xs font-bold text-secondary-hub uppercase tracking-wider">
+                                        Protocolo ou ID <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        id="task-analysis-protocol"
+                                        type="text"
+                                        value={analysisProtocol}
+                                        onChange={(e) => {
+                                            setAnalysisProtocol(e.target.value);
+                                            setFormErrors((prev) => ({ ...prev, analysisProtocol: '' }));
+                                        }}
+                                        placeholder="Ex: #984321"
+                                        autoComplete="off"
+                                        aria-invalid={!!formErrors.analysisProtocol}
+                                        aria-describedby={formErrors.analysisProtocol ? 'task-analysis-protocol-error' : undefined}
+                                        className={`w-full px-3.5 py-2.5 border rounded-xl outline-none text-sm font-mono font-bold text-primary-hub bg-canvas transition-all ${
+                                            formErrors.analysisProtocol
+                                                ? 'border-rose-400 bg-rose-500/5 focus:ring-2 focus:ring-rose-500'
+                                                : 'border-subtle focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                                        }`}
+                                    />
+                                    {formErrors.analysisProtocol && (
+                                        <p id="task-analysis-protocol-error" role="alert" className="text-xs text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
+                                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                            {formErrors.analysisProtocol}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
                         {/* 2.4 IMPACTO NO CLIENTE (SEGMENTED CONTROL MODERNO) */}
                         <div className="bg-surface p-4 sm:p-5 rounded-2xl border border-subtle shadow-xs space-y-3">
                             <div>
@@ -822,7 +898,8 @@ export default function TaskFormModal({
                                         onClick={() => {
                                             setAffectedClient('Não');
                                             setHowAffected('');
-                                            setFormErrors((prev) => ({ ...prev, howAffected: '' }));
+                                            setClientName('');
+                                            setFormErrors((prev) => ({ ...prev, howAffected: '', clientName: '' }));
                                         }}
                                         className={`p-3 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center justify-center gap-2 ${
                                             affectedClient === 'Não'
@@ -851,6 +928,34 @@ export default function TaskFormModal({
                             {/* Campo Expansivo: Como afetou o cliente? */}
                             {affectedClient === 'Sim' && (
                                 <div className="p-4 bg-rose-500/5 rounded-2xl border border-rose-500/30 animate-in fade-in slide-in-from-top-2 duration-200 space-y-2">
+                                    <label htmlFor="task-client-name" className="block text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                                        Nome completo do cliente <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        id="task-client-name"
+                                        type="text"
+                                        value={clientName}
+                                        onChange={(e) => {
+                                            setClientName(e.target.value);
+                                            setFormErrors((prev) => ({ ...prev, clientName: '' }));
+                                        }}
+                                        placeholder="Ex: Maria de Souza Lima"
+                                        autoComplete="off"
+                                        aria-invalid={!!formErrors.clientName}
+                                        aria-describedby={formErrors.clientName ? 'task-client-name-error' : undefined}
+                                        className={`w-full px-3.5 py-2.5 border rounded-xl outline-none text-sm text-primary-hub bg-canvas transition-all ${
+                                            formErrors.clientName
+                                                ? 'border-rose-400 focus:ring-2 focus:ring-rose-500'
+                                                : 'border-rose-300 dark:border-rose-900/60 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20'
+                                        }`}
+                                    />
+                                    {formErrors.clientName && (
+                                        <p id="task-client-name-error" role="alert" className="text-xs text-rose-600 dark:text-rose-400 mt-1 flex items-center gap-1 font-medium">
+                                            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                            {formErrors.clientName}
+                                        </p>
+                                    )}
+
                                     <label htmlFor="task-how-affected" className="block text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
                                         Descreva como o cliente foi afetado <span className="text-rose-500">*</span>
                                     </label>

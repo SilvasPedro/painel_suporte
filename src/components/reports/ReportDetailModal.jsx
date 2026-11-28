@@ -149,7 +149,7 @@ export default function ReportDetailModal({
     const handleCopySummary = () => {
         const title = report.title || report.titulo || report.type || 'Demanda';
         const resp = assignee ? assignee.name : 'Fila da liderança';
-        const impact = report.affectedClient === 'Sim' ? `Sim (${report.howAffected || 'Impacto confirmado'})` : 'Não';
+        const impact = report.affectedClient === 'Sim' ? `Sim (${[report.clientName, report.howAffected || 'Impacto confirmado'].filter(Boolean).join(' - ')})` : 'Não';
         const text = `📋 [HUBDESK • Chamado #${protocol}]\n🔹 Título: ${title}\n🔹 Tipo: ${catMeta.label} | Setor: ${originDept}\n🔹 Status: ${getStatusLabel(status)} | Prioridade: ${report.priority || 'Normal'}\n🔹 Responsável: ${resp}\n🔹 Afetou cliente: ${impact}\n🔹 Prazo: ${formatDateOnly(isoDue)}\n\n📝 Descrição:\n${report.description || 'Sem descrição.'}`;
         navigator.clipboard.writeText(text);
         setCopiedSummary(true);
@@ -406,7 +406,16 @@ export default function ReportDetailModal({
                             {report.affectedClient === 'Sim' && (
                                 <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-700 dark:text-rose-300 flex items-start gap-2.5">
                                     <AlertTriangle className="w-4 h-4 shrink-0 mt-px" aria-hidden="true" />
-                                    <span><strong>Afetou cliente.</strong> {report.howAffected || 'Impacto confirmado pelo solicitante na abertura.'}</span>
+                                    <span>
+                                        <strong>{report.clientName ? `Afetou cliente: ${report.clientName}.` : 'Afetou cliente.'}</strong> {report.howAffected || 'Impacto confirmado pelo solicitante na abertura.'}
+                                    </span>
+                                </div>
+                            )}
+
+                            {report.analysisProtocol && (
+                                <div className="p-3.5 rounded-2xl bg-sky-500/10 border border-sky-500/30 text-xs text-sky-700 dark:text-sky-300 flex items-start gap-2.5">
+                                    <FileText className="w-4 h-4 shrink-0 mt-px" aria-hidden="true" />
+                                    <span><strong>Protocolo / ID para análise:</strong> <span className="font-mono font-bold">{report.analysisProtocol}</span></span>
                                 </div>
                             )}
 

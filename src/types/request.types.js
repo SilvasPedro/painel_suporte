@@ -294,6 +294,32 @@ export const validateTaskForm = (taskData = {}) => {
     };
 };
 
+/**
+ * Valida os campos de protocolo/ID e de cliente impactado do formulário de abertura.
+ * - needsProtocol === 'Sim' exige o protocolo ou ID a ser analisado.
+ * - affectedClient === 'Sim' exige o nome completo do cliente (nome e sobrenome).
+ * @param {{ needsProtocol?: string, analysisProtocol?: string, affectedClient?: string, clientName?: string }} data
+ * @returns {Record<string, string>} erros por campo (vazio quando tudo certo)
+ */
+export const validateProtocolAndClient = (data = {}) => {
+    const errors = {};
+
+    if (data.needsProtocol === 'Sim' && !String(data.analysisProtocol || '').trim()) {
+        errors.analysisProtocol = 'Informe o protocolo ou ID que precisa ser analisado.';
+    }
+
+    if (data.affectedClient === 'Sim') {
+        const words = String(data.clientName || '').trim().split(/\s+/).filter(Boolean);
+        if (words.length === 0) {
+            errors.clientName = 'Informe o nome completo do cliente impactado.';
+        } else if (words.length < 2) {
+            errors.clientName = 'Informe o nome completo do cliente (nome e sobrenome).';
+        }
+    }
+
+    return errors;
+};
+
 // ============================================================================
 // SCHEMAS, INTERFACES (TS/JSDoc) & POLÍTICAS RBAC / RLS (v3.10.1)
 // ============================================================================

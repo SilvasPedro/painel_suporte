@@ -4,6 +4,30 @@ Este arquivo é um registro contínuo e mandatório de todas as adições, alter
 
 ---
 
+## [28/11/2026] — Versão v4.27.0 (Solicitações: protocolo/ID e nome do cliente)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.26.0` para `4.27.0`. |
+| **Alterado** | `src/types/request.types.js` / `request.types.test.js` | `validateProtocolAndClient` e testes. |
+| **Alterado** | `src/components/reports/TaskFormModal.jsx` | Pergunta de protocolo/ID e campo de nome completo do cliente. |
+| **Alterado** | `src/components/reports/ReportDetailModal.jsx` | Exibe protocolo/ID e nome do cliente no detalhe e no resumo copiado. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
+## [28/11/2026] — Versão v4.26.0 (Análise QA: bloqueio de protocolo duplicado)
+
+| Ação | Arquivo | Descrição da Alteração |
+| :--- | :--- | :--- |
+| **Alterado** | `package.json` / `package-lock.json` | Versão `4.25.0` para `4.26.0`. |
+| **Criado** | `src/utils/auditProtocol.js` / `auditProtocol.test.js` | Normalização do protocolo e busca de auditoria duplicada, com testes. |
+| **Alterado** | `src/components/audits/AuditFormModal.jsx` | Aviso de protocolo já auditado e salvamento bloqueado. |
+| **Alterado** | `src/pages/Audits.jsx` | Passa as auditorias ao modal e repete a checagem ao salvar. |
+| **Alterado** | `src/data/changelogData.js` / `version.md` / `log-att.md` | Registro da versão. |
+
+---
+
 ## [26/11/2026] — Versão v4.25.0 (Atlas Bot: nome, avatar e prompt de coletor de dados)
 
 | Ação | Arquivo | Descrição da Alteração |

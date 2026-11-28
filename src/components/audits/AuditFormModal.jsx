@@ -6,6 +6,7 @@ import {
     CheckCheck, RotateCcw, MessageCircle, Sliders, Sparkles,
     CalendarCheck, ArrowDown
 } from 'lucide-react';
+import { findDuplicateAudit } from '../../utils/auditProtocol';
 
 const CHANNELS = [
     { id: 'Telefone', label: 'Ligação / Voz', icon: Phone },
@@ -17,6 +18,7 @@ function AuditFormModalContent({
     auditToEdit = null,
     collaboratorsList = [],
     qaProcesses = [],
+    existingAudits = [],
     onSave,
     isSaving = false
 }) {
@@ -52,6 +54,20 @@ function AuditFormModalContent({
     // Controle de status e override manual
     const [manualStatusOverride, setManualStatusOverride] = useState(!!auditToEdit?.status);
     const [manualStatus, setManualStatus] = useState(auditToEdit?.status || 'Conforme');
+
+    // Protocolo já auditado? (evita analisar o mesmo atendimento duas vezes)
+    const duplicateAudit = useMemo(
+        () => findDuplicateAudit(existingAudits, protocol, auditToEdit?.id || null),
+        [existingAudits, protocol, auditToEdit]
+    );
+    const duplicateColabName = duplicateAudit
+        ? (collaboratorsList.find(c => c.id === duplicateAudit.colabId)?.name || 'colaborador não identificado')
+        : '';
+    const duplicateDate = duplicateAudit?.date
+        ? (/^\d{4}-\d{2}-\d{2}/.test(duplicateAudit.date)
+            ? duplicateAudit.date.substring(0, 10).split('-').reverse().join('/')
+            : String(duplicateAudit.date))
+        : '';
 
     // Recupera o processo selecionado
     const selectedProcess = useMemo(() => {
@@ -157,6 +173,7 @@ function AuditFormModalContent({
     // Submissão
     const handleSubmit = (e) => {
         e.preventDefault();
+        if (duplicateAudit) return;
         if (pendingCount > 0 && !window.confirm(`Ainda há ${pendingCount} critério(s) sem resposta. Salvar mesmo assim?`)) return;
         onSave({
             colabId,
@@ -286,10 +303,25 @@ function AuditFormModalContent({
                                             placeholder="Ex: #984321"
                                             value={protocol}
                                             onChange={(e) => setProtocol(e.target.value)}
-                                            className="w-full p-2 text-xs font-mono font-bold bg-surface border border-strong rounded-xl focus:ring-2 focus:ring-red-600 outline-none"
+                                            aria-invalid={!!duplicateAudit}
+                                            className={`w-full p-2 text-xs font-mono font-bold bg-surface border rounded-xl focus:ring-2 outline-none ${
+                                                duplicateAudit ? 'border-red-500 focus:ring-red-600' : 'border-strong focus:ring-red-600'
+                                            }`}
                                         />
                                     </div>
                                 </div>
+
+                                {duplicateAudit && (
+                                    <div role="alert" className="p-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2">
+                                        <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+                                        <span>
+                                            <strong>Protocolo já auditado.</strong> O atendimento {duplicateAudit.protocol} foi analisado
+                                            {duplicateDate ? ` em ${duplicateDate}` : ''} ({duplicateColabName}
+                                            {duplicateAudit.evaluatorName ? `, por ${duplicateAudit.evaluatorName}` : ''}).
+                                            Escolha outro atendimento.
+                                        </span>
+                                    </div>
+                                )}
 
                                 {/* Canal de Atendimento */}
                                 <div>
@@ -729,8 +761,8 @@ if (listFilter === 'failed' && currentVal !== 'Falhou') return null;
                         <button
                             type="submit"
                             form="auditForm"
-                            disabled={isSaving || !colabId || !processId}
-title={!colabId ? 'Selecione o colaborador auditado' : !processId ? 'Selecione o processo auditado' : undefined}
+                            disabled={isSaving || !colabId || !processId || !!duplicateAudit}
+title={duplicateAudit ? 'Este protocolo já foi auditado' : !colabId ? 'Selecione o colaborador auditado' : !processId ? 'Selecione o processo auditado' : undefined}
                             className="flex-1 sm:flex-none disabled:opacity-50 text-white flex items-center justify-center gap-2 cursor-pointer btn-primary-std"
                         >
                             {isSaving ? (
@@ -758,6 +790,7 @@ export default function AuditFormModal({
     auditToEdit = null,
     collaboratorsList = [],
     qaProcesses = [],
+    existingAudits = [],
     onSave,
     isSaving = false
 }) {
@@ -770,6 +803,7 @@ export default function AuditFormModal({
             auditToEdit={auditToEdit}
             collaboratorsList={collaboratorsList}
             qaProcesses={qaProcesses}
+            existingAudits={existingAudits}
             onSave={onSave}
             isSaving={isSaving}
         />

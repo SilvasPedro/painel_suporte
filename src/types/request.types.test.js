@@ -10,6 +10,7 @@ import {
     hasAssignedResponsible,
     sanitizeMarkdownInput,
     validateTaskForm,
+    validateProtocolAndClient,
     TASK_PRIORITIES,
     TASK_TYPES,
     DEFAULT_TAG_SUGGESTIONS
@@ -145,6 +146,23 @@ describe('Hubdesk v3.10.1 — RLS Visibility, Watchers, Assignee & Markdown Secu
         });
         expect(validResult.isValid).toBe(true);
         expect(validResult.errors).toEqual({});
+    });
+
+    it('valida protocolo/ID e nome completo do cliente impactado', () => {
+        expect(validateProtocolAndClient({})).toEqual({});
+        expect(validateProtocolAndClient({ needsProtocol: 'Não', affectedClient: 'Não' })).toEqual({});
+
+        const noProtocol = validateProtocolAndClient({ needsProtocol: 'Sim', analysisProtocol: '  ' });
+        expect(noProtocol.analysisProtocol).toBeDefined();
+
+        expect(validateProtocolAndClient({ affectedClient: 'Sim', clientName: '' }).clientName).toBeDefined();
+        expect(validateProtocolAndClient({ affectedClient: 'Sim', clientName: 'Maria' }).clientName).toBeDefined();
+        expect(validateProtocolAndClient({
+            needsProtocol: 'Sim',
+            analysisProtocol: '#984321',
+            affectedClient: 'Sim',
+            clientName: 'Maria de Souza'
+        })).toEqual({});
     });
 
     it('fornece tipos oficiais de O.S. e prioridades', () => {

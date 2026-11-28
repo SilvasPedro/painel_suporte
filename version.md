@@ -4,6 +4,28 @@ Todas as alterações notáveis deste projeto serão documentadas neste arquivo,
 
 ---
 
+## [v4.27.0] - 2026-11-28
+
+### 🚀 Novas Funcionalidades (Added)
+- **Protocolo ou ID no formulário de solicitações**: pergunta "É necessário analisar um protocolo ou ID?". Com Sim, abre o campo de protocolo/ID (obrigatório), salvo em `analysisProtocol` e exibido no detalhe do chamado.
+- **Nome completo do cliente impactado**: ao marcar impacto no cliente, o nome completo (nome e sobrenome) passa a ser obrigatório, salvo em `clientName` e exibido no detalhe e no resumo copiado.
+- `validateProtocolAndClient` em `src/types/request.types.js`, com testes.
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore. Solicitações antigas continuam abrindo normalmente (campos novos ausentes são ignorados).
+
+---
+
+## [v4.26.0] - 2026-11-28
+
+### 🚀 Novas Funcionalidades (Added)
+- **Bloqueio de protocolo duplicado na Análise QA**: ao digitar o protocolo em uma nova auditoria, o formulário confere as auditorias existentes e, se o protocolo já foi analisado, exibe aviso com data, colaborador e avaliador e desabilita o salvamento. A página repete a checagem ao salvar (caso outra pessoa tenha auditado o mesmo protocolo com o modal aberto). A comparação ignora `#`, espaços e maiúsculas (`src/utils/auditProtocol.js`, com testes).
+
+### ⚠️ Observações
+- Sem mudança nas regras do Firestore; a checagem é feita no front, sobre as auditorias já carregadas em tempo real.
+
+---
+
 ## [v4.25.0] - 2026-11-26
 
 ### 🚀 Novas Funcionalidades (Added)

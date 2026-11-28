@@ -7,6 +7,7 @@ import { db } from '../services/firebase';
 import { subscribeSharedCollection } from '../services/dataCache';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
+import { findDuplicateAudit } from '../utils/auditProtocol';
 
 import DonutChart from '../components/audits/DonutChart';
 import AuditMetrics from '../components/audits/AuditMetrics';
@@ -298,6 +299,11 @@ export default function Audits() {
     };
 
     const handleSaveAudit = async (payload) => {
+        // Segunda barreira: outra pessoa pode ter auditado o mesmo protocolo com o modal aberto
+        if (findDuplicateAudit(audits, payload.protocol, editingAudit?.id || null)) {
+            showToast("Este protocolo já foi auditado.", "error");
+            return;
+        }
         setSaving(true);
         try {
             const dataToSave = {
@@ -496,6 +502,7 @@ export default function Audits() {
                 auditToEdit={editingAudit}
                 collaboratorsList={collaboratorsList}
                 qaProcesses={qaProcesses}
+                existingAudits={audits}
                 onSave={handleSaveAudit}
                 isSaving={saving}
             />
